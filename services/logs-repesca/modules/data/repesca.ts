@@ -53,6 +53,9 @@ export class Repesca {
     }
 
     protected static async repescarPendientes(config: Configuracion): Promise<void> {
+        if (this.PARAR) {
+            return;
+        }
         const registros = await this.getPendientes();
         if (registros.length==0 || this.PARAR) {
             return;
