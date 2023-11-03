@@ -1,0 +1,26 @@
+{
+  "scripts": {
+    "mrpack": "yarn workspace services-comun mrpack",
+    "doctor": "yarn dlx @yarnpkg/doctor",
+    "devel": "yarn mrpack devel -e",
+    "devel-f": "yarn mrpack devel -e -f",
+    "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
+    "packd": "yarn mrpack devel -c",
+    "packd-f": "yarn mrpack devel -c -f",
+    "g:packd": "yarn workspace services-comun webpack --env entorno=desarrollo --config \"$INIT_CWD/webpack.develop.config.js\"",
+    "update": "yarn mrpack update",
+    "services-comun": "yarn workspace services-comun",
+    "services-comun-status": "yarn workspace services-comun-status",
+    "status-logs-repesca": "yarn workspace status-logs-repesca",
+    "status-logs-slave": "yarn workspace status-logs-slave"
+  },
+  "private": true,
+  "workspaces": [
+    "framework/*",
+    "packages/*",
+    "scripts/*",
+    "services/*",
+    "statics/*"
+  ],
+  "packageManager": "yarn@4.0.1"
+}

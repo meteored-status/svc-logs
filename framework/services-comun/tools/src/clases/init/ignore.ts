@@ -1,0 +1,25 @@
+export default `
+.idea/dataSources.xml
+.idea/watcherTasks.xml
+.idea/php.xml
+.DS_Store
+.idea/workspace.xml
+.next/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+**/files/*
+**/output/*
+!**/output/.foreverignore
+config.workspaces.json
+services-*/files
+services-*/output
+tmp/
+tsconfig.tsbuildinfo
+vendor/
+**/.env*.local
+`.trimStart();
