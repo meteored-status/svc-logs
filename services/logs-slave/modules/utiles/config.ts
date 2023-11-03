@@ -1,11 +1,11 @@
-import {ConfiguracionNet, IConfiguracionNet} from "services-comun/modules/net/config/config";
+import {ConfiguracionNet, type IConfiguracionNet} from "services-comun/modules/net/config/config";
 import {EService, SERVICES} from "services-comun-status/modules/services/config";
-import {Google, IGoogle} from "services-comun/modules/utiles/config";
+import {Google, type IGoogle} from "services-comun/modules/utiles/config";
 
 interface IConfiguracion extends IConfiguracionNet {
     google: IGoogle;
 }
-class Configuracion extends ConfiguracionNet<IConfiguracion> implements IConfiguracion {
+export class Configuracion extends ConfiguracionNet<IConfiguracion> implements IConfiguracion {
     /* INSTANCE */
     public google: Google;
 
@@ -30,5 +30,3 @@ class Configuracion extends ConfiguracionNet<IConfiguracion> implements IConfigu
         }) as Configuracion;
     }
 }
-
-export {Configuracion};
