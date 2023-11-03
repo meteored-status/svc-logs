@@ -2,14 +2,13 @@ import {UAParser} from "ua-parser-js";
 import {hostname} from "node:os";
 import geoip from "fast-geoip"
 
-import {ECS} from "services-comun/modules/elasticsearch/ecs";
-import {ICliente} from "services-comun-status/modules/services/status-logs-slave/backend";
-import {IPodInfo} from "services-comun/modules/utiles/config";
+import {type ECS} from "services-comun/modules/elasticsearch/ecs";
+import {type IPodInfo} from "services-comun/modules/utiles/config";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/elasticsearch/bulk";
 
-import {Bucket, INotify} from "./bucket";
+import {Bucket, type ICliente, type INotify} from "./bucket";
 import {Crawler} from "./source/crawler";
 import {SourceCloudflare} from "./source/cloudflare";
 
