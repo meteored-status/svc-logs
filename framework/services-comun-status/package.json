@@ -1,0 +1,14 @@
+{
+  "name": "services-comun-status",
+  "description": "Componentes comunes de Status",
+  "author": "José Antonio Jiménez",
+  "devDependencies": {
+    "@types/node": "^20.8.10",
+    "@types/qs": "^6.9.9",
+    "qs": "^6.11.2",
+    "services-comun": "workspace:*",
+    "tslib": "^2.6.2"
+  },
+  "version": "2023.11.2+1",
+  "hash": "71bdd8d9ac2d84f5337858524d1d828b"
+}
