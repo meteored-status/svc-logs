@@ -1,6 +1,5 @@
 import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 import {Bucket} from "./bucket";
 import {Configuracion} from "../utiles/config";
@@ -79,17 +78,12 @@ export class Repesca {
                 info(`Repescando []`, registro.bucket, registro.archivo);
             }
             promesas.push(registro.ingest(config).catch(err=>error(err)));
-            await PromiseDelayed(100);
-            // await registro.ingest(config)
-            //     .catch((err)=>{
-            //         error(err);
-            //     });
         }
         await Promise.all(promesas);
     }
 
     protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 10", [], {
+        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 1", [], {
             master: true,
             fn: (row)=>new Repesca({
                 bucket: row.bucket,
@@ -120,17 +114,13 @@ export class Repesca {
                 id: this.cliente,
                 grupo: this.grupo,
             }: undefined);
-            // await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo, this.cliente, this.grupo);
             await this.delete();
 
         } catch (err) {
             if (err instanceof Error) {
-                // if  (err.message == "Service Unavailable") {
-                //     return;
-                // }
-                console.log(err.message);
+                error(err.message);
             } else {
-                console.log(err);
+                error(err);
             }
         }
     }
