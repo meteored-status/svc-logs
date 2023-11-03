@@ -27,6 +27,7 @@ export class Repesca {
 
     public static async run(config: Configuracion): Promise<void> {
         let timeout: NodeJS.Timeout|undefined = setTimeout(()=>{
+            info("Solicitando parada");
             this.PARAR = true;
             timeout = undefined;
         }, 3540000); // 59 minutos para parar el proceso para evitar que se quede a medias cuando se borre el POD
@@ -34,15 +35,21 @@ export class Repesca {
         await this.reset();
         await this.liberarBloqueados();
         await this.repescarPendientes(config);
-        // await this.repescarBloqueados(config);
 
         if (timeout!=undefined) {
             clearTimeout(timeout);
+        } else {
+            info("Solicitando parada => OK");
         }
     }
 
     private static async reset(): Promise<void> {
         await db.update("UPDATE repesca SET tratando=0 WHERE tratando=1");
+    }
+
+    protected static async liberarBloqueados(): Promise<void> {
+        await db.insert("INSERT IGNORE INTO repesca (bucket, archivo, cliente, grupo, fecha) SELECT bucket, archivo, cliente, grupo, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-10800000)]);
+        await db.delete("DELETE FROM procesando WHERE (bucket, archivo) IN (SELECT bucket, archivo FROM repesca)");
     }
 
     protected static async repescarPendientes(config: Configuracion): Promise<void> {
@@ -55,39 +62,29 @@ export class Repesca {
         await this.repescarPendientes(config);
     }
 
-    // protected static async repescarBloqueados(config: Configuracion): Promise<void> {
-    //     const registros = await this.getBloqueados();
-    //     if (registros.length==0 || this.PARAR) {
-    //         return;
-    //     }
-    //
-    //     await this.repescar(config, registros);
-    //     await this.repescarBloqueados(config);
-    // }
-
     protected static async repescar(config: Configuracion, registros: Repesca[]): Promise<void> {
-        // const promesas: Promise<void>[] = [];
-        // for (const registro of registros) {
-        //     info("Ingestando", registro.cliente??"-", registro.grupo??"-", registro.bucket, registro.archivo);
-        //     promesas.push(registro.ingest(config).catch(err=>error(err)));
-        //     await PromiseDelayed(100);
-        // }
-        // await Promise.all(promesas);
+        const promesas: Promise<void>[] = [];
         for (const registro of registros) {
             if (registro.cliente!=undefined) {
-                info(`Ingestando [${registro.cliente}, ${registro.grupo??"-"}]`, registro.bucket, registro.archivo);
+                if (registro.grupo!=undefined) {
+                    info(`Repescando [${registro.cliente}: ${registro.grupo}]`, registro.bucket, registro.archivo);
+                } else {
+                    info(`Repescando [${registro.cliente}]`, registro.bucket, registro.archivo);
+                }
             } else {
-                info(`Ingestando []`, registro.bucket, registro.archivo);
+                info(`Repescando []`, registro.bucket, registro.archivo);
             }
-            await registro.ingest(config)
-                .catch((err)=>{
-                    error(err);
-                });
+            promesas.push(registro.ingest(config).catch(err=>error(err)));
+            // await registro.ingest(config)
+            //     .catch((err)=>{
+            //         error(err);
+            //     });
         }
+        await Promise.all(promesas);
     }
 
     protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 1", [], {
+        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 10", [], {
             master: true,
             fn: (row)=>new Repesca({
                 bucket: row.bucket,
@@ -96,20 +93,6 @@ export class Repesca {
                 grupo: row.grupo??undefined,
             }),
         });
-    }
-
-    protected static async liberarBloqueados(): Promise<void> {
-        await db.insert("INSERT INTO repesca (bucket, archivo, cliente, grupo, fecha) SELECT bucket, archivo, cliente, grupo, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-10800000)]);
-        await db.delete("DELETE FROM procesando WHERE (bucket, archivo) IN (SELECT bucket, archivo FROM repesca)");
-        // return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM procesando WHERE fecha<? ORDER BY fecha LIMIT 100", [new Date(Date.now()-10800000)], {
-        //     master: true,
-        //     fn: (row)=>new Repesca({
-        //         bucket: row.bucket,
-        //         archivo: row.archivo,
-        //         cliente: row.cliente??undefined,
-        //         grupo: row.grupo??undefined,
-        //     }),
-        // });
     }
 
     /* INSTANCE */
