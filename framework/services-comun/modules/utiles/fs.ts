@@ -1,0 +1,285 @@
+import fs from "node:fs";
+import path from "node:path";
+import {readFileSync} from "node:fs";
+import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat} from "node:fs/promises";
+
+import {error, warning} from "./log";
+import {md5} from "./hash";
+import {pipeline} from "./stream";
+import {random} from "./random";
+
+export async function exists(file: string): Promise<boolean> {
+    return new Promise<boolean>((resolve:Function)=>{
+        fs.access(file, fs.constants.F_OK, (err)=>{
+            resolve(!err);
+        });
+    });
+}
+
+export {
+    readdir as readDir,
+    readFile,
+    stat as stats,
+};
+
+export async function readFileBuffer(file: string): Promise<Buffer> {
+    return readFile(file);
+}
+
+export async function readFileString(file: string): Promise<string> {
+    const data = await readFile(file);
+    return data.toString("utf-8");
+}
+
+export async function fileSize(file: string): Promise<number> {
+    const stats = await stat(file);
+    return stats.size;
+}
+
+export async function readJSON<T=any>(file: string): Promise<T> {
+    try {
+        const buffer = await readFileString(file);
+        return JSON.parse(buffer);
+    } catch (e) {
+        return Promise.reject(e);
+    }
+}
+
+export function readJSONSync<T=any>(file: string): T|null {
+    try {
+        return JSON.parse(readFileSync(file).toString("utf-8")) as T;
+    } catch (e) {
+        return null;
+    }
+}
+
+export async function isDir(dir: string, excepcion: boolean=false): Promise<boolean> {
+    try {
+        const stats = await stat(dir);
+        if (stats.isDirectory()) {
+            return true;
+        }
+    } catch (e) {}
+
+    if (!excepcion) {
+        return false;
+    }
+
+    return Promise.reject("Not a directory");
+}
+
+export async function isFile(file: string, excepcion: boolean=false): Promise<boolean> {
+    try {
+        const stats = await stat(file);
+        if (stats.isFile()) {
+            return true;
+        }
+    } catch (e) {}
+
+    if (!excepcion) {
+        return false;
+    }
+
+    return Promise.reject("Not a file");
+}
+
+export async function mkdir(dir: string, recursive: boolean=false): Promise<void> {
+    await mkdirOriginal(dir, {
+        recursive: recursive
+    });
+}
+
+export async function rename(antiguo: string, nuevo: string): Promise<boolean> {
+    return renameOriginal(antiguo, nuevo)
+        .then(()=>true)
+        .catch(()=>false);
+}
+
+export async function rmdir(path: string): Promise<void> {
+    await rm(path, {
+        recursive: true,
+        force: true,
+    });
+    // return new Promise<void>((resolve: Function)=>{
+    //     child_process.exec(`rm -R ${path}`, () => {
+    //         resolve();
+    //     });
+    // });
+}
+
+export async function rmDirManual(path: string): Promise<void> {
+    if (await isDir(path)) {
+        for (const actual of await readdir(path)) {
+            await rmDirManual(`${path}/${actual}`);
+        }
+    }
+
+    await unlink(path);
+}
+
+export async function overwrite(oldPath: string, newPath: string, sobreescribir: boolean): Promise<boolean> {
+    if (!sobreescribir) {
+        if (await exists(newPath)) {
+            await unlink(oldPath);
+            return false;
+        }
+    }
+    if (!await rename(oldPath, newPath)) {
+        await unlink(oldPath);
+    }
+    return true;
+}
+
+export async function safeWrite(local: string, data: string|Buffer, sobreescribir: boolean=false, excepcion: boolean=false): Promise<boolean> {
+    const rnd = `${local}.${random()}`;
+    return new Promise<boolean>((resolve: Function, reject: Function)=>{
+        fs.writeFile(rnd, data, {
+            flag: "wx",
+        }, (err: NodeJS.ErrnoException | null)=>{
+            if (!err) {
+                overwrite(rnd, local, sobreescribir).then((ok: boolean)=>{
+                    if (ok) {
+                        resolve(true);
+                    } else {
+                        if (!excepcion) {
+                            resolve(false);
+                        } else {
+                            reject("No se pudo renombrar el archivo temporal al final");
+                        }
+                    }
+                });
+            } else {
+                if (!excepcion) {
+                    error("Error en safeWrite", rnd, err);
+                    resolve(false);
+                } else {
+                    reject("No se pudo escribir archivo temporal");
+                }
+            }
+        });
+    });
+}
+
+export async function safeWriteStream(inbound: NodeJS.ReadWriteStream|NodeJS.ReadableStream, local: string, sobreescribir: boolean=false): Promise<boolean> {
+    const rnd = `${local}.${random()}`;
+    return pipeline(inbound, fs.createWriteStream(rnd, {
+        flags: "wx",
+    })).then(async ()=>{
+        return overwrite(rnd, local, sobreescribir);
+    }).catch(async (err)=>{
+        // const partes = local.split("/");
+        // partes.pop();
+        // if (partes.length>0) {
+        //     const base = partes.join("/");
+        //     await mkdir(base, true);
+        // }
+        await warning(`Error escribiendo temporal ${rnd}`, err);
+        if (await isFile(rnd)) {
+            await unlink(rnd);
+        }
+        return false;
+    });
+}
+
+export async function safeWriteStreamBuffer(inbound:NodeJS.ReadWriteStream|NodeJS.ReadableStream, local:string, sobreescribir:boolean=false): Promise<void> {
+    const buffer: Buffer[] = [];
+    inbound.on("data", (data: Buffer)=>{
+        buffer.push(data);
+    });
+    return new Promise<void>((resolve)=>{
+        inbound.on("end", ()=>{
+            safeWrite(local, Buffer.concat(buffer), sobreescribir).then(()=>{
+                resolve();
+            }).catch(()=>{
+                resolve();
+            });
+        });
+        inbound.on("error", ()=>{
+            resolve();
+        });
+        // inbound.on("error", (err)=>{
+        //     warning("Error en safeWriteStreamBuffer", err);
+        //     resolve();
+        // });
+    });
+}
+
+export async function unlink(file: string): Promise<void> {
+    if (await isFile(file)) {
+        await new Promise<void>((resolve: Function, reject: Function) => {
+            fs.unlink(file, (err: NodeJS.ErrnoException|null)=>{
+                if (!err) {
+                    resolve();
+                } else {
+                    reject(err);
+                }
+            });
+        });
+    } else if (await isDir(file)) {
+        await rmdir(file);
+    }
+}
+
+export async function findSubdirs(dir: string): Promise<string[]> {
+    const salida: string[] = [];
+
+    if (await isDir(dir)) {
+        salida.push(dir);
+        for (const item of await readdir(dir)) {
+            if (![".", ".."].includes(item)) {
+                salida.push(...await findSubdirs(`${dir}/${item}`));
+            }
+        }
+    }
+
+    return salida;
+}
+
+async function md5DirExec(dir: string): Promise<string> {
+    const salida = [
+        md5(path.basename(dir)),
+    ];
+
+    if (await isFile(dir)) {
+        salida.push(md5(await readFileString(dir)));
+    } else if (await isDir(dir)) {
+        for (const actual of await readdir(dir)) {
+            const name = `${dir}/${actual}`;
+            if (await isDir(name)) {
+                if (name!="files") {
+                    salida.push(await md5Dir(name));
+                }
+            } else if (await isFile(name)) {
+                salida.push(md5(actual));
+                salida.push(md5(await readFileString(name)));
+            }
+        }
+    }
+    return salida.join("");
+}
+
+export async function md5Dir(dir: string): Promise<string> {
+    if (!await isFile(dir) && !await isDir(dir)) {
+        return "";
+    }
+    const salida = await md5DirExec(dir);
+    if (salida.length!=32) {
+        return md5(salida);
+    }
+    return salida;
+}
+
+export async function freeSpace(path: string): Promise<number> {
+    return new Promise((resolve, reject)=>{
+        fs.statfs(path, (err, stats) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(stats.bsize*stats.bavail);
+            }
+            // console.log('Total free space', formatMemoria(stats.bsize*stats.bfree));
+            // console.log('Available for user', formatMemoria(stats.bsize*stats.bavail));
+            // console.log(stats);
+        })
+    });
+}

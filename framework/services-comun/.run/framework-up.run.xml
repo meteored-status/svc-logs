@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="Enviar Framework" type="js.build_tools.npm">
+        <package-json value="$PROJECT_DIR$/framework/services-comun/package.json" />
+        <command value="run" />
+        <scripts>
+            <script value="mrpack" />
+        </scripts>
+        <arguments value="upload" />
+        <node-interpreter value="project" />
+        <envs />
+        <method v="2" />
+    </configuration>
+</component>

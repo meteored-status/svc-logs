@@ -1,0 +1,40 @@
+{
+  "name": "status-logs-repesca",
+  "servicio": "status-logs-repesca",
+  "version": "0000.00.00-000",
+  "description": "Servicio de repesca de logs",
+  "repository": "git+https://github.com/meteored-status/svc-status.git",
+  "author": "Jose Antonio Jiménez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/meteored-status/svc-status/issues"
+  },
+  "homepage": "https://github.com/meteored-status/svc-status#readme",
+  "scripts": {
+    "packd": "yarn g:packd",
+    "devel": "yarn node --no-warnings devel.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.6.3",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.10",
+    "services-comun": "workspace:*",
+    "services-comun-status": "workspace:*",
+    "tslib": "^2.6.2"
+  },
+  "main": "app.js",
+  "config": {
+    "cronjob": true,
+    "devel": false,
+    "deploy": true,
+    "generar": true,
+    "unico": true,
+    "deps": [],
+    "storage": [],
+    "runtime": "node",
+    "framework": "meteored",
+    "credenciales": []
+  }
+}
