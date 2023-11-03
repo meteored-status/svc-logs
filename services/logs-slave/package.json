@@ -1,15 +1,15 @@
 {
-  "name": "status-logs-slave",
-  "servicio": "status-logs-slave",
+  "name": "logs-slave",
+  "servicio": "logs-slave",
   "version": "0000.00.00-000",
-  "description": "Acceso autenticado para el backend de Status desde el frontend",
-  "repository": "git+https://github.com/meteored-status/svc-status.git",
+  "description": "Servicio de receptor de Logs desde PubSub",
+  "repository": "git+https://github.com/meteored-status/svc-logs.git",
   "author": "Jose Antonio Jiménez",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/meteored-status/svc-status/issues"
+    "url": "https://github.com/meteored-status/svc-logs/issues"
   },
-  "homepage": "https://github.com/meteored-status/svc-status#readme",
+  "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "scripts": {
     "packd": "yarn g:packd",
     "devel": "yarn g:devel"
@@ -38,6 +38,7 @@
     "@types/node": "^20.8.10",
     "@types/ua-parser-js": "^0.7.38",
     "formidable": "^3.5.1",
+    "logs-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
     "tslib": "^2.6.2"

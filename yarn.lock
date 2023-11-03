@@ -3117,6 +3117,63 @@ __metadata:
   languageName: node
   linkType: hard
 
+"logs-base@workspace:*, logs-base@workspace:packages/logs-base":
+  version: 0.0.0-use.local
+  resolution: "logs-base@workspace:packages/logs-base"
+  dependencies:
+    "@types/node": "npm:^20.8.10"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    tslib: "npm:^2.6.2"
+  languageName: unknown
+  linkType: soft
+
+"logs-repesca@workspace:services/logs-repesca":
+  version: 0.0.0-use.local
+  resolution: "logs-repesca@workspace:services/logs-repesca"
+  dependencies:
+    "@types/node": "npm:^20.8.10"
+    logs-base: "workspace:*"
+    mysql2: "npm:^3.6.3"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    source-map-support: "npm:^0.5.21"
+    tslib: "npm:^2.6.2"
+  languageName: unknown
+  linkType: soft
+
+"logs-slave@workspace:services/logs-slave":
+  version: 0.0.0-use.local
+  resolution: "logs-slave@workspace:services/logs-slave"
+  dependencies:
+    "@elastic/elasticsearch": "npm:^8.10.0"
+    "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.1.0"
+    "@google-cloud/storage": "npm:^7.5.0"
+    "@opentelemetry/api": "npm:^1.6.0"
+    "@opentelemetry/core": "npm:^1.17.1"
+    "@opentelemetry/instrumentation": "npm:^0.44.0"
+    "@opentelemetry/instrumentation-http": "npm:^0.44.0"
+    "@opentelemetry/resources": "npm:^1.17.1"
+    "@opentelemetry/sdk-trace-base": "npm:^1.17.1"
+    "@opentelemetry/sdk-trace-node": "npm:^1.17.1"
+    "@opentelemetry/semantic-conventions": "npm:^1.17.1"
+    "@types/node": "npm:^20.8.10"
+    "@types/ua-parser-js": "npm:^0.7.38"
+    chokidar: "npm:^3.5.3"
+    crawler-user-agents: "npm:^1.0.115"
+    fast-geoip: "npm:^1.1.88"
+    formidable: "npm:^3.5.1"
+    hexoid: "npm:^1.0.0"
+    logs-base: "workspace:*"
+    mysql2: "npm:^3.6.3"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    source-map-support: "npm:^0.5.21"
+    tslib: "npm:^2.6.2"
+    ua-parser-js: "npm:^2.0.0-beta.1"
+  languageName: unknown
+  linkType: soft
+
 "long@npm:^5.0.0, long@npm:^5.2.1":
   version: 5.2.3
   resolution: "long@npm:5.2.3"
@@ -4617,50 +4674,6 @@ __metadata:
   checksum: 453f9a1c241c13f5dfceca2ab7b4687bcff354c3ccbc932f35452687b9ef0ccf8983fd13b8a3baa5844c1a4882d6e3ddff48b0e7fd21d743809ef33b80616d79
   languageName: node
   linkType: hard
-
-"status-logs-repesca@workspace:services/status-logs-repesca":
-  version: 0.0.0-use.local
-  resolution: "status-logs-repesca@workspace:services/status-logs-repesca"
-  dependencies:
-    "@types/node": "npm:^20.8.10"
-    mysql2: "npm:^3.6.3"
-    services-comun: "workspace:*"
-    services-comun-status: "workspace:*"
-    source-map-support: "npm:^0.5.21"
-    tslib: "npm:^2.6.2"
-  languageName: unknown
-  linkType: soft
-
-"status-logs-slave@workspace:services/status-logs-slave":
-  version: 0.0.0-use.local
-  resolution: "status-logs-slave@workspace:services/status-logs-slave"
-  dependencies:
-    "@elastic/elasticsearch": "npm:^8.10.0"
-    "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.1.0"
-    "@google-cloud/storage": "npm:^7.5.0"
-    "@opentelemetry/api": "npm:^1.6.0"
-    "@opentelemetry/core": "npm:^1.17.1"
-    "@opentelemetry/instrumentation": "npm:^0.44.0"
-    "@opentelemetry/instrumentation-http": "npm:^0.44.0"
-    "@opentelemetry/resources": "npm:^1.17.1"
-    "@opentelemetry/sdk-trace-base": "npm:^1.17.1"
-    "@opentelemetry/sdk-trace-node": "npm:^1.17.1"
-    "@opentelemetry/semantic-conventions": "npm:^1.17.1"
-    "@types/node": "npm:^20.8.10"
-    "@types/ua-parser-js": "npm:^0.7.38"
-    chokidar: "npm:^3.5.3"
-    crawler-user-agents: "npm:^1.0.115"
-    fast-geoip: "npm:^1.1.88"
-    formidable: "npm:^3.5.1"
-    hexoid: "npm:^1.0.0"
-    mysql2: "npm:^3.6.3"
-    services-comun: "workspace:*"
-    services-comun-status: "workspace:*"
-    source-map-support: "npm:^0.5.21"
-    tslib: "npm:^2.6.2"
-    ua-parser-js: "npm:^2.0.0-beta.1"
-  languageName: unknown
-  linkType: soft
 
 "stream-events@npm:^1.0.5":
   version: 1.0.5
