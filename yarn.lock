@@ -3122,9 +3122,12 @@ __metadata:
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
     "@types/node": "npm:^20.8.10"
+    crawler-user-agents: "npm:^1.0.115"
+    fast-geoip: "npm:^1.1.88"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     tslib: "npm:^2.6.2"
+    ua-parser-js: "npm:^2.0.0-beta.1"
   languageName: unknown
   linkType: soft
 
@@ -3133,12 +3136,15 @@ __metadata:
   resolution: "logs-repesca@workspace:services/logs-repesca"
   dependencies:
     "@types/node": "npm:^20.8.10"
+    crawler-user-agents: "npm:^1.0.115"
+    fast-geoip: "npm:^1.1.88"
     logs-base: "workspace:*"
     mysql2: "npm:^3.6.3"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tslib: "npm:^2.6.2"
+    ua-parser-js: "npm:^2.0.0-beta.1"
   languageName: unknown
   linkType: soft
 

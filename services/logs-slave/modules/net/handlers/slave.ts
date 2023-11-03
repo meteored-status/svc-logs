@@ -1,9 +1,9 @@
 import {RouteGroup} from "services-comun/modules/net/routes/group";
-import {IRouteGroup} from "services-comun/modules/net/routes/group/block";
-import {error, info} from "services-comun/modules/utiles/log";
+import {type IRouteGroup} from "services-comun/modules/net/routes/group/block";
+import {error} from "services-comun/modules/utiles/log";
 
-import {Bucket, INotifyPubSub} from "../../data/bucket";
-import {Configuracion} from "../../utiles/config";
+import {Bucket, type INotifyPubSub} from "../../data/bucket";
+import {type Configuracion} from "../../utiles/config";
 
 interface IQuery {
     bucket: string;
