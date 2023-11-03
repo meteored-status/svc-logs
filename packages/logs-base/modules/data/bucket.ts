@@ -1,5 +1,4 @@
 import {Google, IPodInfo} from "services-comun/modules/utiles/config";
-import {ICliente} from "services-comun-status/modules/services/status-logs-slave/backend";
 import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import db from "services-comun/modules/utiles/mysql";
@@ -15,6 +14,11 @@ interface IBucketMySQL {
 export interface INotify {
     bucketId: string;
     objectId: string;
+}
+
+export interface ICliente {
+    id: string;
+    grupo?: string;
 }
 
 export class Bucket {

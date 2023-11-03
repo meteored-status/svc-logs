@@ -1,5 +1,4 @@
-import {Bucket as BucketBase, type INotify} from "logs-base/modules/data/bucket";
-import {type ICliente} from "services-comun-status/modules/services/status-logs-slave/backend";
+import {Bucket as BucketBase, type ICliente, type INotify} from "logs-base/modules/data/bucket";
 
 import {type Configuracion} from "../utiles/config";
 
