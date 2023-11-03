@@ -1,5 +1,6 @@
 import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
+import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 import {Bucket} from "./bucket";
 import {Configuracion} from "../utiles/config";
@@ -78,6 +79,7 @@ export class Repesca {
                 info(`Repescando []`, registro.bucket, registro.archivo);
             }
             promesas.push(registro.ingest(config).catch(err=>error(err)));
+            await PromiseDelayed(100);
             // await registro.ingest(config)
             //     .catch((err)=>{
             //         error(err);
