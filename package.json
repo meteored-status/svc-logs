@@ -11,8 +11,9 @@
     "update": "yarn mrpack update",
     "services-comun": "yarn workspace services-comun",
     "services-comun-status": "yarn workspace services-comun-status",
-    "status-logs-repesca": "yarn workspace status-logs-repesca",
-    "status-logs-slave": "yarn workspace status-logs-slave"
+    "logs-repesca": "yarn workspace logs-repesca",
+    "logs-slave": "yarn workspace logs-slave",
+    "logs-base": "yarn workspace logs-base"
   },
   "private": true,
   "workspaces": [
