@@ -1,9 +1,9 @@
 import {ICliente} from "services-comun-status/modules/services/status-logs-slave/backend";
+import {IPodInfo} from "services-comun/modules/utiles/config";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
 
-import {Configuracion} from "../../utiles/config";
 import {INotify} from "../bucket";
 import {Registro} from "../registro";
 
@@ -120,7 +120,7 @@ export interface ResponseHeaders {
 
 export class Cloudflare {
     /* STATIC */
-    public static async ingest(config: Configuracion, cliente: ICliente, notify: INotify, repesca: boolean, raw?: string): Promise<number> {
+    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, repesca: boolean, raw?: string): Promise<number> {
         if (raw==undefined) {
             return 0;
         }
@@ -139,7 +139,7 @@ export class Cloudflare {
                 continue;
             }
 
-            promesas.push(this.ingestRegistro(config, cliente, registro, notify));
+            promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
         }
 
         await Promise.all(promesas);
@@ -201,8 +201,8 @@ export class Cloudflare {
         // return this.limpiarDuplicados(cliente, source, false);
     }
 
-    private static async ingestRegistro(config: Configuracion, cliente: ICliente, raw: SourceCloudflare, notify: INotify): Promise<void> {
-        const registro = await Registro.build(config.pod, cliente, raw, notify);
+    private static async ingestRegistro(pod: IPodInfo, cliente: ICliente, raw: SourceCloudflare, notify: INotify): Promise<void> {
+        const registro = await Registro.build(pod, cliente, raw, notify);
         await registro.save();
     }
 
