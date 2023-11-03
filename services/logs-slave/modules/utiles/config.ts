@@ -1,5 +1,6 @@
 import {ConfiguracionNet, type IConfiguracionNet} from "services-comun/modules/net/config/config";
 import {EService, SERVICES} from "services-comun-status/modules/services/config";
+import {GOOGLE} from "logs-base/modules/utiles/config";
 import {Google, type IGoogle} from "services-comun/modules/utiles/config";
 
 interface IConfiguracion extends IConfiguracionNet {
@@ -20,13 +21,7 @@ export class Configuracion extends ConfiguracionNet<IConfiguracion> implements I
     public static async load(): Promise<Configuracion> {
         return this.configuracion??=await this.cargar<IConfiguracion>({
             net: SERVICES.configuracion(EService.status_logs_slave),
-            google: {
-                id: "api-project-858154548956",
-                storage: {
-                    credenciales: "files/credenciales/storage.json",
-                    buckets: {},
-                },
-            },
+            google: GOOGLE,
         }) as Configuracion;
     }
 }
