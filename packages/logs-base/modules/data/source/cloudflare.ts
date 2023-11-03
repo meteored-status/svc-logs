@@ -1,10 +1,9 @@
-import {ICliente} from "services-comun-status/modules/services/status-logs-slave/backend";
 import {IPodInfo} from "services-comun/modules/utiles/config";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
 
-import {INotify} from "../bucket";
+import {type ICliente, type INotify} from "../bucket";
 import {Registro} from "../registro";
 
 export interface SourceCloudflare {
