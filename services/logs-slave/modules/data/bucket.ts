@@ -35,7 +35,7 @@ export class Bucket extends BucketBase {
         };
         await this.update(notify, cliente);
         await this.procesando(notify);
-        await bucket.ingest(config.pod, config.google, notify, false)
+        await bucket.ingest(config.pod, config.google, notify)
             .then(()=>this.endProcesando(notify))
             .catch(err=>this.addRepesca(notify, cliente, err));
     }
