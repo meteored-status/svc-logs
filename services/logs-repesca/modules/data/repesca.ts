@@ -53,16 +53,11 @@ export class Repesca {
     }
 
     protected static async repescarPendientes(config: Configuracion): Promise<void> {
-        if (this.PARAR) {
-            return;
-        }
-        const registros = await this.getPendientes();
-        if (registros.length==0 || this.PARAR) {
-            return;
-        }
-
-        await this.repescar(config, registros);
-        await this.repescarPendientes(config);
+        let registros: Repesca[] = [];
+        do {
+            registros = await this.getPendientes();
+            await this.repescar(config, registros);
+        } while (registros.length>0 && !this.PARAR);
     }
 
     protected static async repescar(config: Configuracion, registros: Repesca[]): Promise<void> {
