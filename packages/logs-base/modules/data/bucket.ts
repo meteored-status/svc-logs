@@ -114,7 +114,7 @@ export class Bucket {
             return;
         }
 
-        const contenido = await data.toString().then(str=>str.trim());
+        const contenido = await data.toString();
         await Cloudflare.ingest(pod, this.getCliente(), notify, repesca, contenido);
 
         await data.delete();
