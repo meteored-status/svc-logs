@@ -30,7 +30,7 @@ export class Repesca {
             info("Solicitando parada");
             this.PARAR = true;
             timeout = undefined;
-        }, 840000); // 14 minutos para parar el proceso para evitar que se quede a medias cuando se borre el POD
+        }, 3540000); // 59 minutos para parar el proceso para evitar que se quede a medias cuando se borre el POD
 
         await this.reset();
         await this.liberarBloqueados();
