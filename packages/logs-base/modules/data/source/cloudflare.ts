@@ -1,4 +1,3 @@
-import events from "node:events";
 import readline from "node:readline/promises";
 
 import {IPodInfo} from "services-comun/modules/utiles/config";
@@ -127,7 +126,6 @@ export class Cloudflare {
         // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
         await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
 
-        // const promesas: Promise<void>[] = [];
         let lineas = 0;
         const lector = readline.createInterface({
             input: storage.stream,
@@ -147,36 +145,6 @@ export class Cloudflare {
             await this.ingestRegistro(pod, cliente, registro, notify);
             lineas++;
         }
-        // lector.on("line", (linea)=>{
-        //     if (linea.length==0) {
-        //         return;
-        //     }
-        //
-        //     const registro = this.parse(linea.trim());
-        //     if (registro==null) {
-        //         return;
-        //     }
-        //
-        //     promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
-        // });
-        //
-        // await events.once(lector, "close");
-        // await Promise.all(promesas);
-
-        // for (const linea of raw.split("\n")) {
-        //     if (linea.length==0) {
-        //         continue;
-        //     }
-        //
-        //     const registro = this.parse(linea.trim());
-        //     if (registro==null) {
-        //         continue;
-        //     }
-        //
-        //     promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
-        // }
-        //
-        // await Promise.all(promesas);
 
         return lineas;
     }
@@ -207,32 +175,6 @@ export class Cloudflare {
             await PromiseDelayed(0);
             return this.limpiarDuplicados(cliente, source);
         }
-        // const registros = await elasticsearch.search<void>({
-        //     index: `logs-accesos-${cliente.id}`,
-        //     query: {
-        //         term: {
-        //             "labels.source": source,
-        //         },
-        //     },
-        //     size: 10000,
-        //     _source: false,
-        // });
-        //
-        // if (registros.hits.hits.length==0) {
-        //     return;
-        // }
-        //
-        // if (primero) {
-        //     info(`Limpiando ${JSON.stringify(registros.hits.total)} registros duplicados de ${cliente.id} - ${source}`)
-        // }
-        //
-        // await Promise.all(registros.hits.hits.map(registro=>bulk.delete({
-        //     index: registro._index,
-        //     id: registro._id,
-        //     doc: undefined,
-        // })));
-        //
-        // return this.limpiarDuplicados(cliente, source, false);
     }
 
     private static async ingestRegistro(pod: IPodInfo, cliente: ICliente, raw: SourceCloudflare, notify: INotify): Promise<void> {
