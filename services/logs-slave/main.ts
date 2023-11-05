@@ -1,6 +1,6 @@
 import emitter from "node:events";
 
-import {Main} from "services-comun/cluster";
+import {Main} from "services-comun/main";
 
 import {Configuracion} from "./modules/utiles/config";
 import {Engine} from "./modules/engine";
