@@ -1,4 +1,8 @@
+import events from "node:events";
+import readline from "node:readline/promises";
+
 import {IPodInfo} from "services-comun/modules/utiles/config";
+import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
@@ -119,16 +123,18 @@ export interface ResponseHeaders {
 
 export class Cloudflare {
     /* STATIC */
-    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, repesca: boolean, raw?: string): Promise<number> {
-        if (raw==undefined) {
-            return 0;
-        }
-
+    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
         // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
-        await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`, repesca);
+        await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
 
-        const promesas: Promise<void>[] = [];
-        for (const linea of raw.split("\n")) {
+        // const promesas: Promise<void>[] = [];
+        let lineas = 0;
+        const lector = readline.createInterface({
+            input: storage.stream,
+            crlfDelay: Infinity,
+            terminal: false,
+        });
+        for await (const linea of lector) {
             if (linea.length==0) {
                 continue;
             }
@@ -138,15 +144,44 @@ export class Cloudflare {
                 continue;
             }
 
-            promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
+            await this.ingestRegistro(pod, cliente, registro, notify);
+            lineas++;
         }
+        // lector.on("line", (linea)=>{
+        //     if (linea.length==0) {
+        //         return;
+        //     }
+        //
+        //     const registro = this.parse(linea.trim());
+        //     if (registro==null) {
+        //         return;
+        //     }
+        //
+        //     promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
+        // });
+        //
+        // await events.once(lector, "close");
+        // await Promise.all(promesas);
 
-        await Promise.all(promesas);
+        // for (const linea of raw.split("\n")) {
+        //     if (linea.length==0) {
+        //         continue;
+        //     }
+        //
+        //     const registro = this.parse(linea.trim());
+        //     if (registro==null) {
+        //         continue;
+        //     }
+        //
+        //     promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
+        // }
+        //
+        // await Promise.all(promesas);
 
-        return promesas.length;
+        return lineas;
     }
 
-    private static async limpiarDuplicados(cliente: ICliente, source: string, repesca: boolean): Promise<void> {
+    private static async limpiarDuplicados(cliente: ICliente, source: string): Promise<void> {
         try {
             const data = await elasticsearch.deleteByQuery({
                 index: `logs-accesos-${cliente.id}`,
@@ -159,18 +194,18 @@ export class Cloudflare {
 
             const deleted = data.deleted??0;
             if (deleted>0) {
-                info(`Limpiados ${deleted} registros duplicados de ${cliente.id} - ${source}${repesca?" en repesca":""}`);
+                info(`Limpiados ${deleted} registros duplicados de ${cliente.id} - ${source}`);
             }
 
             const failures = data.failures?.length??0;
             if (failures>0) {
-                info(`Pendientes ${failures} registros duplicados de ${cliente.id} - ${source}${repesca?" en repesca":""}`);
+                info(`Pendientes ${failures} registros duplicados de ${cliente.id} - ${source}`);
                 await PromiseDelayed(0);
-                return this.limpiarDuplicados(cliente, source, repesca);
+                return this.limpiarDuplicados(cliente, source);
             }
         } catch (err) {
             await PromiseDelayed(0);
-            return this.limpiarDuplicados(cliente, source, repesca);
+            return this.limpiarDuplicados(cliente, source);
         }
         // const registros = await elasticsearch.search<void>({
         //     index: `logs-accesos-${cliente.id}`,

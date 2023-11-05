@@ -107,15 +107,14 @@ export class Bucket {
         }
     }
 
-    public async ingest(pod: IPodInfo, storage: Google, notify: INotify, repesca: boolean): Promise<void> {
+    public async ingest(pod: IPodInfo, storage: Google, notify: INotify): Promise<void> {
         const data = await this.getArchivo(storage, notify.bucketId, notify.objectId);
         if (data==null) {
             // info("Archivo no encontrado", Bucket.buildSource(notify));
             return;
         }
 
-        const contenido = await data.toString();
-        await Cloudflare.ingest(pod, this.getCliente(), notify, repesca, contenido);
+        await Cloudflare.ingest(pod, this.getCliente(), notify, data);
 
         await data.delete();
     }
