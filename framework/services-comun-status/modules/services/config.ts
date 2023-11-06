@@ -2,11 +2,11 @@ import {INetServiceBase} from "services-comun/modules/net/config/net";
 import {Service} from "services-comun/modules/net/service";
 
 export enum EService {
+    logs_slave,
     status,
     status_auth,
     status_backend,
     status_external,
-    status_logs_slave,
     status_webhook,
 }
 
@@ -32,8 +32,8 @@ mapeo.set(EService.status_external, {
     namespace: "services",
     tags: ["status", "status-external"],
 });
-mapeo.set(EService.status_logs_slave, {
-    endpoint: "proxy-svc-status-logs-slave",
+mapeo.set(EService.logs_slave, {
+    endpoint: "proxy-svc-logs-slave",
     namespace: "services",
     tags: ["logs", "slave"],
 });
