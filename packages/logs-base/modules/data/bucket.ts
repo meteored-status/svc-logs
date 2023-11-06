@@ -125,7 +125,9 @@ export class Bucket {
             return;
         }
 
-        await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data), Bucket.TIMEOUT)
+        await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data).then(async ()=>{
+            await db.delete("DELETE FROM problemas WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
+        }), Bucket.TIMEOUT)
             .catch(async (err)=>{
                 if (err instanceof PromiseTimeoutError) {
                     error("TimeoutError parseando el log", notify.bucketId, notify.objectId);
