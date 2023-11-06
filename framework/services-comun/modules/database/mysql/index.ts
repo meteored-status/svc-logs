@@ -201,6 +201,12 @@ export class MySQL implements Disposable {
         return registros as never as S[];
     }
 
+    public async queryOne<T=any, S=T>(sql: string, params: TipoRegistro[]=[], options: ISelectOptions<T, S>={}): Promise<S> {
+        const [row] = await this.query<T, S>(sql, params, options);
+
+        return row ?? await Promise.reject(`No se encontró ningún registro`);
+    }
+
     public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn}: ISelectOptions<T, S>={}): Promise<S[]> {
         let registros: T[];
 
