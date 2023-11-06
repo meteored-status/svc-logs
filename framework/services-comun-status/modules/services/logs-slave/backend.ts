@@ -11,7 +11,7 @@ export interface INotify {
 
 export class SlaveLogsBackendRequest extends BackendRequest {
     /* STATIC */
-    private static SERVICIO: string = SERVICES.servicio(EService.status_logs_slave).base;
+    private static SERVICIO: string = SERVICES.servicio(EService.logs_slave).base;
 
     @logRejection(true)
     public static async ingest(bucket: string, archivo: string): Promise<RequestResponse<void>> {

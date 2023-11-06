@@ -20,7 +20,7 @@ export class Configuracion extends ConfiguracionNet<IConfiguracion> implements I
     private static configuracion?: Configuracion;
     public static async load(): Promise<Configuracion> {
         return this.configuracion??=await this.cargar<IConfiguracion>({
-            net: SERVICES.configuracion(EService.status_logs_slave),
+            net: SERVICES.configuracion(EService.logs_slave),
             google: GOOGLE,
         }) as Configuracion;
     }
