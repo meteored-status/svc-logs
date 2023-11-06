@@ -123,7 +123,6 @@ export class Bucket {
         }), Bucket.TIMEOUT)
             .catch(async (err)=>{
                 if (err instanceof PromiseTimeoutError) {
-                    error("TimeoutError parseando el log", notify.bucketId, notify.objectId);
                     await db.insert("INSERT IGNORE INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError parseando el log"]);
                     return;
                 }
