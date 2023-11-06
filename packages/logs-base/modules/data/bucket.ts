@@ -1,5 +1,6 @@
 import {Google, IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
+import {error} from "services-comun/modules/utiles/log";
 import {PromiseDelayed, PromiseTimeout, PromiseTimeoutError} from "services-comun/modules/utiles/promise";
 import db from "services-comun/modules/utiles/mysql";
 
@@ -35,7 +36,7 @@ export class Bucket {
             fn: (row)=>new this(row),
         });
 
-        return row ?? Promise.reject(`Bucket no registrado: ${bucket}`);
+        return row ?? await Promise.reject(`Bucket no registrado: ${bucket}`);
     }
 
     public static buildSource(notify: INotify): string {
@@ -113,6 +114,7 @@ export class Bucket {
         const data = await PromiseTimeout(this.getArchivo(storage, notify.bucketId, notify.objectId), Bucket.TIMEOUT)
             .catch(async (err)=>{
                 if (err instanceof PromiseTimeoutError) {
+                    error("TimeoutError descargando el log", notify.bucketId, notify.objectId);
                     await db.insert("INSERT INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError descargando el log"]);
                     return null;
                 }
@@ -126,6 +128,7 @@ export class Bucket {
         await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data), Bucket.TIMEOUT)
             .catch(async (err)=>{
                 if (err instanceof PromiseTimeoutError) {
+                    error("TimeoutError parseando el log", notify.bucketId, notify.objectId);
                     await db.insert("INSERT INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError parseando el log"]);
                     return;
                 }
