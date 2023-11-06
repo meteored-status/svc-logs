@@ -1,6 +1,6 @@
 import {Google, IPodInfo} from "services-comun/modules/utiles/config";
+import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {Storage} from "services-comun/modules/fs/storage";
-import {error} from "services-comun/modules/utiles/log";
 import {PromiseDelayed, PromiseTimeout, PromiseTimeoutError} from "services-comun/modules/utiles/promise";
 import db from "services-comun/modules/utiles/mysql";
 
@@ -10,11 +10,6 @@ interface IBucketMySQL {
     id: string;
     cliente: string;
     grupo: string|null;
-}
-
-export interface INotify {
-    bucketId: string;
-    objectId: string;
 }
 
 export interface ICliente {

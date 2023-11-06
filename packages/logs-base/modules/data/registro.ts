@@ -3,12 +3,13 @@ import {hostname} from "node:os";
 import geoip from "fast-geoip"
 
 import {type ECS} from "services-comun/modules/elasticsearch/ecs";
+import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {type IPodInfo} from "services-comun/modules/utiles/config";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/elasticsearch/bulk";
 
-import {Bucket, type ICliente, type INotify} from "./bucket";
+import {Bucket, type ICliente} from "./bucket";
 import {Crawler} from "./source/crawler";
 import {SourceCloudflare} from "./source/cloudflare";
 
