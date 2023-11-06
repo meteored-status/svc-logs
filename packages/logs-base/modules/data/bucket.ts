@@ -113,7 +113,7 @@ export class Bucket {
         }
 
         await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data).then(async ()=>{
-            await db.delete("DELETE FROM problemas WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
+            await db.update("UPDATE problemas SET end=? WHERE bucket=? AND archivo=?", [new Date(), notify.bucketId, notify.objectId]);
             await data.delete();
         }), Bucket.TIMEOUT)
             .catch(async (err)=>{
