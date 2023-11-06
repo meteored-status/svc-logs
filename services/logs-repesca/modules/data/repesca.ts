@@ -1,3 +1,4 @@
+import bulk from "services-comun/modules/elasticsearch/bulk";
 import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
 
@@ -41,6 +42,7 @@ export class Repesca {
         } else {
             info("Solicitando parada => OK");
         }
+        await bulk.wait();
     }
 
     private static async reset(): Promise<void> {

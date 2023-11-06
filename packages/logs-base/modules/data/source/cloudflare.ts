@@ -145,6 +145,11 @@ export class Cloudflare {
 
             //await this.ingestRegistro(pod, cliente, registro, notify);
             promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
+            if (promesas.length>=1000) {
+                await Promise.all(promesas);
+                promesas.splice(0);
+                await PromiseDelayed();
+            }
             lineas++;
         }
         await Promise.all(promesas);
