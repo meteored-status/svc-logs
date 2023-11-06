@@ -126,6 +126,7 @@ export class Cloudflare {
         // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
         await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
 
+        const promesas: Promise<void>[] = [];
         let lineas = 0;
         const lector = readline.createInterface({
             input: storage.stream,
@@ -142,9 +143,11 @@ export class Cloudflare {
                 continue;
             }
 
-            await this.ingestRegistro(pod, cliente, registro, notify);
+            //await this.ingestRegistro(pod, cliente, registro, notify);
+            promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
             lineas++;
         }
+        await Promise.all(promesas);
 
         return lineas;
     }
