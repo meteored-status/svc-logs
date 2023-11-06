@@ -1,12 +1,13 @@
 import readline from "node:readline/promises";
 
+import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
 
-import {type ICliente, type INotify} from "../bucket";
+import {type ICliente} from "../bucket";
 import {Registro} from "../registro";
 
 export interface SourceCloudflare {
@@ -145,6 +146,11 @@ export class Cloudflare {
 
             //await this.ingestRegistro(pod, cliente, registro, notify);
             promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
+            if (promesas.length>=1000) {
+                await Promise.all(promesas);
+                promesas.splice(0);
+                await PromiseDelayed();
+            }
             lineas++;
         }
         await Promise.all(promesas);
