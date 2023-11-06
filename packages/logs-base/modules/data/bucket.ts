@@ -1,6 +1,6 @@
 import {Google, IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
+import {PromiseDelayed, PromiseTimeout, PromiseTimeoutError} from "services-comun/modules/utiles/promise";
 import db from "services-comun/modules/utiles/mysql";
 
 import {Cloudflare} from "./source/cloudflare";
@@ -23,6 +23,8 @@ export interface ICliente {
 
 export class Bucket {
     /* STATIC */
+    private static readonly TIMEOUT = 60000;
+
     private static CACHE: NodeJS.Dict<Promise<Bucket>> = {};
     protected static async findBucket(bucket: string): Promise<Bucket> {
         return this.CACHE[bucket]??=this.findBucketEjecutar(bucket);
@@ -108,13 +110,27 @@ export class Bucket {
     }
 
     public async ingest(pod: IPodInfo, storage: Google, notify: INotify): Promise<void> {
-        const data = await this.getArchivo(storage, notify.bucketId, notify.objectId);
+        const data = await PromiseTimeout(this.getArchivo(storage, notify.bucketId, notify.objectId), Bucket.TIMEOUT)
+            .catch(async (err)=>{
+                if (err instanceof PromiseTimeoutError) {
+                    await db.insert("INSERT INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError descargando el log"]);
+                    return null;
+                }
+                return Promise.reject(err);
+            });
         if (data==null) {
             // info("Archivo no encontrado", Bucket.buildSource(notify));
             return;
         }
 
-        await Cloudflare.ingest(pod, this.getCliente(), notify, data);
+        await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data), Bucket.TIMEOUT)
+            .catch(async (err)=>{
+                if (err instanceof PromiseTimeoutError) {
+                    await db.insert("INSERT INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError parseando el log"]);
+                    return;
+                }
+                return Promise.reject(err);
+            });
 
         await data.delete();
     }

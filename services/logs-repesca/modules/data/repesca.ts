@@ -112,11 +112,13 @@ export class Repesca {
             await this.delete();
 
         } catch (err) {
+
             if (err instanceof Error) {
                 error(err.message);
             } else {
                 error(err);
             }
+
         }
     }
 
