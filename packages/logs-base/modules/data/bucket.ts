@@ -115,7 +115,7 @@ export class Bucket {
             .catch(async (err)=>{
                 if (err instanceof PromiseTimeoutError) {
                     error("TimeoutError descargando el log", notify.bucketId, notify.objectId);
-                    await db.insert("INSERT INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError descargando el log"]);
+                    await db.insert("INSERT IGNORE INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError descargando el log"]);
                     return null;
                 }
                 return Promise.reject(err);
@@ -129,7 +129,7 @@ export class Bucket {
             .catch(async (err)=>{
                 if (err instanceof PromiseTimeoutError) {
                     error("TimeoutError parseando el log", notify.bucketId, notify.objectId);
-                    await db.insert("INSERT INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError parseando el log"]);
+                    await db.insert("INSERT IGNORE INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError parseando el log"]);
                     return;
                 }
                 return Promise.reject(err);
