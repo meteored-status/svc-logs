@@ -111,15 +111,7 @@ export class Bucket {
     }
 
     public async ingest(pod: IPodInfo, storage: Google, notify: INotify): Promise<void> {
-        const data = await PromiseTimeout(this.getArchivo(storage, notify.bucketId, notify.objectId), Bucket.TIMEOUT)
-            .catch(async (err)=>{
-                if (err instanceof PromiseTimeoutError) {
-                    error("TimeoutError descargando el log", notify.bucketId, notify.objectId);
-                    await db.insert("INSERT IGNORE INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError descargando el log"]);
-                    return null;
-                }
-                return Promise.reject(err);
-            });
+        const data = await this.getArchivo(storage, notify.bucketId, notify.objectId);
         if (data==null) {
             // info("Archivo no encontrado", Bucket.buildSource(notify));
             return;
@@ -127,6 +119,7 @@ export class Bucket {
 
         await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data).then(async ()=>{
             await db.delete("DELETE FROM problemas WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
+            await data.delete();
         }), Bucket.TIMEOUT)
             .catch(async (err)=>{
                 if (err instanceof PromiseTimeoutError) {
@@ -137,6 +130,5 @@ export class Bucket {
                 return Promise.reject(err);
             });
 
-        await data.delete();
     }
 }
