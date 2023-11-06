@@ -1,3 +1,5 @@
+import {SlaveLogsBackendRequest} from "services-comun-status/modules/services/logs-slave/backend";
+import bulk from "services-comun/modules/elasticsearch/bulk";
 import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
 
@@ -41,6 +43,7 @@ export class Repesca {
         } else {
             info("Solicitando parada => OK");
         }
+        await bulk.wait();
     }
 
     private static async reset(): Promise<void> {
@@ -63,16 +66,17 @@ export class Repesca {
     protected static async repescar(config: Configuracion, registros: Repesca[]): Promise<void> {
         const promesas: Promise<void>[] = [];
         for (const registro of registros) {
-            if (registro.cliente!=undefined) {
-                if (registro.grupo!=undefined) {
-                    info(`Repescando [${registro.cliente}: ${registro.grupo}]`, registro.bucket, registro.archivo);
-                } else {
-                    info(`Repescando [${registro.cliente}]`, registro.bucket, registro.archivo);
-                }
-            } else {
-                info(`Repescando []`, registro.bucket, registro.archivo);
-            }
+            // if (registro.cliente!=undefined) {
+            //     if (registro.grupo!=undefined) {
+            //         info(`Repescando [${registro.cliente}: ${registro.grupo}]`, registro.bucket, registro.archivo);
+            //     } else {
+            //         info(`Repescando [${registro.cliente}]`, registro.bucket, registro.archivo);
+            //     }
+            // } else {
+            //     info(`Repescando []`, registro.bucket, registro.archivo);
+            // }
             promesas.push(registro.ingest(config).catch(err=>error(err)));
+            // await PromiseDelayed(100);
         }
         await Promise.all(promesas);
     }
@@ -102,13 +106,14 @@ export class Repesca {
         await this.tratar();
         try {
 
-            await Bucket.run(config, {
-                bucketId: this.bucket,
-                objectId: this.archivo,
-            }, this.cliente!=undefined?{
-                id: this.cliente,
-                grupo: this.grupo,
-            }: undefined);
+            await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
+            // await Bucket.run(config, {
+            //     bucketId: this.bucket,
+            //     objectId: this.archivo,
+            // }, this.cliente!=undefined?{
+            //     id: this.cliente,
+            //     grupo: this.grupo,
+            // }: undefined);
             await this.delete();
 
         } catch (err) {
