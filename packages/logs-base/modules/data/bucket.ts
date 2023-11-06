@@ -23,7 +23,7 @@ export interface ICliente {
 
 export class Bucket {
     /* STATIC */
-    private static readonly TIMEOUT = 60000;
+    private static readonly TIMEOUT = 300000;
 
     private static CACHE: NodeJS.Dict<Promise<Bucket>> = {};
     protected static async findBucket(bucket: string): Promise<Bucket> {
