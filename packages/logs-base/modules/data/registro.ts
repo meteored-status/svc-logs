@@ -17,6 +17,10 @@ const host = hostname();
 export class Registro {
     /* STATIC */
     public static async getGeoIP(ip: string) {
+        if (ip.length==0) {
+            return null;
+        }
+
         try {
             return await geoip.lookup(ip);
         } catch (e) {
