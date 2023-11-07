@@ -1,6 +1,5 @@
 import readline from "node:readline/promises";
 
-import {type ICliente} from "logs-base/modules/data/bucket";
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import bulk from "services-comun/modules/elasticsearch/bulk";
 import {IPodInfo} from "services-comun/modules/utiles/config";
@@ -9,6 +8,7 @@ import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
 
+import {ICliente} from "../bucket";
 import {Registro} from "../registro";
 
 export interface SourceCloudflare {
