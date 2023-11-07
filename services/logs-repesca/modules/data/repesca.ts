@@ -1,5 +1,5 @@
 import {SlaveLogsBackendRequest} from "services-comun-status/modules/services/logs-slave/backend";
-import bulk from "services-comun/modules/elasticsearch/bulk";
+import {Fecha} from "services-comun/modules/utiles/fecha";
 import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
 
@@ -36,14 +36,14 @@ export class Repesca {
 
         await this.reset();
         await this.liberarBloqueados();
-        await this.repescarPendientes(config);
+        await this.liberarHuerfanos(config);
+        await this.repescarPendientes();
 
         if (timeout!=undefined) {
             clearTimeout(timeout);
         } else {
             info("Solicitando parada => OK");
         }
-        await bulk.wait();
     }
 
     private static async reset(): Promise<void> {
@@ -55,15 +55,30 @@ export class Repesca {
         await db.delete("DELETE FROM procesando WHERE (bucket, archivo) IN (SELECT bucket, archivo FROM repesca)");
     }
 
-    protected static async repescarPendientes(config: Configuracion): Promise<void> {
+    private static async liberarHuerfanos(config: Configuracion): Promise<void> {
+        const fechas: string[] = [];
+        const hoy = new Date();
+        if (hoy.getUTCHours()<4) {
+            hoy.setUTCDate(hoy.getUTCDate()-1);
+        }
+        for (let i=1; i<7; i++) {
+            hoy.setUTCDate(hoy.getUTCDate()-1);
+            fechas.unshift(Fecha.generarFechaBloque(hoy));
+        }
+        for (const bucket of await Bucket.searchBuckets()) {
+            await bucket.pescarHuerfanos(config.google, fechas);
+        }
+    }
+
+    protected static async repescarPendientes(): Promise<void> {
         let registros: Repesca[] = [];
         do {
             registros = await this.getPendientes();
-            await this.repescar(config, registros);
+            await this.repescar(registros);
         } while (registros.length>0 && !this.PARAR);
     }
 
-    protected static async repescar(config: Configuracion, registros: Repesca[]): Promise<void> {
+    protected static async repescar(registros: Repesca[]): Promise<void> {
         const promesas: Promise<void>[] = [];
         for (const registro of registros) {
             // if (registro.cliente!=undefined) {
@@ -75,7 +90,7 @@ export class Repesca {
             // } else {
             //     info(`Repescando []`, registro.bucket, registro.archivo);
             // }
-            promesas.push(registro.ingest(config).catch(err=>error(err)));
+            promesas.push(registro.ingest().catch(err=>error(err)));
             // await PromiseDelayed(100);
         }
         await Promise.all(promesas);
@@ -102,18 +117,11 @@ export class Repesca {
     private constructor(protected data: IRepesca) {
     }
 
-    public async ingest(config: Configuracion): Promise<void> {
+    public async ingest(): Promise<void> {
         await this.tratar();
         try {
 
             await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
-            // await Bucket.run(config, {
-            //     bucketId: this.bucket,
-            //     objectId: this.archivo,
-            // }, this.cliente!=undefined?{
-            //     id: this.cliente,
-            //     grupo: this.grupo,
-            // }: undefined);
             await this.delete();
 
         } catch (err) {
