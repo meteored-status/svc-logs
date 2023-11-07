@@ -227,7 +227,7 @@ export class Registro {
     }
 
     public async save(i: number = 0): Promise<void> {
-        bulk.create({
+        await bulk.create({
             index: `logs-accesos-${this.cliente.id}`,
             doc: this,
         })
@@ -242,7 +242,6 @@ export class Registro {
 
                 await Bucket.addRepesca(this.notify, this.cliente, err);
                 // error("Error guardando", err);
-            })
-            .then(()=>{});
+            });
     }
 }
