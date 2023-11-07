@@ -1,4 +1,3 @@
-import {SlaveLogsBackendRequest} from "services-comun-status/modules/services/logs-slave/backend";
 import {Fecha} from "services-comun/modules/utiles/fecha";
 import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
@@ -37,7 +36,7 @@ export class Repesca {
         await this.reset();
         await this.liberarBloqueados();
         await this.liberarHuerfanos(config);
-        await this.repescarPendientes();
+        await this.repescarPendientes(config);
 
         if (timeout!=undefined) {
             clearTimeout(timeout);
@@ -70,15 +69,15 @@ export class Repesca {
         }
     }
 
-    protected static async repescarPendientes(): Promise<void> {
+    protected static async repescarPendientes(config: Configuracion): Promise<void> {
         let registros: Repesca[] = [];
         do {
             registros = await this.getPendientes();
-            await this.repescar(registros);
+            await this.repescar(config, registros);
         } while (registros.length>0 && !this.PARAR);
     }
 
-    protected static async repescar(registros: Repesca[]): Promise<void> {
+    protected static async repescar(config: Configuracion, registros: Repesca[]): Promise<void> {
         const promesas: Promise<void>[] = [];
         for (const registro of registros) {
             // if (registro.cliente!=undefined) {
@@ -90,7 +89,7 @@ export class Repesca {
             // } else {
             //     info(`Repescando []`, registro.bucket, registro.archivo);
             // }
-            promesas.push(registro.ingest().catch(err=>error(err)));
+            promesas.push(registro.ingest(config).catch(err=>error(err)));
             // await PromiseDelayed(100);
         }
         await Promise.all(promesas);
@@ -117,11 +116,18 @@ export class Repesca {
     private constructor(protected data: IRepesca) {
     }
 
-    public async ingest(): Promise<void> {
+    public async ingest(config: Configuracion): Promise<void> {
         await this.tratar();
         try {
 
-            await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
+            // await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
+            await Bucket.run(config, {
+                bucketId: this.bucket,
+                objectId: this.archivo,
+            }, this.cliente!=undefined?{
+                id: this.cliente,
+                grupo: this.grupo,
+            }: undefined);
             await this.delete();
 
         } catch (err) {

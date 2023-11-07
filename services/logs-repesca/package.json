@@ -15,9 +15,13 @@
     "devel": "yarn node --no-warnings devel.js"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.10.0",
     "@google-cloud/storage": "^7.5.0",
+    "crawler-user-agents": "^1.0.115",
+    "fast-geoip": "^1.1.88",
     "mysql2": "^3.6.3",
-    "source-map-support": "^0.5.21"
+    "source-map-support": "^0.5.21",
+    "ua-parser-js": "^2.0.0-beta.1"
   },
   "devDependencies": {
     "@types/node": "^20.8.10",
