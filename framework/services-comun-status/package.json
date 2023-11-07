@@ -4,7 +4,7 @@
   "author": "José Antonio Jiménez",
   "devDependencies": {
     "@types/node": "^20.8.10",
-    "@types/qs": "^6.9.9",
+    "@types/qs": "^6.9.10",
     "qs": "^6.11.2",
     "services-comun": "workspace:*",
     "tslib": "^2.6.2"

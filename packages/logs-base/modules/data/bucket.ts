@@ -1,7 +1,7 @@
 import {Google, IPodInfo} from "services-comun/modules/utiles/config";
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
-import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed, PromiseTimeout, PromiseTimeoutError} from "services-comun/modules/utiles/promise";
+import {Storage} from "services-comun/modules/fs/storage";
 import db from "services-comun/modules/utiles/mysql";
 
 import {Cloudflare} from "./source/cloudflare";
@@ -19,7 +19,7 @@ export interface ICliente {
 
 export class Bucket {
     /* STATIC */
-    private static readonly TIMEOUT = 300000;
+    private static readonly TIMEOUT = 60000;
 
     public static buildSource(notify: INotify): string {
         return `gs://${notify.bucketId}/${notify.objectId}`;
@@ -112,8 +112,12 @@ export class Bucket {
             return;
         }
 
+        // await Cloudflare.ingest(pod, this.getCliente(), notify, data);
+        // await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
+        // await data.delete();
         await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data).then(async ()=>{
-            await db.update("UPDATE problemas SET end=? WHERE bucket=? AND archivo=?", [new Date(), notify.bucketId, notify.objectId]);
+            await db.update("DELETE FROM problemas WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
+            // await db.update("UPDATE problemas SET end=? WHERE bucket=? AND archivo=?", [new Date(), notify.bucketId, notify.objectId]);
             await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
             await data.delete();
         }), Bucket.TIMEOUT)

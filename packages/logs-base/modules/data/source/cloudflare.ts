@@ -1,11 +1,11 @@
 import readline from "node:readline/promises";
 
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
-import bulk from "services-comun/modules/elasticsearch/bulk";
 import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
+import bulk from "services-comun/modules/elasticsearch/bulk";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
 
 import {ICliente} from "../bucket";
@@ -159,7 +159,7 @@ export class Cloudflare {
         return lineas;
     }
 
-    private static async limpiarDuplicados(cliente: ICliente, source: string): Promise<number> {
+    private static async limpiarDuplicados(cliente: ICliente, source: string, retry=0): Promise<number> {
         try {
             const data = await elasticsearch.search({
                 index: `logs-accesos-${cliente.id}`,
@@ -180,16 +180,18 @@ export class Cloudflare {
                 index: actual._index,
                 id: actual._id,
                 doc: undefined,
-            }).catch(err=>{
-                error(err);
-                return Promise.reject(err);
+            // }).catch(err=>{
+            //     error(err);
+            //     return Promise.reject(err);
             })));
 
             return data.hits.hits.length + await this.limpiarDuplicados(cliente, source);
         } catch (err) {
-            error(err);
-            await PromiseDelayed();
-            return this.limpiarDuplicados(cliente, source);
+            if (retry>10) {
+                error(err);
+            }
+            await PromiseDelayed(retry*100);
+            return this.limpiarDuplicados(cliente, source, retry+1);
         }
     }
 
