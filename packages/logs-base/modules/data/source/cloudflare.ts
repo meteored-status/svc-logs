@@ -140,7 +140,7 @@ export class Cloudflare {
             crlfDelay: Infinity,
             terminal: false,
         });
-        console.log(await storage.size);
+
         for await (const linea of lector) {
             if (linea.length==0) {
                 continue;
