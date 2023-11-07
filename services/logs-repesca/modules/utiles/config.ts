@@ -7,7 +7,7 @@ import {
 interface IConfiguracionDefault extends IConfiguracionBase {
     google: IGoogle;
 }
-class Configuracion extends ConfiguracionBase<IConfiguracionDefault> implements IConfiguracionDefault {
+export class Configuracion extends ConfiguracionBase<IConfiguracionDefault> implements IConfiguracionDefault {
     /* INSTANCE */
     public google: Google;
 
@@ -25,5 +25,3 @@ class Configuracion extends ConfiguracionBase<IConfiguracionDefault> implements 
         }) as Configuracion;
     }
 }
-
-export {Configuracion};

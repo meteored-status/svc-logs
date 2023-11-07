@@ -3135,18 +3135,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-repesca@workspace:services/logs-repesca"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.10.0"
     "@google-cloud/storage": "npm:^7.5.0"
     "@types/node": "npm:^20.8.10"
-    crawler-user-agents: "npm:^1.0.115"
-    fast-geoip: "npm:^1.1.88"
     logs-base: "workspace:*"
     mysql2: "npm:^3.6.3"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tslib: "npm:^2.6.2"
-    ua-parser-js: "npm:^2.0.0-beta.1"
   languageName: unknown
   linkType: soft
 
