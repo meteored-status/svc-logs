@@ -22,5 +22,6 @@ export class Bucket extends BucketBase {
             duplicate: ["bucket", "archivo"],
         }));
         await db.bulkInsert(files);
+        await db.update("UPDATE repesca, procesando SET repesca.tratando=1 WHERE repesca.bucket=procesando.bucket AND repesca.archivo=procesando.archivo");
     }
 }
