@@ -2,6 +2,7 @@ import readline from "node:readline/promises";
 
 import {type ICliente} from "logs-base/modules/data/bucket";
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
+import bulk from "services-comun/modules/elasticsearch/bulk";
 import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
@@ -124,8 +125,13 @@ export interface ResponseHeaders {
 export class Cloudflare {
     /* STATIC */
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
+        const time = Date.now();
         // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
-        await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
+
+        const cantidad = await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
+        if (cantidad>0) {
+            info(`Limpiados ${cantidad} registros duplicados de ${cliente.id} - gs://${notify.bucketId}/${notify.objectId}`);
+        }
 
         const promesas: Promise<void>[] = [];
         let lineas = 0;
@@ -134,6 +140,7 @@ export class Cloudflare {
             crlfDelay: Infinity,
             terminal: false,
         });
+        console.log(await storage.size);
         for await (const linea of lector) {
             if (linea.length==0) {
                 continue;
@@ -153,35 +160,50 @@ export class Cloudflare {
             }
             lineas++;
         }
+        console.log(lineas, Date.now()-time);
         await Promise.all(promesas);
 
         return lineas;
     }
 
-    private static async limpiarDuplicados(cliente: ICliente, source: string): Promise<void> {
+    private static async limpiarDuplicados(cliente: ICliente, source: string): Promise<number> {
         try {
-            const data = await elasticsearch.deleteByQuery({
+            const data = await elasticsearch.search({
                 index: `logs-accesos-${cliente.id}`,
                 query: {
                     term: {
                         "labels.source": source,
                     },
                 },
+                _source: false,
+                size: 100,
             });
 
-            const deleted = data.deleted??0;
-            if (deleted>0) {
-                info(`Limpiados ${deleted} registros duplicados de ${cliente.id} - ${source}`);
+            if (data.hits.hits.length==0) {
+                return 0;
             }
 
-            const failures = data.failures?.length??0;
-            if (failures>0) {
-                info(`Pendientes ${failures} registros duplicados de ${cliente.id} - ${source}`);
-                await PromiseDelayed(0);
-                return this.limpiarDuplicados(cliente, source);
-            }
+            await Promise.all(data.hits.hits.map(actual=>bulk.delete({
+                index: actual._index,
+                id: actual._id,
+                doc: undefined,
+            })));
+
+            return data.hits.hits.length + await this.limpiarDuplicados(cliente, source);
+
+            // const deleted = data.deleted??0;
+            // if (deleted>0) {
+            //     info(`Limpiados ${deleted} registros duplicados de ${cliente.id} - ${source}`);
+            // }
+            //
+            // const failures = data.failures?.length??0;
+            // if (failures>0) {
+            //     info(`Pendientes ${failures} registros duplicados de ${cliente.id} - ${source}`);
+            //     await PromiseDelayed(0);
+            //     return this.limpiarDuplicados(cliente, source);
+            // }
         } catch (err) {
-            await PromiseDelayed(0);
+            await PromiseDelayed();
             return this.limpiarDuplicados(cliente, source);
         }
     }
