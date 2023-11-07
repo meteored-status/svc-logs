@@ -125,12 +125,11 @@ export interface ResponseHeaders {
 export class Cloudflare {
     /* STATIC */
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
-        // const time = Date.now();
+        const time = Date.now();
         // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
-
         const cantidad = await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
         if (cantidad>0) {
-            info(`Limpiados ${cantidad} registros duplicados de ${cliente.id} - gs://${notify.bucketId}/${notify.objectId}`);
+            info(`Limpiados ${cantidad} registros duplicados de ${cliente.id} - gs://${notify.bucketId}/${notify.objectId} en ${Date.now()-time}ms`);
         }
 
         const promesas: Promise<void>[] = [];
@@ -151,13 +150,7 @@ export class Cloudflare {
                 continue;
             }
 
-            //await this.ingestRegistro(pod, cliente, registro, notify);
             promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
-            if (promesas.length>=1000) {
-                await Promise.all(promesas);
-                promesas.splice(0);
-                await PromiseDelayed();
-            }
             lineas++;
         }
         // console.log(lineas, Date.now()-time);
@@ -176,7 +169,7 @@ export class Cloudflare {
                     },
                 },
                 _source: false,
-                size: 100,
+                size: 1000,
             });
 
             if (data.hits.hits.length==0) {
@@ -187,22 +180,14 @@ export class Cloudflare {
                 index: actual._index,
                 id: actual._id,
                 doc: undefined,
+            }).catch(err=>{
+                error(err);
+                return Promise.reject(err);
             })));
 
             return data.hits.hits.length + await this.limpiarDuplicados(cliente, source);
-
-            // const deleted = data.deleted??0;
-            // if (deleted>0) {
-            //     info(`Limpiados ${deleted} registros duplicados de ${cliente.id} - ${source}`);
-            // }
-            //
-            // const failures = data.failures?.length??0;
-            // if (failures>0) {
-            //     info(`Pendientes ${failures} registros duplicados de ${cliente.id} - ${source}`);
-            //     await PromiseDelayed(0);
-            //     return this.limpiarDuplicados(cliente, source);
-            // }
         } catch (err) {
+            error(err);
             await PromiseDelayed();
             return this.limpiarDuplicados(cliente, source);
         }
