@@ -126,10 +126,10 @@ export class Cloudflare {
     /* STATIC */
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal): Promise<number> {
         let ok = true;
-
         signal.addEventListener("abort", ()=>{
             ok = false;
         }, {once: true});
+
         const time = Date.now();
         // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
         const cantidad = await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
@@ -147,6 +147,7 @@ export class Cloudflare {
 
         for await (const linea of lector) {
             if (!ok) {
+                lector.close();
                 return Promise.reject("Abortado");
             }
             if (linea.length==0) {
