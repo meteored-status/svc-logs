@@ -24,7 +24,7 @@
     "ua-parser-js": "^2.0.0-beta.1"
   },
   "devDependencies": {
-    "@types/node": "^20.8.10",
+    "@types/node": "^20.9.0",
     "logs-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
