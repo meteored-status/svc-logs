@@ -151,6 +151,7 @@ export class Cloudflare {
             }
 
             promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
+            // await this.ingestRegistro(pod, cliente, registro, notify);
             lineas++;
         }
         // console.log(lineas, Date.now()-time);
@@ -169,7 +170,7 @@ export class Cloudflare {
                     },
                 },
                 _source: false,
-                size: 1000,
+                size: 10000,
             });
 
             if (data.hits.hits.length==0) {
