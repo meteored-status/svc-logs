@@ -126,7 +126,7 @@ export class Repesca {
         await this.tratar();
         try {
 
-            if (Math.random()<0.5) {
+            if (Math.random()<0.75) {
                 await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
             } else {
                 await Bucket.run(config, signal, {
