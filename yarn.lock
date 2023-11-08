@@ -687,12 +687,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/formidable@npm:^3.4.4":
-  version: 3.4.4
-  resolution: "@types/formidable@npm:3.4.4"
+"@types/formidable@npm:^3.4.5":
+  version: 3.4.5
+  resolution: "@types/formidable@npm:3.4.5"
   dependencies:
     "@types/node": "npm:*"
-  checksum: 4528dc508c481db7801badfa2c420920f1923d09953577371ea68ebf64b736065ae3fb35f143cb5d780b7fbb4074a2d2aff12965109c05662264f7bf01f75361
+  checksum: 4ef1039eb250071fc5a2d6195d6c7cfccce52b69e80ede496409bfbdb2a60bac3f17cef5f84bac0347f69a83e884e3036dadf08450f3cf25dfa24fd372cc6850
   languageName: node
   linkType: hard
 
@@ -717,12 +717,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=12.12.47, @types/node@npm:>=13.7.0, @types/node@npm:^20.8.10":
-  version: 20.8.10
-  resolution: "@types/node@npm:20.8.10"
+"@types/node@npm:*, @types/node@npm:>=12.12.47, @types/node@npm:>=13.7.0, @types/node@npm:^20.9.0":
+  version: 20.9.0
+  resolution: "@types/node@npm:20.9.0"
   dependencies:
     undici-types: "npm:~5.26.4"
-  checksum: 8930039077c8ad74de74c724909412bea8110c3f8892bcef8dda3e9629073bed65632ee755f94b252bcdae8ca71cf83e89a4a440a105e2b1b7c9797b43483049
+  checksum: a934f7645ed117a27857147403b0c657ffbca578c8f280e4c21d27dfb43e58dc4f24c4319d4335b8a4fa08e28fb2dc905a5bd5e4bc8878047164c56c1b162139
   languageName: node
   linkType: hard
 
@@ -741,52 +741,52 @@ __metadata:
   linkType: hard
 
 "@types/request@npm:*, @types/request@npm:^2.48.8":
-  version: 2.48.11
-  resolution: "@types/request@npm:2.48.11"
+  version: 2.48.12
+  resolution: "@types/request@npm:2.48.12"
   dependencies:
     "@types/caseless": "npm:*"
     "@types/node": "npm:*"
     "@types/tough-cookie": "npm:*"
     form-data: "npm:^2.5.0"
-  checksum: 50212efbe4916edb78758f6cbf8f5ff5417e3271f526fcc6be01004582c588a699c8e0c91cdb8c8c06244d3a10ca9febf9fcb9f487799c76223ff77ecd2782a9
+  checksum: a7b3f9f14cacc18fe235bb8e57eff1232a04bd3fa3dad29371f24a5d96db2cd295a0c8b6b34ed7efa3efbbcff845febb02c9635cd68c54811c947ea66ae22090
   languageName: node
   linkType: hard
 
 "@types/shimmer@npm:^1.0.2":
-  version: 1.0.4
-  resolution: "@types/shimmer@npm:1.0.4"
-  checksum: f1e7f8b773c34ea21b69686cb100117bd94cc0d1f043e3fc50683453b9936d1295c4f48e1872766556234a9ec48ea37fc7e6b5e56212f66ec65d5b2b5d73092b
+  version: 1.0.5
+  resolution: "@types/shimmer@npm:1.0.5"
+  checksum: f6b0c950dc9187464c5393faf4f4e2b7b44b16665bb49196da28affecceb4fdcd9749af15cbe50f1a2de39f3a84b7523e73445f117f6b48bdbd61b892568364a
   languageName: node
   linkType: hard
 
-"@types/sparkpost@npm:^2.1.7":
-  version: 2.1.7
-  resolution: "@types/sparkpost@npm:2.1.7"
+"@types/sparkpost@npm:^2.1.8":
+  version: 2.1.8
+  resolution: "@types/sparkpost@npm:2.1.8"
   dependencies:
     "@types/node": "npm:*"
     "@types/request": "npm:*"
-  checksum: 1dbffcdde489c556c31360c3415140ac2a312e0082cf2422420b69ca8134515aec5c1979cbe63513335574c4f8383d6e761e7bf6a0c79e1d4cf895f84e4c3d87
+  checksum: a39e925cc752a18fdc067e1462e66b4c16479c8e44b111d015389c43cfbef0cb4bb655302ae5e3660830a956d7f44667521f9721d5d3e8f25b1ca7e0148a3142
   languageName: node
   linkType: hard
 
 "@types/tough-cookie@npm:*":
-  version: 4.0.4
-  resolution: "@types/tough-cookie@npm:4.0.4"
-  checksum: 8ff45bc80bf8f7e02f00c33a4e300307d6431fa21d230cd9dca2e4e2acac5aeb27f03d7fe251bb27a65670e1e82fd6e366f588440a906892b7581da82cd2ec26
+  version: 4.0.5
+  resolution: "@types/tough-cookie@npm:4.0.5"
+  checksum: 01fd82efc8202670865928629697b62fe9bf0c0dcbc5b1c115831caeb073a2c0abb871ff393d7df1ae94ea41e256cb87d2a5a91fd03cdb1b0b4384e08d4ee482
   languageName: node
   linkType: hard
 
-"@types/ua-parser-js@npm:^0.7.38":
-  version: 0.7.38
-  resolution: "@types/ua-parser-js@npm:0.7.38"
-  checksum: 787e870ec893c7c27c0a617dae1518b6bae334b7d7b731b7ff6cd93f1a533bbf01cef77036df83e0950c236c93062d77eebcf73a06c7d86fd275c24951d66fa5
+"@types/ua-parser-js@npm:^0.7.39":
+  version: 0.7.39
+  resolution: "@types/ua-parser-js@npm:0.7.39"
+  checksum: 8d173a79b37f9404cda49e848d82694c4854828ff20d94ddfba53bf9ccd9b4df16bf28f72786cf253a73305e9a54d2f2bb54ebfc144fca2496d3f3f025a79cb5
   languageName: node
   linkType: hard
 
 "@types/validator@npm:^13.7.5":
-  version: 13.11.5
-  resolution: "@types/validator@npm:13.11.5"
-  checksum: 5d0def292cf04b8ecc2e499bdaa66a411f835a389f350136a13c5b25a1859c5158b2a9f20839f8e8b8ea61b348566887abf126735e797decaadfab0eb192b4cb
+  version: 13.11.6
+  resolution: "@types/validator@npm:13.11.6"
+  checksum: 65991ba60029361b279009efb16cf08a576002742c3a5b84e50e19f74083dafb51cdc697ad54e94befb298c46a468b554844552b9ce78663a4cf7e2030a907f6
   languageName: node
   linkType: hard
 
@@ -1805,9 +1805,9 @@ __metadata:
   linkType: hard
 
 "electron-to-chromium@npm:^1.4.535":
-  version: 1.4.577
-  resolution: "electron-to-chromium@npm:1.4.577"
-  checksum: 542016e8a669c9895a15155f96cfb45f33bb1cfa8cf7562737cced81ec9e848292d46a3fb338438210c6001d867aecf86ac84ced2cea3b26b72c25b6b693f37a
+  version: 1.4.578
+  resolution: "electron-to-chromium@npm:1.4.578"
+  checksum: 3bbdaf56a10c9647c8152dac4c417010a1278c651c2f0fdb5d0a326214758c332c26e30d082b11e3472592ace9a438ad731bbf90d77d4f7c764a458b52ecf158
   languageName: node
   linkType: hard
 
@@ -3129,7 +3129,7 @@ __metadata:
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
     "@elastic/elasticsearch": "npm:^8.10.0"
-    "@types/node": "npm:^20.8.10"
+    "@types/node": "npm:^20.9.0"
     crawler-user-agents: "npm:^1.0.115"
     fast-geoip: "npm:^1.1.88"
     services-comun: "workspace:*"
@@ -3145,7 +3145,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^8.10.0"
     "@google-cloud/storage": "npm:^7.5.0"
-    "@types/node": "npm:^20.8.10"
+    "@types/node": "npm:^20.9.0"
     crawler-user-agents: "npm:^1.0.115"
     fast-geoip: "npm:^1.1.88"
     logs-base: "workspace:*"
@@ -3173,8 +3173,8 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.18.0"
     "@opentelemetry/sdk-trace-node": "npm:^1.18.0"
     "@opentelemetry/semantic-conventions": "npm:^1.18.0"
-    "@types/node": "npm:^20.8.10"
-    "@types/ua-parser-js": "npm:^0.7.38"
+    "@types/node": "npm:^20.9.0"
+    "@types/ua-parser-js": "npm:^0.7.39"
     chokidar: "npm:^3.5.3"
     crawler-user-agents: "npm:^1.0.115"
     fast-geoip: "npm:^1.1.88"
@@ -4442,7 +4442,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "services-comun-status@workspace:framework/services-comun-status"
   dependencies:
-    "@types/node": "npm:^20.8.10"
+    "@types/node": "npm:^20.9.0"
     "@types/qs": "npm:^6.9.10"
     qs: "npm:^6.11.2"
     services-comun: "workspace:*"
@@ -4469,11 +4469,11 @@ __metadata:
     "@opentelemetry/semantic-conventions": "npm:^1.18.0"
     "@sequelize/core": "npm:7.0.0-alpha.33"
     "@tsconfig/node20": "npm:^20.1.2"
-    "@types/formidable": "npm:^3.4.4"
-    "@types/node": "npm:^20.8.10"
+    "@types/formidable": "npm:^3.4.5"
+    "@types/node": "npm:^20.9.0"
     "@types/pidusage": "npm:^2.0.5"
     "@types/qs": "npm:^6.9.10"
-    "@types/sparkpost": "npm:^2.1.7"
+    "@types/sparkpost": "npm:^2.1.8"
     chokidar: "npm:^3.5.3"
     css-loader: "npm:^6.8.1"
     fork-ts-checker-webpack-plugin: "npm:^9.0.2"
