@@ -55,6 +55,6 @@
     "webpack-cli": "^5.1.4",
     "webpack-manifest-plugin": "^5.0.0"
   },
-  "version": "2023.11.8+2",
-  "hash": "f26f7e18940cb1d54e696b66cea3ddfb"
+  "version": "2023.11.8+5",
+  "hash": "fb70ed74c69dde7b35fa32fa0cbcfc4d"
 }

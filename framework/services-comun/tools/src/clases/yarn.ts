@@ -1,11 +1,10 @@
 import {spawn} from "node:child_process";
 
 import {Colors} from "./colors";
-import {isFile, readFileBuffer, readFileString, rename, safeWrite, unlink} from "../../../modules/utiles/fs";
 import {Comando} from "./comando";
+import {readFileBuffer, readFileString, safeWrite, unlink} from "../../../modules/utiles/fs";
 
 interface IYarnConfig {
-    clean?: boolean;
     verbose?: boolean;
 }
 
@@ -65,7 +64,7 @@ export class Yarn {
         const lock2 = await readFileString(`${basedir}/yarn.lock`);
 
         if (status==0 && (cambio || lock1!=lock2)) {
-            await this.install(basedir, {clean:true, verbose:false});
+            await this.install(basedir, {verbose:false});
         }
 
         if (cambio) {
@@ -82,7 +81,7 @@ export class Yarn {
         console.log(Colors.colorize([Colors.FgWhite], "Versión de Yarn"));
         console.group();
         const anterior = await this.getPath(basedir);
-        const {status, stdout, stderr} = await Comando.spawn("yarn", ["set", "version", "latest"], {cwd: basedir});
+        const {status, stderr} = await Comando.spawn("yarn", ["set", "version", "latest"], {cwd: basedir});
         if (status!=0) {
             console.error(Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR"));
             console.error(stderr);
@@ -114,41 +113,52 @@ export class Yarn {
     //     console.log(Colors.colorize([Colors.FgWhite], "Instalando plugin"), Colors.colorize(color, plugin), "=>", `[${Colors.colorize([Colors.FgGreen], "OK   ")}]`);
     // }
 
-    public static async install(basedir: string, {clean, verbose}: IYarnConfig = {}): Promise<void> {
-        clean ??= false;
+    public static async install(basedir: string, {verbose}: IYarnConfig = {}): Promise<void> {
+        // clean ??= false;
         verbose ??= true;
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Reinstalando dependencias"));
         console.group();
-        if (clean) {
-            console.log("Limpiando", Colors.colorize([Colors.FgYellow], "yarn.lock"));
-            if (await isFile(`${basedir}/tmp/yarn.lock`)) {
-                await unlink(`${basedir}/tmp/yarn.lock`);
-            }
-            await rename(`${basedir}/yarn.lock`, `${basedir}/tmp/yarn.lock`);
-        }
-        const {status, stdout, stderr} = await Comando.spawn("yarn", ["install"], {
-            cwd: basedir,
-        });
-        if (status!=0) {
-            if (clean && await isFile(`${basedir}/tmp/yarn.lock`)) {
-                console.error(`[${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}] => ${Colors.colorize([Colors.FgMagenta, Colors.Bright], "Rollback")}`);
-                if (await isFile(`${basedir}/yarn.lock`)) {
-                    await unlink(`${basedir}/yarn.lock`);
-                }
-                await rename(`${basedir}/tmp/yarn.lock`, `${basedir}/yarn.lock`);
-                console.groupEnd();
-                return this.install(basedir, {verbose});
-            }
 
-            console.error(`[${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}]`);
-            console.log(stderr);
-            console.groupEnd();
-            return Promise.reject();
+        {
+            const {status, stdout, stderr} = await Comando.spawn("yarn", ["install"], {
+                cwd: basedir,
+            });
+            if (status != 0) {
+                // if (clean && await isFile(`${basedir}/tmp/yarn.lock`)) {
+                //     console.error(`[${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}] => ${Colors.colorize([Colors.FgMagenta, Colors.Bright], "Rollback")}`);
+                //     if (await isFile(`${basedir}/yarn.lock`)) {
+                //         await unlink(`${basedir}/yarn.lock`);
+                //     }
+                //     await rename(`${basedir}/tmp/yarn.lock`, `${basedir}/yarn.lock`);
+                //     console.groupEnd();
+                //     return this.install(basedir, {verbose});
+                // }
+
+                console.error(`[${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}]`);
+                console.log(stderr);
+                console.groupEnd();
+                return Promise.reject();
+            }
+            if (verbose) {
+                console.log(stdout);
+            }
         }
-        console.error(`[${Colors.colorize([Colors.FgGreen, Colors.Bright], "OK   ")}]`);
-        if (verbose) {
-            console.log(stdout);
+
+        {
+            console.log("Optimizando dependencias");
+            const {status, stdout} = await Comando.spawn("yarn", ["dedupe", "--strategy", "highest"], {
+                cwd: basedir,
+            });
+            if (status == 0) {
+                console.error(`[${Colors.colorize([Colors.FgGreen, Colors.Bright], "OK   ")}]`);
+            } else {
+                console.error(`[${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}]`);
+            }
+            if (verbose) {
+                console.log(stdout);
+            }
         }
+
         console.groupEnd();
     }
 
