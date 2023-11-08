@@ -22,8 +22,11 @@ class Slave extends RouteGroup<Configuracion>{
     /* STATIC */
 
     /* INSTANCE */
+    public constructor(configuracion: Configuracion, protected readonly signal: AbortSignal) {
+        super(configuracion);
+    }
     private parse(data: INotifyPubSub): void {
-        Bucket.run(this.configuracion, data)
+        Bucket.run(this.configuracion, data, this.signal)
             .catch(async (err) => {
                 await Bucket.addRepesca(data, undefined, err);
                 if (err instanceof Error) {
@@ -95,7 +98,7 @@ class Slave extends RouteGroup<Configuracion>{
 }
 
 let instancia: Slave|null = null;
-export default (config: Configuracion)=>{
-    return instancia??=new Slave(config);
+export default (config: Configuracion, signal: AbortSignal)=>{
+    return instancia??=new Slave(config, signal);
 };
 

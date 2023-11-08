@@ -5,6 +5,8 @@ export interface IEngine {
     build: (configuracion: Configuracion, unix: number)=>Promise<EngineBase>
 }
 
+export type TAbort = (motivo?: string)=>void;
+
 export class EngineBase<T extends Configuracion=Configuracion> {
     /* STATIC */
     public static async build(configuracion: Configuracion, unix: number): Promise<EngineBase> {
@@ -22,7 +24,18 @@ export class EngineBase<T extends Configuracion=Configuracion> {
     }
 
     /* INSTANCE */
+    private abortController: AbortController;
+
+    public get abortSignal(): AbortSignal {
+        return this.abortController.signal;
+    }
+
     protected constructor(protected readonly configuracion: T, public readonly inicio: number) {
+        this.abortController = new AbortController();
+    }
+
+    public abort(motivo?: string): void {
+        this.abortController.abort(motivo);
     }
 
     public async ejecutar(): Promise<void> {
