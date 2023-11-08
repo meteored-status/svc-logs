@@ -1,5 +1,6 @@
 import {Fecha} from "services-comun/modules/utiles/fecha";
 import {error, info} from "services-comun/modules/utiles/log";
+import bulk from "services-comun/modules/elasticsearch/bulk";
 import db from "services-comun/modules/utiles/mysql";
 
 import {Bucket} from "./bucket";
@@ -43,6 +44,8 @@ export class Repesca {
         } else {
             info("Solicitando parada => OK");
         }
+
+        await bulk.wait();
     }
 
     private static async reset(): Promise<void> {
