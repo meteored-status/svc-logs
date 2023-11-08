@@ -1,4 +1,5 @@
 import {Fecha} from "services-comun/modules/utiles/fecha";
+import {SlaveLogsBackendRequest} from "services-comun-status/modules/services/logs-slave/backend";
 import {TAbort} from "services-comun/modules/engine_base";
 import {error, info} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/elasticsearch/bulk";
@@ -125,14 +126,17 @@ export class Repesca {
         await this.tratar();
         try {
 
-            // await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
-            await Bucket.run(config, signal, {
-                bucketId: this.bucket,
-                objectId: this.archivo,
-            }, this.cliente!=undefined?{
-                id: this.cliente,
-                grupo: this.grupo,
-            }: undefined);
+            if (Math.random()<0.5) {
+                await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
+            } else {
+                await Bucket.run(config, signal, {
+                    bucketId: this.bucket,
+                    objectId: this.archivo,
+                }, this.cliente != undefined ? {
+                    id: this.cliente,
+                    grupo: this.grupo,
+                } : undefined);
+            }
             await this.delete();
 
         } catch (err) {
