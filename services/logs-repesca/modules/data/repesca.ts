@@ -102,7 +102,7 @@ export class Repesca {
     }
 
     protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 50", [], {
+        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 25", [], {
             master: true,
             fn: (row)=>new Repesca({
                 bucket: row.bucket,
@@ -126,7 +126,7 @@ export class Repesca {
         await this.tratar();
         try {
 
-            if (Math.random()<0.75) {
+            if (Math.random()<0.5) {
                 await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
             } else {
                 await Bucket.run(config, signal, {
