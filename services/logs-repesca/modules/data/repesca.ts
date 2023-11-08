@@ -102,7 +102,7 @@ export class Repesca {
     }
 
     protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 10", [], {
+        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 25", [], {
             master: true,
             fn: (row)=>new Repesca({
                 bucket: row.bucket,
