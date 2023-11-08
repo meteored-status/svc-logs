@@ -30,6 +30,7 @@ export abstract class EngineEvent<T extends Configuracion=Configuracion> extends
 
                 if (fileName === "shutdown.lock") {
                     // info("Se ha solicitado el apagado del POD");
+                    this.abort("Se ha solicitado el apagado del POD");
                     this.shutdown().then(()=>{}).catch(()=>{});
                 }
             });
