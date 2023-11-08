@@ -86,15 +86,15 @@ export class Repesca {
     protected static async repescar(config: Configuracion, registros: Repesca[], signal: AbortSignal): Promise<void> {
         const promesas: Promise<void>[] = [];
         for (const registro of registros) {
-            if (registro.cliente!=undefined) {
-                if (registro.grupo!=undefined) {
-                    info(`Repescando [${registro.cliente}: ${registro.grupo}]`, registro.bucket, registro.archivo);
-                } else {
-                    info(`Repescando [${registro.cliente}]`, registro.bucket, registro.archivo);
-                }
-            } else {
-                info(`Repescando []`, registro.bucket, registro.archivo);
-            }
+            // if (registro.cliente!=undefined) {
+            //     if (registro.grupo!=undefined) {
+            //         info(`Repescando [${registro.cliente}: ${registro.grupo}]`, registro.bucket, registro.archivo);
+            //     } else {
+            //         info(`Repescando [${registro.cliente}]`, registro.bucket, registro.archivo);
+            //     }
+            // } else {
+            //     info(`Repescando []`, registro.bucket, registro.archivo);
+            // }
             promesas.push(registro.ingest(config, signal).catch(err=>error(err)));
             // await PromiseDelayed(100);
         }
