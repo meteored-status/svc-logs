@@ -22,6 +22,7 @@ export interface ESBulkResponse extends ESBulkResponseBase {}
 class Bulk {
     /* STATIC */
     private static readonly MAX_LENGTH = 1000;
+    private static LENGTH = 1000;
 
     /* INSTANCE */
     private enviando: number;
@@ -122,10 +123,10 @@ class Bulk {
     private intervalo(): void {
         this.enviando++;
 
-        const length = this.queue.length < Bulk.MAX_LENGTH ?
+        const length = this.queue.length < Bulk.LENGTH ?
             this.queue.length :
-            Math.floor(this.queue.length/Bulk.MAX_LENGTH)*Bulk.MAX_LENGTH;
-        const bloques = arrayChop(this.queue.splice(0, length), Bulk.MAX_LENGTH);
+            Math.floor(this.queue.length/Bulk.LENGTH)*Bulk.LENGTH;
+        const bloques = arrayChop(this.queue.splice(0, length), Bulk.LENGTH);
 
         PromiseDelayed()
             .then(()=>this.procesar(bloques))
@@ -161,6 +162,7 @@ class Bulk {
         // await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
     }
 
+    // todo
     private async procesarEjecutar(operaciones: BulkBase[]): Promise<void> {
         try {
             const data = await elasticsearch.bulk({
@@ -168,13 +170,26 @@ class Bulk {
             });
 
             let errores = 0;
+            let demasiados = false;
             for (let i = 0, len = operaciones.length; i < len; i++) {
                 const actual = data.items[i];
-                if (!operaciones[i].end(actual)) {
+                const resultado = operaciones[i].end(actual);
+                if (resultado!=undefined) {
                     errores++;
+                    switch(resultado.type) {
+                        case "es_rejected_execution_exception":
+                            Bulk.LENGTH = Bulk.LENGTH/2;
+                            demasiados = true;
+                            break;
+                    }
                 }
             }
-            if (errores > 0 && !PRODUCCION) {
+            if (demasiados) {
+                Bulk.LENGTH = Bulk.LENGTH/2;
+            } else {
+                Bulk.LENGTH = Bulk.MAX_LENGTH;
+            }
+            if (!PRODUCCION && errores > 0) {
                 error("Errores en bulk", errores);
             }
 
