@@ -185,7 +185,7 @@ class Bulk {
                 }
             }
             if (demasiados) {
-                Bulk.LENGTH = Bulk.LENGTH/2;
+                Bulk.LENGTH = Bulk.MAX_LENGTH/10;
             } else {
                 Bulk.LENGTH = Bulk.MAX_LENGTH;
             }
