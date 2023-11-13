@@ -1,4 +1,10 @@
-import {BulkOperationContainer, BulkResponseItem, BulkUpdateAction, Script} from "@elastic/elasticsearch/lib/api/types";
+import {
+    BulkOperationContainer,
+    BulkResponseItem,
+    BulkUpdateAction,
+    ErrorCause,
+    Script,
+} from "@elastic/elasticsearch/lib/api/types";
 
 import {ESBulkResponse} from "../base";
 
@@ -36,23 +42,25 @@ export abstract class BulkBase<T=void, C={}> {
         this.rejecter(data);
     }
 
-    public end(data: ESBulkResponse): boolean {
+    public end(data: ESBulkResponse): ErrorCause|undefined {
         const resultado = data[this.accion];
         if (resultado!=undefined) {
             if (resultado.error==undefined) {
                 this.resolve(resultado);
 
-                return true;
+                return;
             }
 
             this.reject(resultado);
 
-            return false;
+            return resultado.error;
         }
 
         this.reject();
 
-        return false;
+        return {
+            type: "error_desconocido",
+        };
     }
 
     protected abstract toBulk(obj: IBulkBase<T>): BulkType<T>[];
