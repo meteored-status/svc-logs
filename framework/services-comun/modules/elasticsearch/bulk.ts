@@ -177,7 +177,6 @@ class Bulk {
                     errores++;
                     switch(resultado.type) {
                         case "es_rejected_execution_exception":
-                            Bulk.LENGTH = Bulk.LENGTH/2;
                             demasiados = true;
                             break;
                     }
@@ -195,8 +194,18 @@ class Bulk {
         } catch (err: any) {
 
             // error("Error de bulk");//, JSON.stringify(err?.meta?.body ?? (err?.body ?? err)));
+            let demasiados = false;
+
             for (const actual of operaciones) {
                 actual.reject(err?.body ?? err);
+                switch(err?.body?.error?.type) {
+                    case "es_rejected_execution_exception":
+                        demasiados = true;
+                        break;
+                }
+            }
+            if (demasiados) {
+                Bulk.LENGTH = Bulk.MAX_LENGTH/10;
             }
 
         }
