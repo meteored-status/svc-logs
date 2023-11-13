@@ -162,11 +162,10 @@ class Bulk {
         // await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
     }
 
-    // todo
     private async procesarEjecutar(operaciones: BulkBase[]): Promise<void> {
         try {
             const data = await elasticsearch.bulk({
-                operations: operaciones.flatMap((actual) => actual.bulk),
+                operations: operaciones.flatMap(actual=>actual.bulk),
             });
 
             let errores = 0;
