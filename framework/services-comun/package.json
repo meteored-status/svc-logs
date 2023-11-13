@@ -13,7 +13,7 @@
     "@elastic/elasticsearch": "^8.10.0",
     "@google-cloud/common": "^5.0.1",
     "@google-cloud/opentelemetry-cloud-trace-exporter": "^2.1.0",
-    "@google-cloud/pubsub": "^4.0.6",
+    "@google-cloud/pubsub": "^4.0.7",
     "@google-cloud/storage": "^7.6.0",
     "@opentelemetry/api": "^1.7.0",
     "@opentelemetry/core": "^1.18.1",
@@ -55,6 +55,6 @@
     "webpack-cli": "^5.1.4",
     "webpack-manifest-plugin": "^5.0.0"
   },
-  "version": "2023.11.9+1",
-  "hash": "d556475735ffea3fc9ef230ba2aeb7dd"
+  "version": "2023.11.13+1",
+  "hash": "6e866d59202e54258d23c5e115670d16"
 }

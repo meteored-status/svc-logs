@@ -55,6 +55,21 @@ export async function PromiseChain<T>(listado: T[], createPromise: PromiseFuncti
     return salida;
 }
 
+type PromiseFunctionWTB<T> = ()=>Promise<T>;
+export async function PromiseChainWTB<T>(listado: PromiseFunctionWTB<T>[], delay: number = 0): Promise<T[]> {
+    const salida: T[] = [];
+    const item: PromiseFunctionWTB<T>|undefined = listado.shift();
+    if (item) {
+        const itemResult = await item();
+        if (delay>0) {
+            await PromiseDelayed(delay);
+        }
+        salida.push(itemResult);
+        return salida.concat(await PromiseChainWTB(listado, delay));
+    }
+    return salida;
+}
+
 export class PromiseTimeoutError extends Error {
     public constructor(public readonly ms: number) {
         super("Timed out");

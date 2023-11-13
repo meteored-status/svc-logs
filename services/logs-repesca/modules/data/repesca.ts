@@ -38,8 +38,8 @@ export class Repesca {
         }, 3300000); // 55 minutos para parar el proceso para evitar que se quede a medias cuando se borre el POD
 
         await this.reset();
-        await this.liberarBloqueados();
-        await this.liberarHuerfanos(config);
+        // await this.liberarBloqueados();
+        // await this.liberarHuerfanos(config);
         await this.repescarPendientes(config, signal);
 
         if (timeout!=undefined) {
