@@ -145,7 +145,7 @@ class Bulk {
         const promesas: Promise<void>[] = [];
         for (const actual of bloques) {
             promesas.push(this.procesarEjecutar(actual));
-            if (promesas.length>=10) {
+            if (promesas.length>=5) {
                 await Promise.allSettled(promesas);
                 promesas.splice(0, promesas.length);
             }
