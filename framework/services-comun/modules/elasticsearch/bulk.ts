@@ -142,7 +142,18 @@ class Bulk {
     }
 
     private async procesar(bloques: BulkBase[][]): Promise<void> {
-        await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
+        const promesas: Promise<void>[] = [];
+        for (const actual of bloques) {
+            promesas.push(this.procesarEjecutar(actual));
+            if (promesas.length>=10) {
+                await Promise.allSettled(promesas);
+                promesas.splice(0, promesas.length);
+            }
+        }
+        if (promesas.length>0) {
+            await Promise.allSettled(promesas);
+        }
+        // await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
     }
 
     private async procesarEjecutar(operaciones: BulkBase[]): Promise<void> {
