@@ -1,4 +1,5 @@
 import {Fecha} from "services-comun/modules/utiles/fecha";
+import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {SlaveLogsBackendRequest} from "services-comun-status/modules/services/logs-slave/backend";
 import {TAbort} from "services-comun/modules/engine_base";
 import {error, info} from "services-comun/modules/utiles/log";
@@ -96,7 +97,7 @@ export class Repesca {
             //     info(`Repescando []`, registro.bucket, registro.archivo);
             // }
             promesas.push(registro.ingest(config, signal).catch(err=>error(err)));
-            // await PromiseDelayed(100);
+            await PromiseDelayed(1000);
         }
         await Promise.all(promesas);
     }
@@ -126,17 +127,17 @@ export class Repesca {
         await this.tratar();
         try {
 
-            if (Math.random()<0.5) {
+            // if (Math.random()<0.5) {
                 await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
-            } else {
-                await Bucket.run(config, signal, {
-                    bucketId: this.bucket,
-                    objectId: this.archivo,
-                }, this.cliente != undefined ? {
-                    id: this.cliente,
-                    grupo: this.grupo,
-                } : undefined);
-            }
+            // } else {
+            //     await Bucket.run(config, signal, {
+            //         bucketId: this.bucket,
+            //         objectId: this.archivo,
+            //     }, this.cliente != undefined ? {
+            //         id: this.cliente,
+            //         grupo: this.grupo,
+            //     } : undefined);
+            // }
             await this.delete();
 
         } catch (err) {
