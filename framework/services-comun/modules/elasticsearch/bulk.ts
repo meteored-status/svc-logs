@@ -1,4 +1,4 @@
-import {type BulkResponseItem, type Script} from "@elastic/elasticsearch/lib/api/types";
+import {type BulkResponseItem, type ErrorCause, type Script} from "@elastic/elasticsearch/lib/api/types";
 import {PromiseDelayed} from "../utiles/promise";
 
 import {
@@ -175,11 +175,7 @@ class Bulk {
                 const resultado = operaciones[i].end(actual);
                 if (resultado!=undefined) {
                     errores++;
-                    switch(resultado.type) {
-                        case "es_rejected_execution_exception":
-                            demasiados = true;
-                            break;
-                    }
+                    demasiados ||= this.isDemasiados(resultado);
                 }
             }
             if (demasiados) {
@@ -191,18 +187,16 @@ class Bulk {
                 error("Errores en bulk", errores);
             }
 
-        } catch (err: any) {
+        } catch (e: any) {
 
+            const err = ((e?.meta?.body)??e?.body)??e;
             // error("Error de bulk");//, JSON.stringify(err?.meta?.body ?? (err?.body ?? err)));
             let demasiados = false;
 
             for (const actual of operaciones) {
-                actual.reject(err?.body ?? err);
-                switch(err?.body?.error?.type) {
-                    case "es_rejected_execution_exception":
-                        demasiados = true;
-                        break;
-                }
+
+                actual.reject(err);
+                demasiados ||= this.isDemasiados(err);
             }
             if (demasiados) {
                 Bulk.LENGTH = Bulk.MAX_LENGTH/10;
@@ -210,6 +204,15 @@ class Bulk {
 
         }
 
+    }
+
+    private isDemasiados(err: ErrorCause): boolean {
+        switch(err?.type) {
+            case "es_rejected_execution_exception":
+                return true;
+            default:
+                return false;
+        }
     }
 }
 
