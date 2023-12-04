@@ -1,5 +1,4 @@
 import {Fecha} from "services-comun/modules/utiles/fecha";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {SlaveLogsBackendRequest} from "services-comun-status/modules/services/logs-slave/backend";
 import {TAbort} from "services-comun/modules/engine_base";
 import {error, info} from "services-comun/modules/utiles/log";
@@ -85,7 +84,7 @@ export class Repesca {
     }
 
     protected static async repescar(config: Configuracion, registros: Repesca[], signal: AbortSignal): Promise<void> {
-        const promesas: Promise<void>[] = [];
+        // const promesas: Promise<void>[] = [];
         for (const registro of registros) {
             // if (registro.cliente!=undefined) {
             //     if (registro.grupo!=undefined) {
@@ -96,14 +95,15 @@ export class Repesca {
             // } else {
             //     info(`Repescando []`, registro.bucket, registro.archivo);
             // }
-            promesas.push(registro.ingest(config, signal).catch(err=>error(err)));
-            await PromiseDelayed(1000);
+            // promesas.push(registro.ingest(config, signal).catch(err=>error(err)));
+            // await PromiseDelayed(1000);
+            await registro.ingest(config, signal).catch(err=>error(err));
         }
-        await Promise.all(promesas);
+        // await Promise.all(promesas);
     }
 
     protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 25", [], {
+        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 1", [], {
             master: true,
             fn: (row)=>new Repesca({
                 bucket: row.bucket,
