@@ -119,12 +119,17 @@ class Bulk {
         }, 1000);
     }
 
+    private maxlen = 0;
     private intervalo(): void {
         this.enviando++;
 
         const length = this.queue.length < Bulk.MAX_LENGTH ?
             this.queue.length :
             Math.floor(this.queue.length/Bulk.MAX_LENGTH)*Bulk.MAX_LENGTH;
+        if (length>this.maxlen) {
+            this.maxlen = length;
+            info("ElasticSearch Bulk => Max length", this.maxlen);
+        }
         const bloques = arrayChop(this.queue.splice(0, length), Bulk.MAX_LENGTH);
 
         PromiseDelayed()
