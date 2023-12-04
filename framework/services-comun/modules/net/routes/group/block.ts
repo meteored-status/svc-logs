@@ -13,14 +13,14 @@ type THandler = (conexion: Conexion, url: string[])=>Promise<number>;
 
 type TUpdaterHandler = (bloque: RouteGroupBlock)=>Promise<IExpresion[]>;
 type TUpdater = {
-    interval: number;
+    interval?: number;
     exec: TUpdaterHandler;
 };
 
 export interface IRouteGroup {
-    expresiones: IExpresion[];
+    expresiones?: IExpresion[];
     stop?: boolean;
-    handler: THandler;
+    handler?: THandler;
     updater?: TUpdater;
     cache?: Partial<IRouteGroupCache>;
 }
@@ -36,8 +36,9 @@ interface IRouteGroupFinal {
 export class RouteGroupBlock {
     /* STATIC */
     public static build(data: IRouteGroup): RouteGroupBlock {
+        data.handler ??= (conexion)=>conexion.error(404, "No se ha definido manejador");
         const nuevo = new this({
-            expresiones: this.parseExpresiones(data.expresiones),
+            expresiones: this.parseExpresiones(data.expresiones??[]),
             stop: data.stop===undefined?false:data.stop,
             handler: data.handler,
             updater: data.updater,
@@ -82,7 +83,7 @@ export class RouteGroupBlock {
     private readonly handler: THandler;
     private readonly prehandler: THandler;
     private updateando: boolean;
-    private readonly updater?: TUpdater;
+    private readonly updater?: Required<TUpdater>;
 
     private constructor(data: IRouteGroupFinal) {
         this.ok = false;
@@ -95,7 +96,12 @@ export class RouteGroupBlock {
             this.handler :
             this.handlerCache;
         this.updateando = false;
-        this.updater = data.updater;
+        this.updater = data.updater==undefined ?
+            undefined :
+            {
+                interval: 0,
+                ...data.updater,
+            };
     }
 
     public setCache(cache: NetCache): void {

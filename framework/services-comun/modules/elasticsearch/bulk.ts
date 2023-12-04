@@ -1,4 +1,4 @@
-import {type BulkResponseItem, type ErrorCause, type Script} from "@elastic/elasticsearch/lib/api/types";
+import {type BulkResponseItem, type Script} from "@elastic/elasticsearch/lib/api/types";
 import {PromiseDelayed} from "../utiles/promise";
 
 import {
@@ -22,7 +22,6 @@ export interface ESBulkResponse extends ESBulkResponseBase {}
 class Bulk {
     /* STATIC */
     private static readonly MAX_LENGTH = 1000;
-    private static LENGTH = 1000;
 
     /* INSTANCE */
     private enviando: number;
@@ -123,10 +122,10 @@ class Bulk {
     private intervalo(): void {
         this.enviando++;
 
-        const length = this.queue.length < Bulk.LENGTH ?
+        const length = this.queue.length < Bulk.MAX_LENGTH ?
             this.queue.length :
-            Math.floor(this.queue.length/Bulk.LENGTH)*Bulk.LENGTH;
-        const bloques = arrayChop(this.queue.splice(0, length), Bulk.LENGTH);
+            Math.floor(this.queue.length/Bulk.MAX_LENGTH)*Bulk.MAX_LENGTH;
+        const bloques = arrayChop(this.queue.splice(0, length), Bulk.MAX_LENGTH);
 
         PromiseDelayed()
             .then(()=>this.procesar(bloques))
@@ -143,76 +142,41 @@ class Bulk {
     }
 
     private async procesar(bloques: BulkBase[][]): Promise<void> {
+        const promesas: Promise<void>[] = [];
         for (const actual of bloques) {
-            await this.procesarEjecutar(actual);
+            promesas.push(this.procesarEjecutar(actual));
+            await PromiseDelayed(100);
         }
-
-        // const promesas: Promise<void>[] = [];
-        // for (const actual of bloques) {
-        //     promesas.push(this.procesarEjecutar(actual));
-        //     if (promesas.length>=5) {
-        //         await Promise.allSettled(promesas);
-        //         promesas.splice(0, promesas.length);
-        //     }
-        // }
-        // if (promesas.length>0) {
-        //     await Promise.allSettled(promesas);
-        // }
-
+        await Promise.all(promesas);
         // await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
     }
 
     private async procesarEjecutar(operaciones: BulkBase[]): Promise<void> {
         try {
             const data = await elasticsearch.bulk({
-                operations: operaciones.flatMap(actual=>actual.bulk),
+                operations: operaciones.flatMap((actual) => actual.bulk),
             });
 
             let errores = 0;
-            let demasiados = false;
             for (let i = 0, len = operaciones.length; i < len; i++) {
                 const actual = data.items[i];
-                const resultado = operaciones[i].end(actual);
-                if (resultado!=undefined) {
+                if (!operaciones[i].end(actual)) {
                     errores++;
-                    demasiados ||= this.isDemasiados(resultado);
                 }
             }
-            if (demasiados) {
-                Bulk.LENGTH = Bulk.MAX_LENGTH/10;
-            } else {
-                Bulk.LENGTH = Bulk.MAX_LENGTH;
-            }
-            if (!PRODUCCION && errores > 0) {
+            if (errores > 0 && !PRODUCCION) {
                 error("Errores en bulk", errores);
             }
 
-        } catch (e: any) {
+        } catch (err: any) {
 
-            const err = ((e?.meta?.body)??e?.body)??e;
             // error("Error de bulk");//, JSON.stringify(err?.meta?.body ?? (err?.body ?? err)));
-            let demasiados = false;
-
             for (const actual of operaciones) {
-
-                actual.reject(err);
-                demasiados ||= this.isDemasiados(err);
-            }
-            if (demasiados) {
-                Bulk.LENGTH = Bulk.MAX_LENGTH/10;
+                actual.reject(err?.body ?? err);
             }
 
         }
 
-    }
-
-    private isDemasiados(err: ErrorCause): boolean {
-        switch(err?.type) {
-            case "es_rejected_execution_exception":
-                return true;
-            default:
-                return false;
-        }
     }
 }
 

@@ -1,10 +1,10 @@
 import cluster, {type Worker} from "node:cluster";
 import os from "node:os";
 
-import {Configuracion, type IConfiguracion, type IConfiguracionLoader} from "./modules/utiles/config";
+import {Configuracion, type IConfiguracionLoader} from "./modules/utiles/config";
+import {error, info, warning} from "./modules/utiles/log";
 import {type IEngine} from "./modules/engine_base";
-import {type IMainConfig, Main as MainBase} from "./main";
-import {info, warning} from "./modules/utiles/log";
+import {IMain, type IMainConfig, Main as MainBase} from "./main";
 import telemetry, {type ITelemetryConfig} from "./modules/telemetry";
 
 enum ClusterStatus {
@@ -15,6 +15,12 @@ enum ClusterStatus {
 export interface IClusterConfig extends IMainConfig {
     minimo_hilos: number;
     telemetry: Partial<ITelemetryConfig>;
+}
+
+export interface ICluster {
+    Engine: IEngine;
+    configuracion: Configuracion;
+    unix: number;
 }
 
 export class Main extends MainBase {
@@ -44,33 +50,39 @@ export class Main extends MainBase {
         });
     }
 
-    private static async startMaster(hilos: number): Promise<void> {
+    private static async startMaster({Engine, configuracion, unix}: ICluster, hilos: number): Promise<void> {
         info("Iniciando Engine");
+        const engine = await Engine.build(configuracion, unix);
+        try {
+            await engine.master();
+        } catch (err) {
+            error("Error iniciando el Master Engine", err);
+        }
         for (let i=  0; i < hilos; i++) {
             this.addSlave();
         }
     }
 
-    private static async startSlave(Engine: IEngine, configuracion: Configuracion<IConfiguracion>, unix: number): Promise<void> {
+    private static async startSlave({Engine, configuracion, unix}: ICluster): Promise<void> {
         info("Iniciando Worker");
         const engine = await Engine.build(configuracion, unix);
         await engine.ejecutar();
     }
 
-    protected static override async start(Engine: IEngine, configLoader: IConfiguracionLoader, unix: number, cfg: Partial<IClusterConfig>): Promise<void> {
+    protected static override async start({Engine, configLoader, unix}: IMain, cfg: Partial<IClusterConfig>): Promise<void> {
         const config = this.buildConfig(cfg);
         await this.startSidecar();
 
         this.CRONJOB = false;
 
+        const configuracion = await configLoader.load();
         if (cluster.isPrimary) {
             if  (config.minimo_hilos<1) {
                 config.minimo_hilos = os.availableParallelism();
             }
-            await this.startMaster(config.minimo_hilos);
+            await this.startMaster({Engine, configuracion, unix}, config.minimo_hilos);
         } else {
-            const configuracion = await configLoader.load();
-            await this.startSlave(Engine, configuracion, unix);
+            await this.startSlave({Engine, configuracion, unix});
         }
 
         process.on('warning', (warn) => {
