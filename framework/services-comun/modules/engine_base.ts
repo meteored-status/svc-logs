@@ -38,9 +38,18 @@ export class EngineBase<T extends Configuracion=Configuracion> {
         this.abortController.abort(motivo);
     }
 
+    public async master(): Promise<void> {
+        // this.usoTiempo();
+        this.initMaster();
+    }
+
     public async ejecutar(): Promise<void> {
         // this.usoTiempo();
         this.init();
+    }
+
+    protected initMaster(): void {
+
     }
 
     protected init(): void {
