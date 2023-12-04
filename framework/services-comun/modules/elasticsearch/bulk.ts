@@ -15,13 +15,11 @@ import {arrayChop} from "../utiles/array";
 import {error, info} from "../utiles/log";
 import elasticsearch from "./elastic";
 
-declare const PRODUCCION: boolean;
-
 export interface ESBulkResponse extends ESBulkResponseBase {}
 
 class Bulk {
     /* STATIC */
-    private static readonly MAX_LENGTH = 1000;
+    private static readonly MAX_LENGTH = 500;
 
     /* INSTANCE */
     private enviando: number;
