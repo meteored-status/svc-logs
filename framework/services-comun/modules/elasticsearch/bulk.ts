@@ -145,7 +145,7 @@ class Bulk {
         const promesas: Promise<void>[] = [];
         for (const actual of bloques) {
             promesas.push(this.procesarEjecutar(actual));
-            await PromiseDelayed(100);
+            await PromiseDelayed(1000);
         }
         await Promise.all(promesas);
         // await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
