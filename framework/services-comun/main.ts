@@ -15,6 +15,12 @@ emitter.setMaxListeners(256);
 export interface IMainConfig {
 }
 
+export interface IMain {
+    Engine: IEngine;
+    configLoader: IConfiguracionLoader;
+    unix: number;
+}
+
 export class Main {
     protected static CRONJOB: boolean = false;
 
@@ -88,13 +94,18 @@ export class Main {
         }
     }
 
-    protected static async start<T extends IMainConfig>(Engine: IEngine, configLoader: IConfiguracionLoader, unix: number, cfg: Partial<T>): Promise<void> {
+    protected static async start<T extends IMainConfig>({Engine, configLoader, unix}: IMain, cfg: Partial<T>): Promise<void> {
         info("Iniciando Engine");
         await this.startSidecar();
 
         const configuracion = await configLoader.load();
         this.CRONJOB = configuracion.pod.cronjob;
         const engine = await Engine.build(configuracion, unix);
+        try {
+            await engine.master();
+        } catch (err) {
+            error("Error iniciando el Master Engine", err);
+        }
         await engine.ejecutar();
         if (configuracion.pod.cronjob) {
             await this.stopSidecar();
@@ -110,8 +121,8 @@ export class Main {
         }
     }
 
-    public static ejecutar<T extends IMainConfig=IMainConfig>(Engine: IEngine, configuracion: IConfiguracionLoader, cfg: Partial<T>={}): void {
-        this.start<T>(Engine, configuracion, Date.now(), cfg).then(async ()=>{}).catch(async (err)=>{
+    public static ejecutar<T extends IMainConfig=IMainConfig>(Engine: IEngine, configLoader: IConfiguracionLoader, cfg: Partial<T>={}): void {
+        this.start<T>({Engine, configLoader, unix: Date.now()}, cfg).then(async ()=>{}).catch(async (err)=>{
             error("Error iniciando el Engine", err);
             if (this.CRONJOB) {
                 try {

@@ -200,9 +200,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@google-cloud/storage@npm:^7.6.0":
-  version: 7.6.0
-  resolution: "@google-cloud/storage@npm:7.6.0"
+"@google-cloud/storage@npm:^7.7.0":
+  version: 7.7.0
+  resolution: "@google-cloud/storage@npm:7.7.0"
   dependencies:
     "@google-cloud/paginator": "npm:^5.0.0"
     "@google-cloud/projectify": "npm:^4.0.0"
@@ -221,7 +221,7 @@ __metadata:
     retry-request: "npm:^7.0.0"
     teeny-request: "npm:^9.0.0"
     uuid: "npm:^8.0.0"
-  checksum: f634154260c89450a72da6a3143ffdc183026d81e0b47ad3356e907fb7dccf88c9253afe18da54afcf17f1ec5afac978f78bf36c6129ae6fb2cfa3132ed49300
+  checksum: d0f1ac5e3eebe378f3b6d94432e6061a7ee0add5d180e3753b89e848da80cf713caab191cd7dcb977653e7c2b4446148f711e603afdd1a3edada4ed81f4788ba
   languageName: node
   linkType: hard
 
@@ -710,12 +710,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=12.12.47, @types/node@npm:>=13.7.0, @types/node@npm:^20.9.0":
-  version: 20.9.0
-  resolution: "@types/node@npm:20.9.0"
+"@types/node@npm:*, @types/node@npm:>=12.12.47, @types/node@npm:>=13.7.0, @types/node@npm:^20.10.3":
+  version: 20.10.3
+  resolution: "@types/node@npm:20.10.3"
   dependencies:
     undici-types: "npm:~5.26.4"
-  checksum: a934f7645ed117a27857147403b0c657ffbca578c8f280e4c21d27dfb43e58dc4f24c4319d4335b8a4fa08e28fb2dc905a5bd5e4bc8878047164c56c1b162139
+  checksum: 7cb506abb0d570bb5133bd06a47115109a813b507323c985c3b4aef2993eed79b6bb62b82194cb5c558b4d349de3d199ee2e8c693b913065a1cd7f526cc65a68
   languageName: node
   linkType: hard
 
@@ -1240,14 +1240,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:1.4.0":
-  version: 1.4.0
-  resolution: "axios@npm:1.4.0"
+"axios@npm:1.6.2":
+  version: 1.6.2
+  resolution: "axios@npm:1.6.2"
   dependencies:
     follow-redirects: "npm:^1.15.0"
     form-data: "npm:^4.0.0"
     proxy-from-env: "npm:^1.1.0"
-  checksum: b987e4259e5cfc93e95ee306c267a44380bbc045789a91b716e8434a75e22987344605eb4e133482fe285dd3a2e0b7e791ba26999965f04a5ecdde25f56930cb
+  checksum: 612bc93f8f738a518e7c5f9de9cc782bcd36aac6bae279160ef6a10260378e21c1786520eab3336898e3d66e0839ebdf739f327fb6d0431baa4d3235703a7652
   languageName: node
   linkType: hard
 
@@ -1630,10 +1630,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"crawler-user-agents@npm:^1.0.115":
-  version: 1.0.115
-  resolution: "crawler-user-agents@npm:1.0.115"
-  checksum: a890e770c42d4bc91f8aaefddb8e3ae9f2c2cc99a2187d14172c3071f158a6cd54a481d6f0b0ae53f569ed2d3cdbc49da4958933b9cad0201e57c274e26e33fe
+"crawler-user-agents@npm:^1.0.116":
+  version: 1.0.116
+  resolution: "crawler-user-agents@npm:1.0.116"
+  checksum: ee44295fb44d63ab3fb6530167e57f8655b0288facb18f517323b4c55307664591a7a2be43231df74c8aaa2e8fe7fc56a6d4ffab9d660d9ede4192ac7687d986
   languageName: node
   linkType: hard
 
@@ -3122,8 +3122,8 @@ __metadata:
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
     "@elastic/elasticsearch": "npm:^8.10.0"
-    "@types/node": "npm:^20.9.0"
-    crawler-user-agents: "npm:^1.0.115"
+    "@types/node": "npm:^20.10.3"
+    crawler-user-agents: "npm:^1.0.116"
     fast-geoip: "npm:^1.1.88"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
@@ -3137,12 +3137,12 @@ __metadata:
   resolution: "logs-repesca@workspace:services/logs-repesca"
   dependencies:
     "@elastic/elasticsearch": "npm:^8.10.0"
-    "@google-cloud/storage": "npm:^7.6.0"
-    "@types/node": "npm:^20.9.0"
-    crawler-user-agents: "npm:^1.0.115"
+    "@google-cloud/storage": "npm:^7.7.0"
+    "@types/node": "npm:^20.10.3"
+    crawler-user-agents: "npm:^1.0.116"
     fast-geoip: "npm:^1.1.88"
     logs-base: "workspace:*"
-    mysql2: "npm:^3.6.3"
+    mysql2: "npm:^3.6.5"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -3157,7 +3157,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^8.10.0"
     "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.1.0"
-    "@google-cloud/storage": "npm:^7.6.0"
+    "@google-cloud/storage": "npm:^7.7.0"
     "@opentelemetry/api": "npm:^1.7.0"
     "@opentelemetry/core": "npm:^1.18.1"
     "@opentelemetry/instrumentation": "npm:^0.45.1"
@@ -3166,15 +3166,15 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.18.1"
     "@opentelemetry/sdk-trace-node": "npm:^1.18.1"
     "@opentelemetry/semantic-conventions": "npm:^1.18.1"
-    "@types/node": "npm:^20.9.0"
+    "@types/node": "npm:^20.10.3"
     "@types/ua-parser-js": "npm:^0.7.39"
     chokidar: "npm:^3.5.3"
-    crawler-user-agents: "npm:^1.0.115"
+    crawler-user-agents: "npm:^1.0.116"
     fast-geoip: "npm:^1.1.88"
     formidable: "npm:^3.5.1"
     hexoid: "npm:^1.0.0"
     logs-base: "workspace:*"
-    mysql2: "npm:^3.6.3"
+    mysql2: "npm:^3.6.5"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -3217,13 +3217,6 @@ __metadata:
   version: 8.0.5
   resolution: "lru-cache@npm:8.0.5"
   checksum: 74153ab136d0c2d735003b8b1c0fa8213c94c2520701dfe8bb31d957f975b3d3665b1ef27ac9a5b9f92c8f581c79008834c0f9bd60c5adf368476f9a95e8fa82
-  languageName: node
-  linkType: hard
-
-"luxon@npm:^1.21.3":
-  version: 1.28.1
-  resolution: "luxon@npm:1.28.1"
-  checksum: dfba84bb3cd72f359c77115d374937c31eccdfa6b383284b6848c075f85e02269d4d9a717608944f2c11c4ca5d3df0fc18197ce4ca21313ddd72619b39ee034c
   languageName: node
   linkType: hard
 
@@ -3463,9 +3456,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mysql2@npm:^3.6.3":
-  version: 3.6.3
-  resolution: "mysql2@npm:3.6.3"
+"mysql2@npm:^3.6.5":
+  version: 3.6.5
+  resolution: "mysql2@npm:3.6.5"
   dependencies:
     denque: "npm:^2.1.0"
     generate-function: "npm:^2.3.1"
@@ -3475,7 +3468,7 @@ __metadata:
     named-placeholders: "npm:^1.1.3"
     seq-queue: "npm:^0.0.5"
     sqlstring: "npm:^2.3.2"
-  checksum: 087007aaef54d50a0fbc8daa0c59cdc2ee73d46100d08dfbc48a4d9f304c04b7e309148d8b4a8e89b62b9d96c7e47cf66439446e772bae51b81dce7450c2423a
+  checksum: 06db473f0723be74ebd47ce0c6fe38fc9f9b5644d847078105bc39385965f234b920225bbbec08538d0a9f58fbb453b596e5c33036f7cc51097bad71c6c1598f
   languageName: node
   linkType: hard
 
@@ -3559,15 +3552,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-ical@npm:^0.16.1":
-  version: 0.16.1
-  resolution: "node-ical@npm:0.16.1"
+"node-ical@npm:^0.17.0":
+  version: 0.17.0
+  resolution: "node-ical@npm:0.17.0"
   dependencies:
-    axios: "npm:1.4.0"
+    axios: "npm:1.6.2"
     moment-timezone: "npm:^0.5.31"
-    rrule: "npm:2.6.4"
+    rrule: "npm:2.8.1"
     uuid: "npm:^9.0.0"
-  checksum: 1762c7fbc8f02b32d8a222df3aa767f23d73de2bae65a9c6f2b3ecfbaddf7dcf1c2e92c4bce6ad4cd534ef06b5e2a13ff03ad4c4067965abe90b0aa52f0a4122
+  checksum: 15620ab9f48e702f4ab6eeba5fc644d922e5353b89e6e8fd155debd344aedb9f19ef76724660f0a478df5c678d8f90607530a8254243b2f7f085a7470b213b18
   languageName: node
   linkType: hard
 
@@ -4294,16 +4287,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"rrule@npm:2.6.4":
-  version: 2.6.4
-  resolution: "rrule@npm:2.6.4"
+"rrule@npm:2.8.1":
+  version: 2.8.1
+  resolution: "rrule@npm:2.8.1"
   dependencies:
-    luxon: "npm:^1.21.3"
-    tslib: "npm:^1.10.0"
-  dependenciesMeta:
-    luxon:
-      optional: true
-  checksum: d122ae0da9c5bdf77a5773de1cb68a4f71ebddf16a86cca8b5d109d6818cd6ddd67f4c52d32d47d84a995e6e66a1e996ce1c613b2d3941cec94af3479bf2d3d7
+    tslib: "npm:^2.4.0"
+  checksum: 5df8cd2fa08f54ecce704750beb80420a3b15009961c77bd1447c1ccbb3abc1f23929228b13532992c89b813b52430ef0fefb8c9aa0b4ffbc50c51edc514731e
   languageName: node
   linkType: hard
 
@@ -4435,7 +4424,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "services-comun-status@workspace:framework/services-comun-status"
   dependencies:
-    "@types/node": "npm:^20.9.0"
+    "@types/node": "npm:^20.10.3"
     "@types/qs": "npm:^6.9.10"
     qs: "npm:^6.11.2"
     services-comun: "workspace:*"
@@ -4451,7 +4440,7 @@ __metadata:
     "@google-cloud/common": "npm:^5.0.1"
     "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.1.0"
     "@google-cloud/pubsub": "npm:^4.0.7"
-    "@google-cloud/storage": "npm:^7.6.0"
+    "@google-cloud/storage": "npm:^7.7.0"
     "@opentelemetry/api": "npm:^1.7.0"
     "@opentelemetry/core": "npm:^1.18.1"
     "@opentelemetry/instrumentation": "npm:^0.45.1"
@@ -4463,7 +4452,7 @@ __metadata:
     "@sequelize/core": "npm:7.0.0-alpha.33"
     "@tsconfig/node20": "npm:^20.1.2"
     "@types/formidable": "npm:^3.4.5"
-    "@types/node": "npm:^20.9.0"
+    "@types/node": "npm:^20.10.3"
     "@types/pidusage": "npm:^2.0.5"
     "@types/qs": "npm:^6.9.10"
     "@types/sparkpost": "npm:^2.1.8"
@@ -4472,8 +4461,8 @@ __metadata:
     fork-ts-checker-webpack-plugin: "npm:^9.0.2"
     formidable: "npm:^3.5.1"
     mini-css-extract-plugin: "npm:^2.7.6"
-    mysql2: "npm:^3.6.3"
-    node-ical: "npm:^0.16.1"
+    mysql2: "npm:^3.6.5"
+    node-ical: "npm:^0.17.0"
     pidusage: "npm:^3.0.2"
     pug: "npm:^3.0.2"
     pug3-loader: "npm:^2.4.3"
@@ -4485,9 +4474,9 @@ __metadata:
     style-loader: "npm:^3.3.3"
     terser-webpack-plugin: "npm:^5.3.9"
     tree-kill: "npm:^1.2.2"
-    ts-loader: "npm:^9.5.0"
+    ts-loader: "npm:^9.5.1"
     tslib: "npm:^2.6.2"
-    typescript: "npm:5.2.2"
+    typescript: "npm:5.3.2"
     webpack: "npm:^5.89.0"
     webpack-cli: "npm:^5.1.4"
     webpack-manifest-plugin: "npm:^5.0.0"
@@ -4932,9 +4921,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-loader@npm:^9.5.0":
-  version: 9.5.0
-  resolution: "ts-loader@npm:9.5.0"
+"ts-loader@npm:^9.5.1":
+  version: 9.5.1
+  resolution: "ts-loader@npm:9.5.1"
   dependencies:
     chalk: "npm:^4.1.0"
     enhanced-resolve: "npm:^5.0.0"
@@ -4944,14 +4933,7 @@ __metadata:
   peerDependencies:
     typescript: "*"
     webpack: ^5.0.0
-  checksum: 8ffc6411ec366eb11bb1420ce444bf60a38072461f75e30731fd3af21dafea0e00fbb3a3588d9cb7a3191237d7ff80a8e3cf5675a36c30d61620fd6f5625b93a
-  languageName: node
-  linkType: hard
-
-"tslib@npm:^1.10.0":
-  version: 1.14.1
-  resolution: "tslib@npm:1.14.1"
-  checksum: 7dbf34e6f55c6492637adb81b555af5e3b4f9cc6b998fb440dac82d3b42bdc91560a35a5fb75e20e24a076c651438234da6743d139e4feabf0783f3cdfe1dddb
+  checksum: a85d43bb6f72858d613290ac02d1d24e81c38ba2dcb98b90465dc97eb6c2036bf9a389542c1a7865548643e7ed39f063fdff2dbb3e5aafbc511de6a3eb275adf
   languageName: node
   linkType: hard
 
@@ -4985,23 +4967,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:5.2.2":
-  version: 5.2.2
-  resolution: "typescript@npm:5.2.2"
+"typescript@npm:5.3.2":
+  version: 5.3.2
+  resolution: "typescript@npm:5.3.2"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: d65e50eb849bd21ff8677e5b9447f9c6e74777e346afd67754934264dcbf4bd59e7d2473f6062d9a015d66bd573311166357e3eb07fea0b52859cf9bb2b58555
+  checksum: 415e5fb6611f5713e460bad48039f00bcfdbde53a2f911727862d5aa9c5d5edd250059a419df382d8f031709e15a169c41eb62b6a401da5eec7ac0f4e359d6ac
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A5.2.2#optional!builtin<compat/typescript>":
-  version: 5.2.2
-  resolution: "typescript@patch:typescript@npm%3A5.2.2#optional!builtin<compat/typescript>::version=5.2.2&hash=f3b441"
+"typescript@patch:typescript@npm%3A5.3.2#optional!builtin<compat/typescript>":
+  version: 5.3.2
+  resolution: "typescript@patch:typescript@npm%3A5.3.2#optional!builtin<compat/typescript>::version=5.3.2&hash=e012d7"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: f79cc2ba802c94c2b78dbb00d767a10adb67368ae764709737dc277273ec148aa4558033a03ce901406b35fddf4eac46dabc94a1e1d12d2587e2b9cfe5707b4a
+  checksum: 1b45cdfb577a78ae7a9a9d0b77a7b772142cb98ba05e4e5aefba7044a028ded885bcecef63166407a5986645cea816fe4986894336aacd5e791796ea79a6a7ed
   languageName: node
   linkType: hard
 

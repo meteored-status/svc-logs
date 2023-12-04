@@ -1,3 +1,7 @@
+// import {setTimeout} from 'node:timers/promises';
+//
+// export {setTimeout as PromiseDelayed};
+
 export async function PromiseDelayed(delay: number = 0): Promise<void> {
     // if (delay>0) {
     return new Promise<void>((resolve: Function) => {
