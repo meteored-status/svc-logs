@@ -28,7 +28,7 @@ class Slave extends RouteGroup<Configuracion>{
     private parse(data: INotifyPubSub): void {
         Bucket.run(this.configuracion, data, this.signal)
             .catch(async (err) => {
-                await Bucket.addRepesca(data, undefined, err);
+                await Bucket.addRepesca(data, false, undefined, err);
                 if (err instanceof Error) {
                     if (err.message.startsWith("Duplicate entry")) {
                         return;

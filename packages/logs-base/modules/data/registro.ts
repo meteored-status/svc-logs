@@ -226,7 +226,7 @@ export class Registro {
         return this.data;
     }
 
-    public async save(i: number = 0): Promise<void> {
+    public async save(repesca: boolean, i: number = 0): Promise<void> {
         bulk.create({
             index: `logs-accesos-${this.cliente.id}`,
             doc: this,
@@ -237,10 +237,10 @@ export class Registro {
                     i++;
                     await PromiseDelayed(i * multiplicador * 1000);
 
-                    return this.save(i);
+                    return this.save(repesca, i);
                 }
 
-                await Bucket.addRepesca(this.notify, this.cliente, err);
+                await Bucket.addRepesca(this.notify, repesca, this.cliente, err);
                 // error("Error guardando", err);
             })
             .then(()=>{});

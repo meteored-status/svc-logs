@@ -58,9 +58,9 @@ export class Bucket {
         await db.insert("DELETE FROM procesando WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
     }
 
-    public static async addRepesca(notify: INotify, cliente?: ICliente, err?: any): Promise<void> {
+    public static async addRepesca(notify: INotify, repesca: boolean, cliente?: ICliente, err?: any): Promise<void> {
         const mensaje = err!=undefined?JSON.stringify(err):null;
-        await db.insert("INSERT INTO repesca (bucket, archivo, cliente, grupo, mensaje) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, tratando=0", [notify.bucketId, notify.objectId, cliente?.id??null, cliente?.grupo??null, mensaje, mensaje]);
+        await db.insert("INSERT INTO repesca (bucket, archivo, cliente, grupo, mensaje, origen) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, tratando=0", [notify.bucketId, notify.objectId, cliente?.id??null, cliente?.grupo??null, mensaje, mensaje, !repesca?"ingest":"repesca"]);
         await db.insert("UPDATE procesando SET estado=? WHERE bucket=? AND archivo=?", ["error", notify.bucketId, notify.objectId]);
     }
 
