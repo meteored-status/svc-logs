@@ -39,7 +39,7 @@ export class Bucket {
     }
 
     public static async addProcesando(notify: INotify): Promise<void> {
-        await db.insert("INSERT INTO procesando (bucket, archivo) VALUES (?, ?)", [notify.bucketId, notify.objectId]);
+        await db.insert("INSERT INTO procesando (bucket, archivo) VALUES (?, ?) ON DUPLICATE KEY UPDATE estado=?", [notify.bucketId, notify.objectId, "recibido"]);
     }
 
     public static async update(notify: INotify, cliente: ICliente): Promise<void> {
