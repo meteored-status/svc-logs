@@ -124,17 +124,19 @@ export interface ResponseHeaders {
 
 export class Cloudflare {
     /* STATIC */
-    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal): Promise<number> {
+    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
         let ok = true;
         signal.addEventListener("abort", ()=>{
             ok = false;
         }, {once: true});
 
-        const time = Date.now();
-        // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
-        const cantidad = await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
-        if (cantidad>0) {
-            info(`Limpiados ${cantidad} registros duplicados de ${cliente.id} - gs://${notify.bucketId}/${notify.objectId} en ${Date.now()-time}ms`);
+        if (repesca) {
+            const time = Date.now();
+            // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
+            const cantidad = await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
+            if (cantidad > 0) {
+                info(`Limpiados ${cantidad} registros duplicados de ${cliente.id} - gs://${notify.bucketId}/${notify.objectId} en ${Date.now() - time}ms`);
+            }
         }
 
         const promesas: Promise<void>[] = [];

@@ -19,7 +19,7 @@ export interface ESBulkResponse extends ESBulkResponseBase {}
 
 class Bulk {
     /* STATIC */
-    private static readonly MAX_LENGTH = 500;
+    private static readonly MAX_LENGTH = 100;
 
     /* INSTANCE */
     private enviando: number;
@@ -148,7 +148,7 @@ class Bulk {
         const promesas: Promise<void>[] = [];
         for (const actual of bloques) {
             promesas.push(this.procesarEjecutar(actual));
-            await PromiseDelayed(100);
+            await PromiseDelayed();
         }
         await Promise.all(promesas);
         // await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
