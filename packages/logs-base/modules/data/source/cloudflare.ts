@@ -161,7 +161,7 @@ export class Cloudflare {
                 continue;
             }
 
-            promesas.push(this.ingestRegistro(pod, cliente, registro, notify));
+            promesas.push(this.ingestRegistro(pod, cliente, registro, notify, repesca));
             // await this.ingestRegistro(pod, cliente, registro, notify);
             lineas++;
         }
@@ -207,9 +207,9 @@ export class Cloudflare {
         }
     }
 
-    private static async ingestRegistro(pod: IPodInfo, cliente: ICliente, raw: SourceCloudflare, notify: INotify): Promise<void> {
+    private static async ingestRegistro(pod: IPodInfo, cliente: ICliente, raw: SourceCloudflare, notify: INotify, repesca: boolean): Promise<void> {
         const registro = await Registro.build(pod, cliente, raw, notify);
-        await registro.save();
+        await registro.save(repesca);
     }
 
     private static parse(json: string): SourceCloudflare|null {

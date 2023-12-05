@@ -29,7 +29,7 @@ export class Bucket extends BucketBase {
 
         await bucket.ingest(config.pod, config.google, notify, signal, true)
             .then(()=>this.endProcesando(notify))
-            .catch(err=>this.addRepesca(notify, cliente, err));
+            .catch(err=>this.addRepesca(notify, true, cliente, err));
     }
 
     public static async searchBuckets(): Promise<Bucket[]> {
@@ -43,8 +43,8 @@ export class Bucket extends BucketBase {
         const bloques = await Promise.all(fechas.map(fecha=>Storage.list(google, this.id, fecha)));
         const files: IInsert[] = bloques.flat().map(file=>({
             table: "repesca",
-            query: "INSERT INTO repesca (bucket, archivo) VALUES (?, ?)",
-            params: [this.id, file.name],
+            query: "INSERT INTO repesca (bucket, archivo, origen) VALUES (?, ?, ?)",
+            params: [this.id, file.name, "huerfano"],
             duplicate: ["bucket", "archivo"],
         }));
         await db.bulkInsert(files);
