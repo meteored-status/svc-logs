@@ -1,4 +1,5 @@
-import * as fs from "node:fs";
+import fs from "node:fs";
+import {Readable} from "node:stream";
 import {File, Storage as StorageBase} from "@google-cloud/storage";
 import {Metadata} from "@google-cloud/common";
 
@@ -136,7 +137,7 @@ export class Storage implements IDocumento {
     public timeCreated: Date;
     public size: Promise<number>;
 
-    public get stream(): NodeJS.ReadableStream {
+    public get stream(): Readable {
         return this.file.createReadStream();
     }
 

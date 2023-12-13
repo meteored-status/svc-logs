@@ -60,7 +60,8 @@ export class Init {
             "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
             "packd": "yarn mrpack devel -c",
             "packd-f": "yarn mrpack devel -c -f",
-            "g:packd": "yarn workspace services-comun webpack --env entorno=desarrollo --config \"$INIT_CWD/webpack.develop.config.js\"",
+            "g:packd": "TS_NODE_PROJECT=\"webpack/tsconfig.json\" yarn workspace services-comun webpack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"webpack/webpack.config.ts\"",
+            // "g:packd": "yarn workspace services-comun webpack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"$INIT_CWD/webpack.develop.config.js\"",
             // "deploy": "yarn node framework/services-comun/deploy.js $ENV | sh",
             "update": "yarn mrpack update",
         };
@@ -220,6 +221,7 @@ export class Init {
         } else {
             config.credenciales = nextjs.credenciales??[];
         }
+        config.bundle = paquete.config.bundle??{};
 
         paquete.config = config;
 
