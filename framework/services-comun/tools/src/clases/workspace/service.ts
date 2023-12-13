@@ -32,6 +32,16 @@ export enum EFramework {
     // astro = "astro",
 }
 
+export interface IConfigServiceComponentes {
+    pug: boolean;
+    css: boolean;
+    css_type: 0|1|2; // 0=inyectado por JS | 1=archivo independiente | 2=critical
+}
+export interface IConfigServiceBundle {
+    componentes?: IConfigServiceComponentes;
+    entries?: NodeJS.Dict<string>;
+    prefix?: string;
+}
 export interface IConfigService {
     cronjob: boolean;
     devel: boolean;
@@ -46,6 +56,12 @@ export interface IConfigService {
         source: string;
         target: string;
     }[];
+    bundle: {
+        componentes?: IConfigServiceComponentes;
+        entries?: NodeJS.Dict<string>;
+        prefix?: string;
+        web?: IConfigServiceBundle|IConfigServiceBundle[];
+    };
 }
 
 export interface IService extends IWorkspace {

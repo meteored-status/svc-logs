@@ -147,7 +147,11 @@ export class Compilar {
     }
 
     private async webpack(env: string): Promise<void> {
-        const {status, stderr} = await Comando.spawn("yarn", ["workspace", "services-comun", "webpack", "--env", `entorno=${env}`, "--config", `${this.dir}/webpack.production.config.js`], {cwd: this.basedir});
+        const entorno: Record<string, string> = {
+            TS_NODE_PROJECT: "webpack/tsconfig.json",
+        };
+        const {status, stderr} = await Comando.spawn("yarn", ["workspace", "services-comun", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `webpack/webpack.config.ts`], {cwd: this.basedir, env: entorno});
+        // const {status, stderr} = await Comando.spawn("yarn", ["workspace", "services-comun", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `${this.dir}/webpack.production.config.js`], {cwd: this.basedir});
         if (status != 0) {
             console.error(this.name, "[KO   ]", "Error compilando:");
             console.error(stderr);

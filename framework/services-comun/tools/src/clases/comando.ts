@@ -2,6 +2,7 @@ import {spawn} from "node:child_process";
 
 interface IComandoConfig {
     cwd?: string;
+    env?: Record<string, string>;
 }
 
 interface IComandoSalida {
@@ -12,11 +13,15 @@ interface IComandoSalida {
 
 export class Comando {
     /* STATIC */
-    public static async spawn(comando: string, params: string[] = [], {cwd}: IComandoConfig = {}): Promise<IComandoSalida> {
+    public static async spawn(comando: string, params: string[] = [], {cwd, env={}}: IComandoConfig = {}): Promise<IComandoSalida> {
 
         const proceso = spawn(comando, params, {
             cwd,
-            env: { ...process.env, FORCE_COLOR: "1" },
+            env: {
+                ...process.env,
+                ...env,
+                FORCE_COLOR: "1",
+            },
             stdio: "pipe",
             shell: true,
         });

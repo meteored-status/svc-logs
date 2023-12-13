@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import {Readable} from "node:stream";
 import {readFileSync} from "node:fs";
 import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat} from "node:fs/promises";
 
@@ -160,42 +161,39 @@ export async function safeWrite(local: string, data: string|Buffer, sobreescribi
     });
 }
 
-export async function safeWriteStream(inbound: NodeJS.ReadWriteStream|NodeJS.ReadableStream, local: string, sobreescribir: boolean=false): Promise<boolean> {
+export async function safeWriteStream(inbound: Readable, local: string, sobreescribir: boolean=false): Promise<boolean> {
     const rnd = `${local}.${random()}`;
-    return pipeline(inbound, fs.createWriteStream(rnd, {
+    return await pipeline(inbound, fs.createWriteStream(rnd, {
         flags: "wx",
-    })).then(async ()=>{
-        return overwrite(rnd, local, sobreescribir);
-    }).catch(async (err)=>{
-        // const partes = local.split("/");
-        // partes.pop();
-        // if (partes.length>0) {
-        //     const base = partes.join("/");
-        //     await mkdir(base, true);
-        // }
-        await warning(`Error escribiendo temporal ${rnd}`, err);
-        if (await isFile(rnd)) {
-            await unlink(rnd);
-        }
-        return false;
-    });
+    }))
+        .catch((err)=>{
+            warning(`Error escribiendo temporal ${rnd}`, err);
+            return Promise.reject(err);
+        })
+        .then(async ()=>overwrite(rnd, local, sobreescribir))
+        .catch(async ()=>{
+            if (await isFile(rnd)) {
+                await unlink(rnd);
+            }
+            return false;
+        });
 }
 
-export async function safeWriteStreamBuffer(inbound:NodeJS.ReadWriteStream|NodeJS.ReadableStream, local:string, sobreescribir:boolean=false): Promise<void> {
+export async function safeWriteStreamBuffer(inbound: Readable, local: string, sobreescribir: boolean=false): Promise<boolean> {
     const buffer: Buffer[] = [];
     inbound.on("data", (data: Buffer)=>{
         buffer.push(data);
     });
-    return new Promise<void>((resolve)=>{
+    return new Promise<boolean>((resolve)=>{
         inbound.on("end", ()=>{
             safeWrite(local, Buffer.concat(buffer), sobreescribir).then(()=>{
-                resolve();
+                resolve(true);
             }).catch(()=>{
-                resolve();
+                resolve(false);
             });
         });
         inbound.on("error", ()=>{
-            resolve();
+            resolve(false);
         });
         // inbound.on("error", (err)=>{
         //     warning("Error en safeWriteStreamBuffer", err);
