@@ -48,12 +48,15 @@ export class Google<T extends ConfigGenerico=ConfigGenerico> implements IGoogle 
     }
 }
 
+type StringOne = [string, ...string[]];
+
 export interface IPodInfo {
     filesdir: string;
     version: string;
     hash: string;
     host: string;
     servicio: string;
+    servicios: StringOne;
     zona: string;
     cronjob: boolean;
     replica: string;
@@ -78,10 +81,11 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
     }
 
     /* INSTANCE */
-    public readonly pod: IPodInfo;
+    public readonly pod: Readonly<IPodInfo>;
 
-    protected constructor(protected defecto: T, protected readonly user: Partial<T>, servicio: string, version: string, cronjob: boolean) {
-        const host = PRODUCCION?os.hostname():servicio;
+    protected constructor(protected defecto: T, protected readonly user: Partial<T>, svc: string|string[], version: string, cronjob: boolean) {
+        const servicios = (!Array.isArray(svc)?[svc]:(svc.length>0?svc:["unknown"])) as StringOne;
+        const host = PRODUCCION?os.hostname():servicios[0];
 
         const partes = host.split("-");
         let replica: string;
@@ -113,12 +117,15 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
             deploy = random(10).toLowerCase();
         }
 
+        const servicio = servicios.find(svc=>host.includes(svc))??servicios[0];
+
         this.pod = Object.seal({
             filesdir: 'files',
             version,
             hash: crypto.createHash('md5').update(version).digest("hex"),
             host,
             servicio,
+            servicios,
             zona: process.env["ZONA"]??"desarrollo",
             cronjob,
             replica,

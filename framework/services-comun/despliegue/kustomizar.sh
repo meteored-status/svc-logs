@@ -12,15 +12,15 @@ parseWorkspace() {
   local WORKSPACE="${3}"
 
   echo "Kustomizando ${WORKSPACE}"
+  ./jq -r ".[].resourceLabels.zona" "entornos.json" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > services/${WORKSPACE}/despliegue_{}.yaml"
 
   if [[ $(./jq -r '.config.generar' "services/${WORKSPACE}/package.json") == "true" ]]; then
     if [[ $(./jq -r '.config.deploy' "services/${WORKSPACE}/package.json") == "true" ]]; then
       if [[ $(./jq -r '.config.runtime' "services/${WORKSPACE}/package.json") != "browser" ]]; then
-        SERVICIO=$(./jq -r '.servicio' "services/${WORKSPACE}/package.json")
-        VERSION=$(cat "services/${WORKSPACE}/version.txt"|| echo "0000.00.00")
+        SERVICIOS=$(./jq -r '.servicio | if type == "array" then .[] else . end' "services/${WORKSPACE}/package.json")
+        VERSION=$(cat "services/${WORKSPACE}/version.txt" || echo "0000.00.00")
         BASETOP=$(pwd)
 
-        echo "${WORKSPACE}: Versión ${VERSION}"
 
         parseWorkspaceEjecutar() {
           local PROYECTO="${1}"
@@ -38,11 +38,16 @@ parseWorkspace() {
           ./kustomize edit set image "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${VERSION}"
 
           cd "${BASETOP}"
-          ./kustomize build "kustomizar/services/${SERVICIO}/entornos/${CLUSTER}" > "services/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
+          ./kustomize build "kustomizar/services/${SERVICIO}/entornos/${CLUSTER}" >> "services/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
+          echo "---" >> "services/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
         }
         export -f parseWorkspaceEjecutar
 
-        ./jq -r ".[].resourceLabels.zona" "entornos.json" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${PROYECTO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${BASETOP} {}"
+        echo "${SERVICIOS}" | while read SERVICIO; do
+          echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
+
+          ./jq -r ".[].resourceLabels.zona" "entornos.json" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${PROYECTO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${BASETOP} {}"
+        done
       fi
     fi
   fi
