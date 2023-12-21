@@ -31,6 +31,7 @@ class NetEndpoints implements INetEndpoints {
 
 export interface INetServiceBase {
     endpoint: string;
+    alias?: number;
     path?: string;
     maxConnections?: number;
     timeout?: number;

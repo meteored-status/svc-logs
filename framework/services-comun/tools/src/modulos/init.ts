@@ -1,6 +1,7 @@
 import {IModulo, IModuloConfig, Modulo} from "../modulo";
 import {Colors} from "../clases/colors";
 import {Init} from "../clases/init";
+import {Yarn} from "../clases/yarn";
 
 export interface IInitConfig extends IModuloConfig {
     options: IModuloConfig["options"] & {
@@ -35,7 +36,10 @@ export class ModuloInit<T extends IInitConfig> extends Modulo<T> {
         if (config.help) {
             this.mostrarAyuda();
         } else {
-            await Init.init(this.root);
+            const cambio = await Init.init(this.root);
+            if (cambio) {
+                await Yarn.install(this.root, {verbose:false});
+            }
         }
     }
 

@@ -6,9 +6,11 @@ import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
 import IGNORE from "./init/ignore";
+import {md5} from "../../../modules/utiles/hash";
 
 interface IConfiguracion {
     openTelemetry: boolean;
+    cambio: boolean;
 }
 
 export class Init {
@@ -24,20 +26,22 @@ export class Init {
         ]);
 
         await this.initConfig(basedir, workspaces);
-        await this.initYarnRC(basedir, config);
+        const cambio = await this.initYarnRC(basedir, config);
 
-        // todo analizar si hay cambios arriba
         console.groupEnd();
-        return true;
+
+        return cambio || config.cambio;
     }
 
     private static reduceConfig(configs: IConfiguracion[]): IConfiguracion {
         return configs.reduce((prev, actual)=>{
             return {
                 openTelemetry: prev.openTelemetry || actual.openTelemetry,
+                cambio: prev.cambio || actual.cambio,
             };
         }, {
             openTelemetry: false,
+            cambio: false,
         });
     }
 
@@ -189,8 +193,14 @@ export class Init {
     }
 
     private static async initService(basedir: string, workspace: string): Promise<IConfiguracion> {
+        const salida: IConfiguracion = {
+            openTelemetry: false,
+            cambio: false,
+        };
+
         const paquetePropio = await readJSON(`${basedir}/framework/${process.env["npm_package_name"]}/package.json`);
         const paquete = await readJSON(`${basedir}/services/${workspace}/package.json`);
+        const hash = md5(JSON.stringify(paquete));
         paquete.config ??= {};
         if (paquete.config.nextjs!==undefined && typeof paquete.config.nextjs!=="object") {
             paquete.config.nextjs = {};
@@ -229,7 +239,6 @@ export class Init {
             delete paquete.nodemonConfig;
         }
 
-        let openTelemetry = false;
         if (paquete.config.generar) {
             paquete.scripts ??= {};
             switch(paquete.config.framework) {
@@ -263,8 +272,18 @@ export class Init {
                 paquete.dependencies??={};
                 paquete.devDependencies??={};
 
+                const hash=`${md5(JSON.stringify(paquete.dependencies))}${md5(JSON.stringify(paquete.devDependencies))}`;
+
                 paquete.dependencies["source-map-support"] ??= paquetePropio.devDependencies["source-map-support"];
 
+                for (const [lib, version] of Object.entries(paquetePropio.devDependencies)) {
+                    if (paquete.dependencies[lib]!=undefined) {
+                        paquete.dependencies[lib] = version;
+                    }
+                    if (paquete.devDependencies[lib]!=undefined) {
+                        paquete.devDependencies[lib] = version;
+                    }
+                }
                 if (!config.cronjob) {
                     paquete.dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= paquetePropio.devDependencies["@google-cloud/opentelemetry-cloud-trace-exporter"];
                     paquete.dependencies["@opentelemetry/api"] ??= paquetePropio.devDependencies["@opentelemetry/api"];
@@ -289,7 +308,7 @@ export class Init {
                         delete paquete.dependencies["formidable"];
                     }
 
-                    openTelemetry = true;
+                    salida.openTelemetry = true;
                 }
 
                 if (paquete.devDependencies["source-map-support"]!==undefined) {
@@ -335,9 +354,9 @@ export class Init {
             await unlink(`${basedir}/services/${workspace}/pack.js`);
         }
 
-        return {
-            openTelemetry,
-        };
+        salida.cambio = hash!=md5(JSON.stringify(paquete));
+
+        return salida;
     }
 
     private static async initScripts(basedir: string, scripts: string[]): Promise<IConfiguracion> {
@@ -352,6 +371,7 @@ export class Init {
 
     private static async initScript(basedir: string, workspace: string): Promise<IConfiguracion> {
         const paquete = await readJSON(`${basedir}/scripts/${workspace}/package.json`);
+        const hash = md5(JSON.stringify(paquete));
         paquete.scripts ??= {};
         paquete.scripts.packd = `yarn g:packd`;
 
@@ -359,6 +379,7 @@ export class Init {
 
         return {
             openTelemetry: false,
+            cambio: hash!=md5(JSON.stringify(paquete)),
         };
     }
 
@@ -410,10 +431,10 @@ export class Init {
         console.groupEnd();
     }
 
-    private static async initYarnRC(basedir: string, config: IConfiguracion): Promise<void> {
-        if (!config.openTelemetry) {
-            return;
-        }
+    private static async initYarnRC(basedir: string, config: IConfiguracion): Promise<boolean> {
+        // if (!config.openTelemetry) {
+        //     return;
+        // }
         console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración de YARN"));
         console.group();
 
@@ -444,11 +465,11 @@ export class Init {
         }
 
         let cambio = false;
-        let nuevo = false;
+        // let nuevo = false;
         corrientes = corrientes.filter(actual=>actual.length>0);
         if (corrientes.length==0) {
             corrientes.push("packageExtensions:");
-            nuevo = true;
+            // nuevo = true;
         }
 
         const libs: NodeJS.Dict<string> = {
@@ -491,6 +512,8 @@ export class Init {
         }
 
         console.groupEnd();
+
+        return cambio;
     }
 
     /* INSTANCE */

@@ -33,6 +33,7 @@ export enum EFramework {
 }
 
 export interface IConfigServiceComponentes {
+    optimizar: boolean;
     pug: boolean;
     css: boolean;
     css_type: 0|1|2; // 0=inyectado por JS | 1=archivo independiente | 2=critical

@@ -168,7 +168,7 @@ export class Compilar {
         }
 
         {
-            const {status, stderr} = await Comando.spawn("yarn", ["run", this.name, "run", "next", "build"], {cwd: this.basedir});
+            const {status, stderr} = await Comando.spawn("yarn", ["run", this.name, "run", "next", "build"], {cwd: this.basedir, env: {ZONA: nodeEnv,}});
             if (status != 0) {
                 console.error(this.name, "[KO   ]", "Error compilando:");
                 console.error(stderr);

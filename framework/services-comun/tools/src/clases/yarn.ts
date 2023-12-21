@@ -5,17 +5,19 @@ import {Comando} from "./comando";
 import {readFileBuffer, readFileString, safeWrite, unlink} from "../../../modules/utiles/fs";
 
 interface IYarnConfig {
+    install?: boolean;
+    optimize?: boolean;
     verbose?: boolean;
 }
 
 export class Yarn {
     /* STATIC */
-    public static async update(basedir: string): Promise<void> {
+    public static async update(basedir: string, install: boolean): Promise<void> {
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Actualizando YARN"));
         console.group();
         const {anterior, nueva} = await this.updateBase(basedir);
         const cambio = anterior!=nueva;
-        let instalar: boolean = cambio;
+        const instalar = cambio || install;
 
         if (cambio) {
             await safeWrite(`${basedir}/${anterior}`, await readFileBuffer(`${basedir}/${nueva}`));
@@ -113,13 +115,13 @@ export class Yarn {
     //     console.log(Colors.colorize([Colors.FgWhite], "Instalando plugin"), Colors.colorize(color, plugin), "=>", `[${Colors.colorize([Colors.FgGreen], "OK   ")}]`);
     // }
 
-    public static async install(basedir: string, {verbose}: IYarnConfig = {}): Promise<void> {
+    public static async install(basedir: string, {verbose, install=true, optimize=true}: IYarnConfig = {}): Promise<void> {
         // clean ??= false;
         verbose ??= true;
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Reinstalando dependencias"));
         console.group();
 
-        {
+        if (install) {
             const {status, stdout, stderr} = await Comando.spawn("yarn", ["install"], {
                 cwd: basedir,
             });
@@ -144,7 +146,7 @@ export class Yarn {
             }
         }
 
-        {
+        if (optimize) {
             console.log("Optimizando dependencias");
             const {status, stdout} = await Comando.spawn("yarn", ["dedupe", "--strategy", "highest"], {
                 cwd: basedir,
@@ -179,3 +181,4 @@ export class Yarn {
 
     /* INSTANCE */
 }
+
