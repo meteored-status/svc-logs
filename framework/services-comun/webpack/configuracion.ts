@@ -30,6 +30,7 @@ export class Configuracion {
         const test = ["desarrollo","test"].includes(entorno);
         const mode = desarrollo ? "development" : "production";
         const componentes: IConfigServiceComponentes = {
+            optimizar: true,
             pug: false,
             css: false,
             css_type: 0, // 0=inyectado por JS | 1=archivo independiente | 2=critical
@@ -50,7 +51,7 @@ export class Configuracion {
                 css_critico: componentes.css_type==2,
             }),
             mode,
-            optimization: Optimization.build(runtime),
+            optimization: componentes.optimizar ? Optimization.build(runtime) : {},
             resolve: {
                 extensions: ['.ts', '.js', '.tsx', '.jsx'],
                 extensionAlias: {

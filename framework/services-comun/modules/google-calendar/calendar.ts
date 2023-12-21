@@ -1,4 +1,6 @@
 import ical from "node-ical";
+import {Readable} from "node:stream";
+
 import {Event, IEvent} from "./event";
 import {readJSON, safeWriteStream} from "../utiles/fs";
 
@@ -14,8 +16,7 @@ export class Calendar {
         const resource = await fetch(config.ics);
         if (resource.body) {
             const file: string = 'files/tmp/calendar.ics';
-            // @ts-ignore
-            await safeWriteStream(resource.body, file, true);
+            await safeWriteStream(resource.body as any as Readable, file, true);
             return new Calendar(file)
         }
         return Promise.reject('Calendar not found');
