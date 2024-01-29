@@ -3,6 +3,7 @@ import os from "node:os";
 
 import {exists, readJSON} from "./fs";
 import {random} from "./random";
+import {info} from "./log";
 
 export interface IConfigGenerico {}
 export class ConfigGenerico<T extends IConfigGenerico=IConfigGenerico> implements IConfigGenerico {
@@ -97,7 +98,7 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
                 wire = 0;
                 deploy = partes.at(-2) ?? "test";
             } else {
-                const tmp_wire = partes.at(-2);
+                const tmp_wire = partes.at(-1);
                 if (tmp_wire!=undefined) {
                     if (!isNaN(parseFloat(tmp_wire)) && isFinite(tmp_wire as any)) {
                         wire = parseInt(tmp_wire);

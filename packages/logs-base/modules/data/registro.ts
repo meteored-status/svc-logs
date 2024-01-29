@@ -132,6 +132,7 @@ export class Registro {
                 },
             },
             labels: {
+                edge: data.EdgeColoCode,
                 cache: data.CacheCacheStatus,
                 cliente: cliente.id,
                 grupo: cliente.grupo,

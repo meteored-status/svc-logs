@@ -3,16 +3,14 @@ import * as https from "node:https";
 import {parse, stringify} from "qs";
 import formidable, {type Fields, type Files} from "formidable";
 
+import type {Net} from "./config/net";
+import type {Routes} from "./routes";
 import {Conexion} from "./conexion";
 import {IPodInfo} from "../utiles/config";
-import {Net} from "./config/net";
-import {Routes} from "./routes";
 import {Router} from "./router";
+import {Tracer} from "./tracer";
 import {error, info} from "../utiles/log";
 import {readFile} from "../utiles/fs";
-import {Tracer} from "./tracer";
-
-declare var PRODUCCION: boolean;
 
 export class Server {
     /* STATIC */
