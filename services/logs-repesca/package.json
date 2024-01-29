@@ -17,14 +17,14 @@
   "dependencies": {
     "@elastic/elasticsearch": "^8.11.0",
     "@google-cloud/storage": "^7.7.0",
-    "crawler-user-agents": "^1.0.116",
+    "crawler-user-agents": "^1.0.117",
     "fast-geoip": "^1.1.88",
-    "mysql2": "^3.6.5",
+    "mysql2": "^3.9.1",
     "source-map-support": "^0.5.21",
     "ua-parser-js": "^2.0.0-beta.1"
   },
   "devDependencies": {
-    "@types/node": "^20.10.5",
+    "@types/node": "^20.11.10",
     "logs-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",

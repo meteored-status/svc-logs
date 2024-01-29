@@ -9,6 +9,7 @@ export enum TService {
     MR_NEWSLETTER   = 8,
     MR_VIDEOS       = 9,
     MR_ADS          = 10,
+    MR_LOCALIZACION = 11,
 }
 
 export interface IServiceInfo {
@@ -67,6 +68,11 @@ SERVICE_MAP.set(TService.MR_VIDEOS, {
 SERVICE_MAP.set(TService.MR_ADS, {
     name: 'Ads',
     project: 'meteored-svc-ads',
+    namespace: 'Meteored Services'
+});
+SERVICE_MAP.set(TService.MR_LOCALIZACION, {
+    name: 'Localización',
+    project: 'meteored-svc-localizacion',
     namespace: 'Meteored Services'
 });
 

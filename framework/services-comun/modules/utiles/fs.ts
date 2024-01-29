@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {Readable} from "node:stream";
+import type {Readable} from "node:stream";
 import {readFileSync} from "node:fs";
 import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat} from "node:fs/promises";
 

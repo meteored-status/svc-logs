@@ -2,14 +2,15 @@ import querystring from "node:querystring";
 import {Files} from "formidable";
 import {IncomingHttpHeaders, IncomingMessage, ServerResponse} from "node:http";
 import {URL, URLSearchParams} from "node:url";
+import {parse} from "qs";
 
+import type {Net} from "./config/net";
+import type {Tracer} from "./tracer";
 import {ErrorCode, IErrorInfo, IOK, IRespuestaKO, IRespuestaOK} from "./interface";
 import {Idioma} from "./idiomas";
 import {IErrorHandler} from "./router";
 import {IPodInfo} from "../utiles/config";
-import {type Net} from "./config/net";
 import {Respuesta} from "./respuesta";
-import {type Tracer} from "./tracer";
 
 export type TMetodo = "ALL"|"GET"|"POST"|"PUT"|"DELETE"|"HEAD"|"OPTIONS"|"PATCH";
 
@@ -133,6 +134,7 @@ export class Conexion extends Respuesta {
 
     private status:TStatus;
     public readonly query: URLSearchParams;
+    public readonly queryRAW: string;
 
     public constructor(private readonly peticion: IncomingMessage, respuesta: ServerResponse, errorHandler: IErrorHandler, tracer: Tracer, pod: IPodInfo, config: Net, public readonly https: boolean) {
         super(respuesta, errorHandler, tracer, pod, config);
@@ -148,6 +150,7 @@ export class Conexion extends Respuesta {
         this.cors = this.get.indexOf("/web")==0;
         this.status = TStatus.iniciando;
         this.query = url.searchParams;
+        this.queryRAW = url.search;
         this.dominio = peticion.headers.host??"";
         this.path = url.pathname;
     }
@@ -228,16 +231,20 @@ export class Conexion extends Respuesta {
         return this.peticion.headers;
     }
 
-    public getQuery<T>(): T {
-        const salida: any = {};
-        for (const key of this.query.keys()) {
-            const values = this.query.getAll(key);
-            if (values.length==1) {
-                salida[key] = values[0];
-            } else {
-                salida[key] = values;
-            }
-        }
-        return salida as T;
+    public getQuery<T=any>(): T {
+        return parse(this.queryRAW, { ignoreQueryPrefix: true }) as T;
     }
+
+    // public getQuery<T>(): T {
+    //     const salida: any = {};
+    //     for (const key of this.query.keys()) {
+    //         const values = this.query.getAll(key);
+    //         if (values.length==1) {
+    //             salida[key] = values[0];
+    //         } else {
+    //             salida[key] = values;
+    //         }
+    //     }
+    //     return salida as T;
+    // }
 }

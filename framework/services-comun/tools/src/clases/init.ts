@@ -274,7 +274,7 @@ export class Init {
 
                 const hash=`${md5(JSON.stringify(paquete.dependencies))}${md5(JSON.stringify(paquete.devDependencies))}`;
 
-                paquete.dependencies["source-map-support"] ??= paquetePropio.devDependencies["source-map-support"];
+                paquete.dependencies["source-map-support"] ??= paquetePropio.devDependencies["source-map-support"]??"*";
 
                 for (const [lib, version] of Object.entries(paquetePropio.devDependencies)) {
                     if (paquete.dependencies[lib]!=undefined) {
@@ -285,18 +285,18 @@ export class Init {
                     }
                 }
                 if (!config.cronjob) {
-                    paquete.dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= paquetePropio.devDependencies["@google-cloud/opentelemetry-cloud-trace-exporter"];
-                    paquete.dependencies["@opentelemetry/api"] ??= paquetePropio.devDependencies["@opentelemetry/api"];
-                    paquete.dependencies["@opentelemetry/core"] ??= paquetePropio.devDependencies["@opentelemetry/core"];
-                    paquete.dependencies["@opentelemetry/instrumentation"] ??= paquetePropio.devDependencies["@opentelemetry/instrumentation"];
-                    paquete.dependencies["@opentelemetry/instrumentation-http"] ??= paquetePropio.devDependencies["@opentelemetry/instrumentation-http"];
-                    paquete.dependencies["@opentelemetry/resources"] ??= paquetePropio.devDependencies["@opentelemetry/resources"];
-                    paquete.dependencies["@opentelemetry/sdk-trace-base"] ??= paquetePropio.devDependencies["@opentelemetry/sdk-trace-base"];
-                    paquete.dependencies["@opentelemetry/sdk-trace-node"] ??= paquetePropio.devDependencies["@opentelemetry/sdk-trace-node"];
-                    paquete.dependencies["@opentelemetry/semantic-conventions"] ??= paquetePropio.devDependencies["@opentelemetry/semantic-conventions"];
-                    paquete.dependencies["chokidar"] ??= paquetePropio.devDependencies["chokidar"];
-                    paquete.dependencies["hexoid"] ??= paquetePropio.devDependencies["hexoid"];
-                    paquete.devDependencies["formidable"] ??= paquetePropio.devDependencies["formidable"];
+                    paquete.dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= paquetePropio.devDependencies["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
+                    paquete.dependencies["@opentelemetry/api"] ??= paquetePropio.devDependencies["@opentelemetry/api"]??"*";
+                    paquete.dependencies["@opentelemetry/core"] ??= paquetePropio.devDependencies["@opentelemetry/core"]??"*";
+                    paquete.dependencies["@opentelemetry/instrumentation"] ??= paquetePropio.devDependencies["@opentelemetry/instrumentation"]??"*";
+                    paquete.dependencies["@opentelemetry/instrumentation-http"] ??= paquetePropio.devDependencies["@opentelemetry/instrumentation-http"]??"*";
+                    paquete.dependencies["@opentelemetry/resources"] ??= paquetePropio.devDependencies["@opentelemetry/resources"]??"*";
+                    paquete.dependencies["@opentelemetry/sdk-trace-base"] ??= paquetePropio.devDependencies["@opentelemetry/sdk-trace-base"]??"*";
+                    paquete.dependencies["@opentelemetry/sdk-trace-node"] ??= paquetePropio.devDependencies["@opentelemetry/sdk-trace-node"]??"*";
+                    paquete.dependencies["@opentelemetry/semantic-conventions"] ??= paquetePropio.devDependencies["@opentelemetry/semantic-conventions"]??"*";
+                    paquete.dependencies["chokidar"] ??= paquetePropio.devDependencies["chokidar"]??"*";
+                    paquete.dependencies["hexoid"] ??= paquetePropio.devDependencies["hexoid"]??"*";
+                    paquete.devDependencies["formidable"] ??= paquetePropio.devDependencies["formidable"]??"*";
 
                     if (paquete.dependencies["@google-cloud/trace-agent"] !== undefined) {
                         delete paquete.dependencies["@google-cloud/trace-agent"];
