@@ -43,4 +43,7 @@ mapeo.set(EService.status_webhook, {
     tags: ["status", "webhook"],
 });
 
-export const SERVICES = new Service(mapeo);
+export const SERVICES = new Service(mapeo, {
+    prefix: "mr-status",
+    builder: (id: EService)=>EService[id].replace(/_/g, "-"),
+});
