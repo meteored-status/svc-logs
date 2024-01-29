@@ -1,9 +1,9 @@
-import {IRouteGroupCache, NetCache} from "../../cache";
-import {Checker, IExpresion} from "../../checkers";
+import type {IRouteGroupCache, NetCache} from "../../cache";
+import type {Checker, IExpresion} from "../../checkers";
+import type {Conexion, TMetodo} from "../../conexion";
+import type {IPodInfo} from "../../../utiles/config";
 import {Comodin} from "../../checkers/comodin";
-import {Conexion, TMetodo} from "../../conexion";
 import {Exact} from "../../checkers/exact";
-import {IPodInfo} from "../../../utiles/config";
 import {Prefix} from "../../checkers/prefix";
 import {Regex} from "../../checkers/regex";
 import {PromiseDelayed} from "../../../utiles/promise";

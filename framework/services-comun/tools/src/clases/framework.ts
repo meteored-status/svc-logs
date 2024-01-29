@@ -262,9 +262,14 @@ export class Framework {
                     console.log(Colors.colorize([Colors.FgMagenta], nombre), `=> Instalando ${Colors.colorize([Colors.FgGreen], actual.version)}`);
                 }
             } else {
-                console.log(Colors.colorize([Colors.FgMagenta], nombre), `=> [${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}]`);
-                console.log(Colors.colorize([Colors.FgMagenta], nombre), `=>`, stderr);
-                return Promise.reject();
+                if (!stderr.includes("No URLs matched")) {
+                    console.log(Colors.colorize([Colors.FgMagenta], nombre), `=> [${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}]`);
+                    console.log(Colors.colorize([Colors.FgMagenta], nombre), `=>`, stderr);
+                    return Promise.reject();
+                }
+
+                console.log(Colors.colorize([Colors.FgMagenta], nombre), `=> [${Colors.colorize([Colors.FgYellow, Colors.Bright], "NUEVO")}]`);
+                return true;
             }
         }
 

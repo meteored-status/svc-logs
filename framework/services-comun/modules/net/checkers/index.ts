@@ -1,7 +1,7 @@
 import {URLSearchParams} from "node:url";
 
-import {TMetodo} from "../conexion";
-import {IQuery, Query} from "./querys/query";
+import type {TMetodo} from "../conexion";
+import type {IQuery, Query} from "./querys/query";
 import {Regex} from "./querys/regex";
 import {Exact} from "./querys/exact";
 import {Prefix} from "./querys/prefix";
