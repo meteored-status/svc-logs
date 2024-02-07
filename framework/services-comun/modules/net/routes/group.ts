@@ -15,7 +15,7 @@ export abstract class RouteGroup<T extends Configuracion=Configuracion> {
         }
     }
 
-    protected async sendRespuesta<T=undefined>(conexion: Respuesta, {expiracion, data}: Partial<IOK<T>> = {}): Promise<number> {
+    protected async sendRespuesta<T=undefined>(conexion: Conexion, {expiracion, etag, data}: Partial<IOK<T>> = {}): Promise<number> {
         if (expiracion==undefined) {
             expiracion = new Date();
             conexion
@@ -23,6 +23,13 @@ export abstract class RouteGroup<T extends Configuracion=Configuracion> {
         } else {
             conexion
                 .setCache(expiracion);
+        }
+        if (etag!=undefined) {
+            conexion
+                .setETag(etag);
+            if (conexion.ifNoneMatch == `"${etag}"`) {
+                return conexion.send304();
+            }
         }
         return conexion
             .sendRespuesta<IRespuestaOK<T|undefined>>({
