@@ -13,6 +13,7 @@ export interface IErrorInfo {
 
 export interface IOK<T> {
     expiracion: Date;
+    etag: string;
     data: T;
 }
 

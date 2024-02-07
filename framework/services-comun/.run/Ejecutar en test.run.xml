@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Ejecutar en test" type="js.build_tools.npm">
+    <package-json value="$PROJECT_DIR$/framework/services-comun/package.json" />
+    <command value="run" />
+    <scripts>
+      <script value="mrpack" />
+    </scripts>
+    <arguments value="devel -e" />
+    <node-interpreter value="project" />
+    <package-manager value="$PROJECT_DIR$/.yarn/releases/yarn-4.1.0.cjs" />
+    <envs />
+    <method v="2" />
+  </configuration>
+</component>
