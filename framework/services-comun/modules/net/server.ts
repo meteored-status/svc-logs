@@ -1,5 +1,6 @@
-import * as http from "node:http";
-import * as https from "node:https";
+import http from "node:http";
+import https from "node:https";
+import tls, {type SecureContext} from "node:tls";
 import {parse, stringify} from "qs";
 import formidable, {type Fields, type Files} from "formidable";
 
@@ -10,7 +11,7 @@ import {IPodInfo} from "../utiles/config";
 import {Router} from "./router";
 import {Tracer} from "./tracer";
 import {error, info} from "../utiles/log";
-import {readFile} from "../utiles/fs";
+import {isDir, isFile, readDir, readFile, readJSON} from "../utiles/fs";
 
 export class Server {
     /* STATIC */
@@ -67,9 +68,34 @@ export class Server {
 
     public async iniciarHTTPs(requestHandlers: Routes, pod: IPodInfo, config: Net): Promise<void> {
         if (this.serverHTTPS==null) {
+            const contextos = new Map<string, SecureContext>();
+            for (const dir of await readDir("files/ssl")) {
+                if (!await isDir(`files/ssl/${dir}`)) {
+                    continue;
+                }
+
+                info("Cargando certificados para:", dir);
+                const dominios = await readJSON<string[]>(`files/ssl/${dir}/dominios.json`);
+                const contexto = tls.createSecureContext({
+                    key: await readFile(`files/ssl/${dir}/privkey.pem`),
+                    cert: await readFile(`files/ssl/${dir}/fullchain.pem`)
+                });
+                for (const dominio of dominios) {
+                    contextos.set(dominio, contexto);
+                }
+            }
+
             const server = https.createServer({
                 cert: await readFile("files/ssl/fullchain.pem"),
                 key: await readFile("files/ssl/privkey.pem"),
+                SNICallback: (servername: string, cb: (err: Error | null, ctx?: SecureContext) => void) => {
+                    const ctx = contextos.get(servername);
+                    if (ctx==undefined) {
+                        cb(null);
+                    } else {
+                        cb(null, ctx);
+                    }
+                },
             }, (request: http.IncomingMessage, response: http.ServerResponse) => {
                 this.onRequest(request, response, requestHandlers, pod, config, true);
             });

@@ -3,7 +3,7 @@
   "description": "Componentes comunes de Status",
   "author": "José Antonio Jiménez",
   "devDependencies": {
-    "@types/node": "^20.11.10",
+    "@types/node": "^20.11.16",
     "@types/qs": "^6.9.11",
     "qs": "^6.11.2",
     "services-comun": "workspace:*",
