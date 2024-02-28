@@ -6,7 +6,7 @@ ENTORNO="${1}"
 mkdir -p .yarn/plugins
 
 parseWorkspace() {
-  PROYECTO="${1}"
+  PROYECTO=${1}
   ENTORNO="${2}"
   WORKSPACE="${3}"
 
@@ -28,16 +28,22 @@ parseWorkspace() {
             mkdir -p "services/${WORKSPACE}/public"
           fi
 
+          BASE_IMAGE=$(./jq -r '.config.imagen' "services/${WORKSPACE}/package.json")
+          if [[ "${BASE_IMAGE}" == "null" ]]; then
+            BASE_IMAGE="node:lts-alpine"
+          fi
+          echo "${WORKSPACE}: ${BASE_IMAGE}"
+
           if [[ -f services/${WORKSPACE}/Dockerfile ]]; then
             echo "${WORKSPACE}: Custom Dockerfile"
-            docker build --no-cache -f "services/${WORKSPACE}/Dockerfile" --build-arg  ws="${WORKSPACE}" -t "${PROYECTO}/services-${WORKSPACE}" .
+            docker build --no-cache -f "services/${WORKSPACE}/Dockerfile" --build-arg  ws="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROYECTO}/services-${WORKSPACE}" .
           else
             if [[ $(./jq -r '.config.framework' "services/${WORKSPACE}/package.json") != "nextjs" ]]; then
               echo "${WORKSPACE}: Generic Meteored Dockerfile"
-              docker build --no-cache -f "framework/services-comun/despliegue/Dockerfile" --build-arg  ws="${WORKSPACE}" -t "${PROYECTO}/services-${WORKSPACE}" .
+              docker build --no-cache -f "framework/services-comun/despliegue/Dockerfile" --build-arg  ws="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROYECTO}/services-${WORKSPACE}" .
             else
               echo "${WORKSPACE}: Generic Next Dockerfile"
-              docker build --no-cache -f "framework/services-comun/despliegue/Dockerfile-next" --build-arg  ws="${WORKSPACE}" -t "${PROYECTO}/services-${WORKSPACE}" .
+              docker build --no-cache -f "framework/services-comun/despliegue/Dockerfile-next" --build-arg  ws="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROYECTO}/services-${WORKSPACE}" .
             fi
           fi
 

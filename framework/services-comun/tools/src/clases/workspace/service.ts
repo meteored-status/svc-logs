@@ -48,6 +48,7 @@ export interface IConfigService {
     devel: boolean;
     deploy: boolean;
     generar: boolean;
+    imagen?: string;
     unico: boolean;
     deps: string[];
     storage: string[];

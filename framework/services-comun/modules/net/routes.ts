@@ -1,11 +1,29 @@
+import {Checker} from "./checkers";
 import {Conexion} from "./conexion";
 import {RouteGroup, RouteGroupError} from "./routes/group";
 
 export class Routes {
-    private readonly cantidad:number;
-
     public constructor(private groups: RouteGroup[], public readonly error: RouteGroupError) {
-        this.cantidad = groups.length;
+    }
+
+    public getDocumentables(): Checker[] {
+        const salida: Checker[] = [];
+
+        for (const grupo of this.groups) {
+            if (!grupo.params.documentable) {
+                continue;
+            }
+            salida.push(...grupo.getDocumentables());
+        }
+        return salida.sort((a, b) => {
+            if (a.resumen < b.resumen) {
+                return -1;
+            }
+            if (a.resumen > b.resumen) {
+                return 1;
+            }
+            return 0;
+        });
     }
 
     public async check(conexion: Conexion): Promise<boolean> {
@@ -14,11 +32,6 @@ export class Routes {
                 return true;
             }
         }
-        // for (let i=0; i<this.cantidad; i++) {
-        //     if (await this.groups[i].check(conexion)) {
-        //         return true;
-        //     }
-        // }
 
         return false;
     }

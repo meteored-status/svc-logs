@@ -1,4 +1,4 @@
-import {
+import type {
     BulkResponse as BulkResponseBase,
     GetResponse as GetResponseBase,
     IndexResponse as IndexResponseBase,
@@ -21,8 +21,6 @@ import {
 } from "./base";
 import {exists, readFile, readJSON} from "../utiles/fs";
 
-declare var PRODUCCION: boolean;
-
 export interface BulkResponse extends BulkResponseBase {}
 export interface ESAggregate extends ESAggregateBase {}
 export interface ESSuggest<T> extends ESSuggestBase<T> {}
@@ -37,7 +35,7 @@ export interface SearchResponse<T, K> extends SearchResponseBase<T, K> {}
 export interface UpdateResponse extends UpdateResponseBase {}
 
 
-class Elasticsearch extends ElasticsearchBase {
+export class Elasticsearch extends ElasticsearchBase {
     public constructor() {
         super();
     }

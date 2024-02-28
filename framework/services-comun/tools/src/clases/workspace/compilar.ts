@@ -111,37 +111,59 @@ export class Compilar {
 
     private async packMeteored(env: string): Promise<void> {
         switch(this.config.runtime) {
-            case ERuntime.browser:
-                await this.webpack(env);
-                await this.checkVersionBrowser();
+            case ERuntime.browser: {
+                    await this.webpack(env);
+                    await this.checkVersionBrowser();
+                }
                 break;
-            case ERuntime.node:
-                await this.webpack(env);
-                await this.checkVersionService(env, [
-                    `${this.basedir}/.yarnrc.yml`,
-                    `${this.dir}/output`,
-                    await isFile(`${this.dir}/Dockerfile`) ?
-                        `${this.dir}/Dockerfile` :
-                        `${this.basedir}/framework/services-comun/despliegue/Dockerfile`,
-                    `${this.dir}/app.js`,
-                    `${this.dir}/assets`,
-                ]);
+            case ERuntime.node: {
+                    const customDockerfile = await isFile(`${this.dir}/Dockerfile`);
+                    await this.webpack(env);
+                    const checks: string[] = [
+                        `${this.basedir}/.yarnrc.yml`,
+                    ];
+                    if (customDockerfile) {
+                        checks.push(`${this.dir}/Dockerfile`);
+                    }
+                    switch(this.config.framework) {
+                        case EFramework.nextjs:
+                            checks.push(`${this.dir}/.next`);
+                            if (!customDockerfile) {
+                                checks.push(`${this.basedir}/framework/services-comun/despliegue/Dockerfile-next`);
+                            }
+                            break;
+
+                        case EFramework.meteored:
+                        default:
+                            checks.push(`${this.dir}/output`);
+                            if (!customDockerfile) {
+                                checks.push(`${this.basedir}/framework/services-comun/despliegue/Dockerfile`);
+                            }
+                            break;
+                    }
+                    checks.push(
+                        `${this.dir}/app.js`,
+                        `${this.dir}/assets`,
+                    );
+                    await this.checkVersionService(env, checks);
+                }
                 break;
-            case ERuntime.php:
-                await this.checkVersionService(env, [
-                    `${this.dir}/assets`,
-                    `${this.dir}/base/nginx/local.conf`,
-                    `${this.dir}/autoload.php`,
-                    `${this.dir}/composer.json`,
-                    `${this.dir}/composer.lock`,
-                    await isFile(`${this.dir}/Dockerfile`) ?
-                        `${this.dir}/Dockerfile` :
-                        `${this.basedir}/framework/services-comun/despliegue/Dockerfile-php`,
-                    `${this.dir}/Dockerfile`,
-                    `${this.dir}/index.php`,
-                    `${this.dir}/Meteored`,
-                    `${this.dir}/vendor`,
-                ]);
+            case ERuntime.php: {
+                    await this.checkVersionService(env, [
+                        `${this.dir}/assets`,
+                        `${this.dir}/base/nginx/local.conf`,
+                        `${this.dir}/autoload.php`,
+                        `${this.dir}/composer.json`,
+                        `${this.dir}/composer.lock`,
+                        await isFile(`${this.dir}/Dockerfile`) ?
+                            `${this.dir}/Dockerfile` :
+                            `${this.basedir}/framework/services-comun/despliegue/Dockerfile-php`,
+                        `${this.dir}/Dockerfile`,
+                        `${this.dir}/index.php`,
+                        `${this.dir}/Meteored`,
+                        `${this.dir}/vendor`,
+                    ]);
+                }
                 break;
         }
     }
@@ -177,7 +199,9 @@ export class Compilar {
         }
         await this.checkVersionService(env, [
             `${this.basedir}/.yarnrc.yml`,
-            `${this.dir}/output`,
+            this.config.framework==EFramework.nextjs?
+                `${this.dir}/.next`:
+                `${this.dir}/output`,
             await isFile(`${this.dir}/Dockerfile`) ?
                 `${this.dir}/Dockerfile` :
                 `${this.basedir}/framework/services-comun/despliegue/Dockerfile-next`,
@@ -221,6 +245,14 @@ export class Compilar {
         const hashes = [
             JSON.stringify(this.packagejson.dependencies??{}),
         ];
+        if (this.config.imagen!=undefined) {
+            hashes.push(this.config.imagen);
+        }
+        // if (this.config.deps.length>0) {
+        //     hashes.push(JSON.stringify(this.config.deps));
+        // }
+        //     "runtime": "node",
+        //     "framework": "meteored",
         for (const actual of checks) {
             hashes.push(await md5Dir(actual));
         }
