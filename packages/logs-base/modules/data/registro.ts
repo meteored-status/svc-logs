@@ -1,6 +1,6 @@
 import {UAParser} from "ua-parser-js";
 import {hostname} from "node:os";
-import geoip from "fast-geoip"
+import geoip from "geoip-lite";
 
 import {type ECS} from "services-comun/modules/elasticsearch/ecs";
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
@@ -18,13 +18,13 @@ const host = hostname();
 
 export class Registro {
     /* STATIC */
-    public static async getGeoIP(ip: string) {
+    public static getGeoIP(ip: string) {
         if (ip.length==0) {
             return null;
         }
 
         try {
-            return await geoip.lookup(ip);
+            return geoip.lookup(ip);
         } catch (e) {
             error("Error al obtener la geolocalización de la IP");
             return null;
@@ -32,7 +32,7 @@ export class Registro {
     }
 
     public static async build(pod: IPodInfo, cliente: ICliente, data: SourceCloudflare, notify: INotify): Promise<Registro> {
-        const geo = await this.getGeoIP(data.ClientIP);
+        const geo = this.getGeoIP(data.ClientIP);
         const ua = data.ClientRequestUserAgent.length>0?UAParser(data.ClientRequestUserAgent):null;
         const crawler = Crawler.test(data.ClientRequestUserAgent);
         const tls = data.ClientSSLProtocol.split("v");
