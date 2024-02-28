@@ -1,6 +1,6 @@
-import {Configuracion} from "../../utiles/config";
+import type {Configuracion} from "../../utiles/config";
 import {EngineServer} from "../../engine_server";
-import {IRouteGroup} from "../routes/group/block";
+import type {IRouteGroup} from "../routes/group/block";
 import {RouteGroup} from "../routes/group";
 
 class Admin extends RouteGroup {
@@ -23,11 +23,9 @@ class Admin extends RouteGroup {
                     },
                 ],
                 handler: async (conexion)=>{
-                    return this.engine.started().then(()=>{
-                        return this.sendRespuesta(conexion);
-                    }).catch((err)=>{
-                        return conexion.error(404, err);
-                    });
+                    return this.engine.started()
+                        .then(() => this.sendRespuesta(conexion))
+                        .catch((err) => conexion.error(404, err));
                 },
             },
             {
@@ -40,11 +38,9 @@ class Admin extends RouteGroup {
                     },
                 ],
                 handler: async (conexion)=>{
-                    return this.engine.ready().then(() => {
-                        return this.sendRespuesta(conexion);
-                    }).catch((err) => {
-                        return conexion.error(404, err);
-                    });
+                    return this.engine.ready()
+                        .then(() => this.sendRespuesta(conexion))
+                        .catch((err) => conexion.error(404, err));
                 },
             },
             {
@@ -63,57 +59,25 @@ class Admin extends RouteGroup {
                     },
                 ],
                 handler: async (conexion)=>{
-                    return this.engine.okAll().then(()=>{
-                        return this.sendRespuesta(conexion);
-                    }).catch((err)=>{
-                        return conexion.error(404, err);
-                    });
+                    return this.engine.okAll()
+                        .then(() => this.sendRespuesta(conexion))
+                        .catch((err) => conexion.error(404, err));
                 },
             },
-            // {
-            //     expresiones: [
-            //         {
-            //             metodos: ["GET"],
-            //             exact: "/admin/status/",
-            //             resumen: "/admin/status/",
-            //         },
-            //     ],
-            //     handler: async (conexion)=>{
-            //         // const memoria = process.memoryUsage();
-            //         return conexion.sendRespuesta<IRespuesta<void>>({
-            //             ...Conexion.baseDefecto(),
-            //             // data: {
-            //             //     listado: ["admconfig", "status"],
-            //             //     respuesta: {
-            //             //         admconfig: [
-            //             //             {
-            //             //                 pod: this.configuracion.pod.host,
-            //             //                 servicio: this.configuracion.pod.servicio,
-            //             //                 zona: this.configuracion.pod.zona,
-            //             //                 // propiedades: this.configuracion.getUpdateables(),
-            //             //             },
-            //             //         ],
-            //             //         status: [
-            //             //             {
-            //             //                 pod: this.configuracion.pod.host,
-            //             //                 servicio: this.configuracion.pod.servicio,
-            //             //                 zona: this.configuracion.pod.zona,
-            //             //                 memoria: {
-            //             //                     heap: `${formatMemoria(memoria.heapUsed)}/${formatMemoria(memoria.heapTotal)}`,
-            //             //                     buffers: memoria.arrayBuffers?formatMemoria(memoria.arrayBuffers):undefined,
-            //             //                     externa: formatMemoria(memoria.external),
-            //             //                     rss: formatMemoria(memoria.rss),
-            //             //                 },
-            //             //                 version: this.configuracion.pod.version,
-            //             //                 uptime: formatTiempo(Date.now()-this.engine.inicio),
-            //             //                 peticiones: server.peticiones,
-            //             //             },
-            //             //         ],
-            //             //     },
-            //             // },
-            //         });
-            //     },
-            // },
+            {
+                expresiones: [
+                    {
+                        metodos: ["GET"],
+                        exact: "/admin/doc/",
+                        resumen: "/admin/doc/",
+                        log: false,
+                    },
+                ],
+                handler: async (conexion)=>{
+                    const doc = this.engine.routes?.getDocumentables();
+                    return this.sendRespuesta(conexion);
+                },
+            },
         ];
     }
 }

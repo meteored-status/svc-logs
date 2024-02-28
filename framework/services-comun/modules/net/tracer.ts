@@ -1,23 +1,21 @@
-import http from "node:http";
+import type {IncomingMessage} from "node:http";
 import os from "node:os";
 
 import opentelemetry, {
-    Tracer as OTTracer,
-    Span as OTSpan,
+    type Tracer as OTTracer,
+    type Span as OTSpan,
     SpanKind,
-    SpanStatus,
-    Attributes,
-    AttributeValue,
+    type SpanStatus,
+    type Attributes,
+    type AttributeValue,
     SpanStatusCode,
 } from "@opentelemetry/api";
 
-import {IPodInfo} from "../utiles/config";
-
-declare var PRODUCCION: boolean;
+import type {IPodInfo} from "../utiles/config";
 
 export class Tracer {
     /* STATIC */
-    public static build(request: http.IncomingMessage, pod: IPodInfo): Tracer {
+    public static build(request: IncomingMessage, pod: IPodInfo): Tracer {
         return new this(opentelemetry.trace.getTracer(pod.servicio), request, pod);
     }
 
@@ -25,7 +23,7 @@ export class Tracer {
     private readonly rootSpan: Span;
     private finalizado: boolean;
 
-    private constructor(public ottracer: OTTracer, private request: http.IncomingMessage, private pod: IPodInfo) {
+    private constructor(public ottracer: OTTracer, private request: IncomingMessage, private pod: IPodInfo) {
         this.rootSpan = Span.buildRoot(request, this, this.pod.servicio, {
             "/http/host": this.request.headers.host,
             "/http/method": this.request.method,
@@ -92,7 +90,7 @@ export class Span {
         return new this(tracer, span);
     }
 
-    public static buildRoot(request: http.IncomingMessage, tracer: Tracer, nombre: string, attributes?: Attributes): Span {
+    public static buildRoot(request: IncomingMessage, tracer: Tracer, nombre: string, attributes?: Attributes): Span {
         const span = tracer.ottracer.startActiveSpan(nombre, {
             kind: SpanKind.SERVER,
             attributes,

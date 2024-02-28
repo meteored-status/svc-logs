@@ -1,5 +1,6 @@
 export enum ErrorCode {
     NETWORK = 1,
+    TIMEOUT = 2,
     AUTHENTICATION = 2,
     RESPONSE = 3,
     APPLICATION = 3,

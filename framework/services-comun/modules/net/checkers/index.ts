@@ -8,6 +8,11 @@ import {Prefix} from "./querys/prefix";
 import {Options} from "./querys/options";
 import {Cualquiera} from "./querys/cualquiera";
 
+export interface IDocumentable {
+    enabled: boolean;
+    descripcion?: string;
+}
+
 export interface IExpresion {
     metodos?: TMetodo[];
     dominios?: string[];
@@ -23,6 +28,7 @@ export interface IExpresion {
     log?: boolean;
     internal?: boolean;
     deprecated?: boolean;
+    documentacion?: Partial<IDocumentable>;
 }
 
 export interface IExpresionDynamic<T> {
@@ -54,6 +60,7 @@ export abstract class Checker {
     private readonly checkQuery: boolean;
     private readonly query: Query[];
     private readonly checkFunction: TCheckFunction;
+    public readonly documentacion: IDocumentable;
 
     protected constructor(obj: IExpresion) {
         this.metodos = obj.metodos??[];
@@ -114,6 +121,10 @@ export abstract class Checker {
             }
         } else {
             this.checkQuery = false;
+        }
+        this.documentacion = {
+            enabled: false,
+            ...obj.documentacion??{},
         }
     }
 

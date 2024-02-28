@@ -23,6 +23,7 @@ export interface IRouteGroup {
     handler?: THandler;
     updater?: TUpdater;
     cache?: Partial<IRouteGroupCache>;
+    documentable?: boolean;
 }
 
 interface IRouteGroupFinal {
@@ -31,6 +32,7 @@ interface IRouteGroupFinal {
     handler: THandler;
     updater?: TUpdater;
     cache: IRouteGroupCache;
+    documentable: boolean;
 }
 
 export class RouteGroupBlock {
@@ -50,6 +52,7 @@ export class RouteGroupBlock {
                 device: false,
                 ...data.cache,
             },
+            documentable: data.documentable??true,
         });
 
         nuevo.initUpdater();
@@ -84,6 +87,7 @@ export class RouteGroupBlock {
     private readonly prehandler: THandler;
     private updateando: boolean;
     private readonly updater?: Required<TUpdater>;
+    public readonly documentable: boolean;
 
     private constructor(data: IRouteGroupFinal) {
         this.ok = false;
@@ -102,6 +106,19 @@ export class RouteGroupBlock {
                 interval: 0,
                 ...data.updater,
             };
+        this.documentable = data.documentable;
+    }
+
+    public getDocumentables(): Checker[] {
+        const salida: Checker[] = [];
+        for (const actual of this.expresiones) {
+            if (!actual.documentacion.enabled) {
+                continue;
+            }
+            salida.push(actual);
+        }
+
+        return salida;
     }
 
     public setCache(cache: NetCache): void {

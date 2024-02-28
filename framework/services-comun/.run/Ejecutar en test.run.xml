@@ -7,7 +7,6 @@
     </scripts>
     <arguments value="devel -e" />
     <node-interpreter value="project" />
-    <package-manager value="$PROJECT_DIR$/.yarn/releases/yarn-4.1.0.cjs" />
     <envs />
     <method v="2" />
   </configuration>
