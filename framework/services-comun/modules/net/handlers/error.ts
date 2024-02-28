@@ -1,21 +1,25 @@
-import {Conexion} from "../conexion";
-import {Configuracion} from "../../utiles/config";
-import {IRouteGroup} from "../routes/group/block";
+import type {Conexion} from "../conexion";
+import type {Configuracion} from "../../utiles/config";
+import type {IRouteGroup} from "../routes/group/block";
 import {RouteGroupError} from "../routes/group";
 
 class Error extends RouteGroupError {
     /* STATIC */
 
     /* INSTANCE */
+    public constructor(config: Configuracion) {
+        super(config, {
+            documentable: false,
+        });
+    }
+
     protected getHandlers(): IRouteGroup[] {
         return [
             {
                 expresiones: [
                     { metodos: ["ALL"], comodin: true, resumen: '/{url}', checkQuery: false, },
                 ],
-                handler: async (conexion) => {
-                    return conexion.error(404, "Unknown request");
-                },
+                handler: async (conexion) => conexion.error(404, "Unknown request"),
             },
         ];
     }

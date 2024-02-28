@@ -124,6 +124,10 @@ export interface ResponseHeaders {
 
 export class Cloudflare {
     /* STATIC */
+    private static FILTRAR_PATHS_PREFIX: string[] = [
+        "/cdn-cgi/"
+    ];
+
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
         let ok = true;
         signal.addEventListener("abort", ()=>{
@@ -158,6 +162,10 @@ export class Cloudflare {
 
             const registro = this.parse(linea.trim());
             if (registro==null) {
+                continue;
+            }
+
+            if (this.FILTRAR_PATHS_PREFIX.some(prefix=>registro.ClientRequestURI.startsWith(prefix))) {
                 continue;
             }
 

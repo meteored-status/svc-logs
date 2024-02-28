@@ -1,4 +1,6 @@
-FROM node:lts-alpine as build
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE} as build
 ARG ws
 WORKDIR /usr/src/app
 RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
@@ -10,7 +12,7 @@ COPY ./package.json ./
 COPY ./yarn.lock ./
 RUN yarn workspaces focus --production ${ws}
 
-FROM node:lts-alpine as app
+FROM ${BASE_IMAGE} as app
 ARG ws
 WORKDIR /usr/src/app
 ENV NODE_ENV=production

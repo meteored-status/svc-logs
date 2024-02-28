@@ -10,8 +10,6 @@ import {type Net} from "./config/net";
 import {type Tracer} from "./tracer";
 import {pipeline} from "../utiles/stream";
 
-declare var DESARROLLO: boolean;
-
 export abstract class Respuesta {
 
     public time: number;

@@ -213,6 +213,7 @@ export class Init {
         config.devel = paquete.config.devel??paquete.devel??true;
         config.deploy = paquete.config.deploy??true;
         config.generar = paquete.config.generar??paquete.generar??false;
+        // config.imagen = paquete.config.imagen??"node:lts-alpine";
         config.unico = paquete.config.unico??paquete.unico??false;
 
         config.deps = paquete.config.deps??[];

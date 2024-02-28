@@ -28,6 +28,7 @@ export abstract class EngineServer<T extends ConfiguracionNet=ConfiguracionNet> 
 
     /* INSTANCE */
     private handlers: RouteGroup[];
+    public routes?: Routes;
 
     protected constructor(configuracion: T, inicio: number) {
         super(configuracion, inicio);
@@ -78,16 +79,18 @@ export abstract class EngineServer<T extends ConfiguracionNet=ConfiguracionNet> 
         info("Iniciando Servidor Web");
 
         this.iniciar(handlers, config);
+        this.routes ??= new Routes(handlers, config.error??Error(this.configuracion));
 
-        server.iniciarHTTP(new Routes(handlers, config.error??Error(this.configuracion)), this.configuracion.pod, net);
+        server.iniciarHTTP(this.routes, this.configuracion.pod, net);
     }
 
     protected initWebServerS(handlers: RouteGroup[], net: Net, config: IConfig = {}): void {
         info("Iniciando Servidor Web Seguro");
 
         this.iniciar(handlers, config);
+        this.routes ??= new Routes(handlers, config.error??Error(this.configuracion));
 
-        server.iniciarHTTPs(new Routes(handlers, config.error??Error(this.configuracion)), this.configuracion.pod, net)
+        server.iniciarHTTPs(this.routes, this.configuracion.pod, net)
             .then(() => {}).catch((err) => {
                 error("Error iniciando HTTPs", err);
         });

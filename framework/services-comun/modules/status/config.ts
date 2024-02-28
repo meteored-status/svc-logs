@@ -10,6 +10,7 @@ export enum TService {
     MR_VIDEOS       = 9,
     MR_ADS          = 10,
     MR_LOCALIZACION = 11,
+    MR_WEATHER      = 12,
 }
 
 export interface IServiceInfo {
@@ -73,6 +74,11 @@ SERVICE_MAP.set(TService.MR_ADS, {
 SERVICE_MAP.set(TService.MR_LOCALIZACION, {
     name: 'Localización',
     project: 'meteored-svc-localizacion',
+    namespace: 'Meteored Services'
+});
+SERVICE_MAP.set(TService.MR_WEATHER, {
+    name: 'Weather',
+    project: 'meteored-svc-weather',
     namespace: 'Meteored Services'
 });
 

@@ -1,4 +1,4 @@
-import {ConfigGenerico, IConfigGenerico} from "../../utiles/config";
+import {ConfigGenerico, type IConfigGenerico} from "../../utiles/config";
 
 export interface IStatusConfig extends IConfigGenerico {
     enabled: boolean;
@@ -11,7 +11,13 @@ export class StatusConfig extends ConfigGenerico<IStatusConfig> implements IStat
 
     public constructor(defecto: IStatusConfig, user: Partial<IStatusConfig>) {
         super(defecto, user);
-        this.enabled = user.enabled!==undefined?user.enabled:defecto.enabled;
+
+        this.enabled = user.enabled??defecto.enabled;
         this.server = user.server??defecto.server;
     }
 }
+
+export const CONFIG_STATUS_DEFECTO: IStatusConfig = {
+    enabled: PRODUCCION && !TEST,
+    server: "https://status.meteored.com",
+};

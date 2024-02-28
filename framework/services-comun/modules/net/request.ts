@@ -12,6 +12,7 @@ export interface IRequest {
     x_u_email?: string;
     timeout: number;
     retry: number;
+    retryOnTimeout: boolean; // si es true, se reintentará la petición si se produce un timeout del servidor (no del campo tiemout).
     buffer: boolean;
     traceparent?: string;
     contentType?: string;
@@ -30,6 +31,10 @@ export class RequestError extends Error {
     public static check(err: any): boolean {
         // en browser la primera parte no se cumple
         return err instanceof RequestError  || ("url" in err && "headers" in err && "code" in err && "message" in err);
+    }
+
+    public static instanceof(err: any): RequestError|null {
+        return this.check(err) ? err : null;
     }
 
     /* INSTANCE */
@@ -58,6 +63,7 @@ export class Request {
         return {
             timeout: 1000,
             retry: 0,
+            retryOnTimeout: true,
             buffer: false,
             ...cfg,
         };
@@ -185,13 +191,13 @@ export class Request {
                 return Promise.reject(new RequestError({
                     url,
                     headers,
-                    code: ErrorCode.NETWORK,
+                    code: ErrorCode.TIMEOUT,
                     message: `${url} => "Timeout tras ${cfg.timeout}ms"`,
                     extra: e,
                 }));
             }
 
-            if (PRODUCCION && retry<10) {
+            if (PRODUCCION && cfg.retryOnTimeout && retry<10) {
                 retry++;
                 await PromiseDelayed(retry*1000);
                 return this.fetch<T, K>(url, init, headers, cfg, post, retry);

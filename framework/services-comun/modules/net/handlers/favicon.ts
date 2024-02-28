@@ -1,7 +1,7 @@
-import * as fs from "node:fs";
+import fs from "node:fs";
 
-import {Configuracion} from "../../utiles/config";
-import {IRouteGroup} from "../routes/group/block";
+import type {Configuracion} from "../../utiles/config";
+import type {IRouteGroup} from "../routes/group/block";
 import {RouteGroup} from "../routes/group";
 import {exists} from "../../utiles/fs";
 
@@ -9,6 +9,12 @@ class Favicon extends RouteGroup {
     /* STATIC */
 
     /* INSTANCE */
+    public constructor(config: Configuracion) {
+        super(config, {
+            documentable: false,
+        });
+    }
+
     protected getHandlers(): IRouteGroup[] {
         return [
             {

@@ -15,7 +15,7 @@
     "devel": "yarn g:devel"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "^8.12.1",
+    "@elastic/elasticsearch": "^8.12.2",
     "@google-cloud/opentelemetry-cloud-trace-exporter": "^2.1.0",
     "@google-cloud/storage": "^7.7.0",
     "@opentelemetry/api": "^1.7.0",
@@ -27,16 +27,16 @@
     "@opentelemetry/sdk-trace-node": "^1.21.0",
     "@opentelemetry/semantic-conventions": "^1.21.0",
     "chokidar": "^3.6.0",
-    "crawler-user-agents": "^1.0.117",
+    "crawler-user-agents": "^1.0.119",
     "fast-geoip": "^1.1.88",
     "hexoid": "^1.0.0",
-    "mysql2": "^3.9.1",
+    "mysql2": "^3.9.2",
     "source-map-support": "^0.5.21",
     "stream-shift": "1.0.3",
     "ua-parser-js": "^2.0.0-beta.2"
   },
   "devDependencies": {
-    "@types/node": "^20.11.16",
+    "@types/node": "^20.11.21",
     "@types/ua-parser-js": "^0.7.39",
     "formidable": "^3.5.1",
     "logs-base": "workspace:*",
