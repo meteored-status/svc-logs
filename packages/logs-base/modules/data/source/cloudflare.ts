@@ -114,7 +114,7 @@ export interface Cookies {
 }
 
 export interface ResponseHeaders {
-    "x-api-key":    string;
+    "x-api-key":          string;
     "x-meteored-node":    string;
     "x-meteored-version": string;
     "x-meteored-zone":    string;

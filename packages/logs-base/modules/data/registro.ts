@@ -138,8 +138,16 @@ export class Registro {
                 grupo: cliente.grupo,
                 crawler: crawler?.name,
                 source: Bucket.buildSource(notify),
+                nodo: data.ResponseHeaders["x-meteored-node"],
+                version: data.ResponseHeaders["x-meteored-version"],
+                zona: data.ResponseHeaders["x-meteored-zone"],
+                ["api-key"]: data.ResponseHeaders["x-api-key"],
             },
-            tags: [cliente.id, ...cliente.grupo!=undefined?[cliente.grupo]:[]],
+            tags: [
+                cliente.id,
+                ...cliente.grupo!=undefined ?
+                    [cliente.grupo]:
+                    []],
         };
 
         if (geo!=null) {
