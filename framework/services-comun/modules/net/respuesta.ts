@@ -168,6 +168,11 @@ export abstract class Respuesta {
         return this;
     }
 
+    public setContentTypePDF(): Respuesta {
+        this.contentType = "application/pdf";
+        return this;
+    }
+
     public setPasada(pasada: string): Respuesta {
         this.pasada = pasada;
         return this;

@@ -114,6 +114,7 @@ export interface Cookies {
 }
 
 export interface ResponseHeaders {
+    "x-api-key":    string;
     "x-meteored-node":    string;
     "x-meteored-version": string;
     "x-meteored-zone":    string;
@@ -494,6 +495,7 @@ const typeMap: any = {
         { json: "cf-access-user", js: "cf-access-user", typ: u(undefined, "") },
     ], false),
     "ResponseHeaders": o([
+        { json: "x-api-key", js: "x-api-key", typ: u(undefined, "") },
         { json: "x-meteored-node", js: "x-meteored-node", typ: u(undefined, "") },
         { json: "x-meteored-version", js: "x-meteored-version", typ: u(undefined, "") },
         { json: "x-meteored-zone", js: "x-meteored-zone", typ: u(undefined, "") },

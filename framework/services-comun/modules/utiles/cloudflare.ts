@@ -8,3 +8,11 @@ import {Conexion} from "../net/conexion";
 export function cfCountry(conexion: Conexion): string|undefined {
     return conexion.getHeaders()["cf-ipcountry"] as string|undefined;
 }
+
+/**
+ * Devuelve la IP de la petición de CloudFlare.
+ * @param conexion Conexión de la petición de CloudFlare.
+ */
+export function cfIP(conexion: Conexion): string|undefined {
+    return conexion.getHeaders()["cf-connecting-ip"] as string|undefined;
+}
