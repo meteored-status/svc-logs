@@ -110,10 +110,10 @@ export interface SourceCloudflare {
 }
 
 export interface Cookies {
+    "cf-access-user": string;
 }
 
 export interface RequestHeaders {
-    "cf-access-user": string;
     "x-api-key": string;
 }
 
@@ -495,9 +495,9 @@ const typeMap: any = {
         { json: "WorkerWallTimeUs", js: "WorkerWallTimeUs", typ: 0 },
     ], false),
     "Cookies": o([
+        { json: "cf-access-user", js: "cf-access-user", typ: u(undefined, "") },
     ], false),
     "RequestHeaders": o([
-        { json: "cf-access-user", js: "cf-access-user", typ: u(undefined, "") },
         { json: "x-api-key", js: "x-api-key", typ: u(undefined, "") },
     ], false),
     "ResponseHeaders": o([
