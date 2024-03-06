@@ -141,7 +141,7 @@ export class Registro {
                 nodo: data.ResponseHeaders["x-meteored-node"],
                 version: data.ResponseHeaders["x-meteored-version"],
                 zona: data.ResponseHeaders["x-meteored-zone"],
-                ["api-key"]: data.ResponseHeaders["x-api-key"],
+                apikey: data.ResponseHeaders["x-api-key"],
             },
             tags: [
                 cliente.id,
