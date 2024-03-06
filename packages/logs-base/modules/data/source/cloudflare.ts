@@ -78,7 +78,7 @@ export interface SourceCloudflare {
     OriginTCPHandshakeDurationMs:          number;
     OriginTLSHandshakeDurationMs:          number;
     ParentRayID:                           string;
-    RequestHeaders:                        Cookies;
+    RequestHeaders:                        RequestHeaders;
     ResponseHeaders:                       ResponseHeaders;
     SecurityAction?:                       string;
     SecurityActions?:                      string[];
@@ -111,11 +111,13 @@ export interface SourceCloudflare {
 
 export interface Cookies {
     "cf-access-user": string;
+}
+
+export interface RequestHeaders {
     "x-api-key": string;
 }
 
 export interface ResponseHeaders {
-    "x-api-key":          string;
     "x-meteored-node":    string;
     "x-meteored-version": string;
     "x-meteored-zone":    string;
@@ -462,7 +464,7 @@ const typeMap: any = {
         { json: "OriginTCPHandshakeDurationMs", js: "OriginTCPHandshakeDurationMs", typ: 0 },
         { json: "OriginTLSHandshakeDurationMs", js: "OriginTLSHandshakeDurationMs", typ: 0 },
         { json: "ParentRayID", js: "ParentRayID", typ: "" },
-        { json: "RequestHeaders", js: "RequestHeaders", typ: r("Cookies") },
+        { json: "RequestHeaders", js: "RequestHeaders", typ: r("RequestHeaders") },
         { json: "ResponseHeaders", js: "ResponseHeaders", typ: r("ResponseHeaders") },
         { json: "SecurityAction", js: "SecurityAction", typ: u(undefined, "") },
         { json: "SecurityActions", js: "SecurityActions", typ: u(undefined, a("")) },
@@ -494,10 +496,11 @@ const typeMap: any = {
     ], false),
     "Cookies": o([
         { json: "cf-access-user", js: "cf-access-user", typ: u(undefined, "") },
+    ], false),
+    "RequestHeaders": o([
         { json: "x-api-key", js: "x-api-key", typ: u(undefined, "") },
     ], false),
     "ResponseHeaders": o([
-        { json: "x-api-key", js: "x-api-key", typ: u(undefined, "") },
         { json: "x-meteored-node", js: "x-meteored-node", typ: u(undefined, "") },
         { json: "x-meteored-version", js: "x-meteored-version", typ: u(undefined, "") },
         { json: "x-meteored-zone", js: "x-meteored-zone", typ: u(undefined, "") },
