@@ -111,6 +111,7 @@ export interface SourceCloudflare {
 
 export interface Cookies {
     "cf-access-user": string;
+    "x-api-key": string;
 }
 
 export interface ResponseHeaders {
@@ -493,6 +494,7 @@ const typeMap: any = {
     ], false),
     "Cookies": o([
         { json: "cf-access-user", js: "cf-access-user", typ: u(undefined, "") },
+        { json: "x-api-key", js: "x-api-key", typ: u(undefined, "") },
     ], false),
     "ResponseHeaders": o([
         { json: "x-api-key", js: "x-api-key", typ: u(undefined, "") },
