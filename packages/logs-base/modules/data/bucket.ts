@@ -33,7 +33,7 @@ export class Bucket {
     }
 
     protected static async findBucketEjecutar(bucket: string): Promise<Bucket> {
-        const [row] = await db.query<IBucketMySQL, Bucket>("SELECT id, cliente, grupo FROM buckets WHERE id=?", [bucket], {
+        const [row] = await db.query<IBucketMySQL, Bucket>("SELECT id, cliente, grupo, backends FROM buckets WHERE id=?", [bucket], {
             fn: (row)=>new this(row),
         });
 

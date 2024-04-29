@@ -36,7 +36,7 @@ export class Bucket extends BucketBase {
     }
 
     public static async searchBuckets(): Promise<Bucket[]> {
-        return await db.query(`SELECT id, cliente, grupo FROM buckets`, [], {
+        return await db.query(`SELECT id, cliente, grupo, backends FROM buckets`, [], {
             fn: (row)=>new this(row),
         });
     }
