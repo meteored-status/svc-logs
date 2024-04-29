@@ -1,10 +1,11 @@
-import {Bucket as BucketBase, ICliente} from "logs-base/modules/data/bucket";
-import {INotify} from "services-comun-status/modules/services/logs-slave/backend";
+import {Bucket as BucketBase, type ICliente} from "logs-base/modules/data/bucket";
+import type {INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {type IInsert} from "services-comun/modules/database/mysql";
 import {Storage} from "services-comun/modules/fs/storage";
 import {Google} from "services-comun/modules/utiles/config";
 import db from "services-comun/modules/utiles/mysql";
-import {Configuracion} from "../utiles/config";
+
+import type {Configuracion} from "../utiles/config";
 
 export class Bucket extends BucketBase {
     /* STATIC */
@@ -15,6 +16,7 @@ export class Bucket extends BucketBase {
             cliente = {
                 id: bucket.cliente,
                 grupo: bucket.grupo,
+                backends: bucket.backends,
             }
             await this.update(notify, cliente);
         } else {
@@ -22,6 +24,7 @@ export class Bucket extends BucketBase {
                 id: notify.bucketId,
                 cliente: cliente.id,
                 grupo: cliente.grupo ?? null,
+                backends: cliente.backends,
             });
         }
 

@@ -33,6 +33,7 @@ export class Bucket extends BucketBase {
         const cliente: ICliente = {
             id: bucket.cliente,
             grupo: bucket.grupo,
+            backends: bucket.backends,
         };
         await this.update(notify, cliente);
         await this.procesando(notify);
