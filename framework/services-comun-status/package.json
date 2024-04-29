@@ -9,6 +9,6 @@
     "services-comun": "workspace:*",
     "tslib": "^2.6.2"
   },
-  "version": "2024.4.12+1",
-  "hash": "0f5d06a81d749d08f00225b3a65585d3"
+  "version": "2024.4.29+1",
+  "hash": "07474e5b0b81180a118fbc30c07ebab9"
 }

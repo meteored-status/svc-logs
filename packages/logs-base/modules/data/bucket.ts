@@ -10,11 +10,13 @@ export interface IBucketMySQL {
     id: string;
     cliente: string;
     grupo: string|null;
+    backends: Record<string, string>|null;
 }
 
 export interface ICliente {
     id: string;
     grupo?: string;
+    backends: Record<string, string>;
 }
 
 export class Bucket {
@@ -43,7 +45,7 @@ export class Bucket {
     }
 
     public static async update(notify: INotify, cliente: ICliente): Promise<void> {
-        await db.insert("UPDATE procesando SET cliente=?, grupo=? WHERE bucket=? AND archivo=?", [cliente.id, cliente.grupo??null, notify.bucketId, notify.objectId]);
+        await db.insert("UPDATE procesando SET cliente=?, grupo=?, backends=? WHERE bucket=? AND archivo=?", [cliente.id, cliente.grupo??null, cliente.backends!=undefined?JSON.stringify(cliente.backends):null, notify.bucketId, notify.objectId]);
     }
 
     public static async procesando(notify: INotify): Promise<void> {
@@ -69,17 +71,20 @@ export class Bucket {
     public readonly id: string;
     public readonly cliente: string;
     public readonly grupo?: string;
+    public readonly backends: Record<string, string>;
 
     protected constructor(data: IBucketMySQL) {
         this.id = data.id;
         this.cliente = data.cliente;
         this.grupo = data.grupo??undefined;
+        this.backends = data.backends??{};
     }
 
     public getCliente(): ICliente {
         return {
             id: this.cliente,
             grupo: this.grupo,
+            backends: this.backends,
         };
     }
 
