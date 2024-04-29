@@ -1,15 +1,22 @@
 import {Elasticsearch, SearchResponse} from "../elasticsearch/elastic";
 import {ESAggregate} from "../elasticsearch/base";
-import {QueryDslQueryContainer, SearchHit, SearchRequest, SortResults} from "@elastic/elasticsearch/lib/api/types";
+import {
+    QueryDslQueryContainer,
+    SearchHit,
+    SearchRequest,
+    Sort,
+    SortResults
+} from "@elastic/elasticsearch/lib/api/types";
 
 /**
  * Busca todos los elementos en los índices de elastic.
  * @param client Cliente de elastic.
  * @param config Configuración de la búsqueda.
  * @param query Consulta.
+ * @param sort Ordenación.
  * @private
  */
-export const searchAll = async <I>(client: Elasticsearch, config: {index: string; keep_alive: string; size: number;}, query: QueryDslQueryContainer): Promise<SearchResponse<I, ESAggregate>> => {
+export const searchAll = async <I>(client: Elasticsearch, config: {index: string; keep_alive: string; size: number;}, query: QueryDslQueryContainer, sort?: Sort): Promise<SearchResponse<I, ESAggregate>> => {
     // Creamos el Point In Time (pit)
     const pit = await client.openPointInTime({
         index: config.index,
@@ -24,7 +31,7 @@ export const searchAll = async <I>(client: Elasticsearch, config: {index: string
                 id: pit,
                 keep_alive: config.keep_alive,
             },
-            sort: [
+            sort: sort ?? [
                 {
                     _shard_doc: "asc",
                 },
@@ -63,7 +70,9 @@ export const searchAll = async <I>(client: Elasticsearch, config: {index: string
 
     let end: number = Date.now();
 
-    console.log("Tiempo de búsqueda: " + (end - init) + "ms");
+    if (!PRODUCCION || TEST) {
+        console.log("Tiempo de búsqueda: " + (end - init) + "ms");
+    }
 
     return resultados;
 }
@@ -74,9 +83,10 @@ export const searchAll = async <I>(client: Elasticsearch, config: {index: string
  * @param config Configuración de la búsqueda.
  * @param query Consulta.
  * @param fn Función de mapeo.
+ * @param sort Ordenación.
  * @private
  */
-export const searchAllFn = async <T, I>(client: Elasticsearch, config: {index: string; keep_alive: string; size: number;}, query: QueryDslQueryContainer, fn: (hit: SearchHit<I>) => T): Promise<T[]> => {
-    const resultados = await searchAll<I>(client, config, query);
+export const searchAllFn = async <T, I>(client: Elasticsearch, config: {index: string; keep_alive: string; size: number;}, query: QueryDslQueryContainer, fn: (hit: SearchHit<I>) => T, sort?: Sort): Promise<T[]> => {
+    const resultados = await searchAll<I>(client, config, query, sort);
     return resultados.hits.hits.map(fn);
 }

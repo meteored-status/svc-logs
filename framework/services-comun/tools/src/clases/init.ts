@@ -6,6 +6,7 @@ import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
 import IGNORE from "./init/ignore";
+import SONARLINT from "./init/sonarlint";
 import {md5} from "../../../modules/utiles/hash";
 
 interface IConfiguracion {
@@ -156,6 +157,7 @@ export class Init {
 
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
         await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
+        await safeWrite(`${basedir}/.sonarcloud.properties`, SONARLINT, true);
         await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
 
         console.groupEnd();
@@ -418,13 +420,17 @@ export class Init {
                 salida.packd.available.push(actual);
             }
         }
-        salida.devel.available = salida.devel.available.sort();
+        function sort(a: string, b: string): number {
+            return a.localeCompare(b);
+        }
+
+        salida.devel.available = salida.devel.available.toSorted(sort);
         salida.devel.available.push("");
-        salida.devel.disabled = salida.devel.disabled.sort();
+        salida.devel.disabled = salida.devel.disabled.toSorted(sort);
         salida.devel.disabled.push("");
-        salida.packd.available = salida.packd.available.sort();
+        salida.packd.available = salida.packd.available.toSorted(sort);
         salida.packd.available.push("");
-        salida.packd.disabled = salida.packd.disabled.sort();
+        salida.packd.disabled = salida.packd.disabled.toSorted(sort);
         salida.packd.disabled.push("");
 
         await safeWrite(file, JSON.stringify(salida, null, 2), true);

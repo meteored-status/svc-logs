@@ -8,8 +8,8 @@ import {ModuloUpload} from "./modulos/upload";
 import {ModuloFramework} from "./modulos/framework";
 
 export interface IMRPackConfig extends IModuloConfig {
-    options: IModuloConfig["options"] & {
-    };
+    options: IModuloConfig["options"];/* & {
+    };*/
 }
 
 export interface IMRPack extends IModulo {

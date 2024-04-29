@@ -226,7 +226,7 @@ export class Cloudflare {
 
     private static parse(json: string): SourceCloudflare|null {
         try {
-            return cast(JSON.parse(json), r("SourceCloudflare"));
+            return cast(JSON.parse(json), objeto("SourceCloudflare"));
         } catch (e) {
             error("Cloudflare.parse", e);
             return null;
@@ -364,7 +364,7 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
     return transformPrimitive(typ, val);
 }
 
-function cast<T>(val: any, typ: any): T {
+function cast<T>(val: any, typ: IObjeto): T {
     return transform(val, typ, jsonToJSProps);
 }
 
@@ -376,7 +376,11 @@ function l(typ: any) {
     return { literal: typ };
 }
 
-function a(typ: any) {
+interface IArray {
+    arrayItems: any;
+}
+
+function array(typ: any): IArray {
     return { arrayItems: typ };
 }
 
@@ -388,11 +392,15 @@ function o(props: any[], additional: any) {
     return { props, additional };
 }
 
-function m(additional: any) {
-    return { props: [], additional };
+// function m(additional: any) {
+//     return { props: [], additional };
+// }
+
+interface IObjeto {
+    ref: string;
 }
 
-function r(name: string) {
+function objeto(name: string): IObjeto {
     return { ref: name };
 }
 
@@ -430,9 +438,9 @@ const typeMap: any = {
         { json: "ClientSrcPort", js: "ClientSrcPort", typ: 0 },
         { json: "ClientTCPRTTMs", js: "ClientTCPRTTMs", typ: 0 },
         { json: "ClientXRequestedWith", js: "ClientXRequestedWith", typ: "" },
-        { json: "Cookies", js: "Cookies", typ: r("Cookies") },
-        { json: "ContentScanObjResults", js: "ContentScanObjResults", typ: u(undefined, a("")) },
-        { json: "ContentScanObjTypes", js: "ContentScanObjTypes", typ: u(undefined, a("")) },
+        { json: "Cookies", js: "Cookies", typ: objeto("Cookies") },
+        { json: "ContentScanObjResults", js: "ContentScanObjResults", typ: u(undefined, array("")) },
+        { json: "ContentScanObjTypes", js: "ContentScanObjTypes", typ: u(undefined, array("")) },
         { json: "EdgeCFConnectingO2O", js: "EdgeCFConnectingO2O", typ: true },
         { json: "EdgeColoCode", js: "EdgeColoCode", typ: "" },
         { json: "EdgeColoID", js: "EdgeColoID", typ: 0 },
@@ -447,9 +455,9 @@ const typeMap: any = {
         { json: "EdgeResponseContentType", js: "EdgeResponseContentType", typ: "" },
         { json: "EdgeServerIP", js: "EdgeServerIP", typ: "" },
         { json: "EdgeTimeToFirstByteMs", js: "EdgeTimeToFirstByteMs", typ: 0 },
-        { json: "FirewallMatchesActions", js: "FirewallMatchesActions", typ: a("any") },
-        { json: "FirewallMatchesRuleIDs", js: "FirewallMatchesRuleIDs", typ: a("any") },
-        { json: "FirewallMatchesSources", js: "FirewallMatchesSources", typ: a("any") },
+        { json: "FirewallMatchesActions", js: "FirewallMatchesActions", typ: array("any") },
+        { json: "FirewallMatchesRuleIDs", js: "FirewallMatchesRuleIDs", typ: array("any") },
+        { json: "FirewallMatchesSources", js: "FirewallMatchesSources", typ: array("any") },
         { json: "OriginDNSResponseTimeMs", js: "OriginDNSResponseTimeMs", typ: 0 },
         { json: "OriginIP", js: "OriginIP", typ: "" },
         { json: "OriginRequestHeaderSendDurationMs", js: "OriginRequestHeaderSendDurationMs", typ: 0 },
@@ -464,15 +472,15 @@ const typeMap: any = {
         { json: "OriginTCPHandshakeDurationMs", js: "OriginTCPHandshakeDurationMs", typ: 0 },
         { json: "OriginTLSHandshakeDurationMs", js: "OriginTLSHandshakeDurationMs", typ: 0 },
         { json: "ParentRayID", js: "ParentRayID", typ: "" },
-        { json: "RequestHeaders", js: "RequestHeaders", typ: r("RequestHeaders") },
-        { json: "ResponseHeaders", js: "ResponseHeaders", typ: r("ResponseHeaders") },
+        { json: "RequestHeaders", js: "RequestHeaders", typ: objeto("RequestHeaders") },
+        { json: "ResponseHeaders", js: "ResponseHeaders", typ: objeto("ResponseHeaders") },
         { json: "SecurityAction", js: "SecurityAction", typ: u(undefined, "") },
-        { json: "SecurityActions", js: "SecurityActions", typ: u(undefined, a("")) },
+        { json: "SecurityActions", js: "SecurityActions", typ: u(undefined, array("")) },
         { json: "SecurityLevel", js: "SecurityLevel", typ: "" },
         { json: "SecurityRuleDescription", js: "SecurityRuleDescription", typ: u(undefined, "") },
         { json: "SecurityRuleID", js: "SecurityRuleID", typ: u(undefined, "") },
-        { json: "SecurityRuleIDs", js: "SecurityRuleIDs", typ: u(undefined, a("")) },
-        { json: "SecuritySources", js: "SecuritySources", typ: u(undefined, a("")) },
+        { json: "SecurityRuleIDs", js: "SecurityRuleIDs", typ: u(undefined, array("")) },
+        { json: "SecuritySources", js: "SecuritySources", typ: u(undefined, array("")) },
         { json: "SmartRouteColoID", js: "SmartRouteColoID", typ: 0 },
         { json: "UpperTierColoID", js: "UpperTierColoID", typ: 0 },
         { json: "WAFAction", js: "WAFAction", typ: "" },

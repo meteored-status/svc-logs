@@ -198,7 +198,7 @@ export class RouteGroupBlock {
         conexion.enableCors();
         conexion.addCustomHeader("Access-Control-Allow-Credentials", "true");
         conexion.addCustomHeader("Access-Control-Allow-Methods", expresion.metodos.join(", "));
-        conexion.addCustomHeader("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,Referrer-Policy");
+        conexion.addCustomHeader("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,Referrer-Policy,x-api-key");
         conexion.addCustomHeader("Access-Control-Max-Age", 1728000);
         conexion.setContentType("text/plain charset=UTF-8");
         await conexion

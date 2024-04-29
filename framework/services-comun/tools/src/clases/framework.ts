@@ -1,9 +1,10 @@
-import {createHash} from "node:crypto";
 import path from "node:path";
+import os from "node:os";
 
 import {Colors} from "./colors";
 import {Comando} from "./comando";
 import {isDir, isFile, readDir, readFileString, readJSON, rmdir, safeWrite} from "../../../modules/utiles/fs";
+import {md5} from "../../../modules/utiles/hash";
 import {mkdir, rename, unlink} from "../../../modules/utiles/fs";
 import {Yarn} from "./yarn";
 
@@ -12,6 +13,11 @@ export class Framework {
     public static async add(basedir: string, frameworks: string[]): Promise<boolean> {
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Añadiendo frameworks"));
         console.group();
+        if (os.platform()=="win32") {
+            console.log(Colors.colorize([Colors.FgRed], "No disponible en Windows"));
+            console.groupEnd();
+            return false;
+        }
 
         await mkdir(`${basedir}/tmp`, true);
         const promesas: Promise<boolean>[] = [];
@@ -38,6 +44,11 @@ export class Framework {
     public static async remove(basedir: string, frameworks: string[]): Promise<boolean> {
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Eliminando frameworks"));
         console.group();
+        if (os.platform()=="win32") {
+            console.log(Colors.colorize([Colors.FgRed], "No disponible en Windows"));
+            console.groupEnd();
+            return false;
+        }
 
         await mkdir(`${basedir}/tmp`, true);
         const promesas: Promise<boolean>[] = [];
@@ -75,6 +86,11 @@ export class Framework {
     public static async update(basedir: string): Promise<boolean> {
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Comprobando frameworks"));
         console.group();
+        if (os.platform()=="win32") {
+            console.log(Colors.colorize([Colors.FgRed], "No disponible en Windows"));
+            console.groupEnd();
+            return false;
+        }
 
         await mkdir(`${basedir}/tmp`, true);
         const promesas: Promise<boolean>[] = [];
@@ -95,6 +111,11 @@ export class Framework {
     public static async push(basedir: string): Promise<boolean> {
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Enviando frameworks"));
         console.group();
+        if (os.platform()=="win32") {
+            console.log(Colors.colorize([Colors.FgRed], "No disponible en Windows"));
+            console.groupEnd();
+            return false;
+        }
 
         const tmp = `${basedir}/tmp`;
         await mkdir(tmp, true);
@@ -134,13 +155,13 @@ export class Framework {
                 if (await isDir(name)) {
                     salida.push(await this.parseDir(name));
                 } else if (await isFile(name)) {
-                    salida.push(createHash('md5').update(await readFileString(name)).digest("hex"));
+                    salida.push(md5(await readFileString(name)));
                 }
             }
             return salida.join("");
         }
         if (await isFile(dir)) {
-            return createHash('md5').update(await readFileString(dir)).digest("hex");
+            return md5(await readFileString(dir));
         }
         return "";
     }
@@ -170,8 +191,8 @@ export class Framework {
             await rename(`${dirname}/files`, `${tmp}/files`);
         }
 
-        const md5 = createHash('md5').update(await this.parseDir(`${dirname}/`)).digest("hex");
-        if (md5 !== hash) {
+        const md_5 = md5(await this.parseDir(`${dirname}/`));
+        if (md_5 !== hash) {
             const partes = /^(\d{4}\.\d{1,2}\.\d{1,2})\+(\d+)$/.exec(version);
             let fecha, index;
             if (partes == null) {
@@ -196,7 +217,7 @@ export class Framework {
                 indice = 1;
             }
 
-            await this.updatePackage(dirname, paquete, `${fechaActual}+${indice}`, md5);
+            await this.updatePackage(dirname, paquete, `${fechaActual}+${indice}`, md_5);
 
             console.log(Colors.colorize([Colors.FgMagenta], nombre), `=> Subiendo nueva versión ${Colors.colorize([Colors.FgBlue], version)} => ${Colors.colorize([Colors.FgGreen], paquete.version)}`);
 

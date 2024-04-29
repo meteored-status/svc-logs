@@ -1,18 +1,18 @@
 ARG BASE_IMAGE
 
-FROM ${BASE_IMAGE} as build
+FROM ${BASE_IMAGE} AS build
 ARG ws
 WORKDIR /usr/src/app
 RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
 COPY ./.yarn/plugins ./.yarn/plugins
 COPY ./.yarn/releases ./.yarn/releases
-COPY ./.yarnrc* ./
+COPY ./.yarnrc.yml ./
 COPY ./services/${ws} ./services/${ws}
 COPY ./package.json ./
 COPY ./yarn.lock ./
 RUN yarn workspaces focus --production ${ws}
 
-FROM ${BASE_IMAGE} as app
+FROM ${BASE_IMAGE} AS app
 ARG ws
 WORKDIR /usr/src/app
 ENV NODE_ENV=production
@@ -29,7 +29,9 @@ COPY ./services/${ws}/package.json ./services/${ws}
 COPY ./services/${ws}/output ./services/${ws}/output
 RUN echo "#!/usr/bin/env bash" > run.sh
 RUN echo "yarn workspace ${ws} node --no-warnings app.js" >> run.sh
-RUN cd ./services/${ws} && ln -s ../../files ./ && cd ../..
+WORKDIR /usr/src/app/services/${ws}
+RUN ln -s ../../files ./
+WORKDIR /usr/src/app
 
 EXPOSE 8080
 CMD [ "sh", "run.sh" ]
