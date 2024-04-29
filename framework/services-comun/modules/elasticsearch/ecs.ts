@@ -50,9 +50,9 @@ interface ECSELF {
     byte_order?: string;
     cpu_type?: string;
     creation_date?: Date;
-    exports?: NodeJS.Dict<string[]>;
+    exports?: Record<string, string[]>;
     header?: ECSELFHeader;
-    imports?: NodeJS.Dict<string[]>;
+    imports?: Record<string, string[]>;
     sections?: ECSELFSection[];
     segments?: ECSELFSegment[];
     shared_libraries?: string[];
@@ -279,7 +279,7 @@ interface ECSContainer {
     disk?: ECSContainerDisk;
     id?: string;
     image?: ECSContainerImage;
-    labels?: NodeJS.Dict<string>;
+    labels?: Record<string, string>;
     memory?: ECSContainerMemory;
     name?: string;
     network?: ECSContainerNetwork;
@@ -1224,9 +1224,9 @@ interface ECSVulnerability {
     severity?: string;
 }
 
-export interface ECS extends NodeJS.Dict<any> {
+export interface ECS extends Record<string, any> {
     "@timestamp": Date;
-    labels?: NodeJS.Dict<string>;
+    labels: Record<string, string|undefined>;
     message?: string;
     tags?: string[];
     agent?: ECSAgent;

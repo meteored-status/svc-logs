@@ -13,6 +13,7 @@ export interface IRepesca {
     archivo: string;
     cliente?: string;
     grupo?: string;
+    backends?: Record<string, string>;
 }
 
 interface IRepescaMySQL {
@@ -20,6 +21,7 @@ interface IRepescaMySQL {
     archivo: string;
     cliente: string|null;
     grupo: string|null;
+    backends: Record<string, string>|null;
     // mensaje: string|null;
     // contador: number;
     // fecha: Date;
@@ -56,7 +58,7 @@ export class Repesca {
     }
 
     protected static async liberarBloqueados(): Promise<void> {
-        await db.insert("INSERT IGNORE INTO repesca (bucket, archivo, cliente, grupo, fecha) SELECT bucket, archivo, cliente, grupo, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-10800000)]);
+        await db.insert("INSERT IGNORE INTO repesca (bucket, archivo, cliente, grupo, backends, fecha) SELECT bucket, archivo, cliente, grupo, backends, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-10800000)]);
         await db.delete("DELETE FROM procesando WHERE (bucket, archivo) IN (SELECT bucket, archivo FROM repesca)");
     }
 
@@ -103,13 +105,14 @@ export class Repesca {
     }
 
     protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 5", [], {
+        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo, backends FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 5", [], {
             master: true,
             fn: (row)=>new Repesca({
                 bucket: row.bucket,
                 archivo: row.archivo,
                 cliente: row.cliente??undefined,
                 grupo: row.grupo??undefined,
+                backends: row.backends??undefined,
             }),
         });
     }
@@ -119,6 +122,7 @@ export class Repesca {
     public get archivo(): string { return this.data.archivo; }
     public get cliente(): string|undefined { return this.data.cliente; }
     public get grupo(): string|undefined { return this.data.grupo; }
+    public get backends(): Record<string, string>|undefined { return this.data.backends; }
 
     private constructor(protected data: IRepesca) {
     }
@@ -136,6 +140,7 @@ export class Repesca {
                 }, this.cliente != undefined ? {
                     id: this.cliente,
                     grupo: this.grupo,
+                    backends: this.backends ?? {},
                 } : undefined);
             // }
             await this.delete();

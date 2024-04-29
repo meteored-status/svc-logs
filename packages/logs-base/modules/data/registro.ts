@@ -187,6 +187,7 @@ export class Registro {
                 bytes: data.OriginResponseBytes,
                 status_code: data.OriginResponseStatus,
             };
+            ecs.labels["backend"] = cliente.backends[data.OriginIP]??data.OriginIP;
         } else {
             ecs.destination = {
                 ...ecs.destination,
@@ -197,6 +198,7 @@ export class Registro {
                 bytes: data.CacheResponseBytes,
                 status_code: data.CacheResponseStatus,
             };
+            ecs.labels["backend"] = "Cloudflare";
         }
 
         if (ua!=null) {
