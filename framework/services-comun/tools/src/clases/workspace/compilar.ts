@@ -229,7 +229,7 @@ export class Compilar {
         let index: string|undefined;
         let anterior: string|undefined;
         for (const actual of tags) {
-            const partes = /^(\d{4}\.\d{2}\.\d{2})-(\d{3,})(.*)$/.exec(actual);
+            const partes = /^(\d{4}\.\d{2}\.\d{2})-(\d{3,}).*$/.exec(actual);
             if (partes==null) {
                 anterior = actual;
             } else {

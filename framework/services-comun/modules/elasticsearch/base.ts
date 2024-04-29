@@ -57,7 +57,7 @@ export interface IndexResponse extends IndexResponseBase {}
 export type IndicesExistsResponse = IndicesExistsResponseBase;
 export interface InfoResponse extends InfoResponseBase {}
 export interface ScrollResponse<T> extends ScrollResponseBase<T> {}
-export interface SearchResponse<T, K> extends SearchResponseBase<T, K> {}
+export interface SearchResponse<T, K extends ESAggregate = ESAggregate> extends SearchResponseBase<T, K> {}
 export interface UpdateResponse<T> extends UpdateResponseBase<T> {}
 
 export type ESAggregate = Record<AggregateName, AggregationsAggregate>;

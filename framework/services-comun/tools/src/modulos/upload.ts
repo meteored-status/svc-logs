@@ -3,9 +3,9 @@ import {Colors} from "../clases/colors";
 import {Framework} from "../clases/framework";
 
 export interface IUploadConfig extends IModuloConfig {
-    options: IModuloConfig["options"] & {
+    options: IModuloConfig["options"];/* & {
 
-    };
+    };*/
 }
 
 export interface IUpload extends IModulo {

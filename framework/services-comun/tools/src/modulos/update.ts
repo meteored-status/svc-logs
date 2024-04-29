@@ -3,9 +3,9 @@ import {Colors} from "../clases/colors";
 import {Update} from "../clases/update";
 
 export interface IUpdateConfig extends IModuloConfig {
-    options: IModuloConfig["options"] & {
+    options: IModuloConfig["options"];/* & {
 
-    };
+    };*/
 }
 
 export interface IUpdate extends IModulo {

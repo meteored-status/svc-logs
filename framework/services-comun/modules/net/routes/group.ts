@@ -11,6 +11,11 @@ export interface IRouteGroupParams {
     documentable: boolean;
 }
 
+export interface IConfigError {
+    cache: Date;
+    status: number;
+}
+
 export abstract class RouteGroup<T extends Configuracion=Configuracion> {
     private readonly handlers: RouteGroupBlock[];
     public readonly params: IRouteGroupParams;
@@ -88,7 +93,7 @@ export abstract class RouteGroup<T extends Configuracion=Configuracion> {
             });
     }
 
-    protected async sendError(conexion: Respuesta, data?: Partial<IErrorInfo>, cache?: Date): Promise<number> {
+    protected async sendError(conexion: Respuesta, data?: Partial<IErrorInfo>, {cache, status}: Partial<IConfigError>={}): Promise<number> {
         if (cache==undefined) {
             conexion
                 .noCache()
@@ -98,6 +103,10 @@ export abstract class RouteGroup<T extends Configuracion=Configuracion> {
         } else {
             conexion
                 .setCache(cache);
+        }
+        if (status!=undefined) {
+            conexion
+                .setStatus(status);
         }
 
         return conexion

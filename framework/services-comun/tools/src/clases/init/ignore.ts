@@ -1,8 +1,10 @@
 export default `
+.DS_Store
+.idea/copilot/
 .idea/dataSources.xml
 .idea/watcherTasks.xml
 .idea/php.xml
-.DS_Store
+.idea/sonarlint/
 .idea/workspace.xml
 .next/
 .pnp.*

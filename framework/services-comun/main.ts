@@ -35,14 +35,14 @@ export class Main {
                     if (message.statusCode==200) {
                         resolve();
                     } else {
-                        reject();
+                        reject(new Error(message.statusMessage));
                     }
                 }
             });
-            conexion.on("error", ()=>{
+            conexion.on("error", (err)=>{
                 if (!resuelto) {
                     resuelto = true;
-                    reject();
+                    reject(err);
                 }
             });
         });

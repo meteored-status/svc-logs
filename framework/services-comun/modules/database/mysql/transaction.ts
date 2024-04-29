@@ -1,11 +1,9 @@
-import {createHash} from "node:crypto";
-import {type Connection, type ResultSetHeader, type Pool, type PoolNamespace} from "mysql2/promise";
+import {type PoolConnection, type ResultSetHeader, type Pool, type PoolNamespace} from "mysql2/promise";
 
 import {type MySQL, type TipoRegistro} from "./";
 import {error, info, warning} from "../../utiles/log";
+import {md5} from "../../utiles/hash";
 import {random} from "../../utiles/random";
-
-declare var PRODUCCION: boolean;
 
 export enum TIsolationLevel {
     REPEATABLE_READ     = 1,
@@ -24,33 +22,32 @@ export class Transaction {
     ]);
 
     private static isolationLevel(level: TIsolationLevel): string {
-        return this.ISOLATION_LEVEL_MAP.get(level) || "READ_COMMITTED";
+        return this.ISOLATION_LEVEL_MAP.get(level) ?? "READ_COMMITTED";
     }
 
     /* INSTANCE */
-    private _connection: Connection|null;
-    private readonly _hash: string;
+    private _connection?: Promise<PoolConnection>;
+    private get connection(): Promise<PoolConnection> {
+        return this._connection ??= this.pool.getConnection();
+    }
+
+    public readonly hash: string;
 
     public constructor(private readonly pool: Pool | PoolNamespace) {
-        this._connection = null;
-        const hash = createHash("md5").update(`${random(32)}-${Date.now()}-${random(32)}`, 'utf8').digest('hex');
-        this._hash = `${hash.substring(0, 3)}${hash.substring(29)}`;
+        const hash = md5(`${random(32)}-${Date.now()}-${random(32)}`);
+        this.hash = `${hash.substring(0, 3)}${hash.substring(29)}`;
     }
 
-    private async connection(): Promise<Connection> {
-        return this._connection ??= await this.pool.getConnection();
-    }
-
-    public get hash(): string {
-        return this._hash;
-    }
+    // public get hash(): string {
+    //     return this._hash;
+    // }
 
     /**
      * Inicia una nueva transacción.
      * @param level Nivel de aislamiento de la transacción.
      */
     public async start(level: TIsolationLevel = TIsolationLevel.READ_COMMITTED): Promise<Transaction> {
-        const connection = await this.connection();
+        const connection = await this.connection;
         await connection.execute(`set transaction isolation level ${Transaction.isolationLevel(level)}`);
         await connection.beginTransaction();
 
@@ -59,7 +56,7 @@ export class Transaction {
 
     private async executeQuery<T>(sql: string, params: any[]=[]): Promise<T[]> {
         if (!PRODUCCION) info(`Transaction ${this.hash} => QUERY: ${sql} | PARAMS: [${params}]`);
-        const connection = await this.connection();
+        const connection = await this.connection;
         const [rows] = await connection.query(sql, params);
         return rows as T[];
     }
@@ -69,7 +66,7 @@ export class Transaction {
     }
 
     private async execute(sql: string, params: TipoRegistro[]=[]): Promise<ResultSetHeader> {
-        const connection = await this.connection();
+        const connection = await this.connection;
         const [rows] = await connection.query<ResultSetHeader>(sql, params);
         return rows;
     }
@@ -98,7 +95,7 @@ export class Transaction {
      * Confirma los cambios de la transacción.
      */
     public async commit(): Promise<void> {
-        const connection = await this.connection();
+        const connection = await this.connection;
         await connection.commit();
         await this.release();
     }
@@ -107,7 +104,7 @@ export class Transaction {
      * Deshace los cambios realizados por la transacción antes de que los confirme.
      */
     public async rollback(): Promise<void> {
-        const connection = await this.connection();
+        const connection = await this.connection;
         await connection.rollback();
         await this.release();
     }
@@ -117,9 +114,8 @@ export class Transaction {
      * @private
      */
     private async release(): Promise<void> {
-        const connection = await this.connection();
-        // @ts-ignore
-        await connection.release();
+        const connection = await this.connection;
+        connection.release();
     }
 }
 
