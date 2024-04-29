@@ -119,6 +119,10 @@ export class Conexion extends Respuesta {
         return this.peticion.headers["if-none-match"]??null;
     }
 
+    public checkETag(etag: string): boolean {
+        return this.ifNoneMatch==`"${etag}"`;
+    }
+
     public get url(): string {
         return `${!this.https?"http":"https"}://${this.peticion.headers.host}${this.peticion.url}`;
     }

@@ -6,13 +6,26 @@ type TExternals = webpack.Configuration["externals"];
 
 export class Externals {
     /* STATIC */
+    private static ES_MODULES = {
+        "formidable": "3",
+        "pdf-merger-js": "5",
+    };
+
     protected static buildNode(dependencies: NodeJS.Dict<string>): TExternals {
+        function check(actual: string , version: string ): boolean {
+            return actual.startsWith(`^${version}.`)
+                || actual.startsWith(`~${version}.`)
+                || actual.startsWith(`${version}.`);
+        }
+
         const salida: TExternals = {};
         for (let mod in dependencies) {
             salida[mod] = `commonjs ${mod}`;
         }
-        if (dependencies["formidable"]!==undefined && (dependencies["formidable"].startsWith("^3.") || dependencies["formidable"].startsWith("3."))) {
-            delete salida["formidable"];
+        for (const [lib, version] of Object.entries(this.ES_MODULES)) {
+            if (dependencies[lib]!==undefined && check(dependencies[lib], version)) {
+                delete salida[lib];
+            }
         }
         return salida;
     }

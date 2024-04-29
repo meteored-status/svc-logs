@@ -1,9 +1,8 @@
-import crypto from "node:crypto";
 import os from "node:os";
 
 import {exists, readJSON} from "./fs";
+import {md5} from "./hash";
 import {random} from "./random";
-import {info} from "./log";
 
 export interface IConfigGenerico {}
 export class ConfigGenerico<T extends IConfigGenerico=IConfigGenerico> implements IConfigGenerico {
@@ -123,7 +122,7 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
         this.pod = Object.seal({
             filesdir: 'files',
             version,
-            hash: crypto.createHash('md5').update(version).digest("hex"),
+            hash: md5(version),
             host,
             servicio,
             servicios,

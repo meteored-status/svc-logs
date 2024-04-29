@@ -9,7 +9,7 @@ export function Component(name: string) {
 export function Inject(name: string) {
     return (instance: any, property: string) => {
         Object.defineProperty(instance, property, {
-            get: () => catalog.getInstance(name)
-        })
+            get: () => catalog.getInstance(name),
+        });
     }
 }

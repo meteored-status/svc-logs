@@ -4,9 +4,9 @@ import {Init} from "../clases/init";
 import {Yarn} from "../clases/yarn";
 
 export interface IInitConfig extends IModuloConfig {
-    options: IModuloConfig["options"] & {
+    options: IModuloConfig["options"];/* & {
 
-    };
+    };*/
 }
 
 export interface IInit extends IModulo {

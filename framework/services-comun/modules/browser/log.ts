@@ -1,5 +1,3 @@
-declare var PRODUCCION: boolean;
-
 export function info(...vars: any[]): void {
     if (!PRODUCCION) {
         console.log(...vars);

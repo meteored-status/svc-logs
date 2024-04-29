@@ -209,3 +209,27 @@ export function convertirTemperatura(value: number, from: TTemperatura, to: TTem
 
     return value;
 }
+
+export enum TDistancia {
+    METROS = 0,
+    FEET = 1
+}
+
+export function convertirDistancia(value: number, from: TDistancia, to: TDistancia): number {
+    switch (from) {
+        case TDistancia.METROS:
+            switch (to) {
+                case TDistancia.FEET:
+                    return value * 3.28084;
+            }
+            break;
+        case TDistancia.FEET:
+            switch (to) {
+                case TDistancia.METROS:
+                    return value / 3.28084;
+            }
+            break;
+    }
+
+    return value;
+}

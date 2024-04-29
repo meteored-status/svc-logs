@@ -152,6 +152,7 @@ export class Server {
                     keepExtensions: true,
                     multiples: true,
                     uploadDir: config.uploadDir,
+                    maxFileSize: config.maxFileSize,
                 }).parse(request, (err: NodeJS.ErrnoException, fields: Fields, files: Files) => {
                     if (!err) {
                         if (type.includes("multipart")) {

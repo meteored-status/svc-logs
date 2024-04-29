@@ -98,18 +98,6 @@ export class Request {
         const data: IRespuesta<T> = await respuesta.json();
 
         return await this.checkRespuesta<T>(data, respuesta.headers, url);
-        // if (data.ok) {
-        //     return {
-        //         data: data.data,
-        //         headers: respuesta.headers,
-        //         expires: new Date(data.expiracion),
-        //     };
-        // }
-        //
-        // return Promise.reject(new RequestError({
-        //     url,
-        //     ...data.info,
-        // }));
     }
 
     protected static async parseRespuesta<T>(respuesta: Response, config: IRequestConfig, url: string): Promise<RequestResponse<T>> {

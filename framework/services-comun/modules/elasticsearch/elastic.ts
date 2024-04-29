@@ -25,13 +25,13 @@ export interface BulkResponse extends BulkResponseBase {}
 export interface ESAggregate extends ESAggregateBase {}
 export interface ESSuggest<T> extends ESSuggestBase<T> {}
 export type ESSuggestOption<T> = ESSuggestOptionBase<T>;
-export interface GetResponse extends GetResponseBase {}
+export interface GetResponse<T> extends GetResponseBase<T> {}
 export interface IMetadata extends IMetadataBase {}
 export interface IndexResponse extends IndexResponseBase {}
 export type IndicesExistsResponse = IndicesExistsResponseBase;
 export interface InfoResponse extends InfoResponseBase {}
 export interface ScrollResponse extends ScrollResponseBase {}
-export interface SearchResponse<T, K> extends SearchResponseBase<T, K> {}
+export interface SearchResponse<T, K extends ESAggregate = ESAggregate> extends SearchResponseBase<T, K> {}
 export interface UpdateResponse extends UpdateResponseBase {}
 
 
