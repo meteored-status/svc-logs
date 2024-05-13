@@ -32,7 +32,8 @@ export class Registro {
     }
 
     public static async build(pod: IPodInfo, cliente: ICliente, data: SourceCloudflare, notify: INotify): Promise<Registro> {
-        const geo = this.getGeoIP(data.ClientIP);
+        const geo_cliente = this.getGeoIP(data.ClientIP);
+        const geo_origen = this.getGeoIP(data.OriginIP);
         const ua = data.ClientRequestUserAgent.length>0?UAParser(data.ClientRequestUserAgent):null;
         const crawler = Crawler.test(data.ClientRequestUserAgent);
         const tls = data.ClientSSLProtocol.split("v");
@@ -151,15 +152,15 @@ export class Registro {
             ],
         };
 
-        if (geo!=null) {
+        if (geo_cliente!=null) {
             ecs.client!.geo = {
-                country_iso_code: geo.country,
-                region_iso_code: geo.region.length > 0 ? geo.region : undefined,
-                timezone: geo.timezone,
-                city_name: geo.city.length > 0 ? geo.city : undefined,
+                country_iso_code: geo_cliente.country,
+                region_iso_code: geo_cliente.region.length > 0 ? geo_cliente.region : undefined,
+                timezone: geo_cliente.timezone,
+                city_name: geo_cliente.city.length > 0 ? geo_cliente.city : undefined,
                 location: {
-                    lat: geo.ll[0],
-                    lon: geo.ll[1],
+                    lat: geo_cliente.ll[0],
+                    lon: geo_cliente.ll[1],
                 },
             }
         } else {
@@ -168,6 +169,7 @@ export class Registro {
             }
         }
 
+
         if (data.OriginIP.length>0) {
             ecs.destination = {
                 ...ecs.destination,
@@ -175,6 +177,18 @@ export class Registro {
                 bytes: data.OriginResponseBytes,
                 ip: data.OriginIP,
             };
+            if (geo_origen!=null) {
+                ecs.destination.geo = {
+                    country_iso_code: geo_origen.country,
+                    region_iso_code: geo_origen.region.length > 0 ? geo_origen.region : undefined,
+                    timezone: geo_origen.timezone,
+                    city_name: geo_origen.city.length > 0 ? geo_origen.city : undefined,
+                    location: {
+                        lat: geo_origen.ll[0],
+                        lon: geo_origen.ll[1],
+                    },
+                }
+            }
             ecs.dns = {
                 answers: [
                     {
