@@ -190,4 +190,9 @@ export class Fecha {
 
         return result;
     }
+
+    public static getDate(timeZone: string): Date {
+        // Convertir a una zona horaria específica
+        return new Date(new Date().toLocaleString('en-US', { timeZone }));
+    }
 }
