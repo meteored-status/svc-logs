@@ -19,7 +19,7 @@ export interface IDominioConfig {
     };
 }
 
-export class Dominio<T extends IDominioConfig = IDominioConfig> {
+export class Dominio {
     /* STATIC */
     public static readonly BASE: ISubdominioCompleto = {
         nombre: "",
@@ -37,17 +37,19 @@ export class Dominio<T extends IDominioConfig = IDominioConfig> {
     public readonly BASE = this.SUBDOMINIO_BASE.nombre;
     public readonly WWW = this.SUBDOMINIO_WWW.nombre;
 
+    public readonly nombre: string;
     public readonly cookies: string;
     public readonly defecto: string;
     public readonly defecto_base: string;
+    public readonly dominio: string;
     private readonly dominios: Map<string, string>;
     private readonly hosts: Map<string, string>;
     private readonly redirecciones: Map<string, string>;
 
-    public get dominio(): string { return this.config.dominio; }
-
-    protected constructor(public readonly config: T) {
-        this.cookies = `.${this.config.dominio}`;
+    protected constructor(config: IDominioConfig) {
+        this.nombre = `${config.dominio.charAt(0).toUpperCase()}${config.dominio.slice(1)}`;
+        this.cookies = `.${config.dominio}`;
+        this.dominio = config.dominio;
         this.dominios = new Map<string, string>();
         this.hosts = new Map<string, string>();
         this.redirecciones = new Map<string, string>();
@@ -62,22 +64,22 @@ export class Dominio<T extends IDominioConfig = IDominioConfig> {
             coletilla_punto = "test.";
         }
 
-        const habilitados = [this.WWW, ...this.config.subdominios?.habilitados??[]];
+        const habilitados = [this.WWW, ...config.subdominios?.habilitados??[]];
         const listado: ISubdominioCompleto[] = [this.SUBDOMINIO_BASE, this.SUBDOMINIO_WWW,
-            ...this.config.subdominios?.listado?.map(subdominio=>({
+            ...config.subdominios?.listado?.map(subdominio=>({
                 nombre: subdominio.nombre,
                 scheme: subdominio.scheme??`https://`,
             }))??[],
         ];
-        const redirigidos: ISubdominioRedirigido[] = this.config.subdominios?.redirigidos??[];
+        const redirigidos: ISubdominioRedirigido[] = config.subdominios?.redirigidos??[];
 
-        this.defecto_base = `${coletilla_guion}${this.SUBDOMINIO_WWW.nombre}.${this.config.dominio}`;
+        this.defecto_base = `${coletilla_guion}${this.SUBDOMINIO_WWW.nombre}.${config.dominio}`;
         this.defecto = `https://${this.defecto_base}`;
         for (const subdominio of listado) {
             if (subdominio.nombre.length>0) {
-                this.add(subdominio.nombre, `${subdominio.scheme}://${coletilla_guion}${subdominio.nombre}.${this.config.dominio}`);
+                this.add(subdominio.nombre, `${subdominio.scheme}://${coletilla_guion}${subdominio.nombre}.${config.dominio}`);
             } else {
-                this.add(subdominio.nombre, `${subdominio.scheme}://${coletilla_punto}${this.config.dominio}`);
+                this.add(subdominio.nombre, `${subdominio.scheme}://${coletilla_punto}${config.dominio}`);
             }
 
             if (!habilitados.includes(subdominio.nombre) && !redirigidos.find(redirigido=>redirigido.nombre==subdominio.nombre)) {

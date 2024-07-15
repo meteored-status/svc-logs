@@ -1,9 +1,11 @@
 export enum ErrorCode {
-    NETWORK = 1,
-    TIMEOUT = 2,
-    AUTHENTICATION = 3,
-    RESPONSE = 4,
-    APPLICATION = 5,
+    NETWORK           = 1,
+    TIMEOUT           = 2,
+    AUTHENTICATION    = 3,
+    RESPONSE          = 4,
+    APPLICATION       = 5,
+    NO_DATA_TEMPORARY = 6,
+    NO_DATA_PERMANENT = 7,
 }
 
 export interface IErrorInfo {

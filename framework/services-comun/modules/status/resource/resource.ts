@@ -25,6 +25,7 @@ export interface IUrl {
     resolution_guides?: IResolutionGuide[];
     headers?: IHeaders;
     body?: any;
+    tries?: number;
 }
 
 export type TAlternateResponse = "JSON"|"Buffer";

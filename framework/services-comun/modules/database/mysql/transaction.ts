@@ -124,7 +124,7 @@ export function transactional(db: MySQL, name: string = '', level: TIsolationLev
 
         return function (this: any, ...args: any[]) {
             return Promise.resolve().then(async ()=>{
-                let t: Transaction = args.find(arg => arg instanceof Transaction);
+                let t = args.find(arg => arg instanceof Transaction);
                 const initial = t === undefined;
                 if (!t) {
                     t = await db.transaction();

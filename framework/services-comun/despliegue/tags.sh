@@ -19,6 +19,7 @@ parseWorkspace() {
   GENERAR=$(getPackageConfigValue "${WORKSPACE}" "generar")
   DEPLOY=$(getPackageConfigValue "${WORKSPACE}" "deploy")
   RUNTIME=$(getPackageConfigValue "${WORKSPACE}" "runtime")
+  KUSTOMIZER=$(getPackageConfigValue "${WORKSPACE}" "kustomize")
 
   if [[ ${GENERAR} == "true" ]]; then
     if [[ ${DEPLOY} == "true" ]]; then
@@ -28,7 +29,7 @@ parseWorkspace() {
       fi
 
       echo "Obteniendo tags para \"${WORKSPACE}\""
-      gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}" --filter="tags~^${ENTORNO}" --format=json > "services/${WORKSPACE}/tags.json"
+      gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^${ENTORNO}" --format=json > "services/${WORKSPACE}/tags.json"
     fi
   fi
 }

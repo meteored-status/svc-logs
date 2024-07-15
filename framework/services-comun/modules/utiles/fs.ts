@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type {Readable} from "node:stream";
 import {readFileSync} from "node:fs";
+import {existsSync, statSync} from "node:fs";
 import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat} from "node:fs/promises";
 
 import {error, warning} from "./log";
@@ -82,6 +83,10 @@ export async function isFile(file: string, excepcion: boolean=false): Promise<bo
     }
 
     return Promise.reject("Not a file");
+}
+
+export function isFileSync(file: string): boolean {
+    return existsSync(file) && statSync(file).isFile();
 }
 
 export async function mkdir(dir: string, recursive: boolean=false): Promise<void> {
@@ -265,6 +270,13 @@ export async function md5Dir(dir: string): Promise<string> {
         return md5(salida);
     }
     return salida;
+}
+
+export async function md5File(file: string): Promise<string> {
+    if (!await isFile(file)) {
+        return "";
+    }
+    return md5(await readFileString(file));
 }
 
 export async function freeSpace(path: string): Promise<number> {

@@ -7,6 +7,7 @@ export enum EService {
     status_auth,
     status_backend,
     status_external,
+    status_frontend,
     status_webhook,
 }
 
@@ -31,6 +32,11 @@ mapeo.set(EService.status_external, {
     endpoint: "proxy-svc-status-external",
     namespace: "services",
     tags: ["status", "status-external"],
+});
+mapeo.set(EService.status_frontend, {
+    endpoint: "proxy-svc-status-frontend",
+    namespace: "services",
+    tags: ["status", "status-frontend"],
 });
 mapeo.set(EService.logs_slave, {
     endpoint: "proxy-svc-logs-slave",

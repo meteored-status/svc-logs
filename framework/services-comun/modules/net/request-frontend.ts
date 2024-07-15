@@ -69,6 +69,16 @@ export class FrontendRequest extends Request {
         };
     }
 
+    public static async getStringPOST(url: string, data: any, cfg: IRequestConfig={}): Promise<RequestResponse<string>> {
+        const dataBuffer = await this.postJSON(url, data, cfg) as RequestResponse<ArrayBuffer>;
+        const textDecoder = new TextDecoder();
+        const texto = textDecoder.decode(dataBuffer.data);
+        return {
+            ...dataBuffer,
+            data: texto,
+        };
+    }
+
     protected static async postJSON<T,S>(url: string, data: S, cfg: IRequestConfig={}): Promise<RequestResponse<T>> {
         const headers = new Headers();
         headers.append("Accept", "application/json");
@@ -76,6 +86,15 @@ export class FrontendRequest extends Request {
         return this.fetch<T>(url, {
             method: "POST",
             body: JSON.stringify(data),
+        }, headers, cfg);
+    }
+
+    protected static async postFormData<T>(url: string, formData: FormData, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
+        const headers = new Headers();
+        headers.append("Accept", "application/json");
+        return this.fetch<T>(url, {
+            method: "POST",
+            body: formData,
         }, headers, cfg);
     }
 

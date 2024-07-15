@@ -17,15 +17,17 @@ type IConfiguracion = webpack.Configuration;
 interface IConfiguracionConfig {
     basedir: string;
     bundle: IConfigServiceBundle;
-    dependencies: NodeJS.Dict<string>;
+    dependencies: Record<string, string>;
     entorno: string;
     framework: EFramework;
     runtime: ERuntime;
+    database?: string;
+    rules?: string;
 }
 
 export class Configuracion {
     /* STATIC */
-    public static build({basedir, bundle, dependencies, entorno, framework, runtime}: IConfiguracionConfig): IConfiguracion {
+    public static build({basedir, bundle, dependencies, entorno, framework, runtime, database, rules}: IConfiguracionConfig): IConfiguracion {
         const desarrollo = !["produccion", "test"].includes(entorno);
         const test = ["desarrollo","test"].includes(entorno);
         const mode = desarrollo ? "development" : "production";
@@ -65,10 +67,12 @@ export class Configuracion {
                 ...componentes,
                 desarrollo,
                 test,
+                rules,
             }),
             plugins: Plugins.build(runtime, framework, {
                 entorno,
                 desarrollo,
+                database,
                 prefix: bundle.prefix,
                 css: componentes.css,
             }),

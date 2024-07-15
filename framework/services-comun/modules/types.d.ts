@@ -4,6 +4,7 @@ declare global {
     var DESARROLLO: boolean;
     var NEXTJS: boolean;
     var ENTORNO: string;
+    var DATABASE: string|undefined;
 }
 
 export {}

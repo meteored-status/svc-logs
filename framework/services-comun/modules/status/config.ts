@@ -11,6 +11,7 @@ export enum TService {
     MR_ADS          = 10,
     MR_LOCALIZACION = 11,
     MR_WEATHER      = 12,
+    MR_SITEMAP      = 13,
     OLD_MR_SEARCH   = 2001,
 }
 
@@ -82,6 +83,12 @@ SERVICE_MAP.set(TService.MR_WEATHER, {
     project: 'meteored-svc-weather',
     namespace: 'Meteored Services'
 });
+SERVICE_MAP.set(TService.MR_SITEMAP, {
+    name: 'Sitemap',
+    project: 'meteored-web-sitemap',
+    namespace: 'Meteored Services'
+});
+
 SERVICE_MAP.set(TService.OLD_MR_SEARCH, {
     name: 'Search - Old',
     project: 'meteored-search',
