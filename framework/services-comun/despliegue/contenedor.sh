@@ -14,6 +14,7 @@ parseWorkspace() {
     if [[ $(./jq -r '.config.deploy' "services/${WORKSPACE}/package.json") == "true" ]]; then
       if [[ $(./jq -r '.config.runtime' "services/${WORKSPACE}/package.json") != "browser" ]]; then
         VERSION=$(cat "services/${WORKSPACE}/version.txt")
+        KUSTOMIZER=$(./jq -r '.config.kustomize' "services/${WORKSPACE}/package.json")
 
         echo "${WORKSPACE}: Versión ${VERSION}"
 
@@ -48,16 +49,16 @@ parseWorkspace() {
           fi
 
           echo "${WORKSPACE}: Añadiendo etiquetas"
-          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}"
-          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${VERSION}"
-          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${HASH}"
-          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${ENTORNO}"
+          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}"
+          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
+          docker tag "${PROYECTO}/services-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:${ENTORNO}"
 
           echo "${WORKSPACE}: Subiendo contenedor"
-          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:latest"
-          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${VERSION}"
-          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${HASH}"
-          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${ENTORNO}"
+          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:latest"
+          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
+          docker push "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:${ENTORNO}"
 
         else
           echo "${WORKSPACE}: Sin cambios en el contenedor"

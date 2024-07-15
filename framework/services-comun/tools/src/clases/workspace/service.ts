@@ -54,10 +54,12 @@ export interface IConfigService {
     storage: string[];
     runtime: ERuntime;
     framework: EFramework;
+    kustomize: string;
     credenciales: {
         source: string;
         target: string;
     }[];
+    database?: string;
     bundle: {
         componentes?: IConfigServiceComponentes;
         entries?: NodeJS.Dict<string>;

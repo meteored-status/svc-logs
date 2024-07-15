@@ -44,7 +44,12 @@ export class Devel {
             this.ejecutarWorkspace(basedir, "packages"),
             this.ejecutarWorkspace(basedir, "statics"),
         ]);
-        await this.ejecutarServices(ejecucion, basedir, [...framework, ...packages, ...statics]);
+        const existe = await this.ejecutarServices(ejecucion, basedir, [...framework, ...packages, ...statics]);
+        if (!existe) {
+            for (const actual of [framework, packages, statics].flat()) {
+                actual.parar();
+            }
+        }
     }
 
     private static async ejecutarWorkspace(basedir: string, path: string): Promise<Workspace[]> {
@@ -68,7 +73,7 @@ export class Devel {
         return await Promise.all(workspaces);
     }
 
-    private static async ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, dependencias: Workspace[]): Promise<void> {
+    private static async ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, dependencias: Workspace[]): Promise<boolean> {
         const config_global = await readJSON<IConfigServices>(`${basedir}/config.workspaces.json`).catch(()=>{
             return {
                 devel: {
@@ -83,6 +88,9 @@ export class Devel {
             } as IConfigServices;
         });
 
+        if (!await isDir(`${basedir}/services`)) {
+            return false;
+        }
         const workspaces_list = await readDir(`${basedir}/services`);
         const length = workspaces_list.reduce((a, b)=>Math.max(a, b.length), 0);
 
@@ -129,6 +137,8 @@ export class Devel {
                     }
                 });
         });
+
+        return true;
     }
 
     /* INSTANCE */

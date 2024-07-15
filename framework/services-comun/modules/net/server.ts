@@ -14,23 +14,6 @@ import {error, info} from "../utiles/log";
 import {isDir, isFile, readDir, readFile, readJSON} from "../utiles/fs";
 
 export class Server {
-    /* STATIC */
-    private static readonly CONEXIONES_THRESHOLD: number = 10;
-
-    private static checkConexiones(server: http.Server): void {
-        setTimeout(()=>{
-            server.getConnections((err: Error | null, count: number)=>{
-                if (err!=undefined && count>this.CONEXIONES_THRESHOLD && process.send!=undefined) {
-                    process.send({cmd: "spawn"});
-                    info("Conexiones activas:", count);
-                }
-
-                this.checkConexiones(server);
-            });
-            server.closeIdleConnections();
-        }, 1000);
-    }
-
     /* INSTANCE */
     private serverHTTP: http.Server|null;
     private serverHTTPS: https.Server|null;
@@ -43,7 +26,9 @@ export class Server {
     public iniciarHTTP(requestHandlers: Routes, pod: IPodInfo, config: Net): void {
         if (this.serverHTTP==null) {
             const server = http.createServer((request: http.IncomingMessage, response: http.ServerResponse) => {
-                this.onRequest(request, response, requestHandlers, pod, config, false);
+                setImmediate(()=>{
+                    this.onRequest(request, response, requestHandlers, pod, config, false);
+                });
             });
             server.addListener("error", (err)=>{
                 error("Error de servidor HTTP", err);
@@ -61,8 +46,6 @@ export class Server {
             });
 
             this.serverHTTP = server;
-
-            Server.checkConexiones(server);
         }
     }
 
@@ -97,7 +80,9 @@ export class Server {
                     }
                 },
             }, (request: http.IncomingMessage, response: http.ServerResponse) => {
-                this.onRequest(request, response, requestHandlers, pod, config, true);
+                setImmediate(()=>{
+                    this.onRequest(request, response, requestHandlers, pod, config, true);
+                });
             });
             server.addListener("error", (err)=>{
                 error("Error de servidor HTTPS", err);
@@ -115,15 +100,13 @@ export class Server {
             });
 
             this.serverHTTPS = server;
-
-            Server.checkConexiones(server);
         }
     }
 
     private onRequest(request: http.IncomingMessage, response: http.ServerResponse, request_handlers: Routes, pod: IPodInfo, config: Net, seguro: boolean): void {
         const tracer = Tracer.build(request, pod);
 
-        const conexion = new Conexion(request, response, request_handlers.error, tracer, pod, config, request.headers["x-forwarded-proto"]!=undefined ? request.headers["x-forwarded-proto"]=="https" : seguro);
+        const conexion = new Conexion(request, response, request_handlers.error, tracer, config, request.headers["x-forwarded-proto"]!=undefined ? request.headers["x-forwarded-proto"]=="https" : seguro);
 
         if (!["POST","PUT"].includes(conexion.metodo)) {
             request.setEncoding("utf8");

@@ -20,6 +20,7 @@ parseWorkspace() {
         SERVICIOS=$(./jq -r '.servicio | if type == "array" then .[] else . end' "services/${WORKSPACE}/package.json")
         VERSION=$(cat "services/${WORKSPACE}/version.txt" || echo "0000.00.00")
         BASETOP=$(pwd)
+        KUSTOMIZER=$(./jq -r '.config.kustomize' "services/${WORKSPACE}/package.json")
 
 
         parseWorkspaceEjecutar() {
@@ -28,17 +29,18 @@ parseWorkspace() {
           local SERVICIO="${3}"
           local VERSION="${4}"
           local BASETOP="${5}"
-          local CLUSTER="${6}"
+          local KUSTOMIZER="${6}"
+          local CLUSTER="${7}"
 
           ####################
           #### KUSTOMIZAR ####
           ####################
-          cp kustomize "kustomizar/services/${SERVICIO}/entornos/${CLUSTER}"
-          cd "kustomizar/services/${SERVICIO}/entornos/${CLUSTER}"
-          ./kustomize edit set image "europe-west1-docker.pkg.dev/${PROYECTO}/services/${WORKSPACE}:${VERSION}"
+          cp kustomize "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}"
+          cd "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}"
+          ./kustomize edit set image "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
 
           cd "${BASETOP}"
-          ./kustomize build "kustomizar/services/${SERVICIO}/entornos/${CLUSTER}" >> "services/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
+          ./kustomize build "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}" >> "services/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
           echo "---" >> "services/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
         }
         export -f parseWorkspaceEjecutar
@@ -46,7 +48,7 @@ parseWorkspace() {
         echo "${SERVICIOS}" | while read SERVICIO; do
           echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
 
-          ./jq -r ".[].resourceLabels.zona" "entornos.json" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${PROYECTO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${BASETOP} {}"
+          ./jq -r ".[].resourceLabels.zona" "entornos.json" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${PROYECTO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${BASETOP} ${KUSTOMIZER} {}"
         done
       fi
     fi

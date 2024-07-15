@@ -15,12 +15,16 @@ import {arrayChop} from "../../utiles/array";
 import {error, info, warning} from "../../utiles/log";
 import {readJSON} from "../../utiles/fs";
 
-declare const PRODUCCION: boolean;
+interface IMySQLHost {
+    host: string;
+    port: number;
+}
 
-interface IMySQL {
-    host?: string;
-    port?: number;
-    socketPath?: string;
+interface IMySQLSocket {
+    socketPath: string;
+}
+
+interface IMySQLCommon {
     user?: string;
     password?: string;
     database?: string;
@@ -29,9 +33,13 @@ interface IMySQL {
     queueLimit?: number;
 }
 
+interface IMySQL extends IMySQLHost, IMySQLSocket, IMySQLCommon {
+}
+
 interface IMySQLCluster {
     master?: IMySQL;
     slaves: IMySQL[];
+    common?: IMySQLCommon;
 }
 
 export type TipoRegistro = string|number|boolean|Date|null|undefined|string[]|number[]|boolean[]|Date[]|string[][]|number[][]|boolean[][]|Date[][];
@@ -64,10 +72,15 @@ export interface LoadDataInfileQueryOptions extends QueryOptions {
     // infileStreamFactory: () => NodeJS.ReadableStream;
 }
 
+interface IMySQLBuild {
+    credenciales?: string;
+    database?: string;
+}
+
 export class MySQL implements Disposable {
     /* STATIC */
-    public static build(credenciales: string): MySQL {
-        using salida = new this(credenciales);
+    public static build({credenciales=`files/credenciales/mysql.json`, database=DATABASE}: IMySQLBuild={}): MySQL {
+        using salida = new this(credenciales, database);
 
         return salida;
     }
@@ -91,7 +104,7 @@ export class MySQL implements Disposable {
     private watcher?: FSWatcher;
 
     // LLAMAR AL CONSTRUCTOR DIRÉCTAMENTE QUEDA PROHIBIDO, USAR MySQL.build() EN SU LUGAR
-    protected constructor(protected readonly credenciales: string) {
+    protected constructor(protected readonly credenciales: string, public readonly database?: string) {
     }
 
     public [Symbol.dispose](): void {
@@ -125,29 +138,33 @@ export class MySQL implements Disposable {
             restoreNodeTimeout: 1000, // probar a reconectar tras 1 segundo
         });
         if ("slaves" in data) {
+            data.common??={};
+
             if (data.master!=undefined) {
                 cluster.add("MASTER", {
                     charset: "utf8mb4",
-                    // connectionLimit: 1000,
+                    database: this.database,
+                    ...data.common,
                     ...data.master,
                 });
             }
             for (let i = 0; i < data.slaves.length; i++) {
                 cluster.add(`SLAVE${i}`, {
                     charset: "utf8mb4",
+                    database: this.database,
+                    ...data.common,
                     ...data.slaves[i],
-                    // connectionLimit: 1000,
                 });
             }
         } else {
             cluster.add("MASTER", {
                 charset: "utf8mb4",
-                // connectionLimit: 1000,
+                database: this.database,
                 ...data,
             });
             cluster.add("SLAVE1", {
                 charset: "utf8mb4",
-                // connectionLimit: 1000,
+                database: this.database,
                 ...data,
             });
         }

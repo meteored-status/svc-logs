@@ -7,6 +7,7 @@ import {EFramework, ERuntime} from "../tools/src/clases/workspace/service";
 interface IPluginsConfig {
     entorno: string;
     desarrollo: boolean;
+    database?: string;
     prefix?: string;
     css: boolean;
 }
@@ -36,7 +37,7 @@ export class Plugins {
         ];
     }
 
-    public static build(runtime: ERuntime, framework: EFramework, {entorno, desarrollo, prefix = "", css}: IPluginsConfig): webpack.WebpackPluginInstance[] {
+    public static build(runtime: ERuntime, framework: EFramework, {entorno, desarrollo, database, prefix = "", css}: IPluginsConfig): webpack.WebpackPluginInstance[] {
         const salida: webpack.WebpackPluginInstance[] = [];
         let nextjs: boolean;
 
@@ -61,12 +62,14 @@ export class Plugins {
             PRODUCCION: JSON.stringify(!desarrollo),
             ENTORNO: JSON.stringify(entorno),
             NEXTJS: JSON.stringify(nextjs),
+            DATABASE: JSON.stringify(database),
 
             "global.DESARROLLO": JSON.stringify(entorno==="desarrollo"),
             "global.TEST": JSON.stringify(entorno==="test"),
             "global.PRODUCCION": JSON.stringify(!desarrollo),
             "global.ENTORNO": JSON.stringify(entorno),
             "global.NEXTJS": JSON.stringify(nextjs),
+            "global.DATABASE": JSON.stringify(database),
         }));
 
         if (css) {

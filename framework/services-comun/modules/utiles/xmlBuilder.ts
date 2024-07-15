@@ -3,7 +3,7 @@ export interface IXMLConfig {
 }
 
 export class XMLBuilder {
-    private encoding: string;
+    private readonly encoding: string;
     public constructor(private readonly base: XMLNode, private readonly cfg: Partial<IXMLConfig>={}) {
         const config = {
             codificacion: 'UTF-8',

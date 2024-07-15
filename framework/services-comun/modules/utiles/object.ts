@@ -28,3 +28,12 @@ export function copyObject<T, K>(obj: NodeJS.Dict<T>, fn: (value: T)=>K): NodeJS
 
     return salida;
 }
+
+export function immute<T>(obj: T): T {
+    for (const key in obj) {
+        if (typeof obj[key] === 'object' && !Object.isSealed(obj[key]) && !Object.isFrozen(obj[key])) {
+            obj[key] = immute(obj[key]);
+        }
+    }
+    return Object.freeze(Object.seal(obj));
+}

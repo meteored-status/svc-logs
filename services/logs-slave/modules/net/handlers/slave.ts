@@ -25,7 +25,8 @@ class Slave extends RouteGroup<Configuracion>{
     public constructor(configuracion: Configuracion, protected readonly signal: AbortSignal) {
         super(configuracion);
     }
-    private parse(data: INotifyPubSub): void {
+
+    private parseLog(data: INotifyPubSub): void {
         Bucket.run(this.configuracion, data, this.signal)
             .catch(async (err) => {
                 await Bucket.addRepesca(data, false, undefined, err);
@@ -38,6 +39,21 @@ class Slave extends RouteGroup<Configuracion>{
                     error("Error procesando", err);
                 }
             });
+    }
+
+    private parseWorker(data: INotifyPubSub): void {
+        // Bucket.run(this.configuracion, data, this.signal)
+        //     .catch(async (err) => {
+        //         await Bucket.addRepesca(data, false, undefined, err);
+        //         if (err instanceof Error) {
+        //             if (err.message.startsWith("Duplicate entry")) {
+        //                 return;
+        //             }
+        //             error("Error procesando", err.message);
+        //         } else {
+        //             error("Error procesando", err);
+        //         }
+        //     });
     }
 
     protected getHandlers(): IRouteGroup[] {
@@ -58,7 +74,7 @@ class Slave extends RouteGroup<Configuracion>{
 
                     const salida = await this.sendRespuesta(conexion);
 
-                    this.parse({
+                    this.parseLog({
                         ...post,
                         eventTime: "",
                         eventType: "OBJECT_FINALIZE",
@@ -87,7 +103,30 @@ class Slave extends RouteGroup<Configuracion>{
                     const salida = await this.sendRespuesta(conexion);
 
                     if (post.message?.attributes!=undefined) {
-                        this.parse(post.message.attributes);
+                        this.parseLog(post.message.attributes);
+                    }
+
+                    return salida;
+                },
+            },
+            {
+                expresiones: [
+                    {
+                        metodos: ["POST"],
+                        prefix: "/pubsub/workers/ingest/",
+                        checkQuery: false,
+                        resumen: "/pubsub/workers/ingest/",
+                    },
+                ],
+                handler: async (conexion) => {
+                    const post = conexion.post as IPubSub;
+
+                    conexion.noCache();
+
+                    const salida = await this.sendRespuesta(conexion);
+
+                    if (post.message?.attributes!=undefined) {
+                        this.parseWorker(post.message.attributes);
                     }
 
                     return salida;

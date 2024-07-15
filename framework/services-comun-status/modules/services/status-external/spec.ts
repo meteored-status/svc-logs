@@ -1,17 +1,16 @@
 export interface IToLoad {
-    id: string;
     service: number;
+    name: string;
     data: string;
 }
 
 export interface IQueryLoad {
     service: number;
-    group?: string;
+    name: string;
 }
 
 export interface IPostSave {
-    id?: string;
     service: number;
-    group?: string;
-    data: string;
+    name: string;
+    data: any;
 }

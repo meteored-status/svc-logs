@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {Readable} from "node:stream";
-import {File, Storage as StorageBase} from "@google-cloud/storage";
+import {type File, Storage as StorageBase} from "@google-cloud/storage";
 import {Metadata} from "@google-cloud/common";
 
 import {Google} from "../utiles/config";
@@ -13,6 +13,7 @@ import {PromiseDelayed} from "../utiles/promise";
 export interface IDocumento extends IFile {
     contentType: string;
     timeCreated: Date;
+    timeUpdated: Date;
     size: Promise<number>;
 }
 
@@ -86,8 +87,22 @@ export class Storage implements IDocumento {
         const storage = this.getStorage(config);
 
         const data = storage.bucket(bucket).file(file);
+        const [metadata] = await data.getMetadata();
 
-        return new this(bucket, data, await data.getMetadata());
+        return new this(bucket, data, metadata);
+    }
+
+    public static getFile(config: Google, bucket: string, file: string): File {
+        return this.getStorage(config).bucket(bucket).file(file);
+    }
+
+    public static async delete(config: Google, bucket: string, file: string): Promise<boolean> {
+        try {
+            await this.getStorage(config).bucket(bucket).file(file).delete();
+            return true;
+        } catch (err) {
+            return false;
+        }
     }
 
     public static async list(config: Google, bucket: string, prefix?: string): Promise<File[]> {
@@ -135,6 +150,7 @@ export class Storage implements IDocumento {
     /* INSTANCE */
     public contentType: string;
     public timeCreated: Date;
+    public timeUpdated: Date;
     public size: Promise<number>;
 
     public get stream(): Readable {
@@ -153,7 +169,8 @@ export class Storage implements IDocumento {
     public constructor(public readonly bucket: string, public readonly file: File, metadata: Metadata) {
         this.contentType = metadata.contentType;
         this.timeCreated = new Date(metadata.timeCreated);
-        this.size = Promise.resolve(parseInt(metadata.size??"0"));
+        this.timeUpdated = new Date(metadata.updated);
+        this.size = Promise.resolve(parseInt(`${metadata.size??0}`));
     }
 
     private async download(): Promise<Buffer> {
@@ -167,7 +184,8 @@ export class Storage implements IDocumento {
 
 export class StorageError implements IDocumento {
     public timeCreated: Date;
-    // public cacheControl:string;
+    public timeUpdated: Date;
+
     public get size(): Promise<number> {
         return fileSize(this.file)
     }
@@ -180,6 +198,6 @@ export class StorageError implements IDocumento {
 
     public constructor(private readonly file: string, public readonly contentType: string) {
         this.timeCreated = new Date(0);
-        // this.cacheControl = "no-cache";
+        this.timeUpdated = new Date(0);
     }
 }
