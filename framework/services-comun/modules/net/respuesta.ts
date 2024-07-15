@@ -1,17 +1,22 @@
-import * as os from "node:os";
 import * as zlib from "node:zlib";
 import {type IncomingHttpHeaders, type IncomingMessage, type OutgoingHttpHeaders, type ServerResponse} from "node:http";
 
 import {IErrorHandler} from "./router";
 import {INetCache} from "./cache";
-import {IPodInfo} from "../utiles/config";
 import {IRespuesta} from "./interface";
 import {type Net} from "./config/net";
 import {type Tracer} from "./tracer";
 import {pipeline} from "../utiles/stream";
 
 export abstract class Respuesta {
+    /* STATIC */
+    public static SERVICE: string = "localhost";
+    public static POD: string = "localhost";
+    public static ZONA: string = "desarrollo";
+    public static VERSION: string = "0000.00.00-000";
+    private static CHUNK_SIZE = 1024;
 
+    /* INSTANCE */
     public time: number;
     private codigo?: number;
     private location?: string;
@@ -22,18 +27,20 @@ export abstract class Respuesta {
     private etag?: string;
     private contentType?: string;
     private pasada?: string;
-    private vary?: string[];
+    private readonly vary: Set<string>;
     private length?: number;
-    private cacheControl?: string[];
+    private readonly cacheControl: Set<string>;
     public responseHeaders: OutgoingHttpHeaders;
     public data: Buffer|null;
 
-    protected constructor(private readonly respuesta: ServerResponse, public errorHandler: IErrorHandler, public readonly tracer: Tracer, protected readonly pod: IPodInfo, private config: Net) {
+    protected constructor(private readonly respuesta: ServerResponse, public errorHandler: IErrorHandler, public readonly tracer: Tracer, private config: Net) {
         this.time = Date.now();
         this.cacheTags = config.cacheTags.slice();
         this.responseHeaders = {
-            "X-Meteored-Cache": "MISS",
+            // "X-Meteored-Cache": "MISS",
         };
+        this.cacheControl = new Set<string>();
+        this.vary = new Set<string>();
         this.data = null;
     }
 
@@ -61,17 +68,6 @@ export abstract class Respuesta {
         return this;
     }
 
-    public noTransform(uncheck: boolean = false): Respuesta {
-        const cacheControl = this.cacheControl?.filter(actual=>actual!="no-transform")??[];
-        if (!uncheck) {
-            cacheControl.push("no-transform");
-            this.cacheControl = cacheControl;
-        } else if (cacheControl.length==0) {
-            this.cacheControl = undefined;
-        }
-        return this;
-    }
-
     public setCache1Hora(): Respuesta {
         this.cache = new Date(Date.now()+3600000);
         return this;
@@ -93,6 +89,39 @@ export abstract class Respuesta {
 
     public noCache(): Respuesta {
         this.cache = undefined;
+        this.cacheControl.add("private");
+        this.cacheControl.add("no-cache");
+        this.cacheControl.add("no-store");
+        this.cacheControl.add("must-revalidate");
+        return this;
+    }
+
+    public noTransform(uncheck: boolean = false): Respuesta {
+        if (!uncheck) {
+            this.cacheControl.add("no-transform");
+        } else {
+            this.cacheControl.delete("no-transform");
+        }
+        return this;
+    }
+
+    public mustRevalidate(): Respuesta {
+        this.cacheControl.add(`must-revalidate`);
+        return this;
+    }
+
+    public proxyRevalidate(): Respuesta {
+        this.cacheControl.add(`proxy-revalidate`);
+        return this;
+    }
+
+    public staleWhileRevalidate(max: number=0): Respuesta {
+        this.cacheControl.add(`stale-while-revalidate=${max}`);
+        return this;
+    }
+
+    public staleIfError(max: number=0): Respuesta {
+        this.cacheControl.add(`stale-if-error=${max}`);
         return this;
     }
 
@@ -113,13 +142,35 @@ export abstract class Respuesta {
         return this;
     }
 
-    public setETag(tag: string): Respuesta {
-        this.etag = `"${tag}"`;
+    public setETag(etag: string, strong=false): Respuesta {
+        this.etag = !strong?
+            etag:
+            `"${etag}"`;
         return this;
     }
 
     public unsetETag(): Respuesta {
         this.etag = undefined;
+        return this;
+    }
+
+    public setContentEncoding(content: string): Respuesta {
+        this.encoding = content;
+        return this;
+    }
+
+    public setContentEncodingBrotli(): Respuesta {
+        this.encoding = "br";
+        return this;
+    }
+
+    public setContentEncodingGzip(): Respuesta {
+        this.encoding = "gzip";
+        return this;
+    }
+
+    public setContentEncodingDeflate(): Respuesta {
+        this.encoding = "deflate";
         return this;
     }
 
@@ -129,12 +180,14 @@ export abstract class Respuesta {
     }
 
     public setContentTypeJSON(): Respuesta {
-        this.contentType = "application/json; charset=UTF-8";
+        this.contentType = `application/json; charset=UTF-8`;
         return this;
     }
 
-    public setContentTypeHTML(): Respuesta {
-        this.contentType = "text/html; charset=UTF-8";
+    public setContentTypeHTML(charset: string|null="UTF-8"): Respuesta {
+        this.contentType = charset!=null ?
+            `text/html; charset=${charset}` :
+            "text/html";
         return this;
     }
 
@@ -173,23 +226,28 @@ export abstract class Respuesta {
         return this;
     }
 
+    public setContentTypeXML(): Respuesta {
+        this.contentType = "application/xml";
+        return this;
+    }
+
     public setPasada(pasada: string): Respuesta {
         this.pasada = pasada;
         return this;
     }
 
     public addVary(vary: string): Respuesta {
-        if (!this.vary) {
-            this.vary = [];
-        }
-        if (!this.vary.includes(vary)) {
-            this.vary.push(vary);
-        }
+        this.vary.add(vary);
+        return this;
+    }
+
+    public addVaryAcceptEncoding(): Respuesta {
+        this.vary.add("Accept-Encoding");
         return this;
     }
 
     public unsetVary(): Respuesta {
-        this.vary = undefined;
+        this.vary.clear();
         return this;
     }
 
@@ -243,14 +301,14 @@ export abstract class Respuesta {
 
     public async sendDataCompress(data: Buffer): Promise<number> {
         const headers = this.getHeaders();
-        this.addVary("Accept-Encoding");
+        this.addVaryAcceptEncoding();
         if (headers["accept-encoding"]!=undefined) {
             let promesa: Promise<Buffer>;
             if (headers["accept-encoding"].includes("br")) {
                 promesa = new Promise<Buffer>((resolve: Function, reject: Function) => {
                     zlib.brotliCompress(data, (error: Error|null, result: Buffer)=>{
                         if (!error) {
-                            this.encoding = "br";
+                            this.setContentEncodingBrotli();
                             resolve(result);
                         } else {
                             reject(error);
@@ -261,7 +319,7 @@ export abstract class Respuesta {
                 promesa = new Promise<Buffer>((resolve: Function, reject: Function) => {
                     zlib.gzip(data, (error: Error|null, result: Buffer)=>{
                         if (!error) {
-                            this.encoding = "gzip";
+                            this.setContentEncodingGzip();
                             resolve(result);
                         } else {
                             reject(error);
@@ -272,7 +330,7 @@ export abstract class Respuesta {
                 promesa = new Promise<Buffer>((resolve: Function, reject: Function) => {
                     zlib.deflate(data, (error: Error|null, result: Buffer)=>{
                         if (!error) {
-                            this.encoding = "deflate";
+                            this.setContentEncodingDeflate();
                             resolve(result);
                         } else {
                             reject(error);
@@ -314,13 +372,13 @@ export abstract class Respuesta {
         if (this.isCORS()) {
             responseHeaders["Access-Control-Allow-Origin"] = "*";
         }
-        if (this.lastModified) {
+        if (this.lastModified!=undefined) {
             responseHeaders["Last-Modified"] = this.lastModified.toUTCString();
         }
-        if (this.location) {
+        if (this.location!=undefined) {
             responseHeaders["location"] = this.location;
         }
-        if (this.cache) {
+        if (this.cache!=undefined) {
             const tiempo = Math.floor((this.cache.getTime()-Date.now())/1000);
             if (tiempo>0) {
                 responseHeaders["Expires"] = this.cache.toUTCString();
@@ -332,7 +390,8 @@ export abstract class Respuesta {
                 responseHeaders["Expires"] = new Date(Date.now()-3600000).toUTCString();
                 // this.cacheControl??=[];
                 // this.cacheControl.push("private");
-                // this.cacheControl.push("max-age=0");
+                // this.cacheControl.push("no-cache");
+                // this.cacheControl.push("no-store");
                 // this.cacheControl.push("must-revalidate");
                 // responseHeaders["Cache-Control"] = "private, max-age=0, must-revalidate";
             }
@@ -344,8 +403,8 @@ export abstract class Respuesta {
             // this.cacheControl.push("must-revalidate");
             // responseHeaders["Cache-Control"] = "private, max-age=0, must-revalidate";
         }
-        if (this.cacheControl!=undefined && this.cacheControl.length>0) {
-            responseHeaders["Cache-Control"] = this.cacheControl;
+        if (this.cacheControl.size>0) {
+            responseHeaders["Cache-Control"] = [...this.cacheControl];
         }
         if (this.cacheTags.length > 0) {
             responseHeaders["Cache-Tag"] = this.cacheTags;
@@ -357,13 +416,14 @@ export abstract class Respuesta {
         if (this.encoding) {
             responseHeaders["Content-Encoding"] = this.encoding;
         }
-        if (this.vary && this.vary.length>0) {
-            responseHeaders["Vary"] = this.vary.length==1?this.vary[0]:this.vary;
+        if (this.vary.size>0) {
+            responseHeaders["Vary"] = [...this.vary];
         }
-        responseHeaders["X-Meteored-Node"] = DESARROLLO?this.pod.servicio:os.hostname();
-        responseHeaders["X-Meteored-Zone"] = this.pod.zona;
-        responseHeaders["X-Meteored-Version"] = this.pod.version;
-        if (this.pasada) {
+        responseHeaders["X-Meteored-Zone"] = Respuesta.ZONA;
+        responseHeaders["X-Meteored-Service"] = Respuesta.SERVICE;
+        responseHeaders["X-Meteored-Node"] = Respuesta.POD;
+        responseHeaders["X-Meteored-Version"] = Respuesta.VERSION;
+        if (this.pasada!=undefined) {
             responseHeaders["X-Meteored-Pass"] = this.pasada;
         }
         if (this.length!==undefined) {
@@ -385,7 +445,8 @@ export abstract class Respuesta {
         const codigo = this.enviarCabeceras();
 
         if (this.data!=null) {
-            this.respuesta.write(this.data);
+            await this.write(this.data);
+            // this.respuesta.write(this.data);
         }
         this.respuesta.end();
         this.terminado();
@@ -393,6 +454,40 @@ export abstract class Respuesta {
         this.tracer.setCode(codigo);
 
         return codigo;
+    }
+
+    private async write(data: Buffer): Promise<void> {
+        const CHUNK_SIZE = Respuesta.CHUNK_SIZE; // Define el tamaño del paquete aquí
+        let offset = 0;
+
+        const writeChunk = (): Promise<void> => {
+            return new Promise((resolve, reject) => {
+                const end = Math.min(offset + CHUNK_SIZE, data.length);
+                const chunk = data.slice(offset, end);
+                const ok = this.respuesta.write(chunk);
+
+                if (ok) {
+                    offset = end;
+                    if (offset < data.length) {
+                        resolve(writeChunk()); // Si aún quedan datos, escribe el siguiente paquete
+                    } else {
+                        resolve(); // Todos los datos se han escrito
+                    }
+                } else {
+                    this.respuesta.once('drain', () => {
+                        offset = end;
+                        if (offset < data.length) {
+                            resolve(writeChunk()); // Si aún quedan datos, escribe el siguiente paquete
+                        } else {
+                            resolve(); // Todos los datos se han escrito
+                        }
+                        // resolve(writeChunk()); // Continúa escribiendo después de que se haya vaciado el búfer
+                    });
+                }
+            });
+        };
+
+        return writeChunk();
     }
 
     public async sendCache(cache: INetCache, datos: Buffer|null): Promise<number> {
@@ -453,7 +548,8 @@ export abstract class Respuesta {
         }
         this.respuesta.writeHead(datos.statusCode as number, {
             ...datos.headers,
-            "x-meteored-node": DESARROLLO?this.pod.servicio:os.hostname(),
+            "x-meteored-service": Respuesta.SERVICE,
+            "x-meteored-node": Respuesta.POD,
             "x-meteored-node-chain": chain,
             "cache-tag": this.cacheTags,
         });

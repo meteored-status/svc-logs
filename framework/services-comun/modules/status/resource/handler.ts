@@ -1,17 +1,10 @@
-import type {Conexion} from "../../net/conexion";
 import type {Configuracion} from "../../utiles/config";
 import type {IResourceGroup} from "./resource";
 import type {IRouteGroup} from "../../net/routes/group/block";
 import {RouteGroup} from "../../net/routes/group";
 
 export abstract class Status<T extends Configuracion> extends RouteGroup<T> {
-    /* STATIC */
-
     /* INSTANCE */
-    // protected constructor(configuracion: T) {
-    //     super(configuracion);
-    // }
-
     protected getHandlers(): IRouteGroup[] {
         return [
             {
@@ -22,15 +15,29 @@ export abstract class Status<T extends Configuracion> extends RouteGroup<T> {
                         resumen: "/status/{workspace}/"
                     }
                 ],
-                handler: async (conexion: Conexion) => {
-                    return this.sendRespuesta<IResourceGroup[]>(conexion, {
-                        data: await this.buildResourceGroup(),
-                    });
+                handler: async (conexion) => {
+                    try {
+                        return this.sendRespuesta<IResourceGroup[]>(conexion, {
+                            data: await this.buildResourceGroup(),
+                        });
+                    } catch (err) {
+                        if (err instanceof Error) {
+                            return this.sendError(conexion, {
+                                message: err.message,
+                                extra: err.stack,
+                            });
+                        }
+
+                        return this.sendError(conexion, {
+                            message: "Error procesando la petición",
+                            extra: err,
+                        });
+                    }
                 }
             }
         ];
     }
 
     protected abstract getWorkspace(): string;
-    protected abstract buildResourceGroup(): Promise<IResourceGroup[]>;
+    protected abstract buildResourceGroup(dominio?: string): Promise<IResourceGroup[]>;
 }

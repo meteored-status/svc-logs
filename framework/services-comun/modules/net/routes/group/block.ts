@@ -1,6 +1,7 @@
 import type {IRouteGroupCache, NetCache} from "../../cache";
 import type {Checker, IExpresion} from "../../checkers";
 import type {Conexion, TMetodo} from "../../conexion";
+import type {Dominio} from "../../config/dominio";
 import type {IPodInfo} from "../../../utiles/config";
 import {Comodin} from "../../checkers/comodin";
 import {Exact} from "../../checkers/exact";
@@ -20,6 +21,7 @@ type TUpdater = {
 export interface IRouteGroup {
     expresiones?: IExpresion[];
     stop?: boolean;
+    redireccion?: Dominio;
     handler?: THandler;
     updater?: TUpdater;
     cache?: Partial<IRouteGroupCache>;
@@ -29,6 +31,7 @@ export interface IRouteGroup {
 interface IRouteGroupFinal {
     expresiones: Checker[];
     stop: boolean;
+    redireccion?: Dominio;
     handler: THandler;
     updater?: TUpdater;
     cache: IRouteGroupCache;
@@ -41,6 +44,7 @@ export class RouteGroupBlock {
         data.handler ??= (conexion)=>conexion.error(404, "No se ha definido manejador");
         const nuevo = new this({
             expresiones: this.parseExpresiones(data.expresiones??[]),
+            redireccion: data.redireccion,
             stop: data.stop===undefined?false:data.stop,
             handler: data.handler,
             updater: data.updater,
@@ -81,6 +85,7 @@ export class RouteGroupBlock {
     public ok: boolean;
     public readonly stop: boolean;
 
+    private readonly redireccion?: Dominio;
     private readonly cache: IRouteGroupCache;
     private expresiones: Checker[];
     private readonly handler: THandler;
@@ -93,6 +98,7 @@ export class RouteGroupBlock {
         this.ok = false;
         this.stop = data.stop;
 
+        this.redireccion = data.redireccion;
         this.cache = data.cache;
         this.expresiones = data.expresiones;
         this.handler = data.handler;
@@ -177,6 +183,15 @@ export class RouteGroupBlock {
     }
 
     private async parseHandler(conexion: Conexion, coincidencias: string[]): Promise<void> {
+        if (this.redireccion!=undefined) {
+            const host = this.redireccion.getRedireccion(this.redireccion.searchHost(conexion.dominio));
+            if (host!=undefined) {
+                const dominio = this.redireccion.host(host);
+                conexion.send301(conexion.url.replace(conexion.dominio, dominio));
+                return;
+            }
+        }
+
         const span = conexion.tracer.span("Handler");
         await this.prehandler(conexion, coincidencias)
             .catch(async (err)=>{

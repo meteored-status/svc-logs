@@ -23,7 +23,7 @@ export class Externals {
             salida[mod] = `commonjs ${mod}`;
         }
         for (const [lib, version] of Object.entries(this.ES_MODULES)) {
-            if (dependencies[lib]!==undefined && check(dependencies[lib], version)) {
+            if (dependencies[lib]!=undefined && check(dependencies[lib]!, version)) {
                 delete salida[lib];
             }
         }

@@ -2,6 +2,7 @@ export default `
 .DS_Store
 .idea/copilot/
 .idea/dataSources.xml
+.idea/jetClient/state-backup-*.xml
 .idea/watcherTasks.xml
 .idea/php.xml
 .idea/sonarlint/

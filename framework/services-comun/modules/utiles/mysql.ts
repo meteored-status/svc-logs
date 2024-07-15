@@ -1,4 +1,4 @@
 import {MySQL} from "../database/mysql";
 
-const db = MySQL.build(`files/credenciales/mysql.json`);
+const db = MySQL.build();
 export default db;

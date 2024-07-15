@@ -229,11 +229,13 @@ export class Init {
         } else {
             config.framework = EFramework.nextjs;
         }
+        config.kustomize = paquete.config.kustomize??"services";
         if (paquete.config.credenciales!==undefined) {
             config.credenciales = paquete.config.credenciales;
         } else {
             config.credenciales = nextjs.credenciales??[];
         }
+        config.database = paquete.config.database;
         config.bundle = paquete.config.bundle??{};
 
         paquete.config = config;

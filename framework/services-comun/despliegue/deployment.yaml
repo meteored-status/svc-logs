@@ -87,7 +87,6 @@ steps:
       - ${TRIGGER_NAME}
     id: 'Descargar Cache Dependencias'
     waitFor:
-      - 'Descargas'
       - 'Labels'
 
     #####
@@ -129,7 +128,7 @@ steps:
       - ${TRIGGER_NAME}
     id: 'Subir Cache Dependencias'
     waitFor:
-      - 'Compilar'
+      - 'Instalar Dependencias'
 
     #####
     # SUBIR A STORAGE

@@ -1,6 +1,6 @@
 import {Configuracion} from "./configuracion";
 import {ERuntime, IConfigService} from "../tools/src/clases/workspace/service";
-import {readJSONSync} from "../modules/utiles/fs";
+import {isFileSync, readJSONSync} from "../modules/utiles/fs";
 
 interface IEnv {
     entorno: string;
@@ -9,7 +9,7 @@ interface IEnv {
 
 interface IConfiguracion {
     config: IConfigService;
-    dependencies: NodeJS.Dict<string>;
+    dependencies: Record<string, string>;
 }
 
 export default (env: IEnv)=>{
@@ -18,6 +18,7 @@ export default (env: IEnv)=>{
         config: {
             runtime,
             framework,
+            database,
             bundle: {
                 web = [],
                 ...bundle
@@ -25,6 +26,8 @@ export default (env: IEnv)=>{
         },
         dependencies,
     } = readJSONSync<IConfiguracion>(`${basedir}/package.json`) as IConfiguracion;
+
+    const rules = isFileSync(`${basedir}/rules.js`) ? `${basedir}/rules.js` : undefined;
 
     const webFinal = Array.isArray(web) ? web : [web];
 
@@ -36,6 +39,8 @@ export default (env: IEnv)=>{
             entorno,
             framework,
             runtime,
+            database,
+            rules,
         }),
         ...webFinal.map(bundle=>Configuracion.build({
             basedir,
@@ -44,6 +49,7 @@ export default (env: IEnv)=>{
             entorno,
             framework,
             runtime: ERuntime.browser,
+            rules,
         })),
     ];
 }

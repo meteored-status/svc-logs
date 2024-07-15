@@ -43,8 +43,12 @@ export class Workspace {
         this.initWatcher();
     }
 
-    protected initWatcher(): void {
+    public parar(): void {
         this.watcher?.close();
+    }
+
+    protected initWatcher(): void {
+        this.parar();
         if (os.platform()!="linux") {
             this.watcher = watch(this.dir, {recursive: true}, (ev, filename) => {
                 if (filename?.endsWith("~")) {

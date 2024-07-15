@@ -8,11 +8,12 @@ type TModule = webpack.Configuration['module'];
 interface IModuleConfig extends IConfigServiceComponentes {
     desarrollo: boolean;
     test: boolean;
+    rules?: string;
 }
 
 export class Module {
     /* STATIC */
-    public static build({css, css_type, desarrollo, pug, test}: IModuleConfig): TModule {
+    public static build({css, css_type, desarrollo, pug, test, rules}: IModuleConfig): TModule {
         const salida: TModule = {
             rules: [],
         }
@@ -93,6 +94,10 @@ export class Module {
                 },
             ],
         });
+
+        if (rules!=undefined) {
+            salida.rules!.push(...require(rules));
+        }
 
         return salida;
     }

@@ -140,8 +140,8 @@ export class Conexion extends Respuesta {
     public readonly query: URLSearchParams;
     public readonly queryRAW: string;
 
-    public constructor(private readonly peticion: IncomingMessage, respuesta: ServerResponse, errorHandler: IErrorHandler, tracer: Tracer, pod: IPodInfo, config: Net, public readonly https: boolean) {
-        super(respuesta, errorHandler, tracer, pod, config);
+    public constructor(private readonly peticion: IncomingMessage, respuesta: ServerResponse, errorHandler: IErrorHandler, tracer: Tracer, config: Net, public readonly https: boolean) {
+        super(respuesta, errorHandler, tracer, config);
 
         this.start = new Date();
         const url = new URL(`http://localhost${peticion.url??"/"}`);

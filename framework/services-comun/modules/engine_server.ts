@@ -1,4 +1,5 @@
 import chokidar from "chokidar";
+import os from "node:os";
 
 import {ConfiguracionNet} from "./net/config/config";
 import {EngineBase} from "./engine_base";
@@ -6,8 +7,10 @@ import {Idioma, IIdiomas} from "./net/idiomas";
 import {Net} from "./net/config/net";
 import {NetCache} from "./net/cache";
 import {NetCacheDisk} from "./net/cache/disk";
+import {Respuesta} from "./net/respuesta";
 import {Routes} from "./net/routes";
 import {RouteGroup, RouteGroupError} from "./net/routes/group";
+import {Configuracion} from "./utiles/config";
 import {PromiseDelayed} from "./utiles/promise";
 import {isDir, mkdir} from "./utiles/fs";
 import {error, info} from "./utiles/log";
@@ -25,6 +28,20 @@ export interface IConfig {
 
 export abstract class EngineServer<T extends ConfiguracionNet=ConfiguracionNet> extends EngineBase<T> {
     /* STATIC */
+    protected static override async prebuild(configuracion: Configuracion): Promise<void> {
+        super.prebuild(configuracion);
+
+        if (!PRODUCCION) {
+            Respuesta.SERVICE = configuracion.pod.servicio;
+            Respuesta.POD = configuracion.pod.servicio;
+        } else {
+            const hostname = os.hostname().split("-");
+            Respuesta.SERVICE = hostname.slice(0, -2).join('-');
+            Respuesta.POD = hostname.slice(-2).join("-");
+        }
+        Respuesta.VERSION = configuracion.pod.version;
+        Respuesta.ZONA = configuracion.pod.zona;
+    }
 
     /* INSTANCE */
     private handlers: RouteGroup[];
