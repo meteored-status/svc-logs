@@ -9,10 +9,16 @@ export enum EService {
     status_external,
     status_frontend,
     status_webhook,
+    workers_slave,
 }
 
 const mapeo = new Map<EService, INetServiceBase>();
 
+mapeo.set(EService.logs_slave, {
+    endpoint: "proxy-svc-logs-slave",
+    namespace: "services",
+    tags: ["logs", "slave"],
+});
 mapeo.set(EService.status, {
     endpoint: "proxy-svc-status",
     namespace: "services",
@@ -38,15 +44,15 @@ mapeo.set(EService.status_frontend, {
     namespace: "services",
     tags: ["status", "status-frontend"],
 });
-mapeo.set(EService.logs_slave, {
-    endpoint: "proxy-svc-logs-slave",
-    namespace: "services",
-    tags: ["logs", "slave"],
-});
 mapeo.set(EService.status_webhook, {
     endpoint: "proxy-svc-status-webhook",
     namespace: "services",
     tags: ["status", "webhook"],
+});
+mapeo.set(EService.workers_slave, {
+    endpoint: "proxy-svc-workers-slave",
+    namespace: "services",
+    tags: ["workers", "slave"],
 });
 
 export const SERVICES = new Service(mapeo, {

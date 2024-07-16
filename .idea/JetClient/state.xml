@@ -1,6 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="JetClientState">
+    <option name="draftsState">
+      <draftsState>
+        <option name="requests">
+          <list>
+            <requestState>
+              <option name="body">
+                <bodyState>
+                  <option name="raw" value="{&#10;    &quot;message&quot;: {&#10;        &quot;attributes&quot;: {&#10;            &quot;bucketId&quot;: &quot;cf-workers&quot;,&#10;            &quot;objectId&quot;: &quot;20240716/20240716T000102Z_20240716T000201Z_bec70c07.log.gz&quot;,&#10;            eventTime: &quot;&quot;,&#10;            eventType: &quot;OBJECT_FINALIZE&quot;,&#10;            notificationConfig: &quot;&quot;,&#10;            objectGeneration: &quot;&quot;,&#10;            payloadFormat: &quot;&quot;&#10;        },&#10;        &quot;data&quot;: &quot;&quot;,&#10;        &quot;messageId&quot;: &quot;&quot;,&#10;        &quot;message_id&quot;: &quot;&quot;,&#10;        &quot;publishTime&quot;: &quot;&quot;,&#10;        &quot;publish_time&quot;: &quot;&quot;&#10;    },&#10;    &quot;subscription&quot;: &quot;string&quot;&#10;}" />
+                  <option name="type" value="JSON" />
+                </bodyState>
+              </option>
+              <option name="headers">
+                <list>
+                  <headerState>
+                    <option name="key" value="Content-Type" />
+                    <option name="value" value="application/json" />
+                  </headerState>
+                </list>
+              </option>
+              <option name="id" value="d3f9093c-01c3-45f1-9a3c-06024ee17bd8" />
+              <option name="method" value="POST" />
+              <option name="name" value="Draft" />
+              <option name="sortWeight" value="1000000" />
+              <option name="url" value="http://localhost:27342/pubsub/workers/ingest/" />
+            </requestState>
+          </list>
+        </option>
+      </draftsState>
+    </option>
     <option name="id" value="b20b5eb7-d8ce-4705-bda5-eb9c3c4a6883" />
+    <option name="version" value="3" />
   </component>
 </project>

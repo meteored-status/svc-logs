@@ -13,7 +13,9 @@
     "services-comun-status": "yarn workspace services-comun-status",
     "logs-repesca": "yarn workspace logs-repesca",
     "logs-slave": "yarn workspace logs-slave",
-    "logs-base": "yarn workspace logs-base"
+    "workers-slave": "yarn workspace workers-slave",
+    "logs-base": "yarn workspace logs-base",
+    "workers-base": "yarn workspace workers-base"
   },
   "private": true,
   "workspaces": [

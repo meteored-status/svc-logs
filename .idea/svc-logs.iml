@@ -8,11 +8,10 @@
       <excludeFolder url="file://$MODULE_DIR$/services/logs-slave/output" />
       <excludeFolder url="file://$MODULE_DIR$/services/logs-repesca/files" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
+      <excludeFolder url="file://$MODULE_DIR$/services/workers-slave/files" />
+      <excludeFolder url="file://$MODULE_DIR$/services/workers-slave/output" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-  <component name="SonarLintModuleSettings">
-    <option name="uniqueId" value="56cd9475-2515-4e69-81a4-47a5ce1d9c5a" />
   </component>
 </module>
