@@ -26,7 +26,7 @@ class Slave extends RouteGroup<Configuracion>{
         super(configuracion);
     }
 
-    private parseLog(data: INotifyPubSub): void {
+    private parseWorker(data: INotifyPubSub): void {
         Bucket.run(this.configuracion, data, this.signal)
             .catch(async (err) => {
                 await Bucket.addRepesca(data, false, undefined, err);
@@ -47,9 +47,9 @@ class Slave extends RouteGroup<Configuracion>{
                 expresiones: [
                     {
                         metodos: ["POST"],
-                        prefix: "/private/logs/ingest/",
+                        prefix: "/private/workers/ingest/",
                         checkQuery: false,
-                        resumen: "/private/logs/ingest/",
+                        resumen: "/private/workers/ingest/",
                     },
                 ],
                 handler: async (conexion) => {
@@ -59,7 +59,7 @@ class Slave extends RouteGroup<Configuracion>{
 
                     const salida = await this.sendRespuesta(conexion);
 
-                    this.parseLog({
+                    this.parseWorker({
                         ...post,
                         eventTime: "",
                         eventType: "OBJECT_FINALIZE",
@@ -75,9 +75,9 @@ class Slave extends RouteGroup<Configuracion>{
                 expresiones: [
                     {
                         metodos: ["POST"],
-                        prefix: "/pubsub/logs/ingest/",
+                        prefix: "/pubsub/workers/ingest/",
                         checkQuery: false,
-                        resumen: "/pubsub/logs/ingest/",
+                        resumen: "/pubsub/workers/ingest/",
                     },
                 ],
                 handler: async (conexion) => {
@@ -88,7 +88,7 @@ class Slave extends RouteGroup<Configuracion>{
                     const salida = await this.sendRespuesta(conexion);
 
                     if (post.message?.attributes!=undefined) {
-                        this.parseLog(post.message.attributes);
+                        this.parseWorker(post.message.attributes);
                     }
 
                     return salida;

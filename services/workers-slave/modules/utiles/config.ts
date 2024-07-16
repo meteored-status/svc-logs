@@ -1,5 +1,5 @@
 import {ConfiguracionNet, type IConfiguracionNet} from "services-comun/modules/net/config/config";
-import {GOOGLE} from "logs-base/modules/utiles/config";
+import {GOOGLE} from "workers-base/modules/utiles/config";
 import {Google, type IGoogle} from "services-comun/modules/utiles/config";
 import {SERVICES} from "services-comun-status/modules/services/config";
 

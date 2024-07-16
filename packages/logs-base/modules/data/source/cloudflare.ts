@@ -158,7 +158,7 @@ export class Cloudflare {
         for await (const linea of lector) {
             if (!ok) {
                 lector.close();
-                return Promise.reject("Abortado");
+                return Promise.reject(new Error("Abortado"));
             }
             if (linea.length==0) {
                 continue;
