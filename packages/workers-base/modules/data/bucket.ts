@@ -9,14 +9,10 @@ import {Cloudflare} from "./source/cloudflare";
 export interface IBucketMySQL {
     id: string;
     cliente: string;
-    grupo: string|null;
-    backends: Record<string, string>|null;
 }
 
 export interface ICliente {
     id: string;
-    grupo?: string;
-    backends: Record<string, string>;
 }
 
 export class Bucket {
@@ -33,7 +29,7 @@ export class Bucket {
     }
 
     protected static async findBucketEjecutar(bucket: string): Promise<Bucket> {
-        const [row] = await db.query<IBucketMySQL, Bucket>("SELECT id, cliente, grupo, backends FROM buckets WHERE id=?", [bucket], {
+        const [row] = await db.query<IBucketMySQL, Bucket>("SELECT id, cliente FROM buckets WHERE id=?", [bucket], {
             fn: (row)=>new this(row),
         });
 
@@ -45,7 +41,7 @@ export class Bucket {
     }
 
     public static async update(notify: INotify, cliente: ICliente): Promise<void> {
-        await db.insert("UPDATE procesando SET cliente=?, grupo=?, backends=? WHERE bucket=? AND archivo=?", [cliente.id, cliente.grupo??null, cliente.backends!=undefined?JSON.stringify(cliente.backends):null, notify.bucketId, notify.objectId]);
+        await db.insert("UPDATE procesando SET cliente=? WHERE bucket=? AND archivo=?", [cliente.id, notify.bucketId, notify.objectId]);
     }
 
     public static async procesando(notify: INotify): Promise<void> {
@@ -63,28 +59,22 @@ export class Bucket {
     public static async addRepesca(notify: INotify, repesca: boolean, cliente?: ICliente, err?: any): Promise<void> {
         const mensaje = err!=undefined?JSON.stringify(err):null;
         const origen = !repesca?"ingest":"repesca";
-        await db.insert("INSERT INTO repesca (bucket, archivo, cliente, grupo, mensaje, origen) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, tratando=0, origen=?", [notify.bucketId, notify.objectId, cliente?.id??null, cliente?.grupo??null, mensaje, origen, mensaje, origen]);
+        await db.insert("INSERT INTO repesca (bucket, archivo, cliente, mensaje, origen) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, tratando=0, origen=?", [notify.bucketId, notify.objectId, cliente?.id??null, mensaje, origen, mensaje, origen]);
         await db.insert("UPDATE procesando SET estado=? WHERE bucket=? AND archivo=?", ["error", notify.bucketId, notify.objectId]);
     }
 
     /* INSTANCE */
     public readonly id: string;
     public readonly cliente: string;
-    public readonly grupo?: string;
-    public readonly backends: Record<string, string>;
 
     protected constructor(data: IBucketMySQL) {
         this.id = data.id;
         this.cliente = data.cliente;
-        this.grupo = data.grupo??undefined;
-        this.backends = data.backends??{};
     }
 
     public getCliente(): ICliente {
         return {
             id: this.cliente,
-            grupo: this.grupo,
-            backends: this.backends,
         };
     }
 
@@ -111,29 +101,15 @@ export class Bucket {
         }
     }
 
-    public async ingest(pod: IPodInfo, storage: Google, notify: INotify, signal: AbortSignal, repesca: boolean): Promise<void> {
+    public async ingest(storage: Google, notify: INotify, signal: AbortSignal, repesca: boolean): Promise<void> {
         const data = await this.getArchivo(storage, notify.bucketId, notify.objectId);
         if (data==null) {
             // info("Archivo no encontrado", Bucket.buildSource(notify));
             return;
         }
 
-        await Cloudflare.ingest(pod, this.getCliente(), notify, data, signal, repesca);
+        await Cloudflare.ingest(this.getCliente(), notify, data, signal, repesca);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
         await data.delete();
-        // await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data).then(async ()=>{
-        //     await db.update("DELETE FROM problemas WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
-        //     // await db.update("UPDATE problemas SET end=? WHERE bucket=? AND archivo=?", [new Date(), notify.bucketId, notify.objectId]);
-        //     await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
-        //     await data.delete();
-        // }), Bucket.TIMEOUT)
-        //     .catch(async (err)=>{
-        //         if (err instanceof PromiseTimeoutError) {
-        //             await db.insert("INSERT IGNORE INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError parseando el log"]);
-        //             return;
-        //         }
-        //         return Promise.reject(err);
-        //     });
-
     }
 }

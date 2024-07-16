@@ -201,9 +201,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@google-cloud/storage@npm:^7.11.3":
-  version: 7.11.3
-  resolution: "@google-cloud/storage@npm:7.11.3"
+"@google-cloud/storage@npm:^7.12.0":
+  version: 7.12.0
+  resolution: "@google-cloud/storage@npm:7.12.0"
   dependencies:
     "@google-cloud/paginator": "npm:^5.0.0"
     "@google-cloud/projectify": "npm:^4.0.0"
@@ -220,7 +220,7 @@ __metadata:
     retry-request: "npm:^7.0.0"
     teeny-request: "npm:^9.0.0"
     uuid: "npm:^8.0.0"
-  checksum: 10/69f32dc73d8017049eaf43a79ba105bdda1ec413a74703b0b19839573c1bfaf8d9be6a48a784cf9daf19b89365cdd17c9c19bbe921c14650f94d01106363017e
+  checksum: 10/f272b442459475c1bbc1647c5b6a987a1cfa912c17388830847dcb4e0290bafb2a6a44ec318fae5b5588cfb84e46ee3c3a6e8d03dcc4ee348295817d5e86faf2
   languageName: node
   linkType: hard
 
@@ -1311,6 +1311,13 @@ __metadata:
   version: 0.7.0
   resolution: "aws-sign2@npm:0.7.0"
   checksum: 10/2ac497d739f71be3264cf096a33ab256a1fea7fe80b87dc51ec29374505bd5a661279ef1c22989d68528ea61ed634021ca63b31cf1d3c2a3682ffc106f7d0e96
+  languageName: node
+  linkType: hard
+
+"aws-ssl-profiles@npm:^1.1.1":
+  version: 1.1.1
+  resolution: "aws-ssl-profiles@npm:1.1.1"
+  checksum: 10/7293640f29d7b9baf62bcc4e36228c0b7cd435053bbe5535a367dc7fcd76ffdf7f1c7078181147f5d666cc316abb65ce098e64e403f882a49937a4942080a8ea
   languageName: node
   linkType: hard
 
@@ -2949,10 +2956,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isbot@npm:^5.1.12":
-  version: 5.1.12
-  resolution: "isbot@npm:5.1.12"
-  checksum: 10/9f8f56a28e75a9628113b1c6da6cd2776728e215d1f384c8ea82a7e52005a1429c37ad61de0758514879272c6e74ba19fcfa80f7b09faef785edfb945824892a
+"isbot@npm:^5.1.13":
+  version: 5.1.13
+  resolution: "isbot@npm:5.1.13"
+  checksum: 10/520989ff4b3ca0df4436cc79cb93aacd6043284cb8d2516c17a3753f725dcb063dc5e58d84e48da6dc71ac45b35fb33d7db1fb2d084faa7b87cb662a07e82de0
   languageName: node
   linkType: hard
 
@@ -3246,13 +3253,13 @@ __metadata:
   resolution: "logs-repesca@workspace:services/logs-repesca"
   dependencies:
     "@elastic/elasticsearch": "npm:^8.14.0"
-    "@google-cloud/storage": "npm:^7.11.3"
+    "@google-cloud/storage": "npm:^7.12.0"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^20.14.10"
     crawler-user-agents: "npm:^1.0.142"
     geoip-lite: "npm:^1.4.10"
     logs-base: "workspace:*"
-    mysql2: "npm:^3.10.2"
+    mysql2: "npm:^3.10.3"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -3268,7 +3275,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^8.14.0"
     "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.3.0"
-    "@google-cloud/storage": "npm:^7.11.3"
+    "@google-cloud/storage": "npm:^7.12.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/core": "npm:^1.25.1"
     "@opentelemetry/instrumentation": "npm:^0.52.1"
@@ -3286,7 +3293,7 @@ __metadata:
     geoip-lite: "npm:^1.4.10"
     hexoid: "npm:^1.0.0"
     logs-base: "workspace:*"
-    mysql2: "npm:^3.10.2"
+    mysql2: "npm:^3.10.3"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -3577,10 +3584,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mysql2@npm:^3.10.2":
-  version: 3.10.2
-  resolution: "mysql2@npm:3.10.2"
+"mysql2@npm:^3.10.3":
+  version: 3.10.3
+  resolution: "mysql2@npm:3.10.3"
   dependencies:
+    aws-ssl-profiles: "npm:^1.1.1"
     denque: "npm:^2.1.0"
     generate-function: "npm:^2.3.1"
     iconv-lite: "npm:^0.6.3"
@@ -3589,7 +3597,7 @@ __metadata:
     named-placeholders: "npm:^1.1.3"
     seq-queue: "npm:^0.0.5"
     sqlstring: "npm:^2.3.2"
-  checksum: 10/292f7f06b5d4b51f24301dda1a012a160be16851b9a93462ce87cbd574f453f0f0d9dd23e26dd892c0b0f93a6344159894b7d16b1d7a3116c5239c30f41cf784
+  checksum: 10/edb2f1e6056b048421989bf97dafc8ce1e15edb8bf9154f1f3fef2d882c86483050921d56a64f7cec3dac8b5835c7ec19cd4af6d8202282576be991954dc8429
   languageName: node
   linkType: hard
 
@@ -4564,7 +4572,7 @@ __metadata:
     "@google-cloud/common": "npm:^5.0.2"
     "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.3.0"
     "@google-cloud/pubsub": "npm:^4.5.0"
-    "@google-cloud/storage": "npm:^7.11.3"
+    "@google-cloud/storage": "npm:^7.12.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/core": "npm:^1.25.1"
     "@opentelemetry/instrumentation": "npm:^0.52.1"
@@ -4584,9 +4592,9 @@ __metadata:
     css-loader: "npm:^7.1.2"
     fork-ts-checker-webpack-plugin: "npm:^9.0.2"
     formidable: "npm:^3.5.1"
-    isbot: "npm:^5.1.12"
+    isbot: "npm:^5.1.13"
     mini-css-extract-plugin: "npm:^2.9.0"
-    mysql2: "npm:^3.10.2"
+    mysql2: "npm:^3.10.3"
     node-ical: "npm:^0.18.0"
     pidusage: "npm:^3.0.2"
     pug: "npm:^3.0.3"
@@ -5481,6 +5489,47 @@ __metadata:
   languageName: node
   linkType: hard
 
+"workers-base@workspace:*, workers-base@workspace:packages/workers-base":
+  version: 0.0.0-use.local
+  resolution: "workers-base@workspace:packages/workers-base"
+  dependencies:
+    "@elastic/elasticsearch": "npm:^8.14.0"
+    "@types/node": "npm:^20.14.10"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    tslib: "npm:^2.6.3"
+    zod: "npm:^3.23.8"
+  languageName: unknown
+  linkType: soft
+
+"workers-slave@workspace:services/workers-slave":
+  version: 0.0.0-use.local
+  resolution: "workers-slave@workspace:services/workers-slave"
+  dependencies:
+    "@elastic/elasticsearch": "npm:^8.14.0"
+    "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.3.0"
+    "@google-cloud/storage": "npm:^7.12.0"
+    "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/core": "npm:^1.25.1"
+    "@opentelemetry/instrumentation": "npm:^0.52.1"
+    "@opentelemetry/instrumentation-http": "npm:^0.52.1"
+    "@opentelemetry/resources": "npm:^1.25.1"
+    "@opentelemetry/sdk-trace-base": "npm:^1.25.1"
+    "@opentelemetry/sdk-trace-node": "npm:^1.25.1"
+    "@opentelemetry/semantic-conventions": "npm:^1.25.1"
+    "@types/node": "npm:^20.14.10"
+    chokidar: "npm:^3.6.0"
+    formidable: "npm:^3.5.1"
+    hexoid: "npm:^1.0.0"
+    mysql2: "npm:^3.10.3"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    source-map-support: "npm:^0.5.21"
+    tslib: "npm:^2.6.3"
+    workers-base: "workspace:*"
+  languageName: unknown
+  linkType: soft
+
 "wrap-ansi-cjs@npm:wrap-ansi@^7.0.0, wrap-ansi@npm:^7.0.0":
   version: 7.0.0
   resolution: "wrap-ansi@npm:7.0.0"
@@ -5567,5 +5616,12 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: 10/f77b3d8d00310def622123df93d4ee654fc6a0096182af8bd60679ddcdfb3474c56c6c7190817c84a2785648cdee9d721c0154eb45698c62176c322fb46fc700
+  languageName: node
+  linkType: hard
+
+"zod@npm:^3.23.8":
+  version: 3.23.8
+  resolution: "zod@npm:3.23.8"
+  checksum: 10/846fd73e1af0def79c19d510ea9e4a795544a67d5b34b7e1c4d0425bf6bfd1c719446d94cdfa1721c1987d891321d61f779e8236fde517dc0e524aa851a6eff1
   languageName: node
   linkType: hard

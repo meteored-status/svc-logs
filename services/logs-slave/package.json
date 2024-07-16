@@ -17,7 +17,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^8.14.0",
     "@google-cloud/opentelemetry-cloud-trace-exporter": "^2.3.0",
-    "@google-cloud/storage": "^7.11.3",
+    "@google-cloud/storage": "^7.12.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/core": "^1.25.1",
     "@opentelemetry/instrumentation": "^0.52.1",
@@ -30,7 +30,7 @@
     "crawler-user-agents": "^1.0.142",
     "geoip-lite": "^1.4.10",
     "hexoid": "^1.0.0",
-    "mysql2": "^3.10.2",
+    "mysql2": "^3.10.3",
     "source-map-support": "^0.5.21",
     "stream-shift": "1.0.3",
     "ua-parser-js": "^2.0.0-beta.3"
@@ -58,6 +58,7 @@
     "framework": "meteored",
     "kustomize": "services",
     "credenciales": [],
+    "database": "logs",
     "bundle": {}
   }
 }
