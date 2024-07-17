@@ -3,12 +3,12 @@
   "description": "Componentes comunes de Status",
   "author": "José Antonio Jiménez",
   "devDependencies": {
-    "@types/node": "^20.14.10",
+    "@types/node": "^20.14.11",
     "@types/qs": "^6.9.15",
     "qs": "^6.12.3",
     "services-comun": "workspace:*",
     "tslib": "^2.6.3"
   },
-  "version": "2024.7.16+1",
-  "hash": "f05a2f56b5e88596eb0202a8af5fdb9a"
+  "version": "2024.7.17+1",
+  "hash": "7c02290c73e4379afc825702b2642a9a"
 }

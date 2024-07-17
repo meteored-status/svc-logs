@@ -30,3 +30,6 @@ gcloud storage buckets notifications create gs://mr-cf-logs-tiempo-py --topic=me
 gcloud storage buckets notifications create gs://mr-cf-logs-tiempo-ru --topic=meteored-status-cf-logs
 gcloud storage buckets notifications create gs://mr-cf-logs-tiempo-uy --topic=meteored-status-cf-logs
 gcloud storage buckets notifications create gs://mr-cf-logs-tiempo-ve --topic=meteored-status-cf-logs
+
+
+gcloud storage buckets notifications create gs://cf-workers --topic=meteored-status-cf-workers --project=meteored-status

@@ -17,7 +17,7 @@ export interface SourceCloudflare {
     eventType:          "fetch" | "tail";
     exceptions?:        string[];
     logs?:              string[];
-    outcome:            "ok" | "canceled";
+    outcome:            "ok" | "canceled" | "exception";
     scriptName:         string;
     scriptTags?:        string[];
     scriptVersion:      ScriptVersion;
@@ -66,9 +66,9 @@ export class Cloudflare {
         }),
         EventTimestampMs:  z.coerce.date(),
         EventType:         z.enum(["fetch", "tail"]),
-        Exceptions:        z.string().array().transform(hacerUndefinedLength).optional(),
-        Logs:              z.string().array().transform(hacerUndefinedLength).optional(),
-        Outcome:           z.enum(["ok", "canceled"]),
+        Exceptions:        z.any().array().transform(lineas=>lineas.map(linea=>JSON.stringify(linea))).transform(hacerUndefinedLength).optional(),
+        Logs:              z.any().array().transform(lineas=>lineas.map(linea=>JSON.stringify(linea))).transform(hacerUndefinedLength).optional(),
+        Outcome:           z.enum(["ok", "canceled", "exception"]),
         ScriptName:        z.string(),
         ScriptTags:        z.string().array().transform(hacerUndefinedLength).optional(),
         ScriptVersion:     z.object({

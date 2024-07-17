@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@types/geoip-lite": "^1.4.4",
-    "@types/node": "^20.14.10",
+    "@types/node": "^20.14.11",
     "@types/ua-parser-js": "^0.7.39",
     "formidable": "^3.5.1",
     "logs-base": "workspace:*",
