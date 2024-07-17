@@ -83,13 +83,13 @@ export class Cloudflare {
     }));
 
     private static readonly SCHEMA_EXCEPTIONS = z.object({
-        Name:          z.string(),
-        Message:       z.string(),
-        Timestamp:     z.coerce.date(),
+        Name:        z.string(),
+        Message:     z.string(),
+        TimestampMs: z.coerce.date(),
     }).strict().transform(o=>({
         name: o.Name,
         message: o.Message,
-        timestamp: o.Timestamp,
+        timestamp: o.TimestampMs,
     })).array().transform(hacerUndefinedLength).optional();
 
     private static readonly SCHEMA_VERSION = z.object({
