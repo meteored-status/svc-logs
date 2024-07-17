@@ -24,29 +24,29 @@ export interface SourceCloudflare {
     source:       string;
 }
 
-export interface Event {
+interface Event {
     rayID:    string;
     request:  Request;
     response: Response;
     type:     "fetch" | "tail";
 }
 
-export interface Request {
+interface Request {
     url:    string;
     method: string;
 }
 
-export interface Response {
+interface Response {
     status: number;
 }
 
-export interface Exception {
+interface Exception {
     name: string;
     message: string;
     timestamp: Date;
 }
 
-export interface ScriptVersion {
+interface ScriptVersion {
     id:       string;
     message?: string;
     tag?:     string;
@@ -90,7 +90,7 @@ export class Cloudflare {
         name: o.Name,
         message: o.Message,
         timestamp: o.Timestamp,
-    }));
+    })).array().transform(hacerUndefinedLength).optional();
 
     private static readonly SCHEMA_VERSION = z.object({
         ID:      z.string(),
@@ -102,19 +102,18 @@ export class Cloudflare {
         tag: o.Tag,
     }));
 
-    private static SCHEMA = z.object({
+    private static readonly SCHEMA = z.object({
         Entrypoint:        z.string()        .transform(hacerUndefinedLength).optional(),
         Event:             this.SCHEMA_EVENT,
         EventTimestampMs:  z.coerce.date(),
         EventType:         z.enum(["fetch", "tail"]),
-        Exceptions:        this.SCHEMA_EXCEPTIONS.array().transform(hacerUndefinedLength).optional(),
+        Exceptions:        this.SCHEMA_EXCEPTIONS,
         Logs:              z.any().array().transform(lineas=>lineas.map(linea=>JSON.stringify(linea))).transform(hacerUndefinedLength).optional(),
         Outcome:           z.enum(["ok", "canceled", "exception"]),
         ScriptName:        z.string(),
         ScriptTags:        z.string().array().transform(hacerUndefinedLength).optional(),
         ScriptVersion:     this.SCHEMA_VERSION,
         DispatchNamespace: z.string()        .transform(hacerUndefinedLength).optional(),
-        source: z.string(),
     }).strict().transform(o=>({
         "@timestamp": o.EventTimestampMs,
         entrypoint: o.Entrypoint,
@@ -131,7 +130,6 @@ export class Cloudflare {
         tags: o.ScriptTags,
         version: o.ScriptVersion,
         namespace: o.DispatchNamespace,
-        source: o.source,
     }));
 
     public static async ingest(cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
@@ -242,10 +240,10 @@ export class Cloudflare {
 
     private static parse(json: string, source: string): SourceCloudflare|null {
         try {
-            return Cloudflare.SCHEMA.parse({
-                ...JSON.parse(json),
+            return {
+                ...Cloudflare.SCHEMA.parse(JSON.parse(json)),
                 source,
-            });
+            };
         } catch (e) {
             error("Cloudflare.parse", JSON.stringify(e));
             return null;
