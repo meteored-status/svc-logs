@@ -775,12 +775,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^20.14.10":
-  version: 20.14.10
-  resolution: "@types/node@npm:20.14.10"
+"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^20.14.11":
+  version: 20.14.11
+  resolution: "@types/node@npm:20.14.11"
   dependencies:
     undici-types: "npm:~5.26.4"
-  checksum: 10/672892cf94d0d95cf052f11271990686a0fd204cd1e5fe7a4ef240e5315e06711765dc47b9ec98627d3adac18b8c92bb7e2d8db21d18faa20bc3e3203a143e79
+  checksum: 10/344e1ce1ed16c86ed1c4209ab4d1de67db83dd6b694a6fabe295c47144dde2c58dabddae9f39a0a2bdd246e95f8d141ccfe848e464884b48b8918df4f7788025
   languageName: node
   linkType: hard
 
@@ -3238,7 +3238,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^8.14.0"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^20.14.11"
     crawler-user-agents: "npm:^1.0.142"
     geoip-lite: "npm:^1.4.10"
     services-comun: "workspace:*"
@@ -3255,7 +3255,7 @@ __metadata:
     "@elastic/elasticsearch": "npm:^8.14.0"
     "@google-cloud/storage": "npm:^7.12.0"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^20.14.11"
     crawler-user-agents: "npm:^1.0.142"
     geoip-lite: "npm:^1.4.10"
     logs-base: "workspace:*"
@@ -3285,7 +3285,7 @@ __metadata:
     "@opentelemetry/sdk-trace-node": "npm:^1.25.1"
     "@opentelemetry/semantic-conventions": "npm:^1.25.1"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^20.14.11"
     "@types/ua-parser-js": "npm:^0.7.39"
     chokidar: "npm:^3.6.0"
     crawler-user-agents: "npm:^1.0.142"
@@ -4556,7 +4556,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "services-comun-status@workspace:framework/services-comun-status"
   dependencies:
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^20.14.11"
     "@types/qs": "npm:^6.9.15"
     qs: "npm:^6.12.3"
     services-comun: "workspace:*"
@@ -4584,7 +4584,7 @@ __metadata:
     "@sequelize/core": "npm:7.0.0-alpha.41"
     "@tsconfig/node20": "npm:^20.1.4"
     "@types/formidable": "npm:^3.4.5"
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^20.14.11"
     "@types/pidusage": "npm:^2.0.5"
     "@types/qs": "npm:^6.9.15"
     "@types/sparkpost": "npm:^2.1.8"
@@ -5494,7 +5494,7 @@ __metadata:
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
     "@elastic/elasticsearch": "npm:^8.14.0"
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^20.14.11"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     tslib: "npm:^2.6.3"
@@ -5517,7 +5517,7 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.25.1"
     "@opentelemetry/sdk-trace-node": "npm:^1.25.1"
     "@opentelemetry/semantic-conventions": "npm:^1.25.1"
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^20.14.11"
     chokidar: "npm:^3.6.0"
     formidable: "npm:^3.5.1"
     hexoid: "npm:^1.0.0"
