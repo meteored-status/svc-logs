@@ -8,27 +8,27 @@ import {error, info} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/elasticsearch/bulk";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
 
-import {Bucket, ICliente} from "../bucket";
+import {Bucket, type ICliente} from "../bucket";
 
 export interface SourceCloudflare {
-    "@timestamp":       Date;
-    entrypoint?:        string;
-    event:              Event;
-    eventType:          "fetch" | "tail";
-    exceptions?:        string[];
-    logs?:              string[];
-    outcome:            "ok" | "canceled" | "exception";
-    scriptName:         string;
-    scriptTags?:        string[];
-    scriptVersion:      ScriptVersion;
-    dispatchNamespace?: string;
-    source:             string;
+    "@timestamp": Date;
+    entrypoint?:  string;
+    status:       "ok" | "canceled" | "exception";
+    script:       string;
+    event:        Event;
+    exceptions?:  Exception[];
+    logs?:        string[];
+    tags?:        string[];
+    version:      ScriptVersion;
+    namespace?:   string;
+    source:       string;
 }
 
 export interface Event {
     rayID:    string;
     request:  Request;
     response: Response;
+    type:     "fetch" | "tail";
 }
 
 export interface Request {
@@ -38,6 +38,12 @@ export interface Request {
 
 export interface Response {
     status: number;
+}
+
+export interface Exception {
+    name: string;
+    message: string;
+    timestamp: Date;
 }
 
 export interface ScriptVersion {
@@ -52,57 +58,79 @@ function  hacerUndefinedLength<T extends {length:number}>(v: T): T|undefined {
 
 export class Cloudflare {
     /* STATIC */
+    private static readonly SCHEMA_EVENT_REQUEST = z.object({
+        URL:    z.string(),
+        Method: z.string(),
+    }).strict().transform(o=>({
+        url: o.URL,
+        method: o.Method,
+    }));
+
+    private static readonly SCHEMA_EVENT_RESPONSE = z.object({
+        Status: z.number(),
+    }).strict().transform(o=>({
+        status: o.Status,
+    }));
+
+    private static readonly SCHEMA_EVENT = z.object({
+        RayID:    z.string(),
+        Request:  this.SCHEMA_EVENT_REQUEST,
+        Response: this.SCHEMA_EVENT_RESPONSE,
+    }).strict().transform(o=>({
+        rayID: o.RayID,
+        request: o.Request,
+        response: o.Response,
+    }));
+
+    private static readonly SCHEMA_EXCEPTIONS = z.object({
+        Name:          z.string(),
+        Message:       z.string(),
+        Timestamp:     z.coerce.date(),
+    }).strict().transform(o=>({
+        name: o.Name,
+        message: o.Message,
+        timestamp: o.Timestamp,
+    }));
+
+    private static readonly SCHEMA_VERSION = z.object({
+        ID:      z.string(),
+        Message: z.string().transform(hacerUndefinedLength).optional(),
+        Tag:     z.string().transform(hacerUndefinedLength).optional(),
+    }).strict().transform(o=>({
+        id: o.ID,
+        message: o.Message,
+        tag: o.Tag,
+    }));
+
     private static SCHEMA = z.object({
         Entrypoint:        z.string()        .transform(hacerUndefinedLength).optional(),
-        Event:             z.object({
-            RayID:         z.string(),
-            Request:       z.object({
-                URL:       z.string(),
-                Method:    z.string(),
-            }).strict(),
-            Response:      z.object({
-                Status:    z.number(),
-            }).strict(),
-        }),
+        Event:             this.SCHEMA_EVENT,
         EventTimestampMs:  z.coerce.date(),
         EventType:         z.enum(["fetch", "tail"]),
-        Exceptions:        z.any().array().transform(lineas=>lineas.map(linea=>JSON.stringify(linea))).transform(hacerUndefinedLength).optional(),
+        Exceptions:        this.SCHEMA_EXCEPTIONS.array().transform(hacerUndefinedLength).optional(),
         Logs:              z.any().array().transform(lineas=>lineas.map(linea=>JSON.stringify(linea))).transform(hacerUndefinedLength).optional(),
         Outcome:           z.enum(["ok", "canceled", "exception"]),
         ScriptName:        z.string(),
         ScriptTags:        z.string().array().transform(hacerUndefinedLength).optional(),
-        ScriptVersion:     z.object({
-            ID:            z.string(),
-            Message:       z.string()        .transform(hacerUndefinedLength).optional(),
-            Tag:           z.string()        .transform(hacerUndefinedLength).optional(),
-        }).strict(),
+        ScriptVersion:     this.SCHEMA_VERSION,
         DispatchNamespace: z.string()        .transform(hacerUndefinedLength).optional(),
         source: z.string(),
     }).strict().transform(o=>({
         "@timestamp": o.EventTimestampMs,
         entrypoint: o.Entrypoint,
+        status: o.Outcome,
+        script: o.ScriptName,
         event: {
-            rayID: o.Event.RayID,
-            request: {
-                url: o.Event.Request.URL,
-                method: o.Event.Request.Method,
-            },
-            response: {
-                status: o.Event.Response.Status,
-            },
+            rayID: o.Event.rayID,
+            request: o.Event.request,
+            response: o.Event.response,
+            type: o.EventType,
         },
-        eventType: o.EventType,
         exceptions: o.Exceptions,
         logs: o.Logs,
-        outcome: o.Outcome,
-        scriptName: o.ScriptName,
-        scriptTags: o.ScriptTags,
-        scriptVersion: {
-            id: o.ScriptVersion.ID,
-            message: o.ScriptVersion.Message,
-            tag: o.ScriptVersion.Tag,
-        },
-        dispatchNamespace: o.DispatchNamespace,
+        tags: o.ScriptTags,
+        version: o.ScriptVersion,
+        namespace: o.DispatchNamespace,
         source: o.source,
     }));
 
