@@ -3,8 +3,6 @@ import {Service} from "services-comun/modules/net/service";
 
 export enum EService {
     logs_slave,
-    status,
-    status_auth,
     status_backend,
     status_external,
     status_frontend,
@@ -19,18 +17,8 @@ mapeo.set(EService.logs_slave, {
     namespace: "services",
     tags: ["logs", "slave"],
 });
-mapeo.set(EService.status, {
-    endpoint: "proxy-svc-status",
-    namespace: "services",
-    tags: ["status"],
-});
-mapeo.set(EService.status_auth, {
-    endpoint: "proxy-svc-status-auth",
-    namespace: "services",
-    tags: ["status", "status-auth"],
-});
 mapeo.set(EService.status_backend, {
-    endpoint: "proxy-svc-status-backend",
+    endpoint: "switch-svc-status-backend",
     namespace: "services",
     tags: ["status", "status-backend"],
 });

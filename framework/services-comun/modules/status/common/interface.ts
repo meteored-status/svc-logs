@@ -9,7 +9,9 @@ export enum TStatus {
 
 export interface IComponent {
     name: string;
-    service: IService;
+    service: number|{
+        id: number
+    };
     monitors: IMonitor[];
     updated: Date;
 }
@@ -18,7 +20,6 @@ export interface IService {
     id: number;
     name: string;
     project_name: string;
-    namespace: string;
 }
 
 export interface IMonitor {

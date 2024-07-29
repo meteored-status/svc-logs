@@ -1,8 +1,7 @@
 import { IResolutionGuide } from "../common/interface";
-import {TService} from "../config";
 
 export interface IChecker {
-    service: TService;
+    service: number;
     resource_group: IResourceGroup[];
 }
 
@@ -28,15 +27,28 @@ export interface IUrl {
     tries?: number;
 }
 
-export type TAlternateResponse = "JSON"|"Buffer";
+export type TAlternateResponse = "JSON"|"Buffer"|"HTML";
 
 export interface IAlternateResponse {
     code: number;
     type: TAlternateResponse;
-    field?: string;
+    resolution_guides?: IResolutionGuide[];
+}
+
+export interface IJSONAlternateResponse extends IAlternateResponse {
+    type: "JSON";
+    field: string;
     field_value?: string;
     field_empty?: boolean;
-    resolution_guides?: IResolutionGuide[];
+}
+
+export interface IBufferAlternateResponse extends IAlternateResponse {
+    type: "Buffer";
+}
+
+export interface IHTMLAlternateResponse extends IAlternateResponse {
+    type: "HTML";
+    fn?: string;
 }
 
 export interface IHeaders {

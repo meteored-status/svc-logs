@@ -1,10 +1,10 @@
-import {TService} from "../config";
 import {mergeDeep} from "../../utiles/object";
 import {Client, ISpec as IClientSpec} from "./client";
+import {warning} from "../../utiles/log";
 
 interface ISpec<K> {
     service: number;
-    group?: string;
+    name: string;
     data: K;
 }
 
@@ -13,9 +13,8 @@ export class Spec<K> {
 
     /* INSTANCE */
     private _data?: K;
-    private _id?: string;
 
-    protected constructor(public readonly type: TService, private readonly client: Client, private readonly group?: string) {
+    protected constructor(public readonly service: number, private readonly client: Client, private readonly name: string) {
     }
 
     public get data(): K {
@@ -23,37 +22,32 @@ export class Spec<K> {
     }
 
     public async load(def: K): Promise<Spec<K>> {
-        const spec: IClientSpec<K>|undefined = await this.client.loadSpec<K>(this.type, this.group).catch(() => undefined);
+        const spec: IClientSpec<K>|undefined = await this.client.loadSpec<K>(this.service, this.name).catch(err => {
+            warning(`Error loading spec: `, err);
+            return undefined;
+        });
 
         let data: ISpec<K>;
-        let doc: string|undefined = undefined;
         if (!spec) {
             data = {
-                service: this.type,
-                group: this.group,
+                service: this.service,
+                name: this.name,
                 data: def
             };
         } else {
             data = mergeDeep({}, {data: def}, spec);
-            doc = spec.id;
         }
         this._data = data.data;
-        this._id = doc;
 
         return this;
     }
 
     public async save(): Promise<void> {
-        const spec: IClientSpec<K>|undefined = await this.client.saveSpec<K>({
-            id: this._id??undefined,
-            service: this.type,
-            group: this.group,
+        await this.client.saveSpec<K>({
+            service: this.service,
+            name: this.name,
             data: this._data as K
         });
-
-        if (!this._id) {
-            this._id = spec.id;
-        }
     }
 }
 

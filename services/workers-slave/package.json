@@ -28,11 +28,11 @@
     "@opentelemetry/semantic-conventions": "^1.25.1",
     "chokidar": "^3.6.0",
     "hexoid": "^1.0.0",
-    "mysql2": "^3.10.3",
+    "mysql2": "^3.11.0",
     "source-map-support": "^0.5.21"
   },
   "devDependencies": {
-    "@types/node": "^20.14.11",
+    "@types/node": "^20.14.13",
     "formidable": "^3.5.1",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",

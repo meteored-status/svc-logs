@@ -60,16 +60,22 @@ export async function PromiseChain<T>(listado: T[], createPromise: PromiseFuncti
 }
 
 type PromiseFunctionWTB<T> = ()=>Promise<T>;
-export async function PromiseChainWTB<T>(listado: PromiseFunctionWTB<T>[], delay: number = 0): Promise<T[]> {
+export async function PromiseChainWTB<T>(listado: PromiseFunctionWTB<T>[], delay: number = 0, threads: number = 1): Promise<T[]> {
     const salida: T[] = [];
-    const item: PromiseFunctionWTB<T>|undefined = listado.shift();
-    if (item) {
-        const itemResult = await item();
+    const items: PromiseFunctionWTB<T>[] = [];
+    for (let i = 0; i < threads; i++) {
+        const item: PromiseFunctionWTB<T>|undefined = listado.shift();
+        if (item) {
+            items.push(item);
+        }
+    }
+    if (items.length) {
+        const itemResults = await Promise.all(items.map(item=>item()));
         if (delay>0) {
             await PromiseDelayed(delay);
         }
-        salida.push(itemResult);
-        return salida.concat(await PromiseChainWTB(listado, delay));
+        salida.push(...itemResults);
+        return salida.concat(await PromiseChainWTB(listado, delay, threads));
     }
     return salida;
 }
