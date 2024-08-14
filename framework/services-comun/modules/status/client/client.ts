@@ -1,11 +1,9 @@
-import {TService} from "../config";
 import {IRespuesta} from "../../net/interface";
 import {IComponent} from "../common/interface";
 
 export interface ISpec<T> {
-    id?: string
-    service: TService;
-    group?: string;
+    service: number;
+    name: string;
     data: T;
 }
 
@@ -23,20 +21,19 @@ export class Client {
     /**
      * Carga un spec a través de su identificador de servicio.
      * @param service Id del servicio.
-     * @param group Grupo del servicio.
+     * @param name Grupo del servicio.
      */
-    public async loadSpec<K>(service: TService, group?: string): Promise<ISpec<K>> {
-        const url: string = `${this.config.server}/status/external/spec/load?service=${service}${group ? `&group=${group}` : ''}`;
+    public async loadSpec<K>(service: number, name: string): Promise<ISpec<K>> {
+        const url: string = `${this.config.server}/status/external/spec/load?service=${service}&name=${name}`;
         const result = await fetch(url, {
             method: 'GET',
         });
-        const response: IRespuesta<ISpec<string>> = await result.json();
+        const response: IRespuesta<ISpec<any>> = await result.json();
         if (!response || !response.data) return Promise.reject('No data found');
         return {
             service: response.data.service,
-            group: response.data.group,
-            id: response.data.id,
-            data: JSON.parse(response.data.data)
+            name: response.data.name,
+            data: typeof response.data.data === 'string' ? JSON.parse(response.data.data) : response.data.data
         };
     }
 
@@ -48,8 +45,7 @@ export class Client {
         const url: string = `${this.config.server}/status/external/spec/save`;
         const obj: ISpec<string> = {
             service: spec.service,
-            group: spec.group,
-            id: spec.id,
+            name: spec.name,
             data: JSON.stringify(spec.data)
         };
         const result = await fetch(url, {

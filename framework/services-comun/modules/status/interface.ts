@@ -1,7 +1,5 @@
-import {TService} from "./config";
-
 export interface IService {
-    id: TService;
+    id: number;
     endpoints: IEndpoint[];
 }
 

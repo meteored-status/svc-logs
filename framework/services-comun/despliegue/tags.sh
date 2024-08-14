@@ -25,11 +25,10 @@ parseWorkspace() {
     if [[ ${DEPLOY} == "true" ]]; then
       if [[ ${RUNTIME} == "browser" ]]; then
         echo "Tags: ${WORKSPACE} => NO"
-        return
+      else
+        echo "Obteniendo tags para \"${WORKSPACE}\""
+        gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^${ENTORNO}" --format=json > "services/${WORKSPACE}/tags.json"
       fi
-
-      echo "Obteniendo tags para \"${WORKSPACE}\""
-      gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^${ENTORNO}" --format=json > "services/${WORKSPACE}/tags.json"
     fi
   fi
 }

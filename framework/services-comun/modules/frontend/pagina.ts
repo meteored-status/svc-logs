@@ -2,7 +2,7 @@ import {ConfigCache} from "../cache/config";
 import {IConfigPlantilla, IParametros, Plantilla, TDevice as TPaginaDevice} from "./plantilla";
 import {IMetatags} from "./metatags";
 import {IMiga} from "./miga";
-import {TDevice} from "../net/conexion";
+import {TDevice} from "../net/device";
 
 interface IParametroPaginaRecursosCSS {
     href: string;

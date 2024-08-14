@@ -45,7 +45,7 @@ export class Event {
     }
 
     /* INSTANCE */
-    private _attendees: Attendee[];
+    private readonly _attendees: Attendee[];
     private constructor(private readonly _data: IEvent) {
         const attendeesDatas: IAttendee[] = [];
         if (this._data.attendee) {

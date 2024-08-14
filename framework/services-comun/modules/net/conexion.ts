@@ -5,11 +5,11 @@ import {URL, URLSearchParams} from "node:url";
 import {parse} from "qs";
 
 import type {Net} from "./config/net";
+import {TDevice} from "./device";
 import type {Tracer} from "./tracer";
 import {ErrorCode, IErrorInfo, IOK, IRespuestaKO, IRespuestaOK} from "./interface";
 import {Idioma} from "./idiomas";
 import {IErrorHandler} from "./router";
-import {IPodInfo} from "../utiles/config";
 import {Respuesta} from "./respuesta";
 
 export type TMetodo = "ALL"|"GET"|"POST"|"PUT"|"DELETE"|"HEAD"|"OPTIONS"|"PATCH";
@@ -20,14 +20,6 @@ enum TStatus {
     preparando,
     transfiriendo,
     terminado,
-}
-
-export enum TDevice {
-    unknown,
-    desktop,
-    mobile,
-    tablet,
-    amp,
 }
 
 export class Conexion extends Respuesta {

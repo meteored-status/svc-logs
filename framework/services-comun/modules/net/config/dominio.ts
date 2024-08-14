@@ -82,7 +82,7 @@ export class Dominio {
                 this.add(subdominio.nombre, `${subdominio.scheme}://${coletilla_punto}${config.dominio}`);
             }
 
-            if (!habilitados.includes(subdominio.nombre) && !redirigidos.find(redirigido=>redirigido.nombre==subdominio.nombre)) {
+            if (habilitados.indexOf(subdominio.nombre)<0 && !redirigidos.find(redirigido=>redirigido.nombre==subdominio.nombre)) {
                 redirigidos.push({
                     nombre: subdominio.nombre,
                     redirigido: this.WWW,

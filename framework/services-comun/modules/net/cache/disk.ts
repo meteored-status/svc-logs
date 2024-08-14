@@ -1,16 +1,16 @@
 import {dirname} from "node:path";
 
-import {Conexion, TDevice} from "../conexion";
-import {RequestResponse} from "../request";
 import {
-    INetCache,
-    INetCacheV1,
-    IRequestCache,
-    IRequestCacheV1,
-    IRouteGroupCache,
+    type INetCache,
+    type INetCacheV1,
+    type IRequestCache,
+    type IRouteGroupCache,
     NetCache,
     RequestCache,
 } from "./index";
+import type {Conexion} from "../conexion";
+import type {RequestResponse} from "../request";
+import {TDevice} from "../device";
 import {md5} from "../../utiles/hash";
 import {isDir, mkdir, readFileBuffer, readJSON, safeWrite} from "../../utiles/fs";
 

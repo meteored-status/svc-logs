@@ -128,7 +128,7 @@ steps:
       - ${TRIGGER_NAME}
     id: 'Subir Cache Dependencias'
     waitFor:
-      - 'Instalar Dependencias'
+      - 'Compilar'
 
     #####
     # SUBIR A STORAGE

@@ -1,6 +1,5 @@
 import {URLSearchParams} from "node:url";
 
-import type {Dominio} from "../config/dominio";
 import type {IQuery, Query} from "./querys/query";
 import type {TMetodo} from "../conexion";
 import {Regex} from "./querys/regex";
