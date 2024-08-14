@@ -219,7 +219,16 @@ export class Init {
         config.unico = paquete.config.unico??paquete.unico??false;
 
         config.deps = paquete.config.deps??[];
-        config.storage = paquete.config.storage??paquete.storage??[];
+        const storage = paquete.config.storage??paquete.storage;
+        if (Array.isArray(storage)) {
+            if (storage.length>0) {
+                config.storage = {
+                    buckets: storage,
+                };
+            }
+        } else {
+            config.storage = paquete.config.storage;
+        }
 
         config.runtime = paquete.config.runtime??(!resources?ERuntime.node:ERuntime.browser);
         if (paquete.config.framework!==undefined) {

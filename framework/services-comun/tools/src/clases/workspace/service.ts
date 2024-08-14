@@ -51,7 +51,12 @@ export interface IConfigService {
     imagen?: string;
     unico: boolean;
     deps: string[];
-    storage: string[];
+    storage?: {
+        buckets: string[];
+        package?: string;
+        subdir?: string;
+        subdir2?: string;
+    };
     runtime: ERuntime;
     framework: EFramework;
     kustomize: string;

@@ -10,9 +10,9 @@
   },
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "devDependencies": {
-    "@elastic/elasticsearch": "^8.14.0",
+    "@elastic/elasticsearch": "^8.15.0",
     "@types/geoip-lite": "^1.4.4",
-    "@types/node": "^20.14.13",
+    "@types/node": "^20.14.15",
     "crawler-user-agents": "^1.0.142",
     "geoip-lite": "^1.4.10",
     "services-comun": "workspace:*",

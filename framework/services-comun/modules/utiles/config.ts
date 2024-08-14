@@ -14,14 +14,23 @@ export class ConfigGenerico<T extends IConfigGenerico=IConfigGenerico> implement
 interface IGoogleStorage<T extends IConfigGenerico=IConfigGenerico> {
     credenciales: string;
     buckets: T;
+    package?: string;
+    subdir?: string;
+    subdir2?: string;
 }
 class GoogleStorage<T extends ConfigGenerico> implements IGoogleStorage {
     public readonly credenciales: string;
     public readonly buckets: T;
+    public readonly package?: string;
+    public readonly subdir?: string;
+    public readonly subdir2?: string;
 
     public constructor(defecto: IGoogleStorage, user: Partial<IGoogleStorage>, buckets?: T) {
         this.credenciales = user.credenciales??defecto.credenciales;
         this.buckets = buckets??new ConfigGenerico({}, {}) as T;
+        this.package = user.package??defecto.package;
+        this.subdir = user.subdir??defecto.subdir;
+        this.subdir2 = user.subdir2??defecto.subdir2;
     }
 }
 
@@ -62,6 +71,7 @@ export interface IPodInfo {
     replica: string;
     wire: number;
     deploy: string;
+    commitFecha: Date;
 }
 
 export interface IConfiguracion {}
@@ -131,6 +141,7 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
             replica,
             wire,
             deploy,
+            commitFecha: new Date(COMMIT_FECHA??Date.now()),
         });
     }
 }

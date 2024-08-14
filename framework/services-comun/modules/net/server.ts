@@ -11,7 +11,7 @@ import {IPodInfo} from "../utiles/config";
 import {Router} from "./router";
 import {Tracer} from "./tracer";
 import {error, info} from "../utiles/log";
-import {isDir, isFile, readDir, readFile, readJSON} from "../utiles/fs";
+import {isDir, readDir, readFile, readJSON} from "../utiles/fs";
 
 export class Server {
     /* INSTANCE */

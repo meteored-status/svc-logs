@@ -1,5 +1,5 @@
 import {IPodInfo} from "../../utiles/config";
-import {IComponent, IService} from "../common/interface";
+import {IComponent} from "../common/interface";
 import {Monitor} from "./monitor";
 
 export class Component {

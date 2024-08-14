@@ -1,11 +1,10 @@
-import * as http from "node:http";
 import emitter from "node:events";
+import http from "node:http";
 
 import type {} from "./modules/types.d.ts";
-import {info, error, warning} from "./modules/utiles/log";
-
 import {type IConfiguracionLoader} from "./modules/utiles/config";
 import {type IEngine} from "./modules/engine_base";
+import {info, error, warning} from "./modules/utiles/log";
 import {PromiseDelayed} from "./modules/utiles/promise";
 
 const KUBERNETES = process.env["KUBERNETES"]=="true";
