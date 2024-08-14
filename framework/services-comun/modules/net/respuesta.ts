@@ -68,6 +68,11 @@ export abstract class Respuesta {
         return this;
     }
 
+    public setCache10Min(): Respuesta {
+        this.cache = new Date(Date.now()+600000);
+        return this;
+    }
+
     public setCache1Hora(): Respuesta {
         this.cache = new Date(Date.now()+3600000);
         return this;
@@ -246,13 +251,22 @@ export abstract class Respuesta {
         return this;
     }
 
+    public addVaryUserAgent(): Respuesta {
+        this.vary.add("User-Agent");
+        return this;
+    }
+
     public unsetVary(): Respuesta {
         this.vary.clear();
         return this;
     }
 
     public addCustomHeader(header: string, value: string|number): Respuesta {
-        this.responseHeaders[header] = value;
+        if (this.responseHeaders[header]==undefined) {
+            this.responseHeaders[header] = value;
+        } else {
+            this.responseHeaders[header] = `${this.responseHeaders[header]}, ${value}`;
+        }
         return this;
     }
 

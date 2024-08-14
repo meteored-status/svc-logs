@@ -1,17 +1,17 @@
 import {IPodInfo} from "../../utiles/config";
-import {IComponent, IService} from "../common/interface";
+import {IComponent} from "../common/interface";
 import {Monitor} from "./monitor";
 
 export class Component {
     /* STATIC */
-    static build(service: IService, config: IPodInfo, name?: string): Component {
+    static build(service: number, config: IPodInfo, name?: string): Component {
         return new this(service, config, name);
     }
 
     /* INSTANCE */
     private monitors: Monitor[];
 
-    private constructor(private readonly service: IService, private readonly pod: IPodInfo, private readonly _name?: string) {
+    private constructor(private readonly service: number, private readonly pod: IPodInfo, private readonly _name?: string) {
         this.monitors = [];
     }
 

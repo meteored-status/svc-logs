@@ -4,7 +4,8 @@ declare global {
     var DESARROLLO: boolean;
     var NEXTJS: boolean;
     var ENTORNO: string;
-    var DATABASE: string|undefined;
+    var COMMIT_FECHA: string | undefined;
+    var DATABASE: string | undefined;
 }
 
-export {}
+export {};

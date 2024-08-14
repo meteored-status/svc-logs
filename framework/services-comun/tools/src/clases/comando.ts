@@ -4,6 +4,7 @@ interface IComandoConfig {
     cwd?: string;
     env?: Record<string, string>;
     shell?: boolean|string;
+    colores?: boolean;
 }
 
 interface IComandoSalida {
@@ -14,13 +15,16 @@ interface IComandoSalida {
 
 export class Comando {
     /* STATIC */
-    public static async spawn(comando: string, params: string[] = [], {cwd, env={}, shell=true}: IComandoConfig = {}): Promise<IComandoSalida> {
+    public static async spawn(comando: string, params: string[] = [], {cwd, env={}, shell=true, colores=true}: IComandoConfig = {}): Promise<IComandoSalida> {
         const proceso = spawn(comando, params, {
             cwd,
             env: {
                 ...process.env,
                 ...env,
-                FORCE_COLOR: "1",
+                ...colores?{
+                    FORCE_COLOR: "1",
+                }:{},
+
             },
             stdio: "pipe",
             shell,

@@ -10,6 +10,7 @@ interface IPluginsConfig {
     database?: string;
     prefix?: string;
     css: boolean;
+    commit?: Date;
 }
 
 export class Plugins {
@@ -24,7 +25,9 @@ export class Plugins {
                 fileName: 'stats.json',
                 filter: (obj)=>!obj.path.includes('.js.map'),
                 generate: (seed, files, entrypoints)=>{
-                    const entrypoints_final: Record<string, string[]> = {};
+                    const entrypoints_final: Record<string, string[]> = {
+                        "_": files.map(elemento=>elemento.path.replace("auto/", "")),
+                    };
                     for (let actual in entrypoints) {
                         // noinspection JSUnfilteredForInLoop
                         entrypoints_final[actual+".js"] = entrypoints[actual]
@@ -37,7 +40,7 @@ export class Plugins {
         ];
     }
 
-    public static build(runtime: ERuntime, framework: EFramework, {entorno, desarrollo, database, prefix = "", css}: IPluginsConfig): webpack.WebpackPluginInstance[] {
+    public static build(runtime: ERuntime, framework: EFramework, {entorno, desarrollo, database, prefix = "", css, commit}: IPluginsConfig): webpack.WebpackPluginInstance[] {
         const salida: webpack.WebpackPluginInstance[] = [];
         let nextjs: boolean;
 
@@ -56,6 +59,8 @@ export class Plugins {
                 break;
         }
 
+        const fecha = commit?.toISOString();
+
         salida.push(new webpack.DefinePlugin({
             DESARROLLO: JSON.stringify(entorno==="desarrollo"),
             TEST: JSON.stringify(entorno==="test"),
@@ -63,6 +68,7 @@ export class Plugins {
             ENTORNO: JSON.stringify(entorno),
             NEXTJS: JSON.stringify(nextjs),
             DATABASE: JSON.stringify(database),
+            COMMIT_FECHA: JSON.stringify(fecha),
 
             "global.DESARROLLO": JSON.stringify(entorno==="desarrollo"),
             "global.TEST": JSON.stringify(entorno==="test"),
@@ -70,6 +76,7 @@ export class Plugins {
             "global.ENTORNO": JSON.stringify(entorno),
             "global.NEXTJS": JSON.stringify(nextjs),
             "global.DATABASE": JSON.stringify(database),
+            "global.COMMIT_FECHA": JSON.stringify(fecha),
         }));
 
         if (css) {

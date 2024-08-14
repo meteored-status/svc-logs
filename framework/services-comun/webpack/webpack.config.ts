@@ -5,6 +5,7 @@ import {isFileSync, readJSONSync} from "../modules/utiles/fs";
 interface IEnv {
     entorno: string;
     dir: string;
+    fecha?: string;
 }
 
 interface IConfiguracion {
@@ -13,7 +14,8 @@ interface IConfiguracion {
 }
 
 export default (env: IEnv)=>{
-    const {entorno, dir: basedir} = env;
+    const {entorno, dir: basedir, fecha} = env;
+    const commit = fecha!=undefined?new Date(fecha):undefined;
     const {
         config: {
             runtime,
@@ -41,6 +43,7 @@ export default (env: IEnv)=>{
             runtime,
             database,
             rules,
+            commit,
         }),
         ...webFinal.map(bundle=>Configuracion.build({
             basedir,
@@ -50,6 +53,7 @@ export default (env: IEnv)=>{
             framework,
             runtime: ERuntime.browser,
             rules,
+            commit,
         })),
     ];
 }

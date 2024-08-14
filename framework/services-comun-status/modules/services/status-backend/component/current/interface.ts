@@ -8,7 +8,6 @@ export interface IService {
     id: number;
     name: string;
     project_name: string;
-    namespace: string;
     updated: number;
     status: number;
     error_count: number;
@@ -22,9 +21,11 @@ export interface IComponent {
     error_count: number;
     warn_count: number;
     monitors: IMonitor[];
+    disabled: boolean;
 }
 
 export interface IMonitor {
+    key: string;
     name: string;
     status: number;
     updated: number;
@@ -35,4 +36,5 @@ export interface IMonitor {
     log?: string;
     resource_responses?: IResourceResponse[];
     resolution_guides?: IResolutionGuide[];
+    disabled: boolean;
 }

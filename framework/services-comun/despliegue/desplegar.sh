@@ -27,11 +27,14 @@ parseWorkspace() {
 
     if [[ $(./jq -r '.config.generar' "services/${WORKSPACE}/package.json") == "true" ]]; then
       if [[ $(./jq -r '.config.deploy' "services/${WORKSPACE}/package.json") == "true" ]]; then
+
+        if [[ $(./jq -r '.config.runtime' "services/${WORKSPACE}/package.json") == "browser" ]]; then
+          return
+        fi
+
         if [[ $(./jq -r '.config.unico' "services/${WORKSPACE}/package.json") == "true" ]]; then
-          if [[ $(./jq -r '.config.runtime' "services/${WORKSPACE}/package.json") != "browser" ]]; then
-            if [[ ! ${PRIMERO} == "true" ]]; then
-              return
-            fi
+          if [[ ! ${PRIMERO} == "true" ]]; then
+            return
           fi
         fi
 
@@ -40,7 +43,6 @@ parseWorkspace() {
           cat "services/${WORKSPACE}/despliegue_${NOMBRE}.yaml" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
           echo "---" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
         fi
-  #      gke-deploy run --filename="${8}/despliegue_${NOMBRE}.yaml" --cluster="${CLUSTER}" --location="${PRIMERO}" || exit 1
       fi
     fi
   }

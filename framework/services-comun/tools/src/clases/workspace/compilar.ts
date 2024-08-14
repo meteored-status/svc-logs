@@ -18,7 +18,7 @@ interface ITag {
 
 export class Compilar {
     /* STATIC */
-    public static async build(basedir: string, name: string): Promise<Compilar|null> {
+    public static async build(basedir: string, name: string, fecha: Date): Promise<Compilar|null> {
         const dir = `${basedir}/services/${name}`;
         if (!await isDir(dir) || !await isFile(`${dir}/package.json`)) {
             console.error(name, "[ERROR]", "Servicio no válido");
@@ -26,7 +26,7 @@ export class Compilar {
         }
         const json = await readJSON<IPackageJson>(`${dir}/package.json`);
 
-        return new this(basedir, name, json);
+        return new this(basedir, name, json, fecha);
     }
 
     public static async md5Deps(basedir: string): Promise<void> {
@@ -43,12 +43,13 @@ export class Compilar {
     }
 
     /* INSTANCE */
+    public readonly dependiente: boolean;
     protected readonly config: IConfigService
     private readonly dependencias: Compilar[];
     private readonly pendientes: NodeJS.Dict<null>;
     protected readonly dir: string;
 
-    protected constructor(protected basedir: string, public name: string, protected readonly packagejson: IPackageJson) {
+    protected constructor(protected basedir: string, public name: string, protected readonly packagejson: IPackageJson, private fecha: Date) {
         this.config = packagejson.config;
         this.dependencias = [];
         this.pendientes = {};
@@ -56,6 +57,7 @@ export class Compilar {
         for (const dep of this.config.deps) {
             this.pendientes[dep] = null;
         }
+        this.dependiente = this.config.deps.length>0;
     }
 
     protected async guardar(): Promise<void> {
@@ -80,7 +82,7 @@ export class Compilar {
             }
         }
 
-        if (!this.config.generar ||!this.config.deploy) {
+        if (!this.config.generar || !this.config.deploy) {
             if (this.dependencias.length==0) {
                 console.log(this.name, "[OK   ]", "Servicio desactivado para despliegue");
                 return;
@@ -172,7 +174,7 @@ export class Compilar {
         const entorno: Record<string, string> = {
             TS_NODE_PROJECT: "webpack/tsconfig.json",
         };
-        const {status, stderr} = await Comando.spawn("yarn", ["workspace", "services-comun", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `webpack/webpack.config.ts`], {cwd: this.basedir, env: entorno});
+        const {status, stderr} = await Comando.spawn("yarn", ["workspace", "services-comun", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--env", `fecha="${this.fecha.toISOString()}"`, "--config", `webpack/webpack.config.ts`], {cwd: this.basedir, env: entorno, colores: false});
         // const {status, stderr} = await Comando.spawn("yarn", ["workspace", "services-comun", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `${this.dir}/webpack.production.config.js`], {cwd: this.basedir});
         if (status != 0) {
             console.error(this.name, "[KO   ]", "Error compilando:");
@@ -190,7 +192,8 @@ export class Compilar {
         }
 
         {
-            const {status, stderr} = await Comando.spawn("yarn", ["run", this.name, "run", "next", "build"], {cwd: this.basedir, env: {ZONA: nodeEnv,}});
+            // todo falta añadir la fecha del commit (this.fecha)
+            const {status, stderr} = await Comando.spawn("yarn", ["run", this.name, "run", "next", "build"], {cwd: this.basedir, env: {ZONA: nodeEnv}, colores: false});
             if (status != 0) {
                 console.error(this.name, "[KO   ]", "Error compilando:");
                 console.error(stderr);

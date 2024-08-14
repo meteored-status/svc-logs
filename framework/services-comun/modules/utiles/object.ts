@@ -20,10 +20,10 @@ export function dynamicProperty(obj: any, prop: string): any {
     }, obj);
 }
 
-export function copyObject<T, K>(obj: NodeJS.Dict<T>, fn: (value: T)=>K): NodeJS.Dict<K> {
-    const salida = {} as NodeJS.Dict<K>;
-    for (const [key, value] of Object.entries(obj)) {
-        salida[key] = fn(value as T);
+export function copyObject<T, K>(obj: Record<string, T>, fn: (value: T)=>K): Record<string, K> {
+    const salida = {} as Record<string, K>;
+    for (const key of Object.keys(obj)) {
+        salida[key] = fn(obj[key]);
     }
 
     return salida;
