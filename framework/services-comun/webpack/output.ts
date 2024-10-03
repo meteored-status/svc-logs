@@ -1,12 +1,10 @@
 import path from "node:path";
+import webpack from "webpack";
 
-import {ERuntime} from "../tools/src/clases/workspace/service";
+type IOutput = webpack.Configuration["output"];
+type ChunkFunction = string|((pathData: any, assetInfo?: any) => string);
 
-interface IOutput {
-    filename: string;
-    path: string;
-    uniqueName: string;
-}
+import {ERuntime} from "../tools/src/mrpack/clases/workspace/service";
 
 interface IOutputConfig {
     basedir: string;
@@ -14,7 +12,7 @@ interface IOutputConfig {
     css_critico: boolean;
 }
 
-export class Output implements IOutput {
+export class Output {
     /* STATIC */
     protected static buildNode({basedir}: IOutputConfig): Output {
         return new this('[name].js', basedir, 'output');
@@ -24,7 +22,24 @@ export class Output implements IOutput {
         const output: string = !css_critico?"output/bundle":"output/critical";
         const filename: string = desarrollo?'[name].js':'[name]/[contenthash].js';
 
-        return new this(filename, basedir, output);
+        return new this(filename, basedir, output, (pathData)=>{
+            let id = desarrollo?
+                `${pathData.chunk.id}`:
+                `${pathData.chunk.name}/${pathData.chunk.renderedHash}`;
+            if (!id.startsWith("module/") && !id.startsWith("i18n/") && !id.startsWith("site/")) {
+                if (id=="network") {
+                    id =  `common/${id}`;
+                } else {
+                    const nombre = desarrollo ?
+                        `common/chunk/${pathData.chunk.id}.js` :
+                        `common/chunk/${pathData.chunk.renderedHash}.js`;
+                    return nombre.replace("undefined/", "");
+                }
+            }
+
+            const name = id.replace(/-/g, "/");
+            return `${name}.js`;
+        });
     }
 
     public static build(runtime: ERuntime, config: IOutputConfig): Output {
@@ -42,7 +57,7 @@ export class Output implements IOutput {
     public readonly uniqueName: string;
     public readonly path: string;
 
-    public constructor(public readonly filename: string, basedir: string, output: string) {
+    public constructor(public readonly filename: string, basedir: string, output: string, public readonly chunkFilename?: ChunkFunction) {
         this.path = path.resolve(basedir, output);
         this.uniqueName = path.basename(basedir);
     }

@@ -2,17 +2,190 @@ import http, {IncomingMessage as IncomingMessageBase} from "node:http";
 import https from "node:https";
 import opentelemetry from "@opentelemetry/api";
 import {RequestCacheDisk} from "./cache/disk";
+import {ErrorCode, IRespuesta} from "./interface";
 
-import {IRequestConfig, Request, RequestResponse} from "./request";
 import {RequestCache} from "./cache";
 import {PromiseDelayed} from "../utiles/promise";
 import {error} from "../utiles/log";
+import {RequestError} from "./request/error";
 
 export interface IncomingMessage extends IncomingMessageBase {}
 
-export class BackendRequest extends Request {
+export interface IRequest {
+    auth?: string;
+    x_u_email?: string;
+    timeout: number;
+    retry: number;
+    retryOnTimeout: boolean; // si es true, se reintentará la petición si se produce un timeout del servidor (no del campo tiemout).
+    buffer: boolean;
+    traceparent?: string;
+    contentType?: string;
+    dominioAlternativo?: string;
+}
+
+export interface IRequestConfig extends Partial<IRequest> {}
+
+export interface RequestResponse<T=any> {
+    data: T;
+    headers: Headers;
+    expires?: Date;
+}
+
+export class BackendRequest {
     /* STATIC */
     public static CACHE: RequestCache = new RequestCacheDisk();
+    protected static parseConfig(cfg?: IRequestConfig): IRequest {
+        return {
+            timeout: 1000,
+            retry: 0,
+            retryOnTimeout: true,
+            buffer: false,
+            ...cfg,
+        };
+    }
+
+    protected static async parseRespuestaBuffer(respuesta: Response): Promise<RequestResponse<Buffer>> {
+        const expires = respuesta.headers.get("expires");
+        return {
+            data: Buffer.from(await respuesta.arrayBuffer()),
+            headers: respuesta.headers,
+            expires: expires!=null?new Date(expires):undefined,
+        };
+    }
+
+    protected static async checkRespuesta<T>(data: IRespuesta<T>, headers: Headers, url: string): Promise<RequestResponse<T>> {
+        if (data.ok) {
+            return {
+                data: data.data,
+                headers,
+                expires: new Date(data.expiracion),
+            };
+        }
+
+        return Promise.reject(new RequestError({
+            status: 500,
+            url,
+            headers,
+            ...data.info,
+        }));
+    }
+
+    protected static async parseRespuestaJSON<T>(respuesta: Response, url: string): Promise<RequestResponse<T>> {
+        const data: IRespuesta<T> = await respuesta.json();
+
+        return await this.checkRespuesta<T>(data, respuesta.headers, url);
+    }
+
+    protected static async parseRespuesta<T>(respuesta: Response, config: IRequestConfig, url: string): Promise<RequestResponse<T>> {
+        if (respuesta.ok) {
+            if (!config.buffer) {
+                return await this.parseRespuestaJSON<T>(respuesta, url);
+            }
+            return await this.parseRespuestaBuffer(respuesta) as RequestResponse<T>;
+        }
+
+        // SI EL CÓDIGO NO ES 200 ENTONCES VA A SALTAR AQUÍ
+        return Promise.reject(new RequestError({
+            status: respuesta.status,
+            url,
+            headers: respuesta.headers,
+            code: ErrorCode.NETWORK,
+            message: respuesta.statusText,
+        }));
+    }
+
+    protected static async fetch<T, K=undefined>(url: string, init: RequestInit, headers: Headers, cfg: IRequestConfig, post?: K, retry: number = 0): Promise<RequestResponse<T>> {
+        const config = this.parseConfig(cfg);
+        let timeoutID: NodeJS.Timeout|undefined;
+        let abortado = false;
+        if (cfg.timeout!=undefined) {
+            const timeout = new AbortController();
+            timeoutID = setTimeout(() => {
+                timeout.abort();
+                abortado = true;
+                timeoutID = undefined;
+            }, cfg.timeout);
+            init.signal = timeout.signal;
+            // init.signal = AbortSignal.timeout(cfg.timeout);
+        }
+
+        if (config.auth!=undefined && !headers.has("Authorization")) {
+            headers.set("Authorization", config.auth);
+        }
+        if (config.x_u_email!=undefined && !headers.has("x-u-email")) {
+            headers.set("x-u-email", config.x_u_email);
+        }
+        if (config.traceparent && !headers.has("traceparent")) {
+            headers.set("traceparent", config.traceparent);
+        }
+        if (post!=undefined) {
+            init.method = "POST";
+            init.cache = "no-cache";
+            if (!headers.has("Content-Type")) {
+                if (cfg.contentType!=undefined) {
+                    headers.set("Content-Type", cfg.contentType);
+                } else {
+                    headers.set("Content-Type", "application/json");
+                }
+            }
+            switch(headers.get("Content-Type")) {
+                case "application/json":
+                    init.body = JSON.stringify(post);
+                    break;
+                case "text/plain":
+                    init.body = String(post);
+                    break;
+            }
+        }
+
+        try {
+            const respuesta = await fetch(url, {
+                ...init,
+                headers,
+            });
+            if (timeoutID!=undefined) {
+                clearTimeout(timeoutID);
+            }
+            return await this.parseRespuesta(respuesta, config, url);
+        } catch (e) {
+            if (abortado) {
+                return Promise.reject(new RequestError({
+                    status: 500,
+                    url,
+                    headers,
+                    code: ErrorCode.TIMEOUT,
+                    message: `${url} => "Timeout tras ${cfg.timeout}ms"`,
+                    extra: e,
+                }));
+            }
+
+            if (PRODUCCION && cfg.retryOnTimeout && retry<10) {
+                retry++;
+                await PromiseDelayed(retry*1000);
+                return this.fetch<T, K>(url, init, headers, cfg, post, retry);
+            }
+
+            if (e instanceof TypeError) {
+                return Promise.reject(new RequestError({
+                    status: 500,
+                    url,
+                    headers,
+                    code: ErrorCode.NETWORK,
+                    message: `${url} => "${e.message}"`,
+                    extra: e,
+                }));
+            }
+
+            return Promise.reject(new RequestError({
+                status: 500,
+                url,
+                headers,
+                code: ErrorCode.NETWORK,
+                message: `${url} => "Error desconocido"`,
+                extra: e,
+            }));
+        }
+    }
 
     protected static propagarContexto(cfg?: IRequestConfig): IRequestConfig {
         cfg ??= {};
@@ -21,13 +194,13 @@ export class BackendRequest extends Request {
         return cfg;
     }
 
-    protected static override async get<T=undefined>(url: string, cfg: IRequestConfig={}): Promise<RequestResponse<T>> {
+    protected static async get<T=undefined>(url: string, cfg: IRequestConfig={}): Promise<RequestResponse<T>> {
         if (PRODUCCION) {
-            return super.get<T>(url, this.propagarContexto(cfg));
+            return this.fetch<T>(url, {}, new Headers(), this.propagarContexto(cfg));
         }
 
         try {
-            return await super.get<T>(url, this.propagarContexto(cfg));
+            return this.fetch<T>(url, {}, new Headers(), this.propagarContexto(cfg));
         } catch (err) {
             if (!url.startsWith("http://localhost:") || cfg.dominioAlternativo==undefined) {
                 return Promise.reject(err);
@@ -36,7 +209,7 @@ export class BackendRequest extends Request {
             const partes = url.replace("http://localhost:", "").split("/");
             partes.shift();
             partes.unshift(cfg.dominioAlternativo);
-            return super.get<T>(partes.join("/"), this.propagarContexto(cfg));
+            return this.fetch<T>(partes.join("/"), {}, new Headers(), this.propagarContexto(cfg));
         }
     }
 

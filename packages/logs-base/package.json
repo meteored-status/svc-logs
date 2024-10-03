@@ -12,12 +12,12 @@
   "devDependencies": {
     "@elastic/elasticsearch": "^8.15.0",
     "@types/geoip-lite": "^1.4.4",
-    "@types/node": "^20.14.15",
-    "crawler-user-agents": "^1.0.142",
+    "@types/node": "^20.16.10",
+    "crawler-user-agents": "^1.0.150",
     "geoip-lite": "^1.4.10",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
-    "tslib": "^2.6.3",
+    "tslib": "^2.7.0",
     "ua-parser-js": "^2.0.0-beta.3"
   },
   "main": "app.js"

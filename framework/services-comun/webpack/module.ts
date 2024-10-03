@@ -1,7 +1,7 @@
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import webpack from "webpack";
 
-import {IConfigServiceComponentes} from "../tools/src/clases/workspace/service";
+import {IConfigServiceComponentes} from "../tools/src/mrpack/clases/workspace/service";
 
 type TModule = webpack.Configuration['module'];
 

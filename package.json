@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "mrlang": "yarn workspace services-comun mrlang",
     "mrpack": "yarn workspace services-comun mrpack",
     "doctor": "yarn dlx @yarnpkg/doctor",
     "devel": "yarn mrpack devel -e",
@@ -20,10 +21,11 @@
   "private": true,
   "workspaces": [
     "framework/*",
+    "i18n",
     "packages/*",
     "scripts/*",
     "services/*",
     "statics/*"
   ],
-  "packageManager": "yarn@4.4.0"
+  "packageManager": "yarn@4.5.0"
 }

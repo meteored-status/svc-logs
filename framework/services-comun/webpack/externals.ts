@@ -1,6 +1,6 @@
 import webpack from "webpack";
 
-import {ERuntime} from "../tools/src/clases/workspace/service";
+import {ERuntime} from "../tools/src/mrpack/clases/workspace/service";
 
 type TExternals = webpack.Configuration["externals"];
 

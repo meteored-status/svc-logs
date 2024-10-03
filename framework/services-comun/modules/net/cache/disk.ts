@@ -9,7 +9,7 @@ import {
     RequestCache,
 } from "./index";
 import type {Conexion} from "../conexion";
-import type {RequestResponse} from "../request";
+import type {RequestResponse} from "../request-backend";
 import {TDevice} from "../device";
 import {md5} from "../../utiles/hash";
 import {isDir, mkdir, readFileBuffer, readJSON, safeWrite} from "../../utiles/fs";

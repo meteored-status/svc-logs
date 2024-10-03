@@ -1,6 +1,6 @@
 import webpack from "webpack";
 
-import {EFramework, ERuntime} from "../tools/src/clases/workspace/service";
+import {EFramework, ERuntime} from "../tools/src/mrpack/clases/workspace/service";
 
 type TEntry = webpack.Configuration["entry"];
 

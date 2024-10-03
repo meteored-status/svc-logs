@@ -8,7 +8,7 @@ import type {Net} from "./config/net";
 import {TDevice} from "./device";
 import type {Tracer} from "./tracer";
 import {ErrorCode, IErrorInfo, IOK, IRespuestaKO, IRespuestaOK} from "./interface";
-import {Idioma} from "./idiomas";
+import {Idioma} from "./i18n/net";
 import {IErrorHandler} from "./router";
 import {Respuesta} from "./respuesta";
 
@@ -152,9 +152,9 @@ export class Conexion extends Respuesta {
     }
 
     private detectarDevice(): TDevice {
-        if (this.get.endsWith("_amp.html") || this.get.endsWith("-amp.html")) {
-            return TDevice.amp;
-        }
+        // if (this.get.endsWith("_amp.html") || this.get.endsWith("-amp.html")) {
+        //     return TDevice.amp;
+        // }
         const cf = this.getHeaders()["cf-device-type"];
         if (cf!=undefined) {
             switch(cf) {
