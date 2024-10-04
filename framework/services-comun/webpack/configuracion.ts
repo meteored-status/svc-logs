@@ -3,7 +3,7 @@ import {
     EFramework,
     ERuntime,
     IConfigServiceBundle, IConfigServiceComponentes,
-} from "../tools/src/clases/workspace/service";
+} from "../tools/src/mrpack/clases/workspace/service";
 import {Entry} from "./entry";
 import {Externals} from "./externals";
 import {Module} from "./module";
@@ -11,6 +11,7 @@ import {Optimization} from "./optimization";
 import {Output} from "./output";
 import {Plugins} from "./plugins";
 import {Target} from "./target";
+import {Devtool} from "./devtool";
 
 type IConfiguracion = webpack.Configuration;
 
@@ -54,7 +55,7 @@ export class Configuracion {
                 css_critico: componentes.css_type==2,
             }),
             mode,
-            optimization: componentes.optimizar ? Optimization.build(runtime) : {},
+            optimization: componentes.optimizar ? Optimization.build(runtime, desarrollo) : {},
             resolve: {
                 extensions: ['.ts', '.js', '.tsx', '.jsx'],
                 extensionAlias: {
@@ -63,7 +64,7 @@ export class Configuracion {
                     ".mjs": [".mjs", ".mts"]
                 }
             },
-            devtool: "source-map",
+            devtool: bundle.source_map ? Devtool.build(runtime, bundle.source_map, entorno) : "source-map",
             module: Module.build({
                 ...componentes,
                 desarrollo,

@@ -1,6 +1,7 @@
-import {OutgoingHttpHeaders} from "node:http";
-import {Conexion} from "../conexion";
-import {RequestResponse} from "../request";
+import type {OutgoingHttpHeaders} from "node:http";
+
+import type {Conexion} from "../conexion";
+import type {RequestResponse} from "../request-backend";
 
 export interface IRouteGroupCache {
     enabled: boolean;

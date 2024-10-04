@@ -1,21 +1,28 @@
+const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 const path = require("node:path");
 const webpack = require('webpack');
 
 module.exports = {
+    entry: {
+        "mrlang": `${__dirname}/mrlang/main.ts`,
+        "mrpack": `${__dirname}/mrpack/main.ts`,
+    },
     cache: {
         type: "memory",
     },
-    entry: {
-        "mrpack": `${__dirname}/main.ts`,
-    },
     output: {
-        filename: '[name].js',
+        filename: '[name]-run.js',
         path: path.resolve(__dirname, "../bin"),
+        chunkFilename: 'plugins/[name].js',
     },
     watch: true,
     mode: "production",
     optimization: {
         concatenateModules: true,
+        runtimeChunk: 'single',
+        splitChunks: {
+            chunks: 'all',
+        },
     },
     resolve: {
         extensions: ['.ts', '.js', '.tsx', '.jsx'],
@@ -47,10 +54,11 @@ module.exports = {
         ],
     },
     plugins: [
-        new webpack.BannerPlugin({
-            banner: "#!/usr/bin/env node",
-            raw: true,
-        }),
+        // new CleanWebpackPlugin(),
+        // new webpack.BannerPlugin({
+        //     banner: "#!/usr/bin/env node\nrequire(\"source-map-support\").install();",
+        //     raw: true,
+        // }),
         new webpack.DefinePlugin({
             DESARROLLO: JSON.stringify(false),
             TEST: JSON.stringify(false),
@@ -69,6 +77,15 @@ module.exports = {
             "global.COMMIT_FECHA": JSON.stringify("undefined"),
         }),
     ],
+    externals: [
+        function({request}, callback) {
+            if (request.includes("mysql2") || request.includes("tslib")) {
+                return callback(null, `commonjs ${request}`);
+            }
+            callback();
+        },
+    ],
     target: "node",
     stats: "minimal",
+    devtool: "source-map"
 };

@@ -8,6 +8,7 @@
 .idea/workspace.xml
 .next/
 .pnp.*
+.wrangler/
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -18,6 +19,9 @@
 **/output/*
 !**/output/.foreverignore
 config.workspaces.json
+i18n/.credenciales
+i18n/**/*.ts
+node_modules/
 services-*/files
 services-*/output
 tmp/

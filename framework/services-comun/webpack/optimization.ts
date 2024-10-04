@@ -1,23 +1,70 @@
+import TerserPlugin from "terser-webpack-plugin";
 import webpack from "webpack";
 
-import {ERuntime} from "../tools/src/clases/workspace/service";
+import {ERuntime} from "../tools/src/mrpack/clases/workspace/service";
 
 type TOptimization = webpack.Configuration['optimization'];
 
 export class Optimization {
     /* STATIC */
-    protected static buildNode(): TOptimization {
+    protected static buildNode(desarrollo: boolean): TOptimization {
         return {
             concatenateModules: false,
+            minimize: !desarrollo,
+            minimizer: [
+                new TerserPlugin({
+                    terserOptions: {
+                        // mangle: {
+                        //     properties: {
+                        //         regex: /.*/,
+                        //         reserved: [
+                        //             "env",
+                        //             "setMaxListeners",
+                        //             "pipeline",
+                        //             "promisify",
+                        //         ],
+                        //     }
+                        // },
+                        compress: {
+                            // keep_fargs: false,
+                            passes: 10,
+                            // toplevel: true,
+                            // top_retain: [
+                            // ],
+                            unused: true,
+                        },
+                    },
+                }),
+            ],
         };
     }
 
-    protected static buildBrowser(): TOptimization {
+    protected static buildBrowser(desarrollo: boolean): TOptimization {
         return {
             concatenateModules: true,
+            minimize: !desarrollo,
+            minimizer: [
+                new TerserPlugin({
+                    terserOptions: {
+                        compress: {
+                            // keep_fargs: false,
+                            passes: 10,
+                            // toplevel: true,
+                            // top_retain: [
+                            // ],
+                            unused: true,
+                        },
+                    },
+                }),
+            ],
             runtimeChunk: 'single',
             splitChunks: {
                 cacheGroups: {
+                    // network: {
+                    //     test: /[\\/]services-comun[\\/]modules\/net[\\/]/,
+                    //     name: 'network',
+                    //     chunks: 'all',
+                    // },
                     vendor: {
                         test: /[\\/]node_modules[\\/]/,
                         name: 'vendor',
@@ -29,12 +76,12 @@ export class Optimization {
         };
     }
 
-    public static build(runtime: ERuntime): TOptimization {
+    public static build(runtime: ERuntime, desarrollo: boolean): TOptimization {
         switch (runtime) {
             case ERuntime.node:
-                return this.buildNode();
+                return this.buildNode(desarrollo);
             case ERuntime.browser:
-                return this.buildBrowser();
+                return this.buildBrowser(desarrollo);
             default:
                 throw new Error(`Runtime no soportado: ${runtime}`);
         }

@@ -1,6 +1,5 @@
-import {BackendRequest} from "services-comun/modules/net/request-backend";
+import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
 import {EService, SERVICES} from "../../config";
-import {RequestResponse} from "services-comun/modules/net/request";
 import {IStatusOUT} from "./status/interface";
 
 export class CurrentStatus extends BackendRequest {

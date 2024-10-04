@@ -25,13 +25,13 @@ parseWorkspace() {
         local SUBDIR=${4}
 
         PACKAGE=$(./jq -r ".config.storage.package" "services/${WORKSPACE}/package.json")
-        if [ -z "${PACKAGE}" ]; then
+        if [[ -z "${PACKAGE}" || "${PACKAGE}" == "null" ]]; then
           PACKAGE="${WORKSPACE}"
         fi
 
         SUBDIR=$(./jq -r ".config.storage.subdir" "services/${WORKSPACE}/package.json")
-        if [ -z "${SUBDIR}" ]; then
-          SUBDIR="/"
+        if [[ -z "${SUBDIR}" || "${SUBDIR}" == "null" ]]; then
+          SUBDIR=""
         else
           SUBDIR="/${SUBDIR}"
         fi
@@ -62,7 +62,7 @@ parseWorkspace() {
       export -f parseBucket
 
       if ./jq -e '.config.storage.buckets' "services/${WORKSPACE}/package.json" > /dev/null; then
-        ./jq -r ".config.storage.buckets | .[]" "services/${WORKSPACE}/package.json" | xargs -I '{}' -P 1 bash -c "parseBucket ${ENTORNO} ${WORKSPACE} {}"
+        ./jq -r ".config.storage.buckets | .[]" "services/${WORKSPACE}/package.json" | xargs -I '{}' -P 10 bash -c "parseBucket ${ENTORNO} ${WORKSPACE} {}"
       fi
     fi
   fi

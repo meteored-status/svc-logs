@@ -4,6 +4,7 @@ export interface IOpenAPI {
     servers: IServer[];
     paths?: IPaths;
     components?: IComponents;
+    tags?: ITag[];
 }
 
 export interface IInfo {
@@ -38,7 +39,7 @@ export interface ISchemas {
 }
 
 export interface IHTTPMethod {
-
+    tags?: string[];
 }
 
 export interface IGet extends IHTTPMethod {
@@ -109,4 +110,9 @@ export interface IContent {
 export interface IMediaType {
     schema: ISchema;
     examples?: IExamples;
+}
+
+export interface ITag {
+    name: string;
+    description?: string;
 }

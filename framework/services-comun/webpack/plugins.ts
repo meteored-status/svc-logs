@@ -2,7 +2,7 @@ import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import {WebpackManifestPlugin} from "webpack-manifest-plugin";
 import webpack from "webpack";
 
-import {EFramework, ERuntime} from "../tools/src/clases/workspace/service";
+import {EFramework, ERuntime} from "../tools/src/mrpack/clases/workspace/service";
 
 interface IPluginsConfig {
     entorno: string;

@@ -1,4 +1,4 @@
-import {ERuntime} from "../tools/src/clases/workspace/service";
+import {ERuntime} from "../tools/src/mrpack/clases/workspace/service";
 
 export class Target {
     /* STATIC */

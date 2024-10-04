@@ -1,6 +1,5 @@
-import {BackendRequest} from "services-comun/modules/net/request-backend";
+import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
 import {EService, SERVICES} from "../../config";
-import {RequestResponse} from "services-comun/modules/net/request";
 import {IToggleIN, IToggleOUT} from "./toggle/interface";
 import {IListOUT} from "./list/interface";
 import {logRejection} from "services-comun/modules/decorators/metodo";

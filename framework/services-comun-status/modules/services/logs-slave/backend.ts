@@ -1,5 +1,4 @@
-import {BackendRequest} from "services-comun/modules/net/request-backend";
-import {RequestResponse} from "services-comun/modules/net/request";
+import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
 import {logRejection} from "services-comun/modules/decorators/metodo";
 
 import {EService, SERVICES} from "../config";
