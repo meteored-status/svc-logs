@@ -6,6 +6,7 @@ import {
     type PoolCluster,
     type QueryOptions,
     type PoolNamespace,
+    type SslOptions,
 } from "mysql2/promise";
 import {FSWatcher, watch} from "node:fs";
 
@@ -13,7 +14,7 @@ import {PromiseDelayed} from "../../utiles/promise";
 import {Transaction} from "./transaction";
 import {arrayChop} from "../../utiles/array";
 import {error, info, warning} from "../../utiles/log";
-import {readJSON} from "../../utiles/fs";
+import {readFileString, readJSON} from "../../utiles/fs";
 
 interface IMySQLHost {
     host: string;
@@ -36,10 +37,17 @@ interface IMySQLCommon {
 interface IMySQL extends IMySQLHost, IMySQLSocket, IMySQLCommon {
 }
 
+interface IMySQLSSL {
+    ca: string;
+    cert: string;
+    key: string;
+}
+
 interface IMySQLCluster {
     master?: IMySQL;
     slaves: IMySQL[];
     common?: IMySQLCommon;
+    ssl?: IMySQLSSL;
 }
 
 export type TipoRegistro = string|number|boolean|Date|null|undefined|string[]|number[]|boolean[]|Date[]|string[][]|number[][]|boolean[][]|Date[][];
@@ -138,12 +146,30 @@ export class MySQL implements Disposable {
             restoreNodeTimeout: 1000, // probar a reconectar tras 1 segundo
         });
         if ("slaves" in data) {
+            let ssl: SslOptions|undefined;
+            if (data.ssl!=undefined) {
+                const [ca, cert, key] = await Promise.all([
+                    readFileString(data.ssl.ca),
+                    readFileString(data.ssl.cert),
+                    readFileString(data.ssl.key),
+                ]);
+                ssl = {
+                    ca,
+                    cert,
+                    key,
+                    rejectUnauthorized: true,
+                };
+            } else {
+                ssl = undefined;
+            }
+
             data.common??={};
 
             if (data.master!=undefined) {
                 cluster.add("MASTER", {
                     charset: "utf8mb4",
                     database: this.database,
+                    ssl,
                     ...data.common,
                     ...data.master,
                 });
@@ -152,6 +178,7 @@ export class MySQL implements Disposable {
                 cluster.add(`SLAVE${i}`, {
                     charset: "utf8mb4",
                     database: this.database,
+                    ssl,
                     ...data.common,
                     ...data.slaves[i],
                 });
@@ -332,6 +359,9 @@ export class MySQL implements Disposable {
             for (const insert of inserts) {
                 await this.insert(insert, [], {transaction}).catch(async (err) => {
                     warning(`ERROR Insertando registros`, err, insert as any);
+                    if (transaction) {
+                        return Promise.reject(err);
+                    }
                 });
                 await PromiseDelayed();
             }

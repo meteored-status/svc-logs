@@ -45,11 +45,13 @@ export class Transaction {
     /**
      * Inicia una nueva transacción.
      * @param level Nivel de aislamiento de la transacción.
+     * @param name Nombre personalizado de la transacción.
      */
-    public async start(level: TIsolationLevel = TIsolationLevel.READ_COMMITTED): Promise<Transaction> {
+    public async start(level: TIsolationLevel = TIsolationLevel.READ_COMMITTED, name: string = ''): Promise<Transaction> {
         const connection = await this.connection;
         await connection.execute(`set transaction isolation level ${Transaction.isolationLevel(level)}`);
         await connection.beginTransaction();
+        if (!PRODUCCION) info(`Transaction ${this.hash} => BEGIN${name ? `: ${name}` : ``}`);
 
         return this;
     }
@@ -97,6 +99,7 @@ export class Transaction {
     public async commit(): Promise<void> {
         const connection = await this.connection;
         await connection.commit();
+        if (!PRODUCCION) info(`Transaction ${this.hash} => COMMIT`);
         await this.release();
     }
 
@@ -106,6 +109,7 @@ export class Transaction {
     public async rollback(): Promise<void> {
         const connection = await this.connection;
         await connection.rollback();
+        if (!PRODUCCION) warning(`Transaction ${this.hash} => ROLLBACK`);
         await this.release();
     }
 
@@ -116,6 +120,10 @@ export class Transaction {
     private async release(): Promise<void> {
         const connection = await this.connection;
         connection.release();
+    }
+
+    public async lastInsertId(): Promise<number> {
+        return this.query<{id: number}>("SELECT LAST_INSERT_ID() AS id").then(rows => rows[0].id);
     }
 }
 
@@ -128,8 +136,7 @@ export function transactional(db: MySQL, name: string = '', level: TIsolationLev
                 const initial = t === undefined;
                 if (!t) {
                     t = await db.transaction();
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);
-                    await t.start(level);
+                    await t.start(level, name);
                 } else {
                     if (!PRODUCCION) info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);
                 }
@@ -138,13 +145,11 @@ export function transactional(db: MySQL, name: string = '', level: TIsolationLev
                     salida = await originalMethod.apply(this, [...args, t]);
                     if (initial) {
                         await t.commit();
-                        if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT`);
                     }
                 } catch (e) {
                     if (initial) {
                         error(`Transaction ${t.hash} failed: `, e);
                         await t.rollback();
-                        if (!PRODUCCION) warning(`Transaction ${t.hash} => ROLLBACK`);
                         salida = Promise.reject(e);
                     } else {
                         throw e;

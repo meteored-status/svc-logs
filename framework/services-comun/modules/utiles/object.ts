@@ -37,3 +37,22 @@ export function immute<T>(obj: T): T {
     }
     return Object.freeze(Object.seal(obj));
 }
+
+export function sortObjectKeys(obj: any): any {
+    if (typeof obj !== 'object' || obj === null) {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(sortObjectKeys);
+    }
+
+    const sortedKeys = Object.keys(obj).sort();
+    const sortedObj: any = {};
+
+    for (const key of sortedKeys) {
+        sortedObj[key] = sortObjectKeys(obj[key]);
+    }
+
+    return sortedObj;
+}

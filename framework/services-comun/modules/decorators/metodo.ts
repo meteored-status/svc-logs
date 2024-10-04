@@ -1,5 +1,5 @@
 import {Error} from "../net/error";
-import {RequestError} from "../net/request";
+import {RequestError} from "../net/request/error";
 import {PromiseDelayed} from "../utiles/promise";
 
 declare var PRODUCCION: boolean;

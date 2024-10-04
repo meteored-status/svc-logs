@@ -1,4 +1,4 @@
-export enum ErrorCode {
+export const enum ErrorCode {
     NETWORK           = 1,
     TIMEOUT           = 2,
     AUTHENTICATION    = 3,

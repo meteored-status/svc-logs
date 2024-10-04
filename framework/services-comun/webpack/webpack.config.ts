@@ -1,5 +1,5 @@
 import {Configuracion} from "./configuracion";
-import {ERuntime, IConfigService} from "../tools/src/clases/workspace/service";
+import {ERuntime, IConfigService} from "../tools/src/mrpack/clases/workspace/service";
 import {isFileSync, readJSONSync} from "../modules/utiles/fs";
 
 interface IEnv {

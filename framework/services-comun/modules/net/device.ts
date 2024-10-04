@@ -3,5 +3,4 @@ export enum TDevice {
     desktop,
     mobile,
     tablet,
-    amp,
 }

@@ -122,6 +122,10 @@ export class Fecha {
         ].join("");
     }
 
+    public static generarVersion(date: Date): string {
+        return `${date.getUTCFullYear()}.${date.getUTCMonth()+1}.${date.getUTCDate()}-${date.getUTCHours()}${`00${date.getUTCMinutes()}`.slice(-2)}${`00${date.getUTCSeconds()}`.slice(-2)}`;
+    }
+
     public static generarFechaHoraMySQL(date: Date): string {
         return `${Fecha.generarFechaMySQL(date)} ${Fecha.generarHora(date, false)}`;
     }

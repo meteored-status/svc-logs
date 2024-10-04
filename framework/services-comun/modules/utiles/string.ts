@@ -18,7 +18,15 @@ const DECODED_ENTITIES: string[] = [
     '&Oacute;',
     '&Uacute;',
     '&Ntilde;',
-    '&#039;'
+    '&#039;',
+    '&#487;',
+    '&#351;',
+    '&#601;',
+    '&#305;',
+    '&uuml;',
+    '&ouml;',
+    '&egrave;',
+    '&#223;'
 ];
 const ENCODED_ENTITIES: string[] = [
     '&',
@@ -37,7 +45,15 @@ const ENCODED_ENTITIES: string[] = [
     'Ó',
     'Ú',
     'Ñ',
-    "'" // This is not an entity, but it's used in the same way
+    "'", // This is not an entity, but it's used in the same way
+    'ǧ',
+    'ş',
+    'ə',
+    'ı',
+    'ü',
+    'ö',
+    'è',
+    'ß'
 ];
 const URL_INVALID: string[] = [
     '&#40;',

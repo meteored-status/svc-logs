@@ -3,7 +3,7 @@ import os from "node:os";
 
 import {ConfiguracionNet} from "./net/config/config";
 import {EngineBase} from "./engine_base";
-import {Idioma, IIdiomas} from "./net/idiomas";
+import {Idioma, IIdiomas} from "./net/i18n/net";
 import {Net} from "./net/config/net";
 import {NetCache} from "./net/cache";
 import {NetCacheDisk} from "./net/cache/disk";
