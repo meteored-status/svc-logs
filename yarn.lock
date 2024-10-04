@@ -1750,10 +1750,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"crawler-user-agents@npm:^1.0.150":
-  version: 1.0.150
-  resolution: "crawler-user-agents@npm:1.0.150"
-  checksum: 10/471ad8819879faac710bc8825916169979453febfecf1a0da00ad12ad5f0d6ab23ad4137d67833ec74e62b8a5b0d44de0d57be5198e2d3b27bfefac3e529da20
+"crawler-user-agents@npm:^1.0.151":
+  version: 1.0.151
+  resolution: "crawler-user-agents@npm:1.0.151"
+  checksum: 10/cc69fac2b209419e3505843f3e5752038231b515d344ce4294edaf6ba8a8058a1f73390d59e0403fd2261f0ceec983ebdd7889116f2d4b7db5f790723587785d
   languageName: node
   linkType: hard
 
@@ -3314,7 +3314,7 @@ __metadata:
     "@elastic/elasticsearch": "npm:^8.15.0"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^20.16.10"
-    crawler-user-agents: "npm:^1.0.150"
+    crawler-user-agents: "npm:^1.0.151"
     geoip-lite: "npm:^1.4.10"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
@@ -3331,7 +3331,7 @@ __metadata:
     "@google-cloud/storage": "npm:^7.13.0"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^20.16.10"
-    crawler-user-agents: "npm:^1.0.150"
+    crawler-user-agents: "npm:^1.0.151"
     geoip-lite: "npm:^1.4.10"
     logs-base: "workspace:*"
     mysql2: "npm:3.11.0"
@@ -3363,7 +3363,7 @@ __metadata:
     "@types/node": "npm:^20.16.10"
     "@types/ua-parser-js": "npm:^0.7.39"
     chokidar: "npm:^4.0.1"
-    crawler-user-agents: "npm:^1.0.150"
+    crawler-user-agents: "npm:^1.0.151"
     formidable: "npm:^3.5.1"
     geoip-lite: "npm:^1.4.10"
     hexoid: "npm:^1.0.0"
