@@ -1,6 +1,12 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.10.7 R1
+### Updated
+- [Jose] Update de librerías:
+  - [@sequelize/core](https://www.npmjs.com/package/@sequelize/core) 7.0.0-alpha.43
+
+---
 ## 2024.10.3 R1
 ### Added
 - [Jose] Añadido soporte a indicar el idioma por defecto de las traducciones

@@ -602,11 +602,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sequelize/core@npm:7.0.0-alpha.42":
-  version: 7.0.0-alpha.42
-  resolution: "@sequelize/core@npm:7.0.0-alpha.42"
+"@sequelize/core@npm:7.0.0-alpha.43":
+  version: 7.0.0-alpha.43
+  resolution: "@sequelize/core@npm:7.0.0-alpha.43"
   dependencies:
-    "@sequelize/utils": "npm:7.0.0-alpha.42"
+    "@sequelize/utils": "npm:7.0.0-alpha.43"
     "@types/debug": "npm:^4.1.12"
     "@types/validator": "npm:^13.11.9"
     ansis: "npm:^3.2.0"
@@ -624,17 +624,17 @@ __metadata:
     type-fest: "npm:^4.14.0"
     uuid: "npm:^10.0.0"
     validator: "npm:^13.11.0"
-  checksum: 10/dc32aa20b637dc8701347d1982362eebdcdde8ebda9636fb27a749665ddc58906525aa010048c7c8bc5f53c102055c9551d8cb05560c883611c3cd621f3327d9
+  checksum: 10/5dcc3cbbf66cc52414bba9f9da53fb371e8aaefd17840aca88741c3ff01e87efd60c776cd4260be663b6c70852b889249dd1a90b401acf7c897bdbbf886423be
   languageName: node
   linkType: hard
 
-"@sequelize/utils@npm:7.0.0-alpha.42":
-  version: 7.0.0-alpha.42
-  resolution: "@sequelize/utils@npm:7.0.0-alpha.42"
+"@sequelize/utils@npm:7.0.0-alpha.43":
+  version: 7.0.0-alpha.43
+  resolution: "@sequelize/utils@npm:7.0.0-alpha.43"
   dependencies:
     "@types/lodash": "npm:^4.17.0"
     lodash: "npm:^4.17.21"
-  checksum: 10/33170ee3ae1c70d0497272baf1a4afc65fd50c174b3c00930a9028d3c56d6eaa83cc60b79c60863609dfe477707d760f5fdf0455a6a3f685f5969b69fd83ff45
+  checksum: 10/a34e2a1d51a83588e49ad65df7003a77f6ff330c80246d49cc53bfdc064fd4d3fb95abccea0326f969f114baba9ed72486cd3a071258f807a2a7aa1a68b756e2
   languageName: node
   linkType: hard
 
@@ -4707,7 +4707,7 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.26.0"
     "@opentelemetry/sdk-trace-node": "npm:^1.26.0"
     "@opentelemetry/semantic-conventions": "npm:^1.27.0"
-    "@sequelize/core": "npm:7.0.0-alpha.42"
+    "@sequelize/core": "npm:7.0.0-alpha.43"
     "@tsconfig/node20": "npm:^20.1.4"
     "@types/formidable": "npm:^3.4.5"
     "@types/node": "npm:^20.16.10"
