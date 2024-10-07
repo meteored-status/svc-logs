@@ -111,11 +111,17 @@ export class Main {
             info("Proceso terminado");
             process.exit();
         } else {
-            process.on('warning', (warn) => {
+            process.on("warning", (warn) => {
+                // alertas desactivadas globales
                 if (["ExperimentalWarning"].includes(warn.name)) {
                     return;
                 }
-                console.log(warn.name);
+
+                // alertas desactivadas en producción
+                if (PRODUCCION && !TEST && ["DeprecationWarning"].includes(warn.name)) {
+                    return;
+                }
+
                 warning("Advertencia:", warn.stack);
             });
         }
