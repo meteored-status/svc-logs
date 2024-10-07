@@ -1,7 +1,7 @@
 import {EngineServer} from "services-comun/modules/engine_server";
 import elasticsearch from "services-comun/modules/elasticsearch/elastic";
 
-import {Configuracion} from "./utiles/config";
+import type {Configuracion} from "./utiles/config";
 
 import Slave from "./net/handlers/slave";
 
