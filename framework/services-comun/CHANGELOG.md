@@ -2,6 +2,9 @@
 
 ---
 ## 2024.10.7 R1
+### Changed
+- [Jose] Se ha desactivado los warnings de NodeJS en producción para los `DeprecationWarning`
+
 ### Updated
 - [Jose] Update de librerías:
   - [@sequelize/core](https://www.npmjs.com/package/@sequelize/core) 7.0.0-alpha.43
