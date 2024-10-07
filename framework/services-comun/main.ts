@@ -115,6 +115,7 @@ export class Main {
                 if (["ExperimentalWarning"].includes(warn.name)) {
                     return;
                 }
+                console.log(warn.name);
                 warning("Advertencia:", warn.stack);
             });
         }
