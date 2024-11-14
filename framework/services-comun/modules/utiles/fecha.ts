@@ -77,6 +77,10 @@ export class Fecha {
         ].join("");
     }
 
+    public static generarFechaNumerica(date: Date): number {
+        return date.getUTCFullYear()*10000 + (date.getUTCMonth()+1)*100 + date.getUTCDate();
+    }
+
     public static generarHora(date: Date, tz: boolean = true): string {
         return [
             `00${date.getUTCHours()}`.slice(-2),

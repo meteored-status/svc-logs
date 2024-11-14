@@ -7,7 +7,7 @@ import {type INotify} from "services-comun-status/modules/services/logs-slave/ba
 import {type IPodInfo} from "services-comun/modules/utiles/config";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error} from "services-comun/modules/utiles/log";
-import bulk from "services-comun/modules/elasticsearch/bulk";
+import bulk from "services-comun/modules/utiles/elastic/bulk";
 
 import {Bucket} from "./bucket";
 import {Crawler} from "./source/crawler";

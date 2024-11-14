@@ -129,7 +129,7 @@ export class Server {
             });
         } else {
             const type = conexion.getHeaders()["content-type"]?.toLowerCase()??"";
-            if (type.includes("json") || type.includes("urlencoded") || type.includes("multipart") || type.includes("octet-stream")) {
+            if (type.includes("json") || type.includes("multipart") || type.includes("octet-stream")) {
                 formidable({
                     encoding: "utf-8",
                     keepExtensions: true,
@@ -151,6 +151,9 @@ export class Server {
                             const parsed = parse(querystring.join("&"));
                             conexion.post = parsed;
                             conexion.postRAW = JSON.stringify(parsed);
+                        // } else if (type.includes("urlencoded")) {
+                        //     conexion.post = fields;
+                        //     conexion.postRAW = stringify(fields, {arrayFormat: "comma"});
                         } else {
                             conexion.post = fields;
                             conexion.postRAW = JSON.stringify(fields);
@@ -182,6 +185,9 @@ export class Server {
                 });
                 request.addListener("end", () => {
                     conexion.postRAW = chunks.join("");
+                    if (type.includes("urlencoded")) {
+                        conexion.post = parse(conexion.postRAW);
+                    }
                     conexion.iniciado();
                     request.removeAllListeners();
                     Router.route(request_handlers, conexion).then(()=>{}).catch(()=>{});

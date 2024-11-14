@@ -5,8 +5,8 @@ import {type INotify} from "services-comun-status/modules/services/logs-slave/ba
 import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
-import bulk from "services-comun/modules/elasticsearch/bulk";
-import elasticsearch from "services-comun/modules/elasticsearch/elastic";
+import bulk from "services-comun/modules/utiles/elastic/bulk";
+import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import {Bucket, type ICliente} from "../bucket";
 

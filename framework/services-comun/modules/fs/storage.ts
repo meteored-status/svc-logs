@@ -31,7 +31,7 @@ export class Storage implements IDocumento {
         const storage = this.getStorage(config);
         return buckets.map((actual:string)=>{
             return storage.bucket(actual).file(file).createWriteStream({
-                contentType: contentType,
+                contentType,
             });
         });
     }

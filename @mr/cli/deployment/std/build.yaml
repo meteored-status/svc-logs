@@ -1,0 +1,220 @@
+steps:
+    #####
+    # DESCARGA DE APLICACIONES NECESARIAS
+    #####
+  - name: 'gcr.io/cloud-builders/curl'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/descargas.sh"
+    id: 'Descargas'
+    waitFor:
+      - '-'
+
+    #####
+    # LABELS
+    #####
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/labels.sh"
+      - ${_ENTORNO}
+    env:
+      - 'PROJECT_ID=${PROJECT_ID}'
+    id: 'Labels'
+    waitFor:
+      - '-'
+
+    #####
+    # OBTENER TAGS
+    #####
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/tags.sh"
+      - ${_ENTORNO}
+    env:
+      - 'PROJECT_ID=${PROJECT_ID}'
+    id: 'Obtener Tags'
+    waitFor:
+      - 'Descargas'
+
+    #####
+    # AUTORIZAR
+    #####
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/autorizar.sh"
+      - ${_ENTORNO}
+    id: 'Autorizar'
+    waitFor:
+      - 'Descargas'
+      - 'Labels'
+
+    #####
+    # CLONAR REPOSITORIOS
+    #####
+  - name: 'gcr.io/cloud-builders/git'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/clone.sh"
+      - ${_ENTORNO}
+    secretEnv:
+      - GITTOKEN
+    id: 'Clonar Repositorios'
+    waitFor:
+      - 'Descargas'
+      - 'Labels'
+
+    #####
+    # INIT KUSTOMIZE
+    #####
+  - name: 'gcr.io/cloud-builders/gsutil'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/init_kustomize.sh"
+    id: 'Iniciar Kustomize'
+    waitFor:
+      - 'Clonar Repositorios'
+
+    #####
+    # DESCARGAR LAS DEPENDENCIAS DESDE CACHE
+    #####
+  - name: 'gcr.io/cloud-builders/gsutil'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/cache_get.sh"
+      - ${TRIGGER_NAME}
+    id: 'Descargar Cache Dependencias'
+    waitFor:
+      - 'Labels'
+
+    #####
+    # INSTALAR LAS DEPENDENCIAS DEL PROYECTO
+    #####
+  - name: 'node:lts-alpine'
+    entrypoint: 'yarn'
+    args:
+      - install
+      - --mode=skip-build
+    id: 'Instalar Dependencias'
+    waitFor:
+      - 'Descargar Cache Dependencias'
+
+    #####
+    # GENERAR APP DE PRODUCCIÓN Y CALCULAR CÓDIGO DE VERSIÓN Y HASH
+    #####
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/compilar.sh"
+      - ${_ENTORNO}
+    id: 'Compilar'
+    env:
+      - 'MYSQL=${_MYSQL}'
+    waitFor:
+      - 'Descargas'
+      - 'Iniciar Kustomize'
+      - 'Instalar Dependencias'
+      - 'Obtener Tags'
+
+    #####
+    # SUBIR LAS DEPENDENCIAS A CACHE
+    #####
+  - name: 'gcr.io/cloud-builders/gsutil'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/cache_set.sh"
+      - ${TRIGGER_NAME}
+    id: 'Subir Cache Dependencias'
+    waitFor:
+      - 'Compilar'
+
+    #####
+    # SUBIR A STORAGE
+    #####
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/storage.sh"
+      - ${_ENTORNO}
+    id: 'Subir Storage'
+    waitFor:
+      - 'Compilar'
+
+    #####
+    # GENERAR EL CONTENEDOR, PONER ETIQUETAS Y SUBIR
+    #####
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/contenedor.sh"
+      - ${_ENTORNO}
+    env:
+      - 'PROJECT_ID=${PROJECT_ID}'
+    id: 'Generar Contenedor'
+    waitFor:
+      - 'Compilar'
+
+    #####
+    # ACTUALIZAR LA VERSIÓN DE LA IMAGEN A DESPLEGAR
+    #####
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/kustomizar.sh"
+      - ${_ENTORNO}
+    env:
+      - 'PROJECT_ID=${PROJECT_ID}'
+    id: 'Kustomizar'
+    waitFor:
+      - 'Descargas'
+      - 'Labels'
+      - 'Generar Contenedor'
+    # - 'Iniciar Kustomize'
+
+    #####
+    # DESPLEGAR
+    #####
+  - name: 'gcr.io/cloud-builders/gke-deploy'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/desplegar.sh"
+      - ${_ENTORNO}
+    id: 'Desplegar'
+    waitFor:
+      - 'Autorizar'
+      - 'Kustomizar'
+      - 'Subir Storage'
+
+    #####
+    # DESAUTORIZAR
+    #####
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/desautorizar.sh"
+      - ${_ENTORNO}
+    id: 'Desautorizar'
+    waitFor:
+      - 'Desplegar'
+
+#  - name: bash
+#    args:['cat', 'services/${_SERVICIO}/version.txt']
+#    id: 'Test Version'
+#
+#  - name: bash
+#    args:['cat', 'services/${_SERVICIO}/hash.txt']
+#    id: 'Test MD5'
+
+#####
+# COMENTAR ESTO PARA PROBAR EN LOCAL
+#####
+availableSecrets:
+  secretManager:
+    - versionName: "projects/${PROJECT_ID}/secrets/alpred-lectura/versions/1"
+      env: 'GITTOKEN'
+options:
+  pool:
+    name: 'projects/${PROJECT_ID}/locations/europe-west1/workerPools/${_BUILD}'
+timeout: 1800s

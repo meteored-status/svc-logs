@@ -1,6 +1,6 @@
 import {BulkOperationContainer, BulkResponseItem, BulkUpdateAction, Script} from "@elastic/elasticsearch/lib/api/types";
 
-import {ESBulkResponse} from "../base";
+import {ESBulkResponse} from "../index";
 
 type TBulkAction = "index"|"update"|"delete"|"create";
 

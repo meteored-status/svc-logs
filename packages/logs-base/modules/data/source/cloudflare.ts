@@ -5,8 +5,8 @@ import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
-import bulk from "services-comun/modules/elasticsearch/bulk";
-import elasticsearch from "services-comun/modules/elasticsearch/elastic";
+import bulk from "services-comun/modules/utiles/elastic/bulk";
+import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import {ICliente} from "../bucket";
 import {Registro} from "../registro";
@@ -507,6 +507,7 @@ const typeMap: any = {
     ], false),
     "RequestHeaders": o([
         { json: "x-api-key", js: "x-api-key", typ: u(undefined, "") },
+        { json: "cf-access-user", js: "cf-access-user", typ: u(undefined, "") },
     ], false),
     "ResponseHeaders": o([
         { json: "x-meteored-node", js: "x-meteored-node", typ: u(undefined, "") },

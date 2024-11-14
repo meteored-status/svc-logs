@@ -1,4 +1,5 @@
 .DS_Store
+.dev.vars
 .idea/copilot/
 .idea/dataSources.xml
 .idea/jetClient/state-backup-*.xml

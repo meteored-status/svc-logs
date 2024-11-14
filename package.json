@@ -1,14 +1,12 @@
 {
   "scripts": {
-    "mrlang": "yarn workspace services-comun mrlang",
-    "mrpack": "yarn workspace services-comun mrpack",
     "doctor": "yarn dlx @yarnpkg/doctor",
     "devel": "yarn mrpack devel -e",
     "devel-f": "yarn mrpack devel -e -f",
     "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
     "packd": "yarn mrpack devel -c",
     "packd-f": "yarn mrpack devel -c -f",
-    "g:packd": "TS_NODE_PROJECT=\"webpack/tsconfig.json\" yarn workspace services-comun webpack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"webpack/webpack.config.ts\"",
+    "g:packd": "TS_NODE_PROJECT=\"config/tsconfig.json\" yarn workspace @mr/cli webpack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"config/webpack.config.ts\"",
     "update": "yarn mrpack update",
     "services-comun": "yarn workspace services-comun",
     "services-comun-status": "yarn workspace services-comun-status",
@@ -20,6 +18,9 @@
   },
   "private": true,
   "workspaces": [
+    "@mr/cli",
+    "@mr/core/*",
+    "@mr/client/*",
     "framework/*",
     "i18n",
     "packages/*",
@@ -27,5 +28,12 @@
     "services/*",
     "statics/*"
   ],
-  "packageManager": "yarn@4.5.0"
+  "packageManager": "yarn@4.5.1",
+  "bin": {
+    "mrlang": "@mr/cli/bin/mrlang.js",
+    "mrpack": "@mr/cli/bin/mrpack.js"
+  },
+  "resolutions": {
+    "mysql2": "3.11.0"
+  }
 }
