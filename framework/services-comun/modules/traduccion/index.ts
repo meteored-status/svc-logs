@@ -9,9 +9,9 @@ export class Translation<T extends TParams={}> {
     /* INSTANCE */
     protected readonly id: string;
 
-    private readonly params: string[];
+    protected readonly params: string[];
     private readonly paramsRegex: RegExp[];
-    private readonly paramsLength;
+    protected readonly paramsLength;
 
     protected constructor({id, params=[]}: ITranslation) {
         this.id = id;

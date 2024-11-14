@@ -1,0 +1,41 @@
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE} AS build
+ARG ws
+WORKDIR /usr/src/app
+RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
+COPY ./.yarn/plugins ./.yarn/plugins
+COPY ./.yarn/releases ./.yarn/releases
+COPY ./.yarnrc* ./
+COPY ./services/${ws} ./services/${ws}
+COPY ./package.json ./
+COPY ./yarn.lock ./
+RUN yarn workspaces focus --production ${ws}
+
+FROM ${BASE_IMAGE} AS app
+ARG ws
+WORKDIR /usr/src/app
+ENV NODE_ENV=production
+RUN mkdir ./.yarn && mkdir ./files && mkdir -p ./services/${ws}/.next && mkdir -p ./services/${ws}/public
+COPY --from=build /usr/src/app/.yarn ./.yarn
+COPY --from=build /usr/src/app/.pnp.* ./
+COPY --from=build /usr/src/app/.yarnrc* ./
+COPY --from=build /usr/src/app/yarn.lock ./
+COPY ./package.json ./
+COPY ./framework/services-comun/next.config.js ./services/${ws}/next.config.base.js
+COPY ./framework/services-comun/next.config.deps.js ./services/${ws}
+COPY ./framework/services-comun/package.json ./framework/services-comun
+COPY ./services/${ws}/next.config.js ./services/${ws}
+COPY ./services/${ws}/package.json ./services/${ws}
+COPY ./services/${ws}/.next ./services/${ws}/.next
+COPY ./services/${ws}/public ./services/${ws}/public
+RUN echo "#!/usr/bin/env bash" > run.sh
+RUN echo "yarn workspace ${ws} run next start -p 8080" >> run.sh
+WORKDIR /usr/src/app/services/${ws}
+RUN ln -s ../../files ./
+WORKDIR /usr/src/app
+
+EXPOSE 8080
+CMD [ "sh", "run.sh" ]
+
+#USER node

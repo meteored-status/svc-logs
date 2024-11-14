@@ -58,6 +58,7 @@ interface IQueryOptions {
 
 interface IBulkOptions extends IQueryOptions {
     size?: number;
+    delay?: number;
 }
 
 interface ISelectOptions<T, S=T> extends IQueryOptions {
@@ -323,7 +324,7 @@ export class MySQL implements Disposable {
         return this.masterQuery(`TRUNCATE TABLE ${table};`);
     }
 
-    public async bulkInsert(registros: IInsert[], {transaction, size}: IBulkOptions = {}): Promise<void> {
+    public async bulkInsert(registros: IInsert[], {transaction, size, delay}: IBulkOptions = {}): Promise<void> {
         if (registros.length>0) {
             const blockSize = size??0;
             const grupos = new Map<string, IInsert[]>();
@@ -363,7 +364,7 @@ export class MySQL implements Disposable {
                         return Promise.reject(err);
                     }
                 });
-                await PromiseDelayed();
+                await PromiseDelayed(delay??0);
             }
         }
     }

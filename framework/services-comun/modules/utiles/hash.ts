@@ -8,6 +8,10 @@ export function sha512(entrada: string): string {
     return createHash('sha512').update(entrada).digest("hex");
 }
 
+export function sha256(entrada: string): string {
+    return createHash('sha256').update(entrada).digest("hex");
+}
+
 export interface IHash<T> {
     [key: string]: T|undefined;
 }

@@ -6,7 +6,19 @@ export class TraduccionPlural<T extends TParams={}> extends Translation<T> {
         super(cfg);
     }
 
-    public render(i: number, params?: Partial<T>): string {
+    public render(i: number, params: Partial<T>={}): string {
+        if (this.params.includes("i")) {
+            params = {
+                i,
+                ...params,
+            };
+        } else if (this.paramsLength>0) {
+            params = {
+                [this.params[0]]: i,
+                ...params,
+            };
+        }
+
         return this.aplicarParams(this.valores[i]??this.defecto, params);
     }
 }
