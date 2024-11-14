@@ -26,12 +26,28 @@ export class Colors {
     public static BgCyan = "\x1b[46m";
     public static BgWhite = "\x1b[47m";
 
+    public static clear: string = "\x1b[2J";
+
     public static colorize(config: string[], text: string, tty: boolean = false): string {
         if (!tty) {
             return `${config.join("")}${text}${this.Reset}`;
         }
 
         return text;
+    }
+
+    public static up(posiciones: number): string {
+        if (posiciones <= 0) {
+            return "";
+        }
+        return `\x1b[${posiciones}A`;
+    }
+
+    public static down(posiciones: number): string {
+        if (posiciones <= 0) {
+            return "";
+        }
+        return `\x1b[${posiciones}B`;
     }
 
     /* INSTANCE */

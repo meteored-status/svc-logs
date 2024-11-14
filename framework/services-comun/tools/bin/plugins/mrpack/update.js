@@ -1,2 +1,0 @@
-"use strict";exports.id=611,exports.ids=[611],exports.modules={937:(t,a,i)=>{i.d(a,{Update:()=>s});var e=i(582);class s{static async init(t){const{Init:a}=await Promise.all([i.e(582),i.e(232),i.e(534)]).then(i.bind(i,793)),{Framework:s}=await Promise.all([i.e(582),i.e(128)]).then(i.bind(i,830));let n=await a.init(t);const o=await s.update(t);if(o){const i=await a.init(t);n=n||i}await e.R.update(t,n||o)}}}};
-//# sourceMappingURL=update.js.map

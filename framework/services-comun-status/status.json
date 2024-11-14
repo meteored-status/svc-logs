@@ -1,0 +1,335 @@
+{
+  "autor": "bixus",
+  "fecha": "2024-11-11 08:43:35",
+  "hash": "9f2b307573f85187bfae9fed7bd418e1",
+  "version": "2024.11.11+1",
+  "hijos": {
+    "modules": {
+      "autor": "Jose Antonio",
+      "fecha": "2024-10-25 07:27:32",
+      "hash": "81b0dc6ce9aad19f4c2f24a580f200ed",
+      "hijos": {
+        "portal": {
+          "autor": "Jose Antonio",
+          "fecha": "2024-10-25 07:27:32",
+          "hash": "25714d1c3fd481834641eaf835376287",
+          "hijos": {
+            "dominio.ts": {
+              "autor": "Jose Antonio",
+              "fecha": "2024-10-25 07:27:32",
+              "hash": "e790b44eb5db12aacd87c9932f747187"
+            }
+          }
+        },
+        "services": {
+          "autor": "Jose Antonio",
+          "fecha": "2024-10-25 07:27:32",
+          "hash": "297e1665a97f13d7725d4757f0cb6331",
+          "hijos": {
+            "config.ts": {
+              "autor": "Jose Antonio",
+              "fecha": "2024-10-25 07:27:32",
+              "hash": "b6c05fbd9e371b326c15aed7c2e4a94d"
+            },
+            "logs-slave": {
+              "autor": "Jose Antonio",
+              "fecha": "2024-10-25 07:27:32",
+              "hash": "e9bbd8da228fc8be195b2f0afa8ae118",
+              "hijos": {
+                "backend.ts": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "d48c29c11972ba5a19cce8c7294c02b3"
+                }
+              }
+            },
+            "panel-auth.ts": {
+              "autor": "Jose Antonio",
+              "fecha": "2024-10-25 07:27:32",
+              "hash": "062a6debbafb2e9c03e23831f7bc13b8"
+            },
+            "status-backend": {
+              "autor": "Jose Antonio",
+              "fecha": "2024-10-25 07:27:32",
+              "hash": "33ab91a92cbbb1572b49ce80aeb01cb3",
+              "hijos": {
+                "auth": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "30c5a5efcdfc67c57cca1b787be2f80c",
+                  "hijos": {
+                    "index.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "b027d54052c953abd4ab44593a2348e7"
+                    },
+                    "interface.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "e8fd9c8b637cbfcda2a8248f467bfdce"
+                    },
+                    "login": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "2e50311e3b30fb50526103f70290ee28",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "67cdc2a1644530bd37e82393c2aa2aee"
+                        }
+                      }
+                    }
+                  }
+                },
+                "component": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "07b5d7c4f256704fa25612f03d0a8abe",
+                  "hijos": {
+                    "current": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "e8a57d7eb664f285b2d4dc5a93a0d8f6",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "1335129f0d8de32ba04334692bab0a76"
+                        }
+                      }
+                    },
+                    "delete": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "6b7848d906962d2171e46d05277749e1",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "21754fec8437210eb1b314e535f2f351"
+                        }
+                      }
+                    },
+                    "index.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "364158fa52f2b3b9610cc4dd3bff9c03"
+                    }
+                  }
+                },
+                "current-status": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "9d519d8175a63e072e42a33fa16db322",
+                  "hijos": {
+                    "index.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "93a5d7d021b11433f0c55bae8f61a1aa"
+                    },
+                    "status": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "45ec956116724be37ef8d26014b0bea6",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "527a48dca224a205fdbdb2af20fbb00e"
+                        }
+                      }
+                    }
+                  }
+                },
+                "department": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "8c9f26a69d904ad2c180c41a14e2727d",
+                  "hijos": {
+                    "interface.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "8a326213fbf09197fc382236119d164d"
+                    }
+                  }
+                },
+                "disabled-component": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "6a4014308123d879494b93e64978a10b",
+                  "hijos": {
+                    "index.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "f4bbc17907d2d484ace1341e19a295c7"
+                    },
+                    "list": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "72fe75ccbd5dd669b39266809667b509",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "493dbf7e3b9ed42ff65f68c001fb78b5"
+                        }
+                      }
+                    },
+                    "toggle": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "263dbd90886495e9a0dc2726a526d010",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "6d16796c6bba773cf84cb77e0b153d56"
+                        }
+                      }
+                    }
+                  }
+                },
+                "disabled-notification": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "76dea12b464b1a03cbbd4bbd5a3160e7",
+                  "hijos": {
+                    "index.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "627517d3c08703d24a8bebfc46979fd9"
+                    },
+                    "list": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "1683b8b52bd4c65b87cfeb5509153f86",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "525c8d1f2824739090da8b1c5af9d079"
+                        }
+                      }
+                    },
+                    "toggle": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "902495c312975cec7f44e3ef81955d3a",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "c9e3b9a8a8066af51734e3cff5d0e64e"
+                        }
+                      }
+                    }
+                  }
+                },
+                "services": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "96a1442804f2c5e9f17a2450c55163a0",
+                  "hijos": {
+                    "index.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "f0c49683388b422d4d780d49c2f397f8"
+                    },
+                    "save": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "b3538ae97643526aad20a55626c32b44",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "d340af3eabae0d1fab5a5b61d4f749ea"
+                        }
+                      }
+                    },
+                    "user-services": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "69173d01dc500316dd8377779ad59b95",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "d8cd5badc017e58ffd4fe60188780173"
+                        }
+                      }
+                    }
+                  }
+                },
+                "subscription": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "cf35a66c2da617d6c51cf519e284167d",
+                  "hijos": {
+                    "index.ts": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "61b609c1ba9fe3edc8be2c0862e1541d"
+                    },
+                    "list": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "0298fbfd8c7168813ca372c55b861400",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "e1b64341a4d62a1a41654690dfc7ac3b"
+                        }
+                      }
+                    },
+                    "toggle": {
+                      "autor": "Jose Antonio",
+                      "fecha": "2024-10-25 07:27:32",
+                      "hash": "d1dc980498a836870eed321974d63e29",
+                      "hijos": {
+                        "interface.ts": {
+                          "autor": "Jose Antonio",
+                          "fecha": "2024-10-25 07:27:32",
+                          "hash": "d661b27fadf0c5aafdf812f14024277a"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "status-external": {
+              "autor": "Jose Antonio",
+              "fecha": "2024-10-25 07:27:32",
+              "hash": "fe08d986e40ca02f86b09b55a9d0fd61",
+              "hijos": {
+                "component.ts": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "52440519471c6d02cdbfbb193ca49e7e"
+                },
+                "spec.ts": {
+                  "autor": "Jose Antonio",
+                  "fecha": "2024-10-25 07:27:32",
+                  "hash": "9b138db6bb18e39477eaf299e4348468"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "package.json": {
+      "autor": "bixus",
+      "fecha": "2024-11-11 08:43:35",
+      "hash": "5fce8b3ae84cfea27e230f359f192a52"
+    },
+    "tsconfig.json": {
+      "autor": "Jose Antonio",
+      "fecha": "2024-10-25 07:27:32",
+      "hash": "c29cd323720a52c0f209b913b914972b"
+    }
+  }
+}

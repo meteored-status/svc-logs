@@ -200,7 +200,7 @@ export class BackendRequest {
         }
 
         try {
-            return this.fetch<T>(url, {}, new Headers(), this.propagarContexto(cfg));
+            return await this.fetch<T>(url, {}, new Headers(), this.propagarContexto(cfg));
         } catch (err) {
             if (!url.startsWith("http://localhost:") || cfg.dominioAlternativo==undefined) {
                 return Promise.reject(err);

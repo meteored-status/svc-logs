@@ -1,5 +1,5 @@
 import {EngineServer} from "services-comun/modules/engine_server";
-import elasticsearch from "services-comun/modules/elasticsearch/elastic";
+import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import {Configuracion} from "./utiles/config";
 

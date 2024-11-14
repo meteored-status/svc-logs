@@ -2,7 +2,7 @@ import {Fecha} from "services-comun/modules/utiles/fecha";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {TAbort} from "services-comun/modules/engine_base";
 import {error, info} from "services-comun/modules/utiles/log";
-import bulk from "services-comun/modules/elasticsearch/bulk";
+import bulk from "services-comun/modules/utiles/elastic/bulk";
 import db from "services-comun/modules/utiles/mysql";
 
 import {Bucket} from "./bucket";
