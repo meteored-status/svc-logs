@@ -1,4 +1,4 @@
-import {Colors as ColorsBase} from "services-comun/modules/utiles/colors";
+import {Colors as ColorsBase} from "../utiles/colors";
 
 export class Colors extends ColorsBase {
     /* STATIC */

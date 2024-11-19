@@ -1,3 +1,4 @@
+import {z} from "zod";
 import readline from "node:readline/promises";
 
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
@@ -131,6 +132,22 @@ export class Cloudflare {
     private static FILTRAR_PATHS_PREFIX: string[] = [
         "/cdn-cgi/"
     ];
+
+    private static readonly SCHEMA_REQUEST_HEADERS = z.object({
+        "x-api-key": z.string().optional(),
+    }).strict().transform(o=>{
+
+    });
+    private static readonly SCHEMA_RESPONSE_HEADERS = z.object({
+        etag: z.string().optional(),
+        expires: z.string().optional(),
+        "last-modified": z.string().optional(),
+        "x-meteored-node": z.string().optional(),
+        "x-meteored-version": z.string().optional(),
+        "x-meteored-zone": z.string().optional(),
+    }).strict().transform(o=>{
+
+    });
 
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
         let ok = true;
