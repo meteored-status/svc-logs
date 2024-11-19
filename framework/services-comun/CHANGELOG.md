@@ -1,6 +1,12 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.11.18+1
+
+### Changed
+- [Jose] Eliminada información de despliegue. Se ha transferido a `@mr/cli`
+
+---
 ## 2024.11.14+1
 ### Updated
 - [Jose] Update de librerías:
@@ -8,12 +14,14 @@
 
 ---
 ## 2024.11.13+1
+
 ### Updated
 - [Jose] Limpieza de librerías que ya no son necesarias
 - [Jose] Eliminado antiguo Cli que solo se usaba para migrar a la nueva versión
 
 ---
 ## 2024.11.04+1
+
 ### Updated
 - [Juan Carlos] Update de librerías:
   - [node-ical](https://www.npmjs.com/package/node-ical) 0.20.1

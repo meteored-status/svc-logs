@@ -1,4 +1,6 @@
+import {readJSON} from "services-comun/modules/utiles/fs";
 import {Colors} from "./clases/colors";
+import {IPackageJson} from "./clases/packagejson";
 import {type IModulo, type IModuloConfig, Modulo} from "./modulo";
 import {ModuloDevel} from "./modulos/devel";
 import {ModuloDeploy} from "./modulos/deploy";
@@ -42,6 +44,28 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
     /* INSTANCE */
     protected constructor(config: T) {
         super(config);
+    }
+
+    protected override async run(): Promise<void> {
+        const {version} = await readJSON<IPackageJson>(`${this.root}/@mr/cli/package.json`);
+        const [v, autor] = version!.split("-");
+        const [mayor, release] = v.split("+");
+        const partes: string[] = [];
+        partes.push(Colors.colorize([Colors.FgWhite, Colors.Underscore], "MRPack"));
+        partes.push(" ")
+        partes.push(Colors.colorize([Colors.FgGreen, Colors.Bright], mayor));
+        partes.push(Colors.colorize([Colors.FgWhite], "+"));
+        partes.push(Colors.colorize([Colors.FgRed, Colors.Bright], release));
+        if (autor!=undefined) {
+            partes.push(" ");
+            partes.push(Colors.colorize([Colors.FgWhite], "("));
+            partes.push(Colors.colorize([Colors.FgMagenta], autor));
+            partes.push(Colors.colorize([Colors.FgWhite], ")"));
+        }
+        console.log(partes.join(""));
+        console.log("");
+
+        await super.run();
     }
 
     protected override async parsePositionals(positionals: string[]): Promise<void> {

@@ -2,6 +2,7 @@ import JSZip from "jszip";
 
 import {readDir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 
+import {Comando} from "../comando";
 import {type IPaqueteDirectory, PaqueteDirectory} from "./directory";
 
 export interface IPaqueteDirectoryRoot extends IPaqueteDirectory {
@@ -146,25 +147,25 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
 
         await this.pack(this.basedir, zip);
 
-        return await zip.generateAsync({type:"nodebuffer"});
+        return zip.generateAsync({type:"nodebuffer"});
     }
 
-    // public async subirLegacy(): Promise<void> {
-    //     {
-    //         const {status} = await Comando.spawn("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "rm", "-r", `gs://meteored-yarn-workspaces/${this.frameworkDir}`], {
-    //             cwd: this.basedir,
-    //         });
-    //         if (status!=0) {
-    //             return Promise.reject(new Error("Error borrando repositorio antiguo"));
-    //         }
-    //     }
-    //     {
-    //         const {status} = await Comando.spawn("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "cp", "-r", `${this.basedir}/*`, `gs://meteored-yarn-workspaces/${this.frameworkDir}/`], {
-    //             cwd: this.basedir,
-    //         });
-    //         if (status!=0) {
-    //             return Promise.reject(new Error("Error subiendo repositorio antiguo"));
-    //         }
-    //     }
-    // }
+    public async subirLegacy(): Promise<void> {
+        {
+            const {status} = await Comando.spawn("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "rm", "-r", `gs://meteored-yarn-workspaces/${this.frameworkDir}`], {
+                cwd: this.basedir,
+            });
+            if (status!=0) {
+                return Promise.reject(new Error("Error borrando repositorio antiguo"));
+            }
+        }
+        {
+            const {status} = await Comando.spawn("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "cp", "-r", `${this.basedir}/*`, `gs://meteored-yarn-workspaces/${this.frameworkDir}/`], {
+                cwd: this.basedir,
+            });
+            if (status!=0) {
+                return Promise.reject(new Error("Error subiendo repositorio antiguo"));
+            }
+        }
+    }
 }
