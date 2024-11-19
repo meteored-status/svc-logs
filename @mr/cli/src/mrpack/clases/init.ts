@@ -196,6 +196,7 @@ export class Init {
 
         paquete.resolutions??={};
         delete paquete.resolutions["@types/node"];
+        paquete.resolutions["@elastic/elasticsearch"] = "8.15.2";
         paquete.resolutions["mysql2"] = "3.11.0";
 
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
@@ -287,23 +288,29 @@ export class Init {
         console.log(Colors.colorize([Colors.FgWhite], "Revisando archivos innecesarios"));
         console.group();
         for (const file of ["update.sh", "run.sh"]) {
-            if (await isFile(`${basedir}/${file}`)) {
+            const item = `${basedir}/${file}`;
+            if (await isFile(item) || await isDir(item)) {
                 console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], file)}`);
-                await unlink(`${basedir}/${file}`);
+                await unlink(item);
+            }
+        }
+        for (const file of ["status.json"]) {
+            const item = `${basedir}/@mr/cli/${file}`;
+            if (await isFile(item) || await isDir(item)) {
+                console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `@mr/cli/${file}`)}`);
+                await unlink(item);
             }
         }
         for (const actual of await readDir(`${basedir}/framework`)) {
-            for (const file of ["download.js", "upload.js"]) {
-                if (await isFile(`${basedir}/framework/${actual}/${file}`)) {
+            for (const file of ["download.js", "status.json", "upload.js", "files"]) {
+                const item = `${basedir}/framework/${actual}/${file}`;
+                if (await isFile(item) || await isDir(item)) {
                     console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `${actual}/${file}`)}`);
-                    await unlink(`${basedir}/framework/${actual}/${file}`);
+                    await unlink(item);
                 }
             }
         }
-        if (await isFile(`${basedir}/@mr/cli/status.json`)) {
-            console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `@mr/cli/status.json`)}`);
-            await unlink(`${basedir}/@mr/cli/status.json`);
-        }
+
         console.groupEnd();
     }
 

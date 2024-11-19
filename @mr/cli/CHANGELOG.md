@@ -1,6 +1,26 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.11.18+1
+
+### Changed
+- [Jose] Se ha modificado los scripts internos del Cli
+  - El script de actualización ya no da error
+
+---
+## 2024.11.15+1
+
+### Changed
+- [Jose] Revisado el loader de las herramientas para que detecte errores en el ejecutable y fuerce la recompilación
+
+### Fixed
+- [Jose] Fijada la librería [@elastic/elasticsearch](https://www.npmjs.com/package/@elastic/elasticsearch) a la versión `8.15.2` dado que la versión nueva `8.16.0` da errores de tipado
+
+### Updated
+- [Jose] Update de librerías:
+    - [sass](https://www.npmjs.com/package/sass) 1.81.0
+
+---
 ## 2024.11.14+1
 
 ### Changed

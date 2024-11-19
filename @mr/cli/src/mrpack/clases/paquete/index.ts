@@ -162,13 +162,10 @@ export class Paquete {
     }
 
     protected consola({estado=ConsolaEstado.EMPTY, actual=false, nueva, mensaje}: IConsola): void {
-        if (!this.consolaAvanzada) {
-            console.log(Colors.colorize([Colors.FgMagenta], `${this.nombre}${this.consolaPadding}`), STATUS[estado], mensaje);
-            return;
-        }
-
         const salida: string[] = [];
-        salida.push(Colors.up(this.consolaLength-this.consolaIndex));
+        if (this.consolaAvanzada) {
+            salida.push(Colors.up(this.consolaLength - this.consolaIndex));
+        }
         salida.push(Colors.colorize([Colors.FgMagenta], `${this.nombre}${this.consolaPadding}`));
         salida.push(Colors.colorize([Colors.FgWhite, Colors.Bright], "["));
         if (actual) {
@@ -187,7 +184,9 @@ export class Paquete {
         }
         salida.push(Colors.colorize([Colors.FgWhite, Colors.Bright], "]"));
         salida.push(STATUS[estado]);
-        salida.push(Colors.down(this.consolaLength-this.consolaIndex-1));
+        if (this.consolaAvanzada) {
+            salida.push(Colors.down(this.consolaLength - this.consolaIndex - 1));
+        }
 
         console.log(...salida);
     }
@@ -522,15 +521,15 @@ export class Paquete {
                     contentType: "text/plain",
                 }));
 
-            // await status.subirLegacy();
-            //
-            // const file = this.storage
-            //     .bucket("meteored-yarn-workspaces")
-            //     .file(`${this.nombre}/status.json`);
-            // const stream = file.createWriteStream({
-            //     contentType: "application/json",
-            // });
-            // await pipeline(buffer2stream(Buffer.from(JSON.stringify(status.toJSON(), null, 2))), stream);
+            await status.subirLegacy();
+
+            const file = this.storage
+                .bucket("meteored-yarn-workspaces")
+                .file(`${this.nombre}/status.json`);
+            const stream = file.createWriteStream({
+                contentType: "application/json",
+            });
+            await pipeline(buffer2stream(Buffer.from(JSON.stringify(status.toJSON(), null, 2))), stream);
         }
     }
 }
