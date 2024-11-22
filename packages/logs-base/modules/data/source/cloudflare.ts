@@ -279,14 +279,14 @@ export class Cloudflare {
                 value: o.ClientIP,
                 class: o.ClientIPClass,
             },
-            mtls: {
+            mtls: o.ClientMTLSAuthCertFingerprint.length>0 && o.ClientMTLSAuthStatus!="unknown"?{
                 auth: {
                     cert: {
                         fingerprint: o.ClientMTLSAuthCertFingerprint,
                     },
                     status: o.ClientMTLSAuthStatus,
                 },
-            },
+            }:undefined,
             region: o.ClientRegionCode,
             request: {
                 bytes: o.ClientRequestBytes,
@@ -310,9 +310,9 @@ export class Cloudflare {
             tcp: {
                 rtt: o.ClientTCPRTTMs,
             },
-            x: {
+            x: o.ClientXRequestedWith.length>0?{
                 requestedWith: o.ClientXRequestedWith,
-            },
+            }:undefined,
         },
         edge: {
             cf: {
@@ -327,10 +327,10 @@ export class Cloudflare {
                 src: o.EdgePathingSrc,
                 status: o.EdgePathingStatus,
             },
-            rateLimit: {
+            rateLimit: o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=0?{
                 action: o.EdgeRateLimitAction,
                 id: o.EdgeRateLimitID,
-            },
+            }:undefined,
             request: {
                 host: o.EdgeRequestHost,
             },
@@ -346,9 +346,9 @@ export class Cloudflare {
                 status: o.EdgeResponseStatus,
             },
             ray: o.RayID,
-            server: {
+            server: o.EdgeServerIP.length>0?{
                 ip: o.EdgeServerIP,
-            },
+            }:undefined,
             time2FirstByte: o.EdgeTimeToFirstByteMs,
             timestamp: {
                 start: o.EdgeStartTimestamp,
@@ -369,20 +369,20 @@ export class Cloudflare {
             },
         },
         cookies: o.Cookies,
-        content: {
+        content: o.ContentScanObjResults!=undefined && o.ContentScanObjResults.length>0 && o.ContentScanObjTypes!=undefined && o.ContentScanObjTypes.length>0?{
             scan: {
-                results: o.ContentScanObjResults,
-                types: o.ContentScanObjTypes,
+                results: o.ContentScanObjResults.length>0?o.ContentScanObjResults:undefined,
+                types: o.ContentScanObjTypes.length>0?o.ContentScanObjTypes:undefined,
             },
-        },
-        firewall: {
+        }:undefined,
+        firewall: o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
             matches: {
-                actions: o.FirewallMatchesActions,
-                ruleIDs: o.FirewallMatchesRuleIDs,
-                sources: o.FirewallMatchesSources,
+                actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
+                ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
+                sources: o.FirewallMatchesSources.length>0?o.FirewallMatchesSources:undefined,
             },
-        },
-        origin: {
+        }:undefined,
+        origin: o.OriginIP.length>0?{
             dns: {
                 response: {
                     time: o.OriginDNSResponseTimeMs,
@@ -424,7 +424,7 @@ export class Cloudflare {
                     duration: o.OriginTLSHandshakeDurationMs,
                 },
             },
-        },
+        }:undefined,
         parent: {
             ray: o.ParentRayID,
         },
@@ -434,7 +434,7 @@ export class Cloudflare {
         response: {
             headers: o.ResponseHeaders,
         },
-        security: {
+        security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
             action: o.SecurityAction,
             actions: o.SecurityActions,
             level: o.SecurityLevel,
@@ -444,18 +444,18 @@ export class Cloudflare {
                 ids: o.SecurityRuleIDs,
             },
             sources: o.SecuritySources,
-        },
-        smart: {
+        }:undefined,
+        smart: o.SmartRouteColoID>0?{
             route: {
                 colo: o.SmartRouteColoID,
             },
-        },
-        upper: {
+        }:undefined,
+        upper: o.UpperTierColoID>0?{
             tier: {
                 colo: o.UpperTierColoID,
             },
-        },
-        waf: {
+        }:undefined,
+        waf: o.WAFAction!="unknown"?{
             action: o.WAFAction,
             flags: o.WAFFlags,
             matched: {
@@ -476,8 +476,8 @@ export class Cloudflare {
             xss: {
                 score: o.WAFXSSAttackScore,
             },
-        },
-        worker: {
+        }:undefined,
+        worker: o.WorkerStatus!="unknown"?{
             cpu: {
                 time: o.WorkerCPUTime,
             },
@@ -488,7 +488,7 @@ export class Cloudflare {
             wall: {
                 time: o.WorkerWallTimeUs,
             },
-        },
+        }:undefined,
         zone: {
             id: o.ZoneID,
             name: o.ZoneName,
