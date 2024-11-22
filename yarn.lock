@@ -77,7 +77,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@elastic/elasticsearch@npm:8.16.2, @elastic/elasticsearch@npm:^8.15.2":
+"@elastic/elasticsearch@npm:8.16.2, @elastic/elasticsearch@npm:^8.16.2":
   version: 8.16.2
   resolution: "@elastic/elasticsearch@npm:8.16.2"
   dependencies:
@@ -735,7 +735,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/semantic-conventions@npm:*, @opentelemetry/semantic-conventions@npm:1.27.0, @opentelemetry/semantic-conventions@npm:^1.22.0, @opentelemetry/semantic-conventions@npm:^1.27.0":
+"@opentelemetry/semantic-conventions@npm:*, @opentelemetry/semantic-conventions@npm:^1.22.0, @opentelemetry/semantic-conventions@npm:^1.28.0":
+  version: 1.28.0
+  resolution: "@opentelemetry/semantic-conventions@npm:1.28.0"
+  checksum: 10/c182a3206769b5d5a8ab89a5c674d046fd789421cef27ea55af179990e314732433c98e5017aa23e99f15fd2b0e13cb129bb6c2282da6860ce9419adf32b2e87
+  languageName: node
+  linkType: hard
+
+"@opentelemetry/semantic-conventions@npm:1.27.0":
   version: 1.27.0
   resolution: "@opentelemetry/semantic-conventions@npm:1.27.0"
   checksum: 10/98166522f299e2fe3d43376adbdeb92679b75ebb172e2a3c4c71f2942bd91585e9537618efbbae6dc08177699e5719368edf66d7e69e8636f360b85217bbdbe1
@@ -1185,7 +1192,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^22.9.0, @types/node@npm:^22.9.1":
+"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^22.9.1":
   version: 22.9.1
   resolution: "@types/node@npm:22.9.1"
   dependencies:
@@ -3970,9 +3977,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.15.2"
+    "@elastic/elasticsearch": "npm:^8.16.2"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.9.0"
+    "@types/node": "npm:^22.9.1"
     crawler-user-agents: "npm:^1.0.154"
     geoip-lite: "npm:^1.4.10"
     services-comun: "workspace:*"
@@ -4018,7 +4025,7 @@ __metadata:
     "@opentelemetry/resources": "npm:^1.28.0"
     "@opentelemetry/sdk-trace-base": "npm:^1.28.0"
     "@opentelemetry/sdk-trace-node": "npm:^1.28.0"
-    "@opentelemetry/semantic-conventions": "npm:^1.27.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.28.0"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^22.9.1"
     "@types/ua-parser-js": "npm:^0.7.39"
@@ -5421,7 +5428,7 @@ __metadata:
     "@opentelemetry/resources": "npm:^1.28.0"
     "@opentelemetry/sdk-trace-base": "npm:^1.28.0"
     "@opentelemetry/sdk-trace-node": "npm:^1.28.0"
-    "@opentelemetry/semantic-conventions": "npm:^1.27.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.28.0"
     "@sequelize/core": "npm:7.0.0-alpha.43"
     "@tsconfig/node22": "npm:^22.0.0"
     "@types/diff3": "npm:^0.0.2"
@@ -6390,8 +6397,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.15.2"
-    "@types/node": "npm:^22.9.0"
+    "@elastic/elasticsearch": "npm:^8.16.2"
+    "@types/node": "npm:^22.9.1"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     tslib: "npm:^2.8.1"
@@ -6413,7 +6420,7 @@ __metadata:
     "@opentelemetry/resources": "npm:^1.28.0"
     "@opentelemetry/sdk-trace-base": "npm:^1.28.0"
     "@opentelemetry/sdk-trace-node": "npm:^1.28.0"
-    "@opentelemetry/semantic-conventions": "npm:^1.27.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.28.0"
     "@types/node": "npm:^22.9.1"
     chokidar: "npm:^4.0.1"
     formidable: "npm:^3.5.2"

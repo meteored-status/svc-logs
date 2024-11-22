@@ -28,7 +28,7 @@
     "services/*",
     "statics/*"
   ],
-  "packageManager": "yarn@4.5.1",
+  "packageManager": "yarn@4.5.2",
   "bin": {
     "mrlang": "@mr/cli/bin/mrlang.js",
     "mrpack": "@mr/cli/bin/mrpack.js"
