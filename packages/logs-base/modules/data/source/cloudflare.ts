@@ -585,7 +585,7 @@ export class Cloudflare {
                     try {
                         console.log("Parseo de ZOD", JSON.stringify(Cloudflare.SCHEMA.parse(JSON.parse(json))));
                     } catch (err) {
-                        console.log("Error parseando con ZOD", JSON.stringify(err));
+                        console.log("Error parseando con ZOD", JSON.stringify(err), json);
                     }
                 });
             }
