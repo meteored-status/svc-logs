@@ -195,8 +195,8 @@ export class Init {
         }
 
         paquete.resolutions??={};
+        delete paquete.resolutions["@elastic/elasticsearch"];
         delete paquete.resolutions["@types/node"];
-        paquete.resolutions["@elastic/elasticsearch"] = "8.15.2";
         paquete.resolutions["mysql2"] = "3.11.0";
 
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
@@ -437,7 +437,7 @@ export class Init {
         config.devel = paquete.config.devel??paquete.devel??true;
         config.deploy = paquete.config.deploy??true;
         config.generar = paquete.config.generar??paquete.generar??false;
-        // config.imagen = paquete.config.imagen??"node:lts-alpine";
+        config.imagen = paquete.config.imagen;//??"node:lts-alpine";
         config.unico = paquete.config.unico??paquete.unico??false;
 
         config.deps = paquete.config.deps??[];

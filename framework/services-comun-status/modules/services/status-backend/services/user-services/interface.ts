@@ -10,4 +10,5 @@ export interface IService {
         name: string;
     },
     project_name: string;
+    dynamic_resources: string[];
 }

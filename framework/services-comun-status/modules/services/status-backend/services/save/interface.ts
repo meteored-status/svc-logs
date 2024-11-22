@@ -3,6 +3,7 @@ export interface ISaveIN {
     name: string;
     project_name: string;
     department: number;
+    dynamic_resources: string[];
 }
 
 export interface ISaveOUT {
@@ -10,4 +11,5 @@ export interface ISaveOUT {
     name: string;
     project_name: string;
     department: number;
+    dynamic_resources: string[];
 }

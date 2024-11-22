@@ -34,7 +34,6 @@
     "mrpack": "@mr/cli/bin/mrpack.js"
   },
   "resolutions": {
-    "mysql2": "3.11.0",
-    "@elastic/elasticsearch": "8.15.2"
+    "mysql2": "3.11.0"
   }
 }

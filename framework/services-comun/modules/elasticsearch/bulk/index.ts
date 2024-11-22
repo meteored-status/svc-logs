@@ -1,5 +1,3 @@
-import type {BulkResponseItem, Script} from "@elastic/elasticsearch/lib/api/types";
-
 import {
     type BulkBase,
     BulkCreate,
@@ -9,7 +7,7 @@ import {
     BulkUpdate,
     type IBulkBase,
 } from "./documento";
-import type {Elasticsearch, ESBulkResponse as ESBulkResponseBase} from "..";
+import type {Elasticsearch, ESBulkResponse as ESBulkResponseBase, BulkResponseItem, Script} from "..";
 import {arrayChop} from "../../utiles/array";
 import {error, info} from "../../utiles/log";
 import {PromiseDelayed} from "../../utiles/promise";
