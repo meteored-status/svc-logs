@@ -279,7 +279,7 @@ export class Cloudflare {
                 value: o.ClientIP,
                 class: o.ClientIPClass,
             },
-            mtls: o.ClientMTLSAuthCertFingerprint.length>0 && o.ClientMTLSAuthStatus!="unknown"?{
+            mtls: o.ClientMTLSAuthStatus!="unknown"?{
                 auth: {
                     cert: {
                         fingerprint: o.ClientMTLSAuthCertFingerprint,
@@ -300,16 +300,16 @@ export class Cloudflare {
                 ua: o.ClientRequestUserAgent,
                 uri: o.ClientRequestURI,
             },
-            ssl: {
+            ssl: o.ClientSSLCipher!="NONE"?{
                 cipher: o.ClientSSLCipher,
                 protocol: o.ClientSSLProtocol,
-            },
-            src: {
+            }:undefined,
+            src: o.ClientSrcPort>0?{
                 port: o.ClientSrcPort,
-            },
-            tcp: {
+            }:undefined,
+            tcp: o.ClientTCPRTTMs>0?{
                 rtt: o.ClientTCPRTTMs,
-            },
+            }:undefined,
             x: o.ClientXRequestedWith.length>0?{
                 requestedWith: o.ClientXRequestedWith,
             }:undefined,
