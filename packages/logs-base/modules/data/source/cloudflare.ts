@@ -575,17 +575,24 @@ export class Cloudflare {
         await registro.save(repesca);
     }
 
-    private static test = false;
+    private static test1 = false;
+    private static test2 = false;
 
     private static parse(json: string): SourceCloudflare|null {
         try {
-            if (!this.test) {
-                this.test = true;
+            if (!this.test1) {
                 PromiseDelayed().then(() => {
                     try {
-                        console.log("Parseo de ZOD", JSON.stringify(Cloudflare.SCHEMA.parse(JSON.parse(json))));
+                        if (!this.test2) {
+                            this.test2 = true;
+                            console.log("Parseo de ZOD", JSON.stringify(Cloudflare.SCHEMA.parse(JSON.parse(json))));
+                        } else {
+                            Cloudflare.SCHEMA.parse(JSON.parse(json));
+                        }
                     } catch (err) {
                         console.log("Error parseando con ZOD", JSON.stringify(err), json);
+                        this.test1 = true;
+                        this.test2 = true;
                     }
                 });
             }
