@@ -368,7 +368,7 @@ export class Cloudflare {
                 fill: o.CacheTieredFill,
             },
         },
-        cookies: o.Cookies,
+        cookies: Object.keys(o.Cookies).length>0?o.Cookies:undefined,
         content: o.ContentScanObjResults!=undefined && o.ContentScanObjResults.length>0 && o.ContentScanObjTypes!=undefined && o.ContentScanObjTypes.length>0?{
             scan: {
                 results: o.ContentScanObjResults.length>0?o.ContentScanObjResults:undefined,
@@ -428,12 +428,12 @@ export class Cloudflare {
         parent: {
             ray: o.ParentRayID,
         },
-        request: {
+        request: Object.keys(o.RequestHeaders).length>0?{
             headers: o.RequestHeaders,
-        },
-        response: {
+        }:undefined,
+        response: Object.keys(o.ResponseHeaders).length>0?{
             headers: o.ResponseHeaders,
-        },
+        }:undefined,
         security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
             action: o.SecurityAction,
             actions: o.SecurityActions,
