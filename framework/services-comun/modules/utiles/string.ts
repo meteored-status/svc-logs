@@ -559,6 +559,21 @@ const ENCODED_ENTITIES: string[] = [
     'ı',
     'ß',
 ];
+const ENCODED_ENTITIES_SVG: string[] = [
+    '&',
+    '>',
+    '<',
+    '"',
+    "'",
+];
+const DECODED_ENTITIES_SVG: string[] = [
+    '&amp;',
+    '&gt;',
+    '&lt;',
+    '&quot;',
+    '&#039;',
+];
+
 const URL_INVALID: string[] = [
     '&#40;',
     '&#41;',
@@ -608,6 +623,14 @@ export const toEntities = (text: string) => {
         return '';
     });
 };
+
+export const toEntitiesSVG = (text: string) => {
+    return text.replace(new RegExp(`(${ENCODED_ENTITIES_SVG.join('|')})`, 'g'), (entity:string) => {
+        const pos: number = ENCODED_ENTITIES_SVG.indexOf(entity);
+        if (pos >= 0) return DECODED_ENTITIES_SVG[pos];
+        return '';
+    });
+}
 
 export const removeAccents = (text: string) => {
     return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");

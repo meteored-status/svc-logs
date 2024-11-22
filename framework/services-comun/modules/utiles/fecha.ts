@@ -203,4 +203,16 @@ export class Fecha {
         // Convertir a una zona horaria específica
         return new Date(new Date().toLocaleString('en-US', { timeZone }));
     }
+
+    public static generarFechaIntlTraduccion(timestamp: number, idioma: string): string {
+        const date = new Date(timestamp);
+        const options: Intl.DateTimeFormatOptions = {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "numeric"
+        };
+        return new Intl.DateTimeFormat(idioma, options).format(date);
+    }
 }

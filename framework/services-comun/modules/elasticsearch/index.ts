@@ -1,63 +1,78 @@
-import type {
-    AggregateName,
-    AggregationsAggregate, BulkOperationType,
-    BulkRequest,
-    BulkResponse,
-    BulkResponseItem,
-    ClearScrollRequest, ClearScrollResponse,
-    ClosePointInTimeRequest,
-    ClosePointInTimeResponse,
-    CountRequest,
-    CountResponse,
-    DeleteByQueryRequest,
-    DeleteByQueryResponse, DeleteRequest, DeleteResponse,
-    GetRequest,
-    GetResponse,
-    IndexRequest,
-    IndexResponse,
-    IndicesCreateRequest,
-    IndicesCreateResponse,
-    IndicesDeleteRequest,
-    IndicesDeleteResponse,
-    IndicesExistsAliasRequest,
-    IndicesExistsAliasResponse,
-    IndicesExistsRequest,
-    IndicesExistsResponse,
-    IndicesForcemergeRequest,
-    IndicesForcemergeResponse,
-    IndicesGetAliasRequest,
-    IndicesGetAliasResponse,
-    IndicesGetRequest,
-    IndicesGetResponse,
-    IndicesUpdateAliasesRequest,
-    IndicesUpdateAliasesResponse,
-    InfoRequest,
-    InfoResponse,
-    OpenPointInTimeRequest,
-    OpenPointInTimeResponse, ReindexRequest, ReindexResponse,
-    ScrollRequest,
-    ScrollResponse,
-    SearchCompletionSuggestOption,
-    SearchPhraseSuggestOption,
-    SearchRequest,
-    SearchResponse,
-    SearchSuggest,
-    SearchTermSuggestOption,
-    SuggestionName, UpdateByQueryRequest, UpdateByQueryResponse,
-    UpdateRequest,
-    UpdateResponse,
-} from "@elastic/elasticsearch/lib/api/types";
-import {Client} from "@elastic/elasticsearch";
+import elastic, {Client} from "@elastic/elasticsearch";
 import {ConnectionOptions as TlsConnectionOptions} from "node:tls";
 
 import {exists, readFile, readJSON} from "../utiles/fs";
 import {PromiseDelayed} from "../utiles/promise";
 
+export type AggregateName = elastic.estypes.AggregateName;
+export type AggregationsAggregate = elastic.estypes.AggregationsAggregate;
+export type BulkOperationContainer = elastic.estypes.BulkOperationContainer;
+export type BulkOperationType = elastic.estypes.BulkOperationType;
+export type BulkRequest = elastic.estypes.BulkRequest;
+export type BulkResponse = elastic.estypes.BulkResponse;
+export type BulkResponseItem = elastic.estypes.BulkResponseItem;
+export type BulkUpdateAction<T, K> = elastic.estypes.BulkUpdateAction<T, K>;
+export type ClearScrollRequest = elastic.estypes.ClearScrollRequest;
+export type ClearScrollResponse = elastic.estypes.ClearScrollResponse;
+export type ClosePointInTimeRequest = elastic.estypes.ClosePointInTimeRequest;
+export type ClosePointInTimeResponse = elastic.estypes.ClosePointInTimeResponse;
+export type CountRequest = elastic.estypes.CountRequest;
+export type CountResponse = elastic.estypes.CountResponse;
+export type DeleteByQueryRequest = elastic.estypes.DeleteByQueryRequest;
+export type DeleteByQueryResponse = elastic.estypes.DeleteByQueryResponse;
+export type DeleteRequest = elastic.estypes.DeleteRequest;
+export type DeleteResponse = elastic.estypes.DeleteResponse;
+export type GetRequest = elastic.estypes.GetRequest;
+export type GetResponse<T> = elastic.estypes.GetResponse<T>;
+export type IndexRequest = elastic.estypes.IndexRequest;
+export type IndexResponse = elastic.estypes.IndexResponse;
+export type IndicesCreateRequest = elastic.estypes.IndicesCreateRequest;
+export type IndicesCreateResponse = elastic.estypes.IndicesCreateResponse;
+export type IndicesDeleteRequest = elastic.estypes.IndicesDeleteRequest;
+export type IndicesDeleteResponse = elastic.estypes.IndicesDeleteResponse;
+export type IndicesExistsAliasRequest = elastic.estypes.IndicesExistsAliasRequest;
+export type IndicesExistsAliasResponse = elastic.estypes.IndicesExistsAliasResponse;
+export type IndicesExistsRequest = elastic.estypes.IndicesExistsRequest;
+export type IndicesExistsResponse = elastic.estypes.IndicesExistsResponse;
+export type IndicesForcemergeRequest = elastic.estypes.IndicesForcemergeRequest;
+export type IndicesForcemergeResponse = elastic.estypes.IndicesForcemergeResponse;
+export type IndicesGetAliasRequest = elastic.estypes.IndicesGetAliasRequest;
+export type IndicesGetAliasResponse = elastic.estypes.IndicesGetAliasResponse;
+export type IndicesGetRequest = elastic.estypes.IndicesGetRequest;
+export type IndicesGetResponse = elastic.estypes.IndicesGetResponse;
+export type IndicesUpdateAliasesAction = elastic.estypes.IndicesUpdateAliasesAction;
+export type IndicesUpdateAliasesRequest = elastic.estypes.IndicesUpdateAliasesRequest;
+export type IndicesUpdateAliasesResponse = elastic.estypes.IndicesUpdateAliasesResponse;
+export type InfoRequest = elastic.estypes.InfoRequest;
+export type InfoResponse = elastic.estypes.InfoResponse;
+export type OpenPointInTimeRequest = elastic.estypes.OpenPointInTimeRequest;
+export type OpenPointInTimeResponse = elastic.estypes.OpenPointInTimeResponse;
+export type QueryDslQueryContainer = elastic.estypes.QueryDslQueryContainer;
+export type ReindexRequest = elastic.estypes.ReindexRequest;
+export type ReindexResponse = elastic.estypes.ReindexResponse;
+export type Script = elastic.estypes.Script;
+export type ScrollRequest = elastic.estypes.ScrollRequest;
+export type ScrollResponse<T> = elastic.estypes.ScrollResponse<T>;
+export type SearchCompletionSuggestOption<T> = elastic.estypes.SearchCompletionSuggestOption<T>;
+export type SearchHit<T> = elastic.estypes.SearchHit<T>;
+export type SearchPhraseSuggestOption = elastic.estypes.SearchPhraseSuggestOption;
+export type SearchRequest = elastic.estypes.SearchRequest;
+export type SearchTotalHits = elastic.estypes.SearchTotalHits;
+export type SortResults = elastic.estypes.SortResults;
+export type SearchResponse<T, K> = elastic.estypes.SearchResponse<T, K>;
+export type SearchSuggest<T> = elastic.estypes.SearchSuggest<T>;
+export type SearchTermSuggestOption = elastic.estypes.SearchTermSuggestOption;
+export type Sort = elastic.estypes.Sort;
+export type SuggestionName = elastic.estypes.SuggestionName;
+export type UpdateByQueryRequest = elastic.estypes.UpdateByQueryRequest;
+export type UpdateByQueryResponse = elastic.estypes.UpdateByQueryResponse;
+export type UpdateRequest = elastic.estypes.UpdateRequest;
+export type UpdateResponse<T> = elastic.estypes.UpdateResponse<T>;
+
 export type ESAggregate = Record<AggregateName, AggregationsAggregate>;
 export type ESSuggest<T> = Record<SuggestionName, SearchSuggest<T>[]>;
 export type ESSuggestOption<T> = SearchPhraseSuggestOption|SearchTermSuggestOption|SearchCompletionSuggestOption<T>;
 export type ESBulkResponse = Partial<Record<BulkOperationType, BulkResponseItem>>;
-export type * from "@elastic/elasticsearch/lib/api/types";
 
 export interface IElasticSearch {
     hosts: string[];
