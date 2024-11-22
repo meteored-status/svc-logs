@@ -13,9 +13,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@elastic/elasticsearch": "^8.15.2",
+    "@elastic/elasticsearch": "^8.16.2",
     "@types/geoip-lite": "^1.4.4",
-    "@types/node": "^22.9.0",
+    "@types/node": "^22.9.1",
     "crawler-user-agents": "^1.0.154",
     "geoip-lite": "^1.4.10",
     "services-comun": "workspace:*",
