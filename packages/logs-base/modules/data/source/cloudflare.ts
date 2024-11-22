@@ -146,8 +146,8 @@ export class Cloudflare {
     }));
     private static readonly SCHEMA_RESPONSE_HEADERS = z.object({
         etag: z.string().optional(),
-        expires: z.date().optional(),
-        "last-modified": z.date().optional(),
+        expires: z.coerce.date().optional(),
+        "last-modified": z.coerce.date().optional(),
         "x-meteored-node": z.string().optional(),
         "x-meteored-version": z.string().optional(),
         "x-meteored-zone": z.string().optional(),
@@ -165,10 +165,10 @@ export class Cloudflare {
         ClientRequestHost: z.string(),
         ClientRequestMethod: z.string(),
         ClientRequestURI: z.string(),
-        EdgeEndTimestamp: z.date(),
+        EdgeEndTimestamp: z.coerce.date(),
         EdgeResponseBytes: z.number(),
         EdgeResponseStatus: z.number(),
-        EdgeStartTimestamp: z.date(),
+        EdgeStartTimestamp: z.coerce.date(),
         RayID: z.string(),
         CacheCacheStatus: z.string(),
         CacheResponseBytes: z.number(),
@@ -585,7 +585,7 @@ export class Cloudflare {
                     try {
                         console.log("Parseo de ZOD", JSON.stringify(Cloudflare.SCHEMA.parse(JSON.parse(json))));
                     } catch (err) {
-                        console.log("Error parseando con ZOD", err);
+                        console.log("Error parseando con ZOD", JSON.stringify(err));
                     }
                 });
             }
