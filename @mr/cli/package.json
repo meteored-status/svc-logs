@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@types/diff3": "^0.0.2",
-    "@types/node": "^22.9.0",
+    "@types/node": "^22.9.1",
     "@types/source-map-support": "^0.5.10",
     "clean-webpack-plugin": "^4.0.0",
     "css-loader": "^7.1.2",
@@ -51,5 +51,5 @@
     "webpack-cli": "^5.1.4",
     "webpack-manifest-plugin": "^5.0.0"
   },
-  "version": "2024.11.19+8-bixus"
+  "version": "2024.11.20+1-bixus"
 }

@@ -1,16 +1,16 @@
-import type {
-    QueryDslQueryContainer,
-    SearchHit,
-    SearchRequest,
-    SearchResponse,
-    Sort,
-    SortResults,
-} from "@elastic/elasticsearch/lib/api/types";
-
-import {Elasticsearch, type ESAggregate} from "../../elasticsearch";
+import {
+    Elasticsearch,
+    type ESAggregate,
+    type QueryDslQueryContainer,
+    type SearchHit,
+    type SearchRequest,
+    type SearchResponse,
+    type Sort,
+    type SortResults,
+} from "../../elasticsearch";
 
 export type {IMetadata} from "../../elasticsearch";
-export type * from "@elastic/elasticsearch/lib/api/types";
+export type * from "../../elasticsearch";
 
 /**
  * Busca todos los elementos en los índices de elastic.
