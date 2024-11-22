@@ -165,10 +165,22 @@ export class Cloudflare {
         ClientRequestHost: z.string(),
         ClientRequestMethod: z.string(),
         ClientRequestURI: z.string(),
-        EdgeEndTimestamp: z.coerce.date(),
+        EdgeEndTimestamp: z.union([z.string(), z.number()])
+            .transform(o=>{
+                if (typeof o === "number") {
+                    return new Date(Math.floor(o/1000000));
+                }
+                return new Date(o);
+            }),
         EdgeResponseBytes: z.number(),
         EdgeResponseStatus: z.number(),
-        EdgeStartTimestamp: z.coerce.date(),
+        EdgeStartTimestamp: z.union([z.string(), z.number()])
+            .transform(o=>{
+                if (typeof o === "number") {
+                    return new Date(Math.floor(o/1000000));
+                }
+                return new Date(o);
+            }),
         RayID: z.string(),
         CacheCacheStatus: z.string(),
         CacheResponseBytes: z.number(),
