@@ -1,6 +1,14 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.11.25+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.9.3
+    - [typescript](https://www.npmjs.com/package/sass) 5.7.2
+
+---
 ## 2024.11.18+1
 
 ### Changed

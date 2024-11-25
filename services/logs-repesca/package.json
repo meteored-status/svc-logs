@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@types/geoip-lite": "^1.4.4",
-    "@types/node": "^22.9.1",
+    "@types/node": "^22.9.3",
     "logs-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"
