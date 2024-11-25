@@ -142,7 +142,7 @@ interface ISchemaResponseHeaders {
     tags?: string[];
     etag?: string;
     expires?: Date;
-    lastModified?: string;
+    lastModified?: Date;
     meteored: {
         chain?: string[];
         node?:    string;
@@ -353,7 +353,7 @@ interface ICloudFlare {
             id: string;
             message: string;
         };
-        score: number;
+        score?: number;
         sqli: {
             score?: number;
         };
@@ -856,12 +856,11 @@ export class Cloudflare {
             if (!this.test1) {
                 PromiseDelayed().then(() => {
                     try {
+                        const cf: ICloudFlare = Cloudflare.SCHEMA.parse(JSON.parse(json));
                         if (!this.test2) {
                             this.test2 = true;
                             // todo
-                            console.log("Parseo de ZOD", JSON.stringify(Cloudflare.SCHEMA.parse(JSON.parse(json))));
-                        } else {
-                            Cloudflare.SCHEMA.parse(JSON.parse(json));
+                            console.log("Parseo de ZOD", JSON.stringify(cf));
                         }
                     } catch (err) {
                         console.log("Error parseando con ZOD", JSON.stringify(err), json);
