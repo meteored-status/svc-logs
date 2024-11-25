@@ -111,21 +111,274 @@ export interface SourceCloudflare {
 }
 
 export interface Cookies {
-    "cf-access-user": string;
+    "cf-access-user"?: string;
 }
 
 export interface RequestHeaders {
-    "x-api-key": string;
+    "x-api-key"?: string;
 }
 
 export interface ResponseHeaders {
-    "x-meteored-node":    string;
-    "x-meteored-version": string;
-    "x-meteored-zone":    string;
-    expires:              string;
-    etag:                 string;
-    "last-modified":      string;
+    "cache-tag"?: string;
+    "x-meteored-node"?:    string;
+    "x-meteored-node-chain"?: string;
+    "x-meteored-service"?: string;
+    "x-meteored-version"?: string;
+    "x-meteored-zone"?:    string;
+    expires?:              string;
+    etag?:                 string;
+    "last-modified"?:      string;
 }
+
+interface ISchemaCookies {
+    user?: string;
+}
+
+interface ISchemaRequestHeaders {
+    "api-key"?: string;
+}
+
+interface ISchemaResponseHeaders {
+    tags?: string[];
+    etag?: string;
+    expires?: Date;
+    lastModified?: string;
+    meteored: {
+        chain?: string[];
+        node?:    string;
+        service?: string;
+        version?: string;
+        zone?:    string;
+    };
+}
+
+interface ICloudFlare {
+    client: {
+        asn: number;
+        country: string;
+        device: {
+            type: string;
+        };
+        ip: {
+            value: string;
+            class: string;
+        };
+        mtls?: {
+            auth: {
+                cert: {
+                    fingerprint: string;
+                };
+                status: string;
+            };
+        };
+        region?: string;
+        request: {
+            bytes: number;
+            host: string;
+            method: string;
+            path: string;
+            protocol: string;
+            referer?: string;
+            scheme: string;
+            source: string;
+            ua: string;
+            uri: string;
+        },
+        ssl?: {
+            cipher: string;
+            protocol: string;
+        };
+        src?: {
+            port: number;
+        };
+        tcp?: {
+            rtt?: number;
+        };
+        x?: {
+            requestedWith: string;
+        };
+    };
+    edge: {
+        cf: {
+            connectingO2O: boolean;
+        };
+        colo: {
+            code: string;
+            id: number;
+        },
+        pathing: {
+            op: string;
+            src: string;
+            status: string;
+        };
+        rateLimit?: {
+            action: string;
+            id: number;
+        };
+        request: {
+            host: string;
+        };
+        response: {
+            body: {
+                bytes: number;
+            };
+            bytes: number;
+            compression: {
+                ratio: number;
+            };
+            contentType: string;
+            status: number;
+        };
+        ray: string;
+        server?: {
+            ip: string;
+        },
+        time2FirstByte: number;
+        timestamp: {
+            start: Date;
+            end: Date;
+        };
+    };
+    cache: {
+        reserve: {
+            used: boolean;
+        };
+        response: {
+            bytes: number;
+            status: number;
+        };
+        status: string;
+        tiered: {
+            fill: boolean;
+        };
+    };
+    cookies: ISchemaCookies;
+    content?: {
+        scan: {
+            results?: string[];
+            types?: string[];
+        };
+    };
+    firewall?: {
+        matches: {
+            actions?: any[];
+            ruleIDs?: any[];
+            sources?: any[];
+        };
+    };
+    origin?: {
+        dns: {
+            response: {
+                time: number;
+            };
+        };
+        ip: string;
+        request: {
+            header: {
+                send: {
+                    duration: number;
+                };
+            };
+            response: {
+                bytes: number;
+                duration: number;
+                header: {
+                    receive: {
+                        duration: number;
+                    };
+                };
+                http: {
+                    expires: string;
+                    lastModified: string;
+                };
+                status: number;
+                time: number;
+            };
+        };
+        ssl: {
+            protocol: string;
+        };
+        tcp: {
+            handshake: {
+                duration: number;
+            };
+        };
+        tls: {
+            handshake: {
+                duration: number;
+            };
+        };
+    };
+    parent: {
+        ray: string;
+    };
+    request: {
+        headers: ISchemaRequestHeaders;
+    };
+    response: {
+        headers: ISchemaResponseHeaders;
+    };
+    security?: {
+        action: string;
+        actions?: string[];
+        level: string;
+        rule: {
+            description?: string;
+            id?: string;
+            ids?: string[];
+        };
+        sources?: string[];
+    };
+    smart?: {
+        route: {
+            colo: number;
+        };
+    };
+    upper?: {
+        tier: {
+            colo: number;
+        };
+    };
+    waf?: {
+        action: string;
+        flags: string;
+        matched: {
+            var: string;
+        };
+        profile: string;
+        rce: {
+            score?: number;
+        };
+        rule: {
+            id: string;
+            message: string;
+        };
+        score: number;
+        sqli: {
+            score?: number;
+        };
+        xss: {
+            score?: number;
+        };
+    };
+    worker?: {
+        cpu: {
+            time: number;
+        };
+        status: string;
+        subrequest: {
+            count: number;
+        };
+        wall: {
+            time: number;
+        };
+    };
+    zone: {
+        id?: number;
+        name: string;
+    };
+}
+
 
 export class Cloudflare {
     /* STATIC */
@@ -145,19 +398,27 @@ export class Cloudflare {
         "api-key": o["x-api-key"],
     }));
     private static readonly SCHEMA_RESPONSE_HEADERS = z.object({
+        "cache-tags": z.string().optional(),
         etag: z.string().optional(),
         expires: z.coerce.date().optional(),
         "last-modified": z.coerce.date().optional(),
         "x-meteored-node": z.string().optional(),
+        "x-meteored-node-chain": z.string().optional(),
+        "x-meteored-service": z.string().optional(),
         "x-meteored-version": z.string().optional(),
         "x-meteored-zone": z.string().optional(),
     }).transform(o=>({
+        tags: o["cache-tags"]!=undefined?o["cache-tags"].split(","):undefined,
         etag: o.etag,
         expires: o.expires!=undefined?new Date(o.expires):undefined,
-        "last-modified": o["last-modified"],
-        "meteored-node": o["x-meteored-node"],
-        "meteored-version": o["x-meteored-version"],
-        "meteored-zone": o["x-meteored-zone"],
+        lastModified: o["last-modified"],
+        meteored: {
+            chain: o["x-meteored-node-chain"]!=undefined?o["x-meteored-node-chain"].split(","):undefined,
+            node: o["x-meteored-node"],
+            service: o["x-meteored-service"],
+            version: o["x-meteored-version"],
+            zone: o["x-meteored-zone"],
+        },
     }));
 
     private static readonly SCHEMA = z.object({
@@ -294,7 +555,7 @@ export class Cloudflare {
                 method: o.ClientRequestMethod,
                 path: o.ClientRequestPath,
                 protocol: o.ClientRequestProtocol,
-                referer: o.ClientRequestReferer,
+                referer: o.ClientRequestReferer.length>0?o.ClientRequestReferer:undefined,
                 scheme: o.ClientRequestScheme,
                 source: o.ClientRequestSource,
                 ua: o.ClientRequestUserAgent,
@@ -368,7 +629,7 @@ export class Cloudflare {
                 fill: o.CacheTieredFill,
             },
         },
-        cookies: Object.keys(o.Cookies).length>0?o.Cookies:undefined,
+        cookies: o.Cookies,
         content: o.ContentScanObjResults!=undefined && o.ContentScanObjResults.length>0 && o.ContentScanObjTypes!=undefined && o.ContentScanObjTypes.length>0?{
             scan: {
                 results: o.ContentScanObjResults.length>0?o.ContentScanObjResults:undefined,
@@ -428,12 +689,12 @@ export class Cloudflare {
         parent: {
             ray: o.ParentRayID,
         },
-        request: Object.keys(o.RequestHeaders).length>0?{
+        request: {
             headers: o.RequestHeaders,
-        }:undefined,
-        response: Object.keys(o.ResponseHeaders).length>0?{
+        },
+        response: {
             headers: o.ResponseHeaders,
-        }:undefined,
+        },
         security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
             action: o.SecurityAction,
             actions: o.SecurityActions,
@@ -597,6 +858,7 @@ export class Cloudflare {
                     try {
                         if (!this.test2) {
                             this.test2 = true;
+                            // todo
                             console.log("Parseo de ZOD", JSON.stringify(Cloudflare.SCHEMA.parse(JSON.parse(json))));
                         } else {
                             Cloudflare.SCHEMA.parse(JSON.parse(json));
@@ -893,8 +1155,11 @@ const typeMap: any = {
     ], false),
     "ResponseHeaders": o([
         { json: "x-meteored-node", js: "x-meteored-node", typ: u(undefined, "") },
+        { json: "x-meteored-node-chain", js: "x-meteored-node-chain", typ: u(undefined, "") },
+        { json: "x-meteored-service", js: "x-meteored-service", typ: u(undefined, "") },
         { json: "x-meteored-version", js: "x-meteored-version", typ: u(undefined, "") },
         { json: "x-meteored-zone", js: "x-meteored-zone", typ: u(undefined, "") },
+        { json: "cache-tags", js: "cache-tags", typ: u(undefined, "") },
         { json: "expires", js: "expires", typ: u(undefined, "") },
         { json: "etag", js: "etag", typ: u(undefined, "") },
         { json: "last-modified", js: "last-modified", typ: u(undefined, "") },
