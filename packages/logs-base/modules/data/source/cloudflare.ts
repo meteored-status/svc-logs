@@ -619,7 +619,7 @@ export class Cloudflare {
                             console.log("Parseo de ZOD", JSON.stringify(registro));
                         }
                     } catch (err) {
-                        console.log("Error parseando con ZOD", JSON.stringify(err), json);
+                        console.log("Error parseando con ZOD", err, json);
                         this.test1 = true;
                         this.test2 = true;
                     }
