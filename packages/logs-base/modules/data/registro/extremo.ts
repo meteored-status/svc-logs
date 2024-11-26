@@ -19,12 +19,18 @@ export interface IRegistroExtremo {
 export class RegistroExtremo implements IRegistroExtremo {
     /* STATIC */
     public static build(edge: IRAWDataEdge): RegistroExtremo {
-        const location = RegistroLocalizacion.build(edge.server.ip);
+        let ip: string|undefined;
+        let location: RegistroLocalizacion|undefined;
+
+        if (edge.server?.ip!=undefined) {
+            ip = edge.server.ip;
+            location = RegistroLocalizacion.build(ip);
+        }
 
         return new this({
             status: edge.response.status,
             contentType: edge.response.contentType,
-            ip: edge.server.ip,
+            ip,
             location,
             bytes: {
                 headers: edge.response.bytes-edge.response.body.bytes,
