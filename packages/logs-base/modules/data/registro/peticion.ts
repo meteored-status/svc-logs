@@ -1,6 +1,6 @@
 import type {IRAWDataClient, IRAWDataRequest} from ".";
 
-interface IProtocol {
+interface ISSL {
     name: string;
     version: string;
 }
@@ -16,7 +16,8 @@ export interface IRegistroPeticion {
     subdominio: string;
     path: string;
     uri: string;
-    protocol: IProtocol;
+    protocol: string;
+    ssl?: ISSL;
     bytes: number;
     referer?: string;
     source: string;
@@ -26,7 +27,7 @@ export interface IRegistroPeticion {
 export class RegistroPeticion implements IRegistroPeticion {
     /* STATIC */
     public static build(client: IRAWDataClient, request: IRAWDataRequest, zona: string): RegistroPeticion {
-        const protocol = client.request.protocol.split("v");
+        const ssl = client.ssl?.protocol.split("v");
         const headers: IHeaders = {};
         if (request.headers.apiKey!=undefined) {
             headers.apiKey = request.headers.apiKey;
@@ -39,14 +40,14 @@ export class RegistroPeticion implements IRegistroPeticion {
             subdominio: client.request.host.substring(0, client.request.host.length - zona.length - 1),
             path: client.request.path,
             uri: client.request.uri,
-            protocol: {
-                name: protocol[0],
-                version: protocol[1],
-            },
+            protocol: client.request.protocol,
+            ssl: ssl!=undefined ?
+                {name: ssl[0], version: ssl[1]} : undefined,
             bytes: client.request.bytes,
             referer: client.request.referer,
             source: client.request.source,
-            headers: Object.keys(headers).length>0 ? headers : undefined,
+            headers: Object.keys(headers).length>0 ?
+                headers : undefined,
         });
     }
 
@@ -57,7 +58,8 @@ export class RegistroPeticion implements IRegistroPeticion {
     public get subdominio(): string { return this.data.subdominio; }
     public get path(): string { return this.data.path; }
     public get uri(): string { return this.data.uri; }
-    public get protocol(): IProtocol { return this.data.protocol; }
+    public get protocol(): string { return this.data.protocol; }
+    public get ssl(): ISSL|undefined { return this.data.ssl; }
     public get bytes(): number { return this.data.bytes; }
     public get referer(): string|undefined { return this.data.referer; }
     public get source(): string { return this.data.source; }
@@ -75,6 +77,7 @@ export class RegistroPeticion implements IRegistroPeticion {
             path: this.data.path,
             uri: this.data.uri,
             protocol: this.data.protocol,
+            ssl: this.data.ssl,
             bytes: this.data.bytes,
             referer: this.data.referer,
             source: this.data.source,
