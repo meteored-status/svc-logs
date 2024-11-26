@@ -24,19 +24,19 @@ export class RegistroCliente implements IRegistroCliente {
         if (data.request.ua!=undefined && data.request.ua.length>0) {
             const tmp = UAParser(data.request.ua);
             ua.ua = tmp.ua;
-            if (Object.keys(tmp.browser).length>0) {
+            if (tmp.browser.name!=undefined) {
                 ua.browser = tmp.browser;
             }
-            if (Object.keys(tmp.cpu).length>0) {
+            if (tmp.cpu.architecture!=undefined) {
                 ua.cpu = tmp.cpu;
             }
-            if (Object.keys(tmp.device).length>0) {
+            if (tmp.device.model!=undefined) {
                 ua.device = tmp.device;
             }
-            if (Object.keys(tmp.engine).length>0) {
+            if (tmp.engine.name!=undefined) {
                 ua.engine = tmp.engine;
             }
-            if (Object.keys(tmp.os).length>0) {
+            if (tmp.os.name!=undefined) {
                 ua.os = tmp.os;
             }
         }
