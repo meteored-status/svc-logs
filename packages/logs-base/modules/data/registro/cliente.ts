@@ -9,7 +9,7 @@ export interface IRegistroCliente {
     device: string;
     ip: string;
     location: IRegistroLocalizacion;
-    ua?: IResult;
+    agent?: Partial<IResult>;
 }
 
 export class RegistroCliente implements IRegistroCliente {
@@ -20,6 +20,27 @@ export class RegistroCliente implements IRegistroCliente {
             crawler = "Unknown";
         }
 
+        let ua: Partial<IResult> = {};
+        if (data.request.ua!=undefined && data.request.ua.length>0) {
+            const tmp = UAParser(data.request.ua);
+            ua.ua = tmp.ua;
+            if (Object.keys(tmp.browser).length>0) {
+                ua.browser = tmp.browser;
+            }
+            if (Object.keys(tmp.cpu).length>0) {
+                ua.cpu = tmp.cpu;
+            }
+            if (Object.keys(tmp.device).length>0) {
+                ua.device = tmp.device;
+            }
+            if (Object.keys(tmp.engine).length>0) {
+                ua.engine = tmp.engine;
+            }
+            if (Object.keys(tmp.os).length>0) {
+                ua.os = tmp.os;
+            }
+        }
+
         const location = RegistroLocalizacion.build(data.ip.value);
 
         return new this({
@@ -27,8 +48,7 @@ export class RegistroCliente implements IRegistroCliente {
             device: data.device.type,
             ip: data.ip.value,
             location,
-            ua: data.request.ua!=undefined && data.request.ua.length>0 ?
-                UAParser(data.request.ua) : undefined,
+            agent: Object.keys(ua).length>0 ? ua : undefined,
         }, location);
     }
 
@@ -36,7 +56,7 @@ export class RegistroCliente implements IRegistroCliente {
     public get crawler(): string|undefined { return this.data.crawler; };
     public get device(): string { return this.data.device; };
     public get ip(): string { return this.data.ip; };
-    public get ua(): IResult|undefined { return this.data.ua; };
+    public get agent(): Partial<IResult>|undefined { return this.data.agent; };
 
     protected constructor(private data: IRegistroCliente, public readonly location: RegistroLocalizacion) {
     }
@@ -47,7 +67,7 @@ export class RegistroCliente implements IRegistroCliente {
             device: this.data.device,
             ip: this.data.ip,
             location: this.location.toJSON(),
-            ua: this.data.ua,
+            agent: this.data.agent,
         };
     }
 }
