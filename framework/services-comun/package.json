@@ -24,7 +24,7 @@
     "@tsconfig/node22": "^22.0.0",
     "@types/diff3": "^0.0.2",
     "@types/formidable": "^3.4.5",
-    "@types/node": "^22.9.3",
+    "@types/node": "^22.10.0",
     "@types/pidusage": "^2.0.5",
     "@types/qs": "^6.9.17",
     "@types/sparkpost": "^2.1.8",
@@ -44,5 +44,5 @@
     "webpack": "^5.96.1",
     "webpack-cli": "^5.1.4"
   },
-  "version": "2024.11.25+1-bixus"
+  "version": "2024.11.26+2-bixus"
 }

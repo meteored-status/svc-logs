@@ -1,6 +1,19 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.11.26+3
+
+### Changed
+- [Jose] Ahora se autoselecciona la versión LTS de node al abrir la consola
+
+---
+## 2024.11.26+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.10.0
+
+---
 ## 2024.11.25+1
 
 ### Updated
