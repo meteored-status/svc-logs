@@ -10,7 +10,7 @@ import {error} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/utiles/elastic/bulk";
 
 import {Bucket} from "./bucket";
-import {Crawler} from "./source/crawler";
+import {Crawler} from "./crawler";
 import {type ICliente} from "./bucket";
 import {SourceCloudflare} from "./source/cloudflare";
 

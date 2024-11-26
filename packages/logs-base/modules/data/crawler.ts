@@ -3,23 +3,29 @@ import crawlerUserAgents from "crawler-user-agents";
 export class Crawler {
     /* STATIC */
     private static readonly crawlers: Crawler[] = crawlerUserAgents.map(actual=> new this(actual.pattern));
-    private static readonly cache: Map<string, Crawler|null> = new Map<string, Crawler|null>();
+    private static readonly cache: Record<string, Crawler|null|undefined> = {};
 
-    public static test(ua: string): Crawler|null {
-        let cache = this.cache.get(ua);
+    public static test(ua?: string): Crawler|undefined {
+        if (ua==undefined) {
+            return;
+        }
+
+        const cache = this.cache[ua];
         if (cache!==undefined) {
-            return cache;
+            return cache??undefined;
         }
 
         for (const crawler of this.crawlers) {
             if (crawler.check(ua)) {
-                this.cache.set(ua, crawler);
+                this.cache[ua] = crawler;
+
                 return crawler;
             }
         }
 
-        this.cache.set(ua, null);
-        return null;
+        this.cache[ua] = null;
+
+        return;
     }
 
     /* INSTANCE */

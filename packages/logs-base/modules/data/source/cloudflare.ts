@@ -9,8 +9,9 @@ import {error, info} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/utiles/elastic/bulk";
 import elasticsearch from "services-comun/modules/utiles/elastic";
 
-import {ICliente} from "../bucket";
-import {Registro} from "../registro";
+import type {ICliente} from "../bucket";
+import {Registro as RegistroLegacy} from "../registro";
+import {type IRAWData, Registro} from "../registro/";
 
 export interface SourceCloudflare {
     ClientIP:                              string;
@@ -130,256 +131,6 @@ export interface ResponseHeaders {
     "last-modified"?:      string;
 }
 
-interface ISchemaCookies {
-    user?: string;
-}
-
-interface ISchemaRequestHeaders {
-    "api-key"?: string;
-}
-
-interface ISchemaResponseHeaders {
-    tags?: string[];
-    etag?: string;
-    expires?: Date;
-    lastModified?: Date;
-    meteored: {
-        chain?: string[];
-        node?:    string;
-        service?: string;
-        version?: string;
-        zone?:    string;
-    };
-}
-
-interface ICloudFlare {
-    client: {
-        asn: number;
-        country: string;
-        device: {
-            type: string;
-        };
-        ip: {
-            value: string;
-            class: string;
-        };
-        mtls?: {
-            auth: {
-                cert: {
-                    fingerprint: string;
-                };
-                status: string;
-            };
-        };
-        region?: string;
-        request: {
-            bytes: number;
-            host: string;
-            method: string;
-            path: string;
-            protocol: string;
-            referer?: string;
-            scheme: string;
-            source: string;
-            ua: string;
-            uri: string;
-        },
-        ssl?: {
-            cipher: string;
-            protocol: string;
-        };
-        src?: {
-            port: number;
-        };
-        tcp?: {
-            rtt?: number;
-        };
-        x?: {
-            requestedWith: string;
-        };
-    };
-    edge: {
-        cf: {
-            connectingO2O: boolean;
-        };
-        colo: {
-            code: string;
-            id: number;
-        },
-        pathing: {
-            op: string;
-            src: string;
-            status: string;
-        };
-        rateLimit?: {
-            action: string;
-            id: number;
-        };
-        request: {
-            host: string;
-        };
-        response: {
-            body: {
-                bytes: number;
-            };
-            bytes: number;
-            compression: {
-                ratio: number;
-            };
-            contentType: string;
-            status: number;
-        };
-        ray: string;
-        server?: {
-            ip: string;
-        },
-        time2FirstByte: number;
-        timestamp: {
-            start: Date;
-            end: Date;
-        };
-    };
-    cache: {
-        reserve: {
-            used: boolean;
-        };
-        response: {
-            bytes: number;
-            status: number;
-        };
-        status: string;
-        tiered: {
-            fill: boolean;
-        };
-    };
-    cookies: ISchemaCookies;
-    content?: {
-        scan: {
-            results?: string[];
-            types?: string[];
-        };
-    };
-    firewall?: {
-        matches: {
-            actions?: any[];
-            ruleIDs?: any[];
-            sources?: any[];
-        };
-    };
-    origin?: {
-        dns: {
-            response: {
-                time: number;
-            };
-        };
-        ip: string;
-        request: {
-            header: {
-                send: {
-                    duration: number;
-                };
-            };
-            response: {
-                bytes: number;
-                duration: number;
-                header: {
-                    receive: {
-                        duration: number;
-                    };
-                };
-                http: {
-                    expires: string;
-                    lastModified: string;
-                };
-                status: number;
-                time: number;
-            };
-        };
-        ssl: {
-            protocol: string;
-        };
-        tcp: {
-            handshake: {
-                duration: number;
-            };
-        };
-        tls: {
-            handshake: {
-                duration: number;
-            };
-        };
-    };
-    parent: {
-        ray: string;
-    };
-    request: {
-        headers: ISchemaRequestHeaders;
-    };
-    response: {
-        headers: ISchemaResponseHeaders;
-    };
-    security?: {
-        action: string;
-        actions?: string[];
-        level: string;
-        rule: {
-            description?: string;
-            id?: string;
-            ids?: string[];
-        };
-        sources?: string[];
-    };
-    smart?: {
-        route: {
-            colo: number;
-        };
-    };
-    upper?: {
-        tier: {
-            colo: number;
-        };
-    };
-    waf?: {
-        action: string;
-        flags: string;
-        matched: {
-            var: string;
-        };
-        profile: string;
-        rce: {
-            score?: number;
-        };
-        rule: {
-            id: string;
-            message: string;
-        };
-        score?: number;
-        sqli: {
-            score?: number;
-        };
-        xss: {
-            score?: number;
-        };
-    };
-    worker?: {
-        cpu: {
-            time: number;
-        };
-        status: string;
-        subrequest: {
-            count: number;
-        };
-        wall: {
-            time: number;
-        };
-    };
-    zone: {
-        id?: number;
-        name: string;
-    };
-}
-
-
 export class Cloudflare {
     /* STATIC */
     private static FILTRAR_PATHS_PREFIX: string[] = [
@@ -395,7 +146,7 @@ export class Cloudflare {
     private static readonly SCHEMA_REQUEST_HEADERS = z.object({
         "x-api-key": z.string().optional(),
     }).transform(o=>({
-        "api-key": o["x-api-key"],
+        apiKey: o["x-api-key"],
     }));
     private static readonly SCHEMA_RESPONSE_HEADERS = z.object({
         "cache-tags": z.string().optional(),
@@ -412,7 +163,7 @@ export class Cloudflare {
         etag: o.etag,
         expires: o.expires!=undefined?new Date(o.expires):undefined,
         lastModified: o["last-modified"],
-        meteored: {
+        mr: {
             chain: o["x-meteored-node-chain"]!=undefined?o["x-meteored-node-chain"].split(","):undefined,
             node: o["x-meteored-node"],
             service: o["x-meteored-service"],
@@ -529,131 +280,135 @@ export class Cloudflare {
         ZoneName: z.string(),
         CacheReserveUsed: z.boolean(),
         WorkerWallTimeUs: z.number(),
-    }).transform(o=>({
-        client: {
-            asn: o.ClientASN,
-            country: o.ClientCountry,
-            device: {
-                type: o.ClientDeviceType,
-            },
-            ip: {
-                value: o.ClientIP,
-                class: o.ClientIPClass,
-            },
-            mtls: o.ClientMTLSAuthStatus!="unknown"?{
-                auth: {
-                    cert: {
-                        fingerprint: o.ClientMTLSAuthCertFingerprint,
+    }).transform(o=>{
+        const protocol = o.ClientSSLProtocol.split("v");
+        return {
+            client: {
+                asn: o.ClientASN,
+                country: o.ClientCountry,
+                device: {
+                    type: o.ClientDeviceType,
+                },
+                ip: {
+                    value: o.ClientIP,
+                    class: o.ClientIPClass,
+                },
+                mtls: o.ClientMTLSAuthStatus!="unknown"?{
+                    auth: {
+                        cert: {
+                            fingerprint: o.ClientMTLSAuthCertFingerprint,
+                        },
+                        status: o.ClientMTLSAuthStatus,
                     },
-                    status: o.ClientMTLSAuthStatus,
+                }:undefined,
+                region: o.ClientRegionCode,
+                request: {
+                    bytes: o.ClientRequestBytes,
+                    host: o.ClientRequestHost,
+                    method: o.ClientRequestMethod,
+                    path: o.ClientRequestPath,
+                    protocol: o.ClientRequestProtocol,
+                    referer: o.ClientRequestReferer.length>0?o.ClientRequestReferer:undefined,
+                    scheme: o.ClientRequestScheme,
+                    source: o.ClientRequestSource,
+                    ua: o.ClientRequestUserAgent,
+                    uri: o.ClientRequestURI,
                 },
-            }:undefined,
-            region: o.ClientRegionCode,
-            request: {
-                bytes: o.ClientRequestBytes,
-                host: o.ClientRequestHost,
-                method: o.ClientRequestMethod,
-                path: o.ClientRequestPath,
-                protocol: o.ClientRequestProtocol,
-                referer: o.ClientRequestReferer.length>0?o.ClientRequestReferer:undefined,
-                scheme: o.ClientRequestScheme,
-                source: o.ClientRequestSource,
-                ua: o.ClientRequestUserAgent,
-                uri: o.ClientRequestURI,
+                ssl: o.ClientSSLCipher!="NONE"?{
+                    cipher: o.ClientSSLCipher,
+                    protocol: protocol[0],
+                    version: protocol[1],
+                }:undefined,
+                src: o.ClientSrcPort>0?{
+                    port: o.ClientSrcPort,
+                }:undefined,
+                tcp: o.ClientTCPRTTMs>0?{
+                    rtt: o.ClientTCPRTTMs,
+                }:undefined,
+                x: o.ClientXRequestedWith.length>0?{
+                    requestedWith: o.ClientXRequestedWith,
+                }:undefined,
             },
-            ssl: o.ClientSSLCipher!="NONE"?{
-                cipher: o.ClientSSLCipher,
-                protocol: o.ClientSSLProtocol,
-            }:undefined,
-            src: o.ClientSrcPort>0?{
-                port: o.ClientSrcPort,
-            }:undefined,
-            tcp: o.ClientTCPRTTMs>0?{
-                rtt: o.ClientTCPRTTMs,
-            }:undefined,
-            x: o.ClientXRequestedWith.length>0?{
-                requestedWith: o.ClientXRequestedWith,
-            }:undefined,
-        },
-        edge: {
-            cf: {
-                connectingO2O: o.EdgeCFConnectingO2O,
-            },
-            colo: {
-                code: o.EdgeColoCode,
-                id: o.EdgeColoID,
-            },
-            pathing: {
-                op: o.EdgePathingOp,
-                src: o.EdgePathingSrc,
-                status: o.EdgePathingStatus,
-            },
-            rateLimit: o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=0?{
-                action: o.EdgeRateLimitAction,
-                id: o.EdgeRateLimitID,
-            }:undefined,
-            request: {
-                host: o.EdgeRequestHost,
-            },
-            response: {
-                body: {
-                    bytes: o.EdgeResponseBodyBytes,
+            edge: {
+                cf: {
+                    connectingO2O: o.EdgeCFConnectingO2O,
                 },
-                bytes: o.EdgeResponseBytes,
-                compression: {
-                    ratio: o.EdgeResponseCompressionRatio,
+                colo: {
+                    code: o.EdgeColoCode,
+                    id: o.EdgeColoID,
                 },
-                contentType: o.EdgeResponseContentType,
-                status: o.EdgeResponseStatus,
-            },
-            ray: o.RayID,
-            server: o.EdgeServerIP.length>0?{
-                ip: o.EdgeServerIP,
-            }:undefined,
-            time2FirstByte: o.EdgeTimeToFirstByteMs,
-            timestamp: {
-                start: o.EdgeStartTimestamp,
-                end: o.EdgeEndTimestamp,
-            },
-        },
-        cache: {
-            reserve: {
-                used: o.CacheReserveUsed,
-            },
-            response: {
-                bytes: o.CacheResponseBytes,
-                status: o.CacheResponseStatus,
-            },
-            status: o.CacheCacheStatus,
-            tiered: {
-                fill: o.CacheTieredFill,
-            },
-        },
-        cookies: o.Cookies,
-        content: o.ContentScanObjResults!=undefined && o.ContentScanObjResults.length>0 && o.ContentScanObjTypes!=undefined && o.ContentScanObjTypes.length>0?{
-            scan: {
-                results: o.ContentScanObjResults.length>0?o.ContentScanObjResults:undefined,
-                types: o.ContentScanObjTypes.length>0?o.ContentScanObjTypes:undefined,
-            },
-        }:undefined,
-        firewall: o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
-            matches: {
-                actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
-                ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
-                sources: o.FirewallMatchesSources.length>0?o.FirewallMatchesSources:undefined,
-            },
-        }:undefined,
-        origin: o.OriginIP.length>0?{
-            dns: {
+                pathing: {
+                    op: o.EdgePathingOp,
+                    src: o.EdgePathingSrc,
+                    status: o.EdgePathingStatus,
+                },
+                rateLimit: o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=0?{
+                    action: o.EdgeRateLimitAction,
+                    id: o.EdgeRateLimitID,
+                }:undefined,
+                request: {
+                    host: o.EdgeRequestHost,
+                },
                 response: {
-                    time: o.OriginDNSResponseTimeMs,
+                    body: {
+                        bytes: o.EdgeResponseBodyBytes,
+                    },
+                    bytes: o.EdgeResponseBytes,
+                    compression: {
+                        ratio: o.EdgeResponseCompressionRatio,
+                    },
+                    contentType: o.EdgeResponseContentType,
+                    status: o.EdgeResponseStatus,
+                },
+                ray: o.RayID,
+                server: {
+                    ip: o.EdgeServerIP,
+                },
+                time2FirstByte: o.EdgeTimeToFirstByteMs,
+                timestamp: {
+                    start: o.EdgeStartTimestamp,
+                    end: o.EdgeEndTimestamp,
                 },
             },
-            ip: o.OriginIP,
-            request: {
-                header: {
-                    send: {
-                        duration: o.OriginRequestHeaderSendDurationMs,
+            cache: {
+                reserve: {
+                    used: o.CacheReserveUsed,
+                },
+                response: {
+                    bytes: o.CacheResponseBytes,
+                    status: o.CacheResponseStatus,
+                },
+                status: o.CacheCacheStatus,
+                tiered: {
+                    fill: o.CacheTieredFill,
+                },
+            },
+            cookies: o.Cookies,
+            content: o.ContentScanObjResults!=undefined && o.ContentScanObjResults.length>0 && o.ContentScanObjTypes!=undefined && o.ContentScanObjTypes.length>0?{
+                scan: {
+                    results: o.ContentScanObjResults.length>0?o.ContentScanObjResults:undefined,
+                    types: o.ContentScanObjTypes.length>0?o.ContentScanObjTypes:undefined,
+                },
+            }:undefined,
+            firewall: o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
+                matches: {
+                    actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
+                    ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
+                    sources: o.FirewallMatchesSources.length>0?o.FirewallMatchesSources:undefined,
+                },
+            }:undefined,
+            origin: o.OriginIP.length>0?{
+                dns: {
+                    response: {
+                        time: o.OriginDNSResponseTimeMs,
+                    },
+                },
+                ip: o.OriginIP,
+                request: {
+                    header: {
+                        send: {
+                            duration: o.OriginRequestHeaderSendDurationMs,
+                        },
                     },
                 },
                 response: {
@@ -671,90 +426,90 @@ export class Cloudflare {
                     status: o.OriginResponseStatus,
                     time: o.OriginResponseTime,
                 },
-            },
-            ssl: {
-                protocol: o.OriginSSLProtocol,
-            },
-            tcp: {
-                handshake: {
-                    duration: o.OriginTCPHandshakeDurationMs,
+                ssl: {
+                    protocol: o.OriginSSLProtocol,
                 },
-            },
-            tls: {
-                handshake: {
-                    duration: o.OriginTLSHandshakeDurationMs,
+                tcp: {
+                    handshake: {
+                        duration: o.OriginTCPHandshakeDurationMs,
+                    },
                 },
+                tls: {
+                    handshake: {
+                        duration: o.OriginTLSHandshakeDurationMs,
+                    },
+                },
+            }:undefined,
+            parent: {
+                ray: o.ParentRayID,
             },
-        }:undefined,
-        parent: {
-            ray: o.ParentRayID,
-        },
-        request: {
-            headers: o.RequestHeaders,
-        },
-        response: {
-            headers: o.ResponseHeaders,
-        },
-        security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
-            action: o.SecurityAction,
-            actions: o.SecurityActions,
-            level: o.SecurityLevel,
-            rule: {
-                description: o.SecurityRuleDescription,
-                id: o.SecurityRuleID,
-                ids: o.SecurityRuleIDs,
+            request: {
+                headers: o.RequestHeaders,
             },
-            sources: o.SecuritySources,
-        }:undefined,
-        smart: o.SmartRouteColoID>0?{
-            route: {
-                colo: o.SmartRouteColoID,
+            response: {
+                headers: o.ResponseHeaders,
             },
-        }:undefined,
-        upper: o.UpperTierColoID>0?{
-            tier: {
-                colo: o.UpperTierColoID,
+            security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
+                action: o.SecurityAction,
+                actions: o.SecurityActions,
+                level: o.SecurityLevel,
+                rule: {
+                    description: o.SecurityRuleDescription,
+                    id: o.SecurityRuleID,
+                    ids: o.SecurityRuleIDs,
+                },
+                sources: o.SecuritySources,
+            }:undefined,
+            smart: o.SmartRouteColoID>0?{
+                route: {
+                    colo: o.SmartRouteColoID,
+                },
+            }:undefined,
+            upper: o.UpperTierColoID>0?{
+                tier: {
+                    colo: o.UpperTierColoID,
+                },
+            }:undefined,
+            waf: o.WAFAction!="unknown"?{
+                action: o.WAFAction,
+                flags: o.WAFFlags,
+                matched: {
+                    var: o.WAFMatchedVar,
+                },
+                profile: o.WAFProfile,
+                rce: {
+                    score: o.WAFRCEAttackScore,
+                },
+                rule: {
+                    id: o.WAFRuleID,
+                    message: o.WAFRuleMessage,
+                },
+                score: o.WAFAttackScore,
+                sqli: {
+                    score: o.WAFSQLiAttackScore,
+                },
+                xss: {
+                    score: o.WAFXSSAttackScore,
+                },
+            }:undefined,
+            worker: o.WorkerStatus!="unknown"?{
+                cpu: {
+                    time: o.WorkerCPUTime,
+                },
+                status: o.WorkerStatus,
+                subrequest: {
+                    count: o.WorkerSubrequestCount,
+                },
+                wall: {
+                    time: o.WorkerWallTimeUs,
+                },
+            }:undefined,
+            zone: {
+                id: o.ZoneID,
+                name: o.ZoneName,
             },
-        }:undefined,
-        waf: o.WAFAction!="unknown"?{
-            action: o.WAFAction,
-            flags: o.WAFFlags,
-            matched: {
-                var: o.WAFMatchedVar,
-            },
-            profile: o.WAFProfile,
-            rce: {
-                score: o.WAFRCEAttackScore,
-            },
-            rule: {
-                id: o.WAFRuleID,
-                message: o.WAFRuleMessage,
-            },
-            score: o.WAFAttackScore,
-            sqli: {
-                score: o.WAFSQLiAttackScore,
-            },
-            xss: {
-                score: o.WAFXSSAttackScore,
-            },
-        }:undefined,
-        worker: o.WorkerStatus!="unknown"?{
-            cpu: {
-                time: o.WorkerCPUTime,
-            },
-            status: o.WorkerStatus,
-            subrequest: {
-                count: o.WorkerSubrequestCount,
-            },
-            wall: {
-                time: o.WorkerWallTimeUs,
-            },
-        }:undefined,
-        zone: {
-            id: o.ZoneID,
-            name: o.ZoneName,
-        },
-    }));
+        };
+    });
 
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
         let ok = true;
@@ -844,7 +599,7 @@ export class Cloudflare {
     }
 
     private static async ingestRegistro(pod: IPodInfo, cliente: ICliente, raw: SourceCloudflare, notify: INotify, repesca: boolean): Promise<void> {
-        const registro = await Registro.build(pod, cliente, raw, notify);
+        const registro = await RegistroLegacy.build(pod, cliente, raw, notify);
         await registro.save(repesca);
     }
 
@@ -856,11 +611,12 @@ export class Cloudflare {
             if (!this.test1) {
                 PromiseDelayed().then(() => {
                     try {
-                        const cf: ICloudFlare = Cloudflare.SCHEMA.parse(JSON.parse(json));
+                        const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(json));
                         if (!this.test2) {
                             this.test2 = true;
+                            const registro = Registro.build(cf);
                             // todo
-                            console.log("Parseo de ZOD", JSON.stringify(cf));
+                            console.log("Parseo de ZOD", JSON.stringify(registro));
                         }
                     } catch (err) {
                         console.log("Error parseando con ZOD", JSON.stringify(err), json);
