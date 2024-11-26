@@ -201,7 +201,7 @@ export class Init {
 
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
         await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
-        await safeWrite(`${basedir}/.node-version`, "v22.11.0\n", true);
+        await safeWrite(`${basedir}/.node-version`, "lts-latest\n", true);
         await safeWrite(`${basedir}/.sonarcloud.properties`, SONARLINT, true);
         await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
 
