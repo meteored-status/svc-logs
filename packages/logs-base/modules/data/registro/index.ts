@@ -86,7 +86,7 @@ export interface IRAWDataEdge {
         status: number;
     };
     ray: string;
-    server: {
+    server?: {
         ip: string;
     },
     time2FirstByte: number;

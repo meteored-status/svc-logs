@@ -361,9 +361,9 @@ export class Cloudflare {
                     status: o.EdgeResponseStatus,
                 },
                 ray: o.RayID,
-                server: {
+                server: o.EdgeServerIP.length>0?{
                     ip: o.EdgeServerIP,
-                },
+                }:undefined,
                 time2FirstByte: o.EdgeTimeToFirstByteMs,
                 timestamp: {
                     start: o.EdgeStartTimestamp,
