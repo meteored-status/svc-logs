@@ -27,7 +27,6 @@ export interface IRegistroPeticion {
 export class RegistroPeticion implements IRegistroPeticion {
     /* STATIC */
     public static build(client: IRAWDataClient, request: IRAWDataRequest, zona: string): RegistroPeticion {
-        const ssl = client.ssl?.protocol.split("v");
         const headers: IHeaders = {};
         if (request.headers.apiKey!=undefined) {
             headers.apiKey = request.headers.apiKey;
@@ -41,8 +40,8 @@ export class RegistroPeticion implements IRegistroPeticion {
             path: client.request.path,
             uri: client.request.uri,
             protocol: client.request.protocol,
-            ssl: ssl!=undefined ?
-                {name: ssl[0], version: ssl[1]} : undefined,
+            ssl: client.ssl!=undefined ?
+                {name: client.ssl?.protocol, version: client.ssl?.version} : undefined,
             bytes: client.request.bytes,
             referer: client.request.referer,
             source: client.request.source,
