@@ -1,6 +1,6 @@
 export interface IRegistroMetadata {
-    cliente: string;
-    proyecto?: string;
+    proyecto: string;
+    subproyecto?: string;
     ingest: Date;
     pod: string;
     version: string;
@@ -8,8 +8,8 @@ export interface IRegistroMetadata {
 }
 
 export interface IRegistroMetadataES {
-    cliente: string;
-    proyecto?: string;
+    proyecto: string;
+    subproyecto?: string;
     ingest: string;
     pod: string;
     version: string;
@@ -20,8 +20,8 @@ export class RegistroMetadata implements IRegistroMetadata {
     /* STATIC */
     public static build(data: IRegistroMetadata): RegistroMetadata {
         return new this({
-            cliente: data.cliente,
             proyecto: data.proyecto,
+            subproyecto: data.subproyecto,
             ingest: data.ingest,
             pod: data.pod,
             version: data.version,
@@ -30,8 +30,8 @@ export class RegistroMetadata implements IRegistroMetadata {
     }
 
     /* INSTANCE */
-    public get cliente(): string { return this.data.cliente; }
-    public get proyecto(): string|undefined { return this.data.proyecto; }
+    public get proyecto(): string { return this.data.proyecto; }
+    public get subproyecto(): string|undefined { return this.data.subproyecto; }
     public get ingest(): Date { return this.data.ingest; }
     public get pod(): string { return this.data.pod; }
     public get version(): string { return this.data.version; }
@@ -42,8 +42,8 @@ export class RegistroMetadata implements IRegistroMetadata {
 
     public toJSON(): IRegistroMetadataES {
         return {
-            cliente: this.data.cliente,
             proyecto: this.data.proyecto,
+            subproyecto: this.data.subproyecto,
             ingest: this.data.ingest.toISOString(),
             pod: this.data.pod,
             version: this.data.version,
