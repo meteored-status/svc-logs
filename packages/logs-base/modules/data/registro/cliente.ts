@@ -27,7 +27,7 @@ export interface IRegistroCliente {
     crawler?: string;
     device: string;
     ip: string;
-    location: IRegistroLocalizacion;
+    location?: IRegistroLocalizacion;
     agent?: IAgent;
 }
 
@@ -85,7 +85,7 @@ export class RegistroCliente implements IRegistroCliente {
     public get ip(): string { return this.data.ip; };
     public get agent(): IAgent|undefined { return this.data.agent; };
 
-    protected constructor(private data: IRegistroCliente, public readonly location: RegistroLocalizacion) {
+    protected constructor(private data: IRegistroCliente, public readonly location?: RegistroLocalizacion) {
     }
 
     public toJSON(): IRegistroCliente {
@@ -93,7 +93,7 @@ export class RegistroCliente implements IRegistroCliente {
             crawler: this.data.crawler,
             device: this.data.device,
             ip: this.data.ip,
-            location: this.location.toJSON(),
+            location: this.location?.toJSON(),
             agent: this.data.agent,
         };
     }

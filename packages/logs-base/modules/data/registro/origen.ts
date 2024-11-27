@@ -5,7 +5,7 @@ export interface IRegistroOrigen {
     status: number;
     ip: string;
     nombre?: string;
-    location: IRegistroLocalizacion;
+    location?: IRegistroLocalizacion;
     bytes: number;
 }
 
@@ -33,7 +33,7 @@ export class RegistroOrigen implements IRegistroOrigen {
     public get nombre(): string|undefined { return this.data.nombre; }
     public get bytes(): number { return this.data.bytes; }
 
-    protected constructor(private data: IRegistroOrigen, public readonly location: RegistroLocalizacion) {
+    protected constructor(private data: IRegistroOrigen, public readonly location?: RegistroLocalizacion) {
     }
 
     public toJSON(): IRegistroOrigen {
@@ -41,7 +41,7 @@ export class RegistroOrigen implements IRegistroOrigen {
             status: this.data.status,
             ip: this.data.ip,
             nombre: this.data.nombre,
-            location: this.location.toJSON(),
+            location: this.location?.toJSON(),
             bytes: this.data.bytes,
         };
     }
