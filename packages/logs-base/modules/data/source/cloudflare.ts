@@ -6,12 +6,12 @@ import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
-import bulk from "services-comun/modules/utiles/elastic/bulk";
+import elastic, {type BulkOperationContainer} from "services-comun/modules/utiles/elastic";
 import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import type {ICliente} from "../bucket";
 // import {Registro as RegistroLegacy} from "../registro";
-import {type IRAWData, Registro} from "../registro/";
+import {type IRAWData, IRegistroES, Registro} from "../registro/";
 
 // export interface SourceCloudflare {
 //     ClientIP:                              string;
@@ -517,14 +517,14 @@ export class Cloudflare {
             ok = false;
         }, {once: true});
 
-        if (repesca) {
-            const time = Date.now();
-            // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
-            const cantidad = await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
-            if (cantidad > 0) {
-                info(`Limpiados ${cantidad} registros duplicados de ${cliente.id} - gs://${notify.bucketId}/${notify.objectId} en ${Date.now() - time}ms`);
-            }
-        }
+        // if (repesca) {
+        //     const time = Date.now();
+        //     // eliminar las entradas que coincidan con el mismo source antes de meter las nuevas para evitar duplicados
+        //     const cantidad = await this.limpiarDuplicados(cliente, `gs://${notify.bucketId}/${notify.objectId}`);
+        //     if (cantidad > 0) {
+        //         info(`Limpiados ${cantidad} registros duplicados de ${cliente.id} - gs://${notify.bucketId}/${notify.objectId} en ${Date.now() - time}ms`);
+        //     }
+        // }
 
         // const promesas: Promise<void>[] = [];
         let lineas = 0;
@@ -534,6 +534,12 @@ export class Cloudflare {
             terminal: false,
         });
 
+        const bulk: [BulkOperationContainer, IRegistroES][] = [];
+        const index: BulkOperationContainer = {
+            create: {
+                _index: Registro.getIndex(cliente),
+            },
+        };
         for await (const linea of lector) {
             if (!ok) {
                 lector.close();
@@ -545,7 +551,7 @@ export class Cloudflare {
 
             const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(linea.trim()));
             const registro = Registro.build(cliente, cf, pod, notify.objectId);
-            await registro.crear();
+            bulk.push([index, registro.toJSON()]);
             // promesas.push(registro.crear());
 
             // const registro = this.parse(linea.trim(), pod, cliente, notify);
@@ -561,47 +567,52 @@ export class Cloudflare {
             // await this.ingestRegistro(pod, cliente, registro, notify);
             lineas++;
         }
+        await elastic.bulk({
+            // index: Registro.getIndex(cliente),
+            operations: bulk.flat(),
+            refresh: "wait_for",
+        });
         // console.log(lineas, Date.now()-time);
         // await Promise.all(promesas);
 
         return lineas;
     }
 
-    private static async limpiarDuplicados(cliente: ICliente, source: string, retry=0): Promise<number> {
-        try {
-            const data = await elasticsearch.search({
-                index: `logs-accesos-${cliente.id}`,
-                query: {
-                    term: {
-                        "labels.source": source,
-                    },
-                },
-                _source: false,
-                size: 10000,
-            });
-
-            if (data.hits.hits.length==0) {
-                return 0;
-            }
-
-            await Promise.all(data.hits.hits.map(actual=>bulk.delete({
-                index: actual._index,
-                id: actual._id,
-                doc: undefined,
-            // }).catch(err=>{
-            //     error(err);
-            //     return Promise.reject(err);
-            })));
-
-            return data.hits.hits.length + await this.limpiarDuplicados(cliente, source);
-        } catch (err) {
-            if (retry>10) {
-                error(err);
-            }
-            await PromiseDelayed(retry*100);
-            return this.limpiarDuplicados(cliente, source, retry+1);
-        }
-    }
+    // private static async limpiarDuplicados(cliente: ICliente, source: string, retry=0): Promise<number> {
+    //     try {
+    //         const data = await elasticsearch.search({
+    //             index: `logs-accesos-${cliente.id}`,
+    //             query: {
+    //                 term: {
+    //                     "labels.source": source,
+    //                 },
+    //             },
+    //             _source: false,
+    //             size: 10000,
+    //         });
+    //
+    //         if (data.hits.hits.length==0) {
+    //             return 0;
+    //         }
+    //
+    //         await Promise.all(data.hits.hits.map(actual=>bulk.delete({
+    //             index: actual._index,
+    //             id: actual._id,
+    //             doc: undefined,
+    //         // }).catch(err=>{
+    //         //     error(err);
+    //         //     return Promise.reject(err);
+    //         })));
+    //
+    //         return data.hits.hits.length + await this.limpiarDuplicados(cliente, source);
+    //     } catch (err) {
+    //         if (retry>10) {
+    //             error(err);
+    //         }
+    //         await PromiseDelayed(retry*100);
+    //         return this.limpiarDuplicados(cliente, source, retry+1);
+    //     }
+    // }
 
     // private static async ingestRegistro(pod: IPodInfo, cliente: ICliente, raw: SourceCloudflare, notify: INotify, repesca: boolean): Promise<void> {
     //     const registro = await RegistroLegacy.build(pod, cliente, raw, notify);
