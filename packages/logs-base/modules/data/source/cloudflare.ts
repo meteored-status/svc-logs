@@ -396,6 +396,7 @@ export class Cloudflare {
             ok = false;
         }, {once: true});
 
+        info("Indexando", cliente.id, cliente.grupo??"-");
         let lineas = 0;
         const lector = readline.createInterface({
             input: storage.stream,
@@ -426,7 +427,7 @@ export class Cloudflare {
             lineas++;
         }
 
-        // info("Indexados", cliente.id, cliente.grupo??"-", bulk.length, "registros");
+        info("Indexados", cliente.id, cliente.grupo??"-", bulk.length, "registros");
         this.crear(bulk);
 
         return lineas;
