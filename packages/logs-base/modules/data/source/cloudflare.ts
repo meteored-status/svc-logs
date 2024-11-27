@@ -543,7 +543,7 @@ export class Cloudflare {
                 continue;
             }
 
-            const registro = this.parse(linea.trim());
+            const registro = this.parse(linea.trim(), pod, cliente, notify);
             if (registro==null) {
                 continue;
             }
@@ -606,7 +606,7 @@ export class Cloudflare {
     private static test1 = false;
     private static test2 = false;
 
-    private static parse(json: string): SourceCloudflare|null {
+    private static parse(json: string, pod: IPodInfo, cliente: ICliente, notify: INotify): SourceCloudflare|null {
         try {
             if (!this.test1) {
                 PromiseDelayed().then(() => {
@@ -614,7 +614,7 @@ export class Cloudflare {
                         const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(json));
                         if (!this.test2) {
                             this.test2 = true;
-                            const registro = Registro.build(cf);
+                            const registro = Registro.build(cliente, cf, pod, notify.objectId);
                             // todo
                             console.log("Parseo de ZOD", JSON.stringify(registro));
                         }

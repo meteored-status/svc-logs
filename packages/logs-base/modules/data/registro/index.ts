@@ -1,8 +1,10 @@
-import {hostname} from "node:os";
+import type {IPodInfo} from "services-comun/modules/utiles/config";
 
+import type {ICliente} from "../bucket";
 import {RegistroCache, type IRegistroCache} from "./cache";
 import {RegistroCliente, type IRegistroCliente} from "./cliente";
 import {RegistroExtremo, type IRegistroExtremo} from "./extremo";
+import {RegistroMetadata, type IRegistroMetadata, type IRegistroMetadataES} from "./metadata";
 import {RegistroOrigen, type IRegistroOrigen} from "./origen";
 import {RegistroPeticion, type IRegistroPeticion} from "./peticion";
 import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} from "./respuesta";
@@ -272,6 +274,7 @@ interface IRegistro {
     cliente: IRegistroCliente;
     extremo: IRegistroExtremo;
     origen?: IRegistroOrigen;
+    metadata: IRegistroMetadata;
 }
 
 interface IRegistroES {
@@ -283,6 +286,7 @@ interface IRegistroES {
     cliente: IRegistroCliente;
     extremo: IRegistroExtremo;
     origen?: IRegistroOrigen;
+    metadata: IRegistroMetadataES;
 }
 
 interface IObj {
@@ -292,18 +296,27 @@ interface IObj {
     cliente: RegistroCliente;
     extremo: RegistroExtremo;
     origen?: RegistroOrigen;
+    metadata: RegistroMetadata;
 }
 
 export class Registro implements IRegistro {
     /* STATIC */
 
-    public static build(data: IRAWData): Registro {
+    public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string): Registro {
         const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
         const cache = RegistroCache.build(data.cache);
         const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
         const cliente = RegistroCliente.build(data.client);
         const extremo = RegistroExtremo.build(data.edge);
         const origen = RegistroOrigen.build(data.origin);
+        const metadata = RegistroMetadata.build({
+            cliente: client.id,
+            proyecto: client.grupo,
+            ingest: new Date(),
+            pod: pod.host,
+            version: pod.version,
+            source,
+        });
         const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
 
         return new this({
@@ -315,6 +328,7 @@ export class Registro implements IRegistro {
             cliente,
             extremo,
             origen,
+            metadata,
         }, {
             peticion,
             cache,
@@ -322,6 +336,7 @@ export class Registro implements IRegistro {
             cliente,
             extremo,
             origen,
+            metadata,
         });
     }
 
@@ -334,6 +349,7 @@ export class Registro implements IRegistro {
     public get cliente(): RegistroCliente { return this.obj.cliente; }
     public get extremo(): RegistroExtremo { return this.obj.extremo; }
     public get origen(): RegistroOrigen|undefined { return this.obj.origen; }
+    public get metadata(): RegistroMetadata { return this.obj.metadata; }
 
     public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
     }
@@ -348,6 +364,7 @@ export class Registro implements IRegistro {
             cliente: this.obj.cliente.toJSON(),
             extremo: this.obj.extremo.toJSON(),
             origen: this.obj.origen?.toJSON(),
+            metadata: this.obj.metadata.toJSON(),
         };
     }
 }
