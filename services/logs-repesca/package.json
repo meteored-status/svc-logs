@@ -44,6 +44,7 @@
     "framework": "meteored",
     "kustomize": "services",
     "credenciales": [],
+    "database": "logs",
     "bundle": {}
   }
 }
