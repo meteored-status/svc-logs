@@ -12,16 +12,17 @@ export interface IRegistroLocalizacion {
     eu: boolean;
 }
 
-export class RegistroLocalizacion implements IRegistroLocalizacion{
+export class RegistroLocalizacion implements IRegistroLocalizacion {
     /* STATIC */
-    public static build(ip?: string): RegistroLocalizacion {
+    public static build(ip?: string): RegistroLocalizacion|undefined {
         if (ip==undefined || ip.length==0) {
-            throw new Error("No se ha proporcionado una IP");
+            return;
         }
 
         const data = geoip.lookup(ip);
         if (data==null) {
-            throw new Error("No se ha podido obtener la geolocalización");
+            console.log(ip);
+            return;
         }
 
         return new this({
