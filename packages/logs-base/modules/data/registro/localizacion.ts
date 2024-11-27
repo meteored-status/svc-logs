@@ -21,7 +21,7 @@ export class RegistroLocalizacion implements IRegistroLocalizacion {
 
         const data = geoip.lookup(ip);
         if (data==null) {
-            console.log(ip);
+            // console.log(ip);
             return;
         }
 
