@@ -526,7 +526,7 @@ export class Cloudflare {
             }
         }
 
-        const promesas: Promise<void>[] = [];
+        // const promesas: Promise<void>[] = [];
         let lineas = 0;
         const lector = readline.createInterface({
             input: storage.stream,
@@ -545,7 +545,8 @@ export class Cloudflare {
 
             const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(linea.trim()));
             const registro = Registro.build(cliente, cf, pod, notify.objectId);
-            promesas.push(registro.crear());
+            await registro.crear();
+            // promesas.push(registro.crear());
 
             // const registro = this.parse(linea.trim(), pod, cliente, notify);
             // if (registro==null) {
@@ -561,7 +562,7 @@ export class Cloudflare {
             lineas++;
         }
         // console.log(lineas, Date.now()-time);
-        await Promise.all(promesas);
+        // await Promise.all(promesas);
 
         return lineas;
     }
@@ -621,7 +622,6 @@ export class Cloudflare {
     //                         const registro = Registro.build(cliente, cf, pod, notify.objectId);
     //                         // console.log("Parseo de ZOD", JSON.stringify(registro));
     //                         await registro.crear();
-    //                         // todo
     //                     }
     //                 } catch (err) {
     //                     console.log("Error parseando con ZOD", err, json);
