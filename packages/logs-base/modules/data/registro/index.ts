@@ -270,35 +270,35 @@ export interface IRAWData {
 interface IRegistro {
     timestamp: Date;
     url: URL;
+    metadata: IRegistroMetadata;
     peticion: IRegistroPeticion;
     cache: IRegistroCache;
     respuesta: IRegistroRespuesta;
     cliente: IRegistroCliente;
     extremo: IRegistroExtremo;
     origen?: IRegistroOrigen;
-    metadata: IRegistroMetadata;
 }
 
 interface IRegistroES {
     "@timestamp": string;
     url: string;
+    metadata: IRegistroMetadataES;
     peticion: IRegistroPeticion;
     cache: IRegistroCache;
     respuesta: IRegistroRespuestaES;
     cliente: IRegistroCliente;
     extremo: IRegistroExtremo;
     origen?: IRegistroOrigen;
-    metadata: IRegistroMetadataES;
 }
 
 interface IObj {
+    metadata: RegistroMetadata;
     peticion: RegistroPeticion;
     cache: RegistroCache;
     respuesta: RegistroRespuesta;
     cliente: RegistroCliente;
     extremo: RegistroExtremo;
     origen?: RegistroOrigen;
-    metadata: RegistroMetadata;
 }
 
 declare var PRODUCCION: boolean;
@@ -306,23 +306,10 @@ declare var TEST: boolean;
 
 export class Registro implements IRegistro {
     /* STATIC */
-    public static get INDEX(): string {
-        if (!PRODUCCION || TEST) {
-            const fecha = Fecha.generarFechaElastic(new Date(), {
-                dia: false,
-            });
-            return `mr-log-accesos-${fecha}`;
-        }
-        return `mr-log-accesos`;
-    }
+    public static INDEX = `mr-log-accesos`;
 
     public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string): Registro {
-        const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
-        const cache = RegistroCache.build(data.cache);
-        const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
-        const cliente = RegistroCliente.build(data.client);
-        const extremo = RegistroExtremo.build(data.edge);
-        const origen = RegistroOrigen.build(data.origin, client.backends);
+        const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
         const metadata = RegistroMetadata.build({
             proyecto: client.id,
             subproyecto: client.grupo,
@@ -331,39 +318,63 @@ export class Registro implements IRegistro {
             version: pod.version,
             source,
         });
-        const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
+        const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
+        const cache = RegistroCache.build(data.cache);
+        const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
+        const cliente = RegistroCliente.build(data.client);
+        const extremo = RegistroExtremo.build(data.edge);
+        const origen = RegistroOrigen.build(data.origin, client.backends);
 
         return new this({
             timestamp: data.edge.timestamp.start,
             url,
+            metadata,
             peticion,
             cache,
             respuesta,
             cliente,
             extremo,
             origen,
-            metadata,
         }, {
+            metadata,
             peticion,
             cache,
             respuesta,
             cliente,
             extremo,
             origen,
-            metadata,
         });
     }
 
     /* INSTANCE */
     public get timestamp(): Date { return this.data.timestamp; }
     public get url(): URL { return this.data.url; }
+    public get metadata(): RegistroMetadata { return this.obj.metadata; }
     public get peticion(): RegistroPeticion { return this.obj.peticion; }
     public get cache(): RegistroCache { return this.obj.cache; }
     public get respuesta(): RegistroRespuesta { return this.obj.respuesta; }
     public get cliente(): RegistroCliente { return this.obj.cliente; }
     public get extremo(): RegistroExtremo { return this.obj.extremo; }
     public get origen(): RegistroOrigen|undefined { return this.obj.origen; }
-    public get metadata(): RegistroMetadata { return this.obj.metadata; }
+
+    public get proyecto(): string {
+        const proyecto: string[] = [this.metadata.proyecto];
+        const subproyecto = this.metadata.subproyecto;
+        if (subproyecto!=undefined) {
+            proyecto.push(subproyecto);
+        }
+        return proyecto.join("-")
+    }
+
+    public get index(): string {
+        if (!PRODUCCION || TEST) {
+            const fecha = Fecha.generarFechaElastic(new Date(), {
+                dia: false,
+            });
+            return `${Registro.INDEX}-${this.proyecto}-${fecha}`;
+        }
+        return `${Registro.INDEX}-${this.proyecto}`;
+    }
 
     public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
     }
@@ -372,19 +383,19 @@ export class Registro implements IRegistro {
         return {
             "@timestamp": this.data.timestamp.toISOString(),
             url: this.data.url.toString(),
+            metadata: this.obj.metadata.toJSON(),
             peticion: this.obj.peticion.toJSON(),
             cache: this.obj.cache.toJSON(),
             respuesta: this.obj.respuesta.toJSON(),
             cliente: this.obj.cliente.toJSON(),
             extremo: this.obj.extremo.toJSON(),
             origen: this.obj.origen?.toJSON(),
-            metadata: this.obj.metadata.toJSON(),
         };
     }
 
     public async crear(): Promise<void> {
         await elastic.index({
-            index: Registro.INDEX,
+            index: this.index,
             document: this.toJSON(),
         })
     }
