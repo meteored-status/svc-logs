@@ -61,8 +61,12 @@ export class Bucket {
         await db.insert("DELETE FROM procesando WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
     }
 
+    private static primero = true;
     public static async addRepesca(notify: INotify, repesca: boolean, cliente?: ICliente, err?: any): Promise<void> {
-        error(err);
+        if (this.primero) {
+            this.primero=false;
+            error(err);
+        }
         const mensaje = err!=undefined?JSON.stringify(err):null;
         const origen = !repesca?"ingest":"repesca";
         await db.insert("INSERT INTO repesca (bucket, archivo, cliente, grupo, mensaje, origen) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, tratando=0, origen=?", [notify.bucketId, notify.objectId, cliente?.id??null, cliente?.grupo??null, mensaje, origen, mensaje, origen]);
