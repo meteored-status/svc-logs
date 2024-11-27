@@ -1,6 +1,7 @@
 import {Fecha} from "services-comun/modules/utiles/fecha";
 import type {IPodInfo} from "services-comun/modules/utiles/config";
 import elastic from "services-comun/modules/utiles/elastic";
+import {error} from "services-comun/modules/utiles/log";
 
 import type {ICliente} from "../bucket";
 import {RegistroCache, type IRegistroCache} from "./cache";
@@ -404,6 +405,8 @@ export class Registro implements IRegistro {
         await elastic.index({
             index: this.index,
             document: this.toJSON(),
-        })
+        }).catch((err)=>{
+            error(err, JSON.stringify(this.toJSON()));
+        });
     }
 }
