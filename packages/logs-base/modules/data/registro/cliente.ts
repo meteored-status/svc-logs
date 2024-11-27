@@ -1,15 +1,34 @@
-import {UAParser, type IResult} from "ua-parser-js";
+import {UAParser} from "ua-parser-js";
 
 import {Crawler} from "../crawler";
 import type {IRAWDataClient} from ".";
 import {type IRegistroLocalizacion, RegistroLocalizacion} from "./localizacion";
+
+interface IAgent {
+    raw: string;
+    browser?: {
+        name?: string;
+        version?: string;
+        major?: string;
+        type?: string;
+    },
+    os?: {
+        name?: string;
+        version?: string;
+    },
+    device?: {
+        model?: string;
+        type?: string;
+        vendor?: string;
+    }
+}
 
 export interface IRegistroCliente {
     crawler?: string;
     device: string;
     ip: string;
     location: IRegistroLocalizacion;
-    agent?: Partial<IResult>;
+    agent?: IAgent;
 }
 
 export class RegistroCliente implements IRegistroCliente {
@@ -20,24 +39,32 @@ export class RegistroCliente implements IRegistroCliente {
             crawler = "Unknown";
         }
 
-        let ua: Partial<IResult> = {};
+        let agent: IAgent|undefined;
         if (data.request.ua!=undefined && data.request.ua.length>0) {
             const tmp = UAParser(data.request.ua);
-            ua.ua = tmp.ua;
+            agent = {
+                raw: tmp.ua,
+            };
             if (tmp.browser.name!=undefined) {
-                ua.browser = tmp.browser;
-            }
-            if (tmp.cpu.architecture!=undefined) {
-                ua.cpu = tmp.cpu;
-            }
-            if (tmp.device.model!=undefined) {
-                ua.device = tmp.device;
-            }
-            if (tmp.engine.name!=undefined) {
-                ua.engine = tmp.engine;
+                agent.browser = {
+                    name: tmp.browser.name,
+                    version: tmp.browser.version,
+                    major: tmp.browser.major,
+                    type: tmp.browser.type,
+                };
             }
             if (tmp.os.name!=undefined) {
-                ua.os = tmp.os;
+                agent.os = {
+                    name: tmp.os.name,
+                    version: tmp.os.version,
+                };
+            }
+            if (tmp.device.model!=undefined) {
+                agent.device = {
+                    model: tmp.device.model,
+                    type: tmp.device.type,
+                    vendor: tmp.device.vendor,
+                };
             }
         }
 
@@ -48,7 +75,7 @@ export class RegistroCliente implements IRegistroCliente {
             device: data.device.type,
             ip: data.ip.value,
             location,
-            agent: Object.keys(ua).length>0 ? ua : undefined,
+            agent,
         }, location);
     }
 
@@ -56,7 +83,7 @@ export class RegistroCliente implements IRegistroCliente {
     public get crawler(): string|undefined { return this.data.crawler; };
     public get device(): string { return this.data.device; };
     public get ip(): string { return this.data.ip; };
-    public get agent(): Partial<IResult>|undefined { return this.data.agent; };
+    public get agent(): IAgent|undefined { return this.data.agent; };
 
     protected constructor(private data: IRegistroCliente, public readonly location: RegistroLocalizacion) {
     }
