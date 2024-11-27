@@ -4,7 +4,7 @@ import {z} from "zod";
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
-import {error, info} from "services-comun/modules/utiles/log";
+import {error} from "services-comun/modules/utiles/log";
 import elastic, {type BulkOperationContainer} from "services-comun/modules/utiles/elastic";
 
 import type {ICliente} from "../bucket";
@@ -426,7 +426,7 @@ export class Cloudflare {
             lineas++;
         }
 
-        info("Indexados", cliente.id, cliente.grupo??"-", bulk.length, "registros");
+        // info("Indexados", cliente.id, cliente.grupo??"-", bulk.length, "registros");
         this.crear(bulk);
 
         return lineas;
