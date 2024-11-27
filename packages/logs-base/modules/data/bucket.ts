@@ -1,5 +1,6 @@
 import {Google, IPodInfo} from "services-comun/modules/utiles/config";
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
+import {error} from "services-comun/modules/utiles/log";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {Storage} from "services-comun/modules/fs/storage";
 import db from "services-comun/modules/utiles/mysql";
@@ -61,6 +62,7 @@ export class Bucket {
     }
 
     public static async addRepesca(notify: INotify, repesca: boolean, cliente?: ICliente, err?: any): Promise<void> {
+        error(err);
         const mensaje = err!=undefined?JSON.stringify(err):null;
         const origen = !repesca?"ingest":"repesca";
         await db.insert("INSERT INTO repesca (bucket, archivo, cliente, grupo, mensaje, origen) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, tratando=0, origen=?", [notify.bucketId, notify.objectId, cliente?.id??null, cliente?.grupo??null, mensaje, origen, mensaje, origen]);
