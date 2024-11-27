@@ -615,9 +615,9 @@ export class Cloudflare {
                         if (!this.test2) {
                             this.test2 = true;
                             const registro = Registro.build(cliente, cf, pod, notify.objectId);
-                            // todo
-                            console.log("Parseo de ZOD", JSON.stringify(registro));
+                            // console.log("Parseo de ZOD", JSON.stringify(registro));
                             await registro.crear();
+                            // todo
                         }
                     } catch (err) {
                         console.log("Error parseando con ZOD", err, json);
