@@ -1,9 +1,10 @@
-import {z} from "zod";
 import readline from "node:readline/promises";
+import {z} from "zod";
 
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
+import {error, info} from "services-comun/modules/utiles/log";
 import elastic, {type BulkOperationContainer} from "services-comun/modules/utiles/elastic";
 
 import type {ICliente} from "../bucket";
@@ -11,6 +12,10 @@ import {type IRAWData, IRegistroES, Registro} from "../registro/";
 
 export class Cloudflare {
     /* STATIC */
+    private static FILTRAR_PATHS_PREFIX: string[] = [
+        "/cdn-cgi/"
+    ];
+
     private static readonly SCHEMA_COOKIES = z.object({
         "cf-access-user": z.string().optional(),
     }).transform(o=>({
@@ -385,7 +390,7 @@ export class Cloudflare {
         };
     });
 
-    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
+    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal): Promise<number> {
         let ok = true;
         signal.addEventListener("abort", ()=>{
             ok = false;
@@ -414,21 +419,33 @@ export class Cloudflare {
             }
 
             const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(linea.trim()));
-            bulk.push([index, Registro.build(cliente, cf, pod, notify.objectId).toJSON()]);
+            const registro = Registro.build(cliente, cf, pod, notify.objectId);
+            if (!this.FILTRAR_PATHS_PREFIX.some(path=>registro.peticion.uri.startsWith(path))) {
+                bulk.push([index, registro.toJSON()]);
+            }
             lineas++;
         }
 
+        info("Indexados", cliente.id, cliente.grupo??"-", bulk.length, "registros");
         this.crear(bulk);
 
         return lineas;
     }
 
     private static crear(bulk: [BulkOperationContainer, IRegistroES][]): void {
+        if (bulk.length==0) {
+            return;
+        }
+
         elastic.bulk({
             // index: Registro.getIndex(cliente),
             operations: bulk.flat(),
             // refresh: "wait_for",
         }).then((data)=>{
+            if (!data.errors) {
+                return;
+            }
+
             let repesca: [BulkOperationContainer, IRegistroES][] = [];
             for (let i=0, len=bulk.length; i<len; i++) {
                 const actual = data.items[i].create!;
@@ -436,7 +453,7 @@ export class Cloudflare {
                     if (actual.status==429) {
                         repesca.push(bulk[i]);
                     } else {
-                        console.error("Error", actual.error);
+                        error("Error", actual.error);
                     }
                 }
             }
@@ -444,7 +461,7 @@ export class Cloudflare {
                 this.crear(bulk)
             }
         }).catch((err)=>{
-            console.error("KO", err, JSON.stringify(err));
+            error("KO", err, JSON.stringify(err));
         });
     }
 }

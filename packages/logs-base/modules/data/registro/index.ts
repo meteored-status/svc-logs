@@ -308,9 +308,6 @@ declare var TEST: boolean;
 export class Registro implements IRegistro {
     /* STATIC */
     private static INDEX = `mr-log-accesos`;
-    private static FILTRAR_PATHS_PREFIX: string[] = [
-        "/cdn-cgi/"
-    ];
 
     public static getIndex(cliente: ICliente): string {
         if (!PRODUCCION || TEST) {
@@ -371,25 +368,6 @@ export class Registro implements IRegistro {
     public get extremo(): RegistroExtremo { return this.obj.extremo; }
     public get origen(): RegistroOrigen|undefined { return this.obj.origen; }
 
-    // public get proyecto(): string {
-    //     const proyecto: string[] = [this.metadata.proyecto];
-    //     const subproyecto = this.metadata.subproyecto;
-    //     if (subproyecto!=undefined) {
-    //         proyecto.push(subproyecto);
-    //     }
-    //     return proyecto.join("-")
-    // }
-
-    // public get index(): string {
-    //     if (!PRODUCCION || TEST) {
-    //         const fecha = Fecha.generarFechaElastic(new Date(), {
-    //             dia: false,
-    //         });
-    //         return `${Registro.INDEX}-${this.metadata.proyecto}-${fecha}`;
-    //     }
-    //     return `${Registro.INDEX}-${this.metadata.proyecto}`;
-    // }
-
     public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
     }
 
@@ -406,33 +384,4 @@ export class Registro implements IRegistro {
             origen: this.obj.origen?.toJSON(),
         };
     }
-
-    // public crear(): TBulk {
-    //     if (Registro.FILTRAR_PATHS_PREFIX.some(path=>this.peticion.uri.startsWith(path))) {
-    //         return [];
-    //     }
-    //
-    //     return [
-    //         {
-    //             create: {
-    //                 _index: this.index,
-    //             },
-    //         },
-    //         this.toJSON(),
-    //     ]
-    //     // await elastic.index({
-    //     //     index: this.index,
-    //     //     document: this.toJSON(),
-    //     // }).catch((err)=>{
-    //     //     error(err, JSON.stringify(this.toJSON()));
-    //     // });
-    // }
 }
-
-interface IBulk {
-    create: {
-        _index: string,
-    },
-}
-
-export type TBulk = [IBulk, IRegistroES] | [];
