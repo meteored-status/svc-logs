@@ -434,7 +434,7 @@ export class Cloudflare {
         }).catch((err)=>{
             if (!this.ok) {
                 this.ok = true;
-                console.error("KO", err);
+                console.error("KO", err, JSON.stringify(err));
             }
         });
 
