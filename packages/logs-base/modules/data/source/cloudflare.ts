@@ -511,6 +511,8 @@ export class Cloudflare {
         };
     });
 
+    private static ok = false;
+
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
         let ok = true;
         signal.addEventListener("abort", ()=>{
@@ -571,6 +573,16 @@ export class Cloudflare {
             // index: Registro.getIndex(cliente),
             operations: bulk.flat(),
             refresh: "wait_for",
+        }).then((data)=>{
+            if (!this.ok) {
+                this.ok = true;
+                console.log(JSON.stringify(data));
+            }
+        }).catch((err)=>{
+            if (!this.ok) {
+                this.ok = true;
+                console.error(err);
+            }
         });
         // console.log(lineas, Date.now()-time);
         // await Promise.all(promesas);
