@@ -429,12 +429,12 @@ export class Cloudflare {
         }).then((data)=>{
             if (!this.ok) {
                 this.ok = true;
-                console.log(JSON.stringify(data));
+                console.log("OK", JSON.stringify(data));
             }
         }).catch((err)=>{
             if (!this.ok) {
                 this.ok = true;
-                console.error(err);
+                console.error("KO", err);
             }
         });
 
