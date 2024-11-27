@@ -4,8 +4,7 @@
       "type": "date"
     },
     "url": {
-      "type": "text",
-      "index": false
+      "type": "keyword"
     },
     "peticion": {
       "properties": {
