@@ -1,4 +1,6 @@
+import {Fecha} from "services-comun/modules/utiles/fecha";
 import type {IPodInfo} from "services-comun/modules/utiles/config";
+import elastic from "services-comun/modules/utiles/elastic";
 
 import type {ICliente} from "../bucket";
 import {RegistroCache, type IRegistroCache} from "./cache";
@@ -299,8 +301,20 @@ interface IObj {
     metadata: RegistroMetadata;
 }
 
+declare var PRODUCCION: boolean;
+declare var TEST: boolean;
+
 export class Registro implements IRegistro {
     /* STATIC */
+    public static get INDEX(): string {
+        if (!PRODUCCION || TEST) {
+            const fecha = Fecha.generarFechaElastic(new Date(), {
+                dia: false,
+            });
+            return `mr-log-accesos-${fecha}`;
+        }
+        return `mr-log-accesos`;
+    }
 
     public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string): Registro {
         const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
@@ -366,5 +380,12 @@ export class Registro implements IRegistro {
             origen: this.obj.origen?.toJSON(),
             metadata: this.obj.metadata.toJSON(),
         };
+    }
+
+    public async crear(): Promise<void> {
+        await elastic.index({
+            index: Registro.INDEX,
+            document: this.toJSON(),
+        })
     }
 }

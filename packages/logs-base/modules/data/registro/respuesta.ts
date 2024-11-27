@@ -109,7 +109,7 @@ export class RegistroRespuesta implements IRegistroRespuesta {
                     total: origin.response.duration,
                 }: undefined,
             },
-            headers: Object.keys(headers).length>0 && Object.values(headers).every(value=>value!=undefined) ?
+            headers: Object.keys(headers).length>0 ?
                 headers : undefined,
         });
     }
@@ -123,8 +123,9 @@ export class RegistroRespuesta implements IRegistroRespuesta {
     }
 
     public toJSON(): IRegistroRespuestaES {
-        const headers: IHeadersES = {};
+        let headers: IHeadersES|undefined;
         if (this.data.headers!=undefined) {
+            headers = {};
             headers.tags = this.data.headers.tags;
             headers.etag = this.data.headers.etag;
             headers.expires = this.data.headers.expires?.toISOString();

@@ -609,7 +609,7 @@ export class Cloudflare {
     private static parse(json: string, pod: IPodInfo, cliente: ICliente, notify: INotify): SourceCloudflare|null {
         try {
             if (!this.test1) {
-                PromiseDelayed().then(() => {
+                PromiseDelayed().then(async () => {
                     try {
                         const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(json));
                         if (!this.test2) {
@@ -617,6 +617,7 @@ export class Cloudflare {
                             const registro = Registro.build(cliente, cf, pod, notify.objectId);
                             // todo
                             console.log("Parseo de ZOD", JSON.stringify(registro));
+                            await registro.crear();
                         }
                     } catch (err) {
                         console.log("Error parseando con ZOD", err, json);
