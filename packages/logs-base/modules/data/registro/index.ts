@@ -307,6 +307,9 @@ declare var TEST: boolean;
 export class Registro implements IRegistro {
     /* STATIC */
     public static INDEX = `mr-log-accesos`;
+    private static FILTRAR_PATHS_PREFIX: string[] = [
+        "/cdn-cgi/"
+    ];
 
     public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string): Registro {
         const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
@@ -394,6 +397,10 @@ export class Registro implements IRegistro {
     }
 
     public async crear(): Promise<void> {
+        if (Registro.FILTRAR_PATHS_PREFIX.some(path=>this.peticion.uri.startsWith(path))) {
+            return;
+        }
+
         await elastic.index({
             index: this.index,
             document: this.toJSON(),
