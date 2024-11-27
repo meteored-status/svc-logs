@@ -385,8 +385,6 @@ export class Cloudflare {
         };
     });
 
-    private static ok = false;
-
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
         let ok = true;
         signal.addEventListener("abort", ()=>{
@@ -419,25 +417,34 @@ export class Cloudflare {
             bulk.push([index, Registro.build(cliente, cf, pod, notify.objectId).toJSON()]);
             lineas++;
         }
-        if (!this.ok) {
-            console.log("Cantidad", bulk.length);
-        }
-        await elastic.bulk({
+
+        this.crear(bulk);
+
+        return lineas;
+    }
+
+    private static crear(bulk: [BulkOperationContainer, IRegistroES][]): void {
+        elastic.bulk({
             // index: Registro.getIndex(cliente),
             operations: bulk.flat(),
             // refresh: "wait_for",
         }).then((data)=>{
-            if (!this.ok) {
-                this.ok = true;
-                console.log("OK", JSON.stringify(data));
+            let repesca: [BulkOperationContainer, IRegistroES][] = [];
+            for (let i=0, len=bulk.length; i<len; i++) {
+                const actual = data.items[i].create!;
+                if (actual.error!=undefined) {
+                    if (actual.status==429) {
+                        repesca.push(bulk[i]);
+                    } else {
+                        console.error("Error", actual.error);
+                    }
+                }
+            }
+            if (repesca.length>0) {
+                this.crear(bulk)
             }
         }).catch((err)=>{
-            if (!this.ok) {
-                this.ok = true;
-                console.error("KO", err, JSON.stringify(err));
-            }
+            console.error("KO", err, JSON.stringify(err));
         });
-
-        return lineas;
     }
 }
