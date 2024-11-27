@@ -109,7 +109,8 @@ export class RegistroRespuesta implements IRegistroRespuesta {
                     total: origin.response.duration,
                 }: undefined,
             },
-            headers: Object.keys(headers).length>0 ? headers : undefined,
+            headers: Object.keys(headers).length>0 && Object.values(headers).every(value=>value!=undefined) ?
+                headers : undefined,
         });
     }
 
