@@ -357,23 +357,23 @@ export class Registro implements IRegistro {
     public get extremo(): RegistroExtremo { return this.obj.extremo; }
     public get origen(): RegistroOrigen|undefined { return this.obj.origen; }
 
-    public get proyecto(): string {
-        const proyecto: string[] = [this.metadata.proyecto];
-        const subproyecto = this.metadata.subproyecto;
-        if (subproyecto!=undefined) {
-            proyecto.push(subproyecto);
-        }
-        return proyecto.join("-")
-    }
+    // public get proyecto(): string {
+    //     const proyecto: string[] = [this.metadata.proyecto];
+    //     const subproyecto = this.metadata.subproyecto;
+    //     if (subproyecto!=undefined) {
+    //         proyecto.push(subproyecto);
+    //     }
+    //     return proyecto.join("-")
+    // }
 
     public get index(): string {
         if (!PRODUCCION || TEST) {
             const fecha = Fecha.generarFechaElastic(new Date(), {
                 dia: false,
             });
-            return `${Registro.INDEX}-${this.proyecto}-${fecha}`;
+            return `${Registro.INDEX}-${this.metadata.proyecto}-${fecha}`;
         }
-        return `${Registro.INDEX}-${this.proyecto}`;
+        return `${Registro.INDEX}-${this.metadata.proyecto}`;
     }
 
     public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
