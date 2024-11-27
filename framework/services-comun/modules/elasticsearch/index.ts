@@ -291,6 +291,8 @@ export class Elasticsearch {
             },
             compression: !config.hosts.map(actual=>actual.startsWith("https://")).reduce((actual, acumulado)=>actual||acumulado),
             tls,
+            maxRetries: 10,
+            requestTimeout: 60000,
         });
     }
 }
