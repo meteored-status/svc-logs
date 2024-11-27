@@ -308,7 +308,7 @@ export class Registro implements IRegistro {
         const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
         const cliente = RegistroCliente.build(data.client);
         const extremo = RegistroExtremo.build(data.edge);
-        const origen = RegistroOrigen.build(data.origin);
+        const origen = RegistroOrigen.build(data.origin, client.backends);
         const metadata = RegistroMetadata.build({
             cliente: client.id,
             proyecto: client.grupo,
