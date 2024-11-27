@@ -280,7 +280,7 @@ interface IRegistro {
     origen?: IRegistroOrigen;
 }
 
-interface IRegistroES {
+export interface IRegistroES {
     "@timestamp": string;
     url: string;
     metadata: IRegistroMetadataES;
@@ -307,10 +307,20 @@ declare var TEST: boolean;
 
 export class Registro implements IRegistro {
     /* STATIC */
-    public static INDEX = `mr-log-accesos`;
+    private static INDEX = `mr-log-accesos`;
     private static FILTRAR_PATHS_PREFIX: string[] = [
         "/cdn-cgi/"
     ];
+
+    public static getIndex(cliente: ICliente): string {
+        if (!PRODUCCION || TEST) {
+            const fecha = Fecha.generarFechaElastic(new Date(), {
+                dia: false,
+            });
+            return `${this.INDEX}-${cliente.id}-${fecha}`;
+        }
+        return `${this.INDEX}-${cliente.id}`;
+    }
 
     public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string): Registro {
         const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
@@ -370,15 +380,15 @@ export class Registro implements IRegistro {
     //     return proyecto.join("-")
     // }
 
-    public get index(): string {
-        if (!PRODUCCION || TEST) {
-            const fecha = Fecha.generarFechaElastic(new Date(), {
-                dia: false,
-            });
-            return `${Registro.INDEX}-${this.metadata.proyecto}-${fecha}`;
-        }
-        return `${Registro.INDEX}-${this.metadata.proyecto}`;
-    }
+    // public get index(): string {
+    //     if (!PRODUCCION || TEST) {
+    //         const fecha = Fecha.generarFechaElastic(new Date(), {
+    //             dia: false,
+    //         });
+    //         return `${Registro.INDEX}-${this.metadata.proyecto}-${fecha}`;
+    //     }
+    //     return `${Registro.INDEX}-${this.metadata.proyecto}`;
+    // }
 
     public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
     }
@@ -397,16 +407,32 @@ export class Registro implements IRegistro {
         };
     }
 
-    public async crear(): Promise<void> {
-        if (Registro.FILTRAR_PATHS_PREFIX.some(path=>this.peticion.uri.startsWith(path))) {
-            return;
-        }
-
-        await elastic.index({
-            index: this.index,
-            document: this.toJSON(),
-        }).catch((err)=>{
-            error(err, JSON.stringify(this.toJSON()));
-        });
-    }
+    // public crear(): TBulk {
+    //     if (Registro.FILTRAR_PATHS_PREFIX.some(path=>this.peticion.uri.startsWith(path))) {
+    //         return [];
+    //     }
+    //
+    //     return [
+    //         {
+    //             create: {
+    //                 _index: this.index,
+    //             },
+    //         },
+    //         this.toJSON(),
+    //     ]
+    //     // await elastic.index({
+    //     //     index: this.index,
+    //     //     document: this.toJSON(),
+    //     // }).catch((err)=>{
+    //     //     error(err, JSON.stringify(this.toJSON()));
+    //     // });
+    // }
 }
+
+interface IBulk {
+    create: {
+        _index: string,
+    },
+}
+
+export type TBulk = [IBulk, IRegistroES] | [];
