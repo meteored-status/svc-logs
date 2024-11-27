@@ -1,0 +1,375 @@
+{
+  "dynamic_templates": [],
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "url": {
+      "type": "text",
+      "index": false
+    },
+    "peticion": {
+      "properties": {
+        "method": {
+          "type": "keyword"
+        },
+        "scheme": {
+          "type": "keyword"
+        },
+        "dominio": {
+          "type": "keyword"
+        },
+        "subdominio": {
+          "type": "keyword"
+        },
+        "path": {
+          "type": "keyword"
+        },
+        "uri": {
+          "type": "keyword"
+        },
+        "protocol": {
+          "type": "keyword"
+        },
+        "ssl": {
+          "properties": {
+            "name": {
+              "type": "keyword"
+            },
+            "version": {
+              "type": "keyword"
+            }
+          }
+        },
+        "bytes": {
+          "type": "integer"
+        },
+        "referer": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "source": {
+          "type": "keyword"
+        },
+        "headers": {
+          "properties": {
+            "apiKey": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "cache": {
+      "properties": {
+        "status": {
+          "type": "keyword"
+        },
+        "reserva": {
+          "type": "boolean"
+        },
+        "escalonada": {
+          "type": "boolean"
+        },
+        "bytes": {
+          "type": "integer"
+        },
+        "codigo": {
+          "type": "short",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "respuesta": {
+      "properties": {
+        "status": {
+          "type": "short",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "tiempos": {
+          "properties": {
+            "inicio": {
+              "type": "date"
+            },
+            "lag": {
+              "type": "integer"
+            },
+            "fin": {
+              "type": "date"
+            },
+            "origin": {
+              "properties": {
+                "lag": {
+                  "type": "integer"
+                },
+                "total": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "headers": {
+          "properties": {
+            "tags": {
+              "type": "keyword"
+            },
+            "etag": {
+              "type": "keyword"
+            },
+            "expires": {
+              "type": "date"
+            },
+            "lastModified": {
+              "type": "date"
+            },
+            "mr": {
+              "properties": {
+                "chain": {
+                  "type": "keyword"
+                },
+                "node": {
+                  "type":  "keyword"
+                },
+                "service":  {
+                  "type":  "keyword"
+                },
+                "version": {
+                  "type":  "keyword"
+                },
+                "zone":  {
+                  "type":  "keyword"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cliente": {
+      "properties": {
+        "crawler": {
+          "type": "keyword"
+        },
+        "device": {
+          "type": "keyword"
+        },
+        "ip": {
+          "type": "ip"
+        },
+        "location": {
+          "properties": {
+            "pais": {
+              "type": "keyword"
+            },
+            "region": {
+              "type": "keyword"
+            },
+            "ciudad": {
+              "type": "keyword"
+            },
+            "coordenadas": {
+              "type": "geo_point"
+            },
+            "precision": {
+              "type": "integer"
+            },
+            "timezone": {
+              "type": "keyword"
+            },
+            "eu": {
+              "type": "boolean"
+            }
+          }
+        },
+        "agent": {
+          "properties": {
+            "raw": {
+              "type": "text"
+            },
+            "browser": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "keyword"
+                },
+                "version": {
+                  "type": "keyword"
+                },
+                "major": {
+                  "type": "keyword"
+                },
+                "type": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "os": {
+              "properties": {
+                "name": {
+                  "type": "keyword"
+                },
+                "version": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "device": {
+              "properties": {
+                "model": {
+                  "type": "keyword"
+                },
+                "type": {
+                  "type": "keyword"
+                },
+                "vendor": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "extremo": {
+      "properties": {
+        "status": {
+          "type": "short",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "contentType": {
+          "type": "keyword"
+        },
+        "ip": {
+          "type": "ip"
+        },
+        "location": {
+          "properties": {
+            "pais": {
+              "type": "keyword"
+            },
+            "region": {
+              "type": "keyword"
+            },
+            "ciudad": {
+              "type": "keyword"
+            },
+            "coordenadas": {
+              "type": "geo_point"
+            },
+            "precision": {
+              "type": "integer"
+            },
+            "timezone": {
+              "type": "keyword"
+            },
+            "eu": {
+              "type": "boolean"
+            }
+          }
+        },
+        "bytes": {
+          "properties": {
+            "headers": {
+              "type": "integer"
+            },
+            "body": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "compression": {
+              "type": "scaled_float",
+              "scaling_factor": 100
+            }
+          }
+        }
+      }
+    },
+    "origen": {
+      "properties": {
+        "status": {
+          "type": "short",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "ip": {
+          "type": "ip"
+        },
+        "nombre": {
+          "type": "keyword"
+        },
+        "location": {
+          "properties": {
+            "pais": {
+              "type": "keyword"
+            },
+            "region": {
+              "type": "keyword"
+            },
+            "ciudad": {
+              "type": "keyword"
+            },
+            "coordenadas": {
+              "type": "geo_point"
+            },
+            "precision": {
+              "type": "integer"
+            },
+            "timezone": {
+              "type": "keyword"
+            },
+            "eu": {
+              "type": "boolean"
+            }
+          }
+        },
+        "bytes": {
+          "type": "integer"
+        }
+      }
+    },
+    "metadata": {
+      "properties": {
+        "proyecto": {
+          "type": "keyword"
+        },
+        "subproyecto": {
+          "type": "keyword"
+        },
+        "ingest": {
+          "type": "date"
+        },
+        "pod": {
+          "type": "keyword"
+        },
+        "version": {
+          "type": "keyword"
+        },
+        "source": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}
