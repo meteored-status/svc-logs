@@ -25,7 +25,7 @@ export class RegistroLocalizacion implements IRegistroLocalizacion {
             return;
         }
 
-        if (isNaN(data.ll[0]) || isNaN(data.ll[1])) {
+        if (typeof data.ll[0] !== 'number' || isNaN(data.ll[0])) {
             console.log(ip, data);
             return;
         }

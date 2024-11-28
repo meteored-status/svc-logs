@@ -3,6 +3,9 @@
 ---
 ## 2024.11.28+1
 
+### Changed
+- [Jose] Nuevo tipado para operaciones Bulk de ElasticSearch
+
 ### Updated
 - [Jose] Update de librerías:
     - [@types/node](https://www.npmjs.com/package/@types/node) 22.10.1
