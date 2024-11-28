@@ -6,6 +6,23 @@
 ### Changed
 - [Jose] Nuevo tipado para operaciones Bulk de ElasticSearch
 - [Jose] Incrementado timeout de ElasticSearch a 60sg
+- [Jose] Se ha añadido una nueva clase Bulk en `services-comun/modules/elasticsearch/bloque` para gestionar los envíos en Bulk de forma controlada
+  - En esta nueva funcionalidad, se crea un objeto bulk, se le añaden operaciones y se envía el bloque manualmente
+  ```typescript
+  /**
+    * elastic: Elasticsearch => Instancia de ElasticSearch
+    * indice1?: string       => Nombre del índice por defecto para este bulk
+    * indice2?: string       => Índice para esta operación
+    * id?: string            => ID del documento
+    * doc: any               => Documento
+    * ok: boolean            => Resultado de la operación completa
+  */
+  const bulk = Bulk().init(elastic, indice1);
+  const promesa = bulk.index({index: indice2, id: id, doc: doc});
+  // ...
+  const ok = await bulk.run();
+  ```
+- [Jose] Se ha eliminado la fecha de commit del compilador, así se evita que se generen nuevos contenedores en cada despliegue
 
 ### Updated
 - [Jose] Update de librerías:

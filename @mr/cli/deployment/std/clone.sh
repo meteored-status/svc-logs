@@ -23,5 +23,3 @@ parseRepository() {
 export -f parseRepository
 
 ./jq -r ".labels[\"k8s-github\"]" "labels.json" | xargs -I '{}' -P10 -n1 bash -c "parseRepository ${ENTORNO} {}"
-
-git show -s --format=%ci HEAD > "last_commit.txt"

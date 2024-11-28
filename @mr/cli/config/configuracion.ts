@@ -24,12 +24,11 @@ interface IConfiguracionConfig {
     runtime: ERuntime;
     database?: string;
     rules?: string;
-    commit?: Date;
 }
 
 export class Configuracion {
     /* STATIC */
-    public static build({basedir, bundle, dependencies, entorno, framework, runtime, database, rules, commit}: IConfiguracionConfig): IConfiguracion {
+    public static build({basedir, bundle, dependencies, entorno, framework, runtime, database, rules}: IConfiguracionConfig): IConfiguracion {
         const desarrollo = !["produccion", "test"].includes(entorno);
         const test = ["desarrollo","test"].includes(entorno);
         const mode = desarrollo ? "development" : "production";
@@ -77,7 +76,6 @@ export class Configuracion {
                 database,
                 prefix: bundle.prefix,
                 css: componentes.css,
-                commit,
             }),
             stats: "minimal",
             externals: Externals.build(runtime, dependencies),
