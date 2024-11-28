@@ -1,6 +1,13 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.11.28+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.10.1
+
+---
 ## 2024.11.26+3
 
 ### Changed
