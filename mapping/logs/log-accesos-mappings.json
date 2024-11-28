@@ -40,7 +40,7 @@
           }
         },
         "bytes": {
-          "type": "integer"
+          "type": "unsigned_long"
         },
         "referer": {
           "type": "text",
@@ -74,7 +74,7 @@
           "type": "boolean"
         },
         "bytes": {
-          "type": "integer"
+          "type": "unsigned_long"
         },
         "codigo": {
           "type": "short",
@@ -288,10 +288,10 @@
               "type": "integer"
             },
             "body": {
-              "type": "integer"
+              "type": "unsigned_long"
             },
             "total": {
-              "type": "integer"
+              "type": "unsigned_long"
             },
             "compression": {
               "type": "scaled_float",
@@ -343,7 +343,7 @@
           }
         },
         "bytes": {
-          "type": "integer"
+          "type": "unsigned_long"
         }
       }
     },

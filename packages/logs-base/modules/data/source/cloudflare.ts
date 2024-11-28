@@ -478,7 +478,7 @@ export class Cloudflare {
                 if (actual.status==429) {
                     repesca.push(bulk[i]);
                 } else {
-                    error("Error", actual.error);
+                    error("Error", JSON.stringify(actual.error));
                 }
             }
         }
