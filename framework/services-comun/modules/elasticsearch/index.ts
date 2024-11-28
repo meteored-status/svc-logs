@@ -72,6 +72,7 @@ export type UpdateResponse<T> = elastic.estypes.UpdateResponse<T>;
 export type ESAggregate = Record<AggregateName, AggregationsAggregate>;
 export type ESSuggest<T> = Record<SuggestionName, SearchSuggest<T>[]>;
 export type ESSuggestOption<T> = SearchPhraseSuggestOption|SearchTermSuggestOption|SearchCompletionSuggestOption<T>;
+export type ESBulkOperation<TDocument=void> = (BulkOperationContainer | BulkUpdateAction<TDocument, Partial<TDocument>> | TDocument);
 export type ESBulkResponse = Partial<Record<BulkOperationType, BulkResponseItem>>;
 
 export interface IElasticSearch {

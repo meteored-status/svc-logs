@@ -1,8 +1,6 @@
-import {BulkOperationContainer, BulkResponseItem, BulkUpdateAction, ESBulkResponse, Script} from "..";
+import {BulkResponseItem, ESBulkOperation, ESBulkResponse, Script} from "..";
 
 type TBulkAction = "index"|"update"|"delete"|"create";
-
-export type BulkType<T> = (BulkOperationContainer | BulkUpdateAction<T, Partial<T>> | T);
 
 export interface IBulkBase<T> {
     index: string;
@@ -12,7 +10,7 @@ export interface IBulkBase<T> {
 
 export abstract class BulkBase<T=void, C={}> {
     // public readonly data: string[];
-    public readonly bulk: BulkType<T>[];
+    public readonly bulk: ESBulkOperation<T>[];
     // public readonly size: number;
 
     protected constructor(obj: IBulkBase<T>, private resolver: Function, private rejecter: Function, private accion: TBulkAction, protected settings: C) {
@@ -53,7 +51,7 @@ export abstract class BulkBase<T=void, C={}> {
         return false;
     }
 
-    protected abstract toBulk(obj: IBulkBase<T>): BulkType<T>[];
+    protected abstract toBulk(obj: IBulkBase<T>): ESBulkOperation<T>[];
 }
 
 export class BulkIndex<T> extends BulkBase<T> {
@@ -61,7 +59,7 @@ export class BulkIndex<T> extends BulkBase<T> {
         super(doc, resolver, rejecter, "index", {});
     }
 
-    protected toBulk(obj: IBulkBase<T>): BulkType<T>[] {
+    protected toBulk(obj: IBulkBase<T>): ESBulkOperation<T>[] {
         return [
             {
                 index: {
@@ -79,7 +77,7 @@ export class BulkCreate<T> extends BulkBase<T> {
         super(doc, resolver, rejecter, "create", {});
     }
 
-    protected toBulk(obj: IBulkBase<T>): BulkType<T>[] {
+    protected toBulk(obj: IBulkBase<T>): ESBulkOperation<T>[] {
         return [
             {
                 create: {
@@ -97,7 +95,7 @@ export class BulkUpdate<T> extends BulkBase<T, {crear: boolean}> {
         super(doc, resolver, rejecter, "update", {crear});
     }
 
-    protected toBulk(obj: IBulkBase<T>): BulkType<T>[] {
+    protected toBulk(obj: IBulkBase<T>): ESBulkOperation<T>[] {
         return [
             {
                 update: {
@@ -118,7 +116,7 @@ export class BulkDelete extends BulkBase {
         super(doc, resolver, rejecter, "delete", {});
     }
 
-    protected toBulk(obj: IBulkBase<void>): BulkType<void>[] {
+    protected toBulk(obj: IBulkBase<void>): ESBulkOperation<void>[] {
         return [
             {
                 delete: {
@@ -135,7 +133,7 @@ export class BulkScript extends BulkBase<Script> {
         super(doc, resolver, rejecter, "update", {});
     }
 
-    protected toBulk(obj: IBulkBase<Script>): BulkType<Script>[] {
+    protected toBulk(obj: IBulkBase<Script>): ESBulkOperation<Script>[] {
         return [
             {
                 update: {
