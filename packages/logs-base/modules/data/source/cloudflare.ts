@@ -478,7 +478,9 @@ export class Cloudflare {
                 if (actual.status==429) {
                     repesca.push(bulk[i]);
                 } else {
-                    error("Error", JSON.stringify(actual.error));
+                    if (!["index_not_found_exception"].includes(actual.error.type)) {
+                        error("Error", JSON.stringify(actual.error));
+                    }
                 }
             }
         }
