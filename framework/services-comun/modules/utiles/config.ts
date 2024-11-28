@@ -71,7 +71,6 @@ export interface IPodInfo {
     replica: string;
     wire: number;
     deploy: string;
-    commitFecha: Date;
 }
 
 export interface IConfiguracion {}
@@ -141,7 +140,6 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
             replica,
             wire,
             deploy,
-            commitFecha: new Date(COMMIT_FECHA??Date.now()),
         });
     }
 }

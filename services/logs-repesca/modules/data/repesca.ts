@@ -1,8 +1,6 @@
 import {Fecha} from "services-comun/modules/utiles/fecha";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
-import {TAbort} from "services-comun/modules/engine_base";
 import {error, info} from "services-comun/modules/utiles/log";
-import bulk from "services-comun/modules/utiles/elastic/bulk";
 import db from "services-comun/modules/utiles/mysql";
 
 import {Bucket} from "./bucket";
@@ -31,11 +29,10 @@ export class Repesca {
     /* STATIC */
     private static PARAR = false;
 
-    public static async run(config: Configuracion, abort: TAbort): Promise<void> {
+    public static async run(config: Configuracion): Promise<void> {
         let timeout: NodeJS.Timeout|undefined = setTimeout(()=>{
             info("Solicitando parada");
             this.PARAR = true;
-            abort("Parada solicitada");
             timeout = undefined;
         }, 3300000); // 55 minutos para parar el proceso para evitar que se quede a medias cuando se borre el POD
 
@@ -49,8 +46,6 @@ export class Repesca {
         } else {
             info("Solicitando parada => OK");
         }
-
-        await bulk.wait();
     }
 
     private static async reset(): Promise<void> {
@@ -105,7 +100,7 @@ export class Repesca {
     }
 
     protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo, backends FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 5", [], {
+        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo, backends FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 10", [], {
             master: true,
             fn: (row)=>new Repesca({
                 bucket: row.bucket,

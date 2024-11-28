@@ -19,7 +19,7 @@ interface ITag {
 
 export class Compilar {
     /* STATIC */
-    public static async build(basedir: string, name: string, fecha: Date): Promise<Compilar|null> {
+    public static async build(basedir: string, name: string): Promise<Compilar|null> {
         const dir = `${basedir}/services/${name}`;
         if (!await isDir(dir) || !await isFile(`${dir}/package.json`)) {
             console.error(name, "[ERROR]", "Servicio no válido");
@@ -27,7 +27,7 @@ export class Compilar {
         }
         const json = await readJSON<IPackageJson>(`${dir}/package.json`);
 
-        return new this(basedir, name, json, fecha);
+        return new this(basedir, name, json);
     }
 
     public static async md5Deps(basedir: string): Promise<void> {
@@ -50,7 +50,7 @@ export class Compilar {
     private readonly pendientes: NodeJS.Dict<null>;
     protected readonly dir: string;
 
-    protected constructor(protected basedir: string, public name: string, protected readonly packagejson: IPackageJson, private fecha: Date) {
+    protected constructor(protected basedir: string, public name: string, protected readonly packagejson: IPackageJson) {
         this.config = packagejson.config;
         this.dependencias = [];
         this.pendientes = {};
@@ -175,7 +175,7 @@ export class Compilar {
         const entorno: Record<string, string> = {
             TS_NODE_PROJECT: "config/tsconfig.json",
         };
-        const {status, stdout, stderr} = await Comando.spawn("yarn", ["workspace", "@mr/cli", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--env", `fecha="${this.fecha.toISOString()}"`, "--config", `config/webpack.config.ts`], {cwd: this.basedir, env: entorno, colores: false});
+        const {status, stdout, stderr} = await Comando.spawn("yarn", ["workspace", "@mr/cli", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `config/webpack.config.ts`], {cwd: this.basedir, env: entorno, colores: false});
         if (status != 0) {
             console.error(this.name, "[KO   ]", "Error compilando:");
             console.error(stdout);
