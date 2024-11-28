@@ -126,14 +126,14 @@ export class Bucket {
         }
     }
 
-    public async ingest(pod: IPodInfo, storage: Google, notify: INotify, signal: AbortSignal): Promise<void> {
+    public async ingest(pod: IPodInfo, storage: Google, notify: INotify): Promise<void> {
         const data = await this.getArchivo(storage, notify.bucketId, notify.objectId);
         if (data==null) {
             return;
         }
 
         await Cloudflare.limpiarDuplicados(this.getCliente(), notify.objectId);
-        await Cloudflare.ingest(pod, this.getCliente(), notify, data, signal);
+        await Cloudflare.ingest(pod, this.getCliente(), notify, data);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
         await data.delete();
     }

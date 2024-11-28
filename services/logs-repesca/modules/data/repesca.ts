@@ -31,7 +31,7 @@ export class Repesca {
     /* STATIC */
     private static PARAR = false;
 
-    public static async run(config: Configuracion, signal: AbortSignal, abort: TAbort): Promise<void> {
+    public static async run(config: Configuracion, abort: TAbort): Promise<void> {
         let timeout: NodeJS.Timeout|undefined = setTimeout(()=>{
             info("Solicitando parada");
             this.PARAR = true;
@@ -42,7 +42,7 @@ export class Repesca {
         await this.reset();
         await this.liberarBloqueados();
         await this.liberarHuerfanos(config);
-        await this.repescarPendientes(config, signal);
+        await this.repescarPendientes(config);
 
         if (timeout!=undefined) {
             clearTimeout(timeout);
@@ -77,15 +77,15 @@ export class Repesca {
         }
     }
 
-    protected static async repescarPendientes(config: Configuracion, signal: AbortSignal): Promise<void> {
+    protected static async repescarPendientes(config: Configuracion): Promise<void> {
         let registros: Repesca[] = [];
         do {
             registros = await this.getPendientes();
-            await this.repescar(config, registros, signal);
+            await this.repescar(config, registros);
         } while (registros.length>0 && !this.PARAR);
     }
 
-    protected static async repescar(config: Configuracion, registros: Repesca[], signal: AbortSignal): Promise<void> {
+    protected static async repescar(config: Configuracion, registros: Repesca[]): Promise<void> {
         const promesas: Promise<void>[] = [];
         for (const registro of registros) {
             if (registro.cliente!=undefined) {
@@ -97,7 +97,7 @@ export class Repesca {
             } else {
                 info(`Repescando []`, registro.bucket, registro.archivo);
             }
-            promesas.push(registro.ingest(config, signal).catch(err=>error(err)));
+            promesas.push(registro.ingest(config).catch(err=>error(err)));
             await PromiseDelayed(1000);
             // await registro.ingest(config, signal).catch(err=>error(err));
         }
@@ -127,11 +127,11 @@ export class Repesca {
     private constructor(protected data: IRepesca) {
     }
 
-    public async ingest(config: Configuracion, signal: AbortSignal): Promise<void> {
+    public async ingest(config: Configuracion): Promise<void> {
         await this.tratar();
         try {
 
-            await Bucket.run(config, signal, {
+            await Bucket.run(config, {
                 bucketId: this.bucket,
                 objectId: this.archivo,
             }, this.cliente != undefined ? {
