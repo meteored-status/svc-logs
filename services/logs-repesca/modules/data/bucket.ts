@@ -9,7 +9,7 @@ import type {Configuracion} from "../utiles/config";
 
 export class Bucket extends BucketBase {
     /* STATIC */
-    public static async run(config: Configuracion, signal: AbortSignal, notify: INotify, cliente?: ICliente): Promise<void> {
+    public static async run(config: Configuracion, notify: INotify, cliente?: ICliente): Promise<void> {
         let bucket: Bucket;
         if (cliente==undefined) {
             bucket = await this.findBucket(notify.bucketId) as Bucket;
@@ -30,7 +30,7 @@ export class Bucket extends BucketBase {
 
         await this.repescando(notify);
 
-        await bucket.ingest(config.pod, config.google, notify, signal)
+        await bucket.ingest(config.pod, config.google, notify)
             .then(()=>this.endProcesando(notify))
             .catch(err=>this.addRepesca(notify, true, cliente, err));
     }

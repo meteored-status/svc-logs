@@ -14,7 +14,7 @@ export interface INotifyPubSub extends INotify {
 
 export class Bucket extends BucketBase {
     /* STATIC */
-    public static async run(config: Configuracion, notify: INotifyPubSub, signal: AbortSignal): Promise<void> {
+    public static async run(config: Configuracion, notify: INotifyPubSub): Promise<void> {
         if (notify.eventType!="OBJECT_FINALIZE") {
             switch (notify.eventType) {
                 case "OBJECT_DELETE":
@@ -37,7 +37,7 @@ export class Bucket extends BucketBase {
         };
         await this.update(notify, cliente);
         await this.procesando(notify);
-        await bucket.ingest(config.pod, config.google, notify, signal)
+        await bucket.ingest(config.pod, config.google, notify)
             .then(()=>this.endProcesando(notify))
             .catch(err=>this.addRepesca(notify, false, cliente, err));
     }
