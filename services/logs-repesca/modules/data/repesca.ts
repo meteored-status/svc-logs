@@ -131,18 +131,15 @@ export class Repesca {
         await this.tratar();
         try {
 
-            // if (Math.random()<0.5) {
-            //     await SlaveLogsBackendRequest.ingest(this.bucket, this.archivo);
-            // } else {
-                await Bucket.run(config, signal, {
-                    bucketId: this.bucket,
-                    objectId: this.archivo,
-                }, this.cliente != undefined ? {
-                    id: this.cliente,
-                    grupo: this.grupo,
-                    backends: this.backends ?? {},
-                } : undefined);
-            // }
+            await Bucket.run(config, signal, {
+                bucketId: this.bucket,
+                objectId: this.archivo,
+            }, this.cliente != undefined ? {
+                id: this.cliente,
+                grupo: this.grupo,
+                backends: this.backends ?? {},
+            } : undefined);
+
             await this.delete();
 
         } catch (err) {

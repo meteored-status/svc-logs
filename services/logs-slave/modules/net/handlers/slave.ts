@@ -2,6 +2,7 @@ import {type INotify} from "services-comun-status/modules/services/logs-slave/ba
 import {RouteGroup} from "services-comun/modules/net/routes/group";
 import {type IRouteGroup} from "services-comun/modules/net/routes/group/block";
 import {error} from "services-comun/modules/utiles/log";
+import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 import {Bucket, type INotifyPubSub} from "../../data/bucket";
 import {type Configuracion} from "../../utiles/config";
@@ -27,8 +28,11 @@ class Slave extends RouteGroup<Configuracion>{
     }
 
     private parseLog(data: INotifyPubSub): void {
-        Bucket.run(this.configuracion, data, this.signal)
-            .catch(async (err) => {
+        PromiseDelayed()
+            .then(async ()=>{
+                await Bucket.run(this.configuracion, data, this.signal);
+            })
+            .catch(async (err)=>{
                 await Bucket.addRepesca(data, false, undefined, err);
                 if (err instanceof Error) {
                     if (err.message.startsWith("Duplicate entry")) {
@@ -38,6 +42,9 @@ class Slave extends RouteGroup<Configuracion>{
                 } else {
                     error("Error procesando", err);
                 }
+            })
+            .catch((err)=>{
+                error("Error procesando", err);
             });
     }
 
