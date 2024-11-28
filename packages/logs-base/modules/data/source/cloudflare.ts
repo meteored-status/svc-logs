@@ -428,12 +428,7 @@ export class Cloudflare {
         }
     }
 
-    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal): Promise<number> {
-        let ok = true;
-        signal.addEventListener("abort", ()=>{
-            ok = false;
-        }, {once: true});
-
+    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
         let lineas = 0;
         const lector = readline.createInterface({
             input: storage.stream,
@@ -448,10 +443,6 @@ export class Cloudflare {
             },
         };
         for await (const linea of lector) {
-            if (!ok) {
-                lector.close();
-                return Promise.reject(new Error("Abortado"));
-            }
             if (linea.length==0) {
                 continue;
             }

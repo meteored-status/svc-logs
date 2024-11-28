@@ -8,7 +8,7 @@ export class Engine extends EngineBase<Configuracion> {
 
     /* INSTANCE */
     public override async ejecutar(): Promise<void> {
-        await Repesca.run(this.configuracion, this.abortSignal, (message?: string)=>this.abort(message));
+        await Repesca.run(this.configuracion, (message?: string)=>this.abort(message));
 
         await super.ejecutar();
     }

@@ -11,7 +11,7 @@ export class Engine extends EngineServer<Configuracion> {
     /* INSTANCE */
     public override async ejecutar(): Promise<void> {
         this.initWebServer([
-            Slave(this.configuracion, this.abortSignal),
+            Slave(this.configuracion),
         ], this.configuracion.net);
 
         await super.ejecutar();
