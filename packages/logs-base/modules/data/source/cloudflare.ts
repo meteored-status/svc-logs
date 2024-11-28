@@ -390,6 +390,44 @@ export class Cloudflare {
         };
     });
 
+    public static async limpiarDuplicados(cliente: ICliente, source: string): Promise<void> {
+        const index = Registro.getIndex(cliente);
+        let cantidad = 0;
+        let total = 0;
+        do {
+            const operations: BulkOperationContainer[] = [];
+            const data = await elastic.search({
+                index,
+                query: {
+                    term: {
+                        "metadata.source": source,
+                    },
+                },
+                _source: false,
+                size: 10000,
+            });
+            for (const actual of data.hits.hits) {
+                operations.push({
+                    delete: {
+                        _index: actual._index,
+                        _id: actual._id,
+                    },
+                });
+            }
+            cantidad = operations.length;
+            if (cantidad>0) {
+                const data = await elastic.bulk({
+                    operations,
+                    refresh: "wait_for",
+                })
+            }
+            total += cantidad;
+        } while (cantidad>0);
+        if (total>0) {
+            info(`Eliminados ${total} registros duplicados de ${cliente.id} ${cliente.grupo??"-"} ${source}`);
+        }
+    }
+
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal): Promise<number> {
         let ok = true;
         signal.addEventListener("abort", ()=>{
@@ -426,42 +464,35 @@ export class Cloudflare {
             lineas++;
         }
 
-        // info("Indexados", cliente.id, cliente.grupo??"-", bulk.length, "registros");
-        this.crear(bulk);
+        if (bulk.length>0) {
+            await this.crear(bulk);
+        }
 
         return lineas;
     }
 
-    private static crear(bulk: [BulkOperationContainer, IRegistroES][]): void {
-        if (bulk.length==0) {
+    private static async crear(bulk: [BulkOperationContainer, IRegistroES][]): Promise<void> {
+        const data = await elastic.bulk({
+            operations: bulk.flat(),
+            refresh: "wait_for",
+        })
+        if (!data.errors) {
             return;
         }
 
-        elastic.bulk({
-            // index: Registro.getIndex(cliente),
-            operations: bulk.flat(),
-            // refresh: "wait_for",
-        }).then((data)=>{
-            if (!data.errors) {
-                return;
-            }
-
-            let repesca: [BulkOperationContainer, IRegistroES][] = [];
-            for (let i=0, len=bulk.length; i<len; i++) {
-                const actual = data.items[i].create!;
-                if (actual.error!=undefined) {
-                    if (actual.status==429) {
-                        repesca.push(bulk[i]);
-                    } else {
-                        error("Error", actual.error);
-                    }
+        let repesca: [BulkOperationContainer, IRegistroES][] = [];
+        for (let i=0, len=bulk.length; i<len; i++) {
+            const actual = data.items[i].create!;
+            if (actual.error!=undefined) {
+                if (actual.status==429) {
+                    repesca.push(bulk[i]);
+                } else {
+                    error("Error", actual.error);
                 }
             }
-            if (repesca.length>0) {
-                this.crear(bulk)
-            }
-        }).catch((err)=>{
-            error("KO", err, JSON.stringify(err));
-        });
+        }
+        if (repesca.length>0) {
+            return this.crear(bulk)
+        }
     }
 }

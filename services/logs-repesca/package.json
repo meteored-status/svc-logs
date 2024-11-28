@@ -36,7 +36,7 @@
   "config": {
     "cronjob": true,
     "devel": false,
-    "deploy": false,
+    "deploy": true,
     "generar": true,
     "unico": true,
     "deps": [],
