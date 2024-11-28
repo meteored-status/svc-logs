@@ -67,7 +67,16 @@ export class Bucket {
             this.primero=false;
             error(err);
         }
-        const mensaje = err!=undefined?JSON.stringify(err):null;
+        let mensaje: string|null;
+        if (err!=undefined) {
+            if (err instanceof Error) {
+                mensaje = err.message;
+            } else {
+                mensaje = JSON.stringify(err);
+            }
+        } else {
+            mensaje = null;
+        }
         const origen = !repesca?"ingest":"repesca";
         await db.insert("INSERT INTO repesca (bucket, archivo, cliente, grupo, mensaje, origen) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, tratando=0, origen=?", [notify.bucketId, notify.objectId, cliente?.id??null, cliente?.grupo??null, mensaje, origen, mensaje, origen]);
         await db.insert("UPDATE procesando SET estado=? WHERE bucket=? AND archivo=?", ["error", notify.bucketId, notify.objectId]);
@@ -120,26 +129,12 @@ export class Bucket {
     public async ingest(pod: IPodInfo, storage: Google, notify: INotify, signal: AbortSignal): Promise<void> {
         const data = await this.getArchivo(storage, notify.bucketId, notify.objectId);
         if (data==null) {
-            // info("Archivo no encontrado", Bucket.buildSource(notify));
             return;
         }
 
+        await Cloudflare.limpiarDuplicados(this.getCliente(), notify.objectId);
         await Cloudflare.ingest(pod, this.getCliente(), notify, data, signal);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
         await data.delete();
-        // await PromiseTimeout(Cloudflare.ingest(pod, this.getCliente(), notify, data).then(async ()=>{
-        //     await db.update("DELETE FROM problemas WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
-        //     // await db.update("UPDATE problemas SET end=? WHERE bucket=? AND archivo=?", [new Date(), notify.bucketId, notify.objectId]);
-        //     await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
-        //     await data.delete();
-        // }), Bucket.TIMEOUT)
-        //     .catch(async (err)=>{
-        //         if (err instanceof PromiseTimeoutError) {
-        //             await db.insert("INSERT IGNORE INTO problemas (bucket, archivo, cliente, grupo, detalle) VALUES (?, ?, ?, ?, ?)", [notify.bucketId, notify.objectId, this.cliente, this.grupo??null, "TimeoutError parseando el log"]);
-        //             return;
-        //         }
-        //         return Promise.reject(err);
-        //     });
-
     }
 }
