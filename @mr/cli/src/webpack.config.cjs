@@ -85,7 +85,6 @@ module.exports = {
             ENTORNO: JSON.stringify("produccion"),
             NEXTJS: JSON.stringify(false),
             DATABASE: JSON.stringify("undefined"),
-            COMMIT_FECHA: JSON.stringify("undefined"),
 
             "global.DESARROLLO": JSON.stringify(false),
             "global.TEST": JSON.stringify(false),
@@ -93,7 +92,6 @@ module.exports = {
             "global.ENTORNO": JSON.stringify("produccion"),
             "global.NEXTJS": JSON.stringify(false),
             "global.DATABASE": JSON.stringify("undefined"),
-            "global.COMMIT_FECHA": JSON.stringify("undefined"),
         }),
     ],
     externals: [

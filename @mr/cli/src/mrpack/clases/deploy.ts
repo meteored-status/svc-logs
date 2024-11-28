@@ -1,4 +1,4 @@
-import {isDir, isFile, readDir, readFileString} from "services-comun/modules/utiles/fs";
+import {isDir, readDir} from "services-comun/modules/utiles/fs";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 import {Comando} from "./comando";
@@ -11,9 +11,7 @@ export class Deploy {
             .then(async ()=>{
                 const services = await readDir(`${basedir}/services/`);
 
-                const fecha = await this.fechaCommit(basedir);
-
-                const compilaciones = await Promise.all(services.map((service)=>Compilar.build(basedir, service, fecha)));
+                const compilaciones = await Promise.all(services.map((service)=>Compilar.build(basedir, service)));
                 const compilaciones_validas = compilaciones.filter((compilacion)=>compilacion!=null);
                 compilaciones_validas.forEach((compilacion)=>{
                     compilacion.checkDependencias(compilaciones_validas);
@@ -42,15 +40,6 @@ export class Deploy {
                 }
                 process.exit(1);
             });
-    }
-
-    public static async fechaCommit(basedir: string): Promise<Date> {
-        if (await isFile(`${basedir}/last_commit.txt`)) {
-            const fecha = await readFileString(`${basedir}/last_commit.txt`);
-            return new Date(fecha.trim());
-        }
-
-        return new Date(0);
     }
 
     /* INSTANCE */

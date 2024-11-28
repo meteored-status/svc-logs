@@ -51,5 +51,5 @@
     "webpack-cli": "^5.1.4",
     "webpack-manifest-plugin": "^5.0.0"
   },
-  "version": "2024.11.28+1-bixus"
+  "version": "2024.11.28+2-bixus"
 }
