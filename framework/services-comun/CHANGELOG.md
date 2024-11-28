@@ -5,6 +5,7 @@
 
 ### Changed
 - [Jose] Nuevo tipado para operaciones Bulk de ElasticSearch
+- [Jose] Incrementado timeout de ElasticSearch a 60sg
 
 ### Updated
 - [Jose] Update de librerías:
