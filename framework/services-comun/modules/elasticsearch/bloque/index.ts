@@ -34,8 +34,8 @@ interface IBulkParamsUpdate<T> extends IBulkParamsID {
 
 export class Bulk {
     /* STATIC */
-    public static init(index?: string): Bulk {
-        return new this(index);
+    public static init(elastic: Elasticsearch, index?: string): Bulk {
+        return new this(elastic, index);
     }
 
     /* INSTANCE */
@@ -43,7 +43,7 @@ export class Bulk {
     private cerrado: boolean;
     private ok: boolean;
 
-    protected constructor(protected readonly indice?: string) {
+    protected constructor(protected readonly elastic: Elasticsearch, protected readonly indice?: string) {
         this.operaciones = [];
         this.cerrado = false;
         this.ok = false;
@@ -97,22 +97,22 @@ export class Bulk {
         return operacion;
     }
 
-    public async run(elastic: Elasticsearch): Promise<boolean> {
+    public async run(): Promise<boolean> {
         if (this.cerrado) {
             return this.ok;
         }
 
         this.cerrado = true;
 
-        return this.ok = await this.ejecutar(elastic, this.operaciones);
+        return this.ok = await this.ejecutar(this.operaciones);
     }
 
-    private async ejecutar(elastic: Elasticsearch, operaciones: BulkOperation[]): Promise<boolean> {
+    private async ejecutar(operaciones: BulkOperation[]): Promise<boolean> {
         if (operaciones.length==0) {
             return true;
         }
 
-        const data = await elastic.bulk({
+        const data = await this.elastic.bulk({
             index: this.indice,
             operations: operaciones.map(operacion=>operacion.operations).flat(),
             refresh: "wait_for",
@@ -127,19 +127,27 @@ export class Bulk {
 
         let ok = true;
         const repesca: BulkOperation[] = [];
+        const reportados: string[] = [];
         for (let i=0, len=operaciones.length; i<len; i++) {
             const actual = data.items[i].create!;
             if (actual.error!=undefined) {
                 if (actual.status==429) {
                     repesca.push(operaciones[i]);
                 } else {
-                    error("Error irrecuperable de Bulk", actual.error);
-                    operaciones[i].reject(actual.error);
+                    if (!reportados.includes(actual.error.type)) {
+                        reportados.push(actual.error.type);
+                        error("Error irrecuperable de Bulk", JSON.stringify(actual.error));
+                    }
                     ok = false;
+                    operaciones[i].reject(actual.error);
                 }
             }
         }
 
-        return await this.ejecutar(elastic, repesca) && ok;
+        if (repesca.length==0) {
+            return ok;
+        }
+
+        return await this.ejecutar(repesca) && ok;
     }
 }
