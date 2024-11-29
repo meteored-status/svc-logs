@@ -132,12 +132,6 @@ export class Bucket {
             return;
         }
 
-        try {
-            await Cloudflare.limpiarDuplicados(this.getCliente(), notify.objectId);
-        } catch (err) {
-            error("Error limpiando duplicados", err);
-            return;
-        }
         await Cloudflare.ingest(pod, this.getCliente(), notify, data);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
         await data.delete();
