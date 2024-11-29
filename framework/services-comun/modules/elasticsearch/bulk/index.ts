@@ -49,6 +49,8 @@ export class Bulk {
 
     private readonly start: number;
 
+    public get length(): number { return this.operaciones.length; }
+
     protected constructor(protected readonly elastic: Elasticsearch, protected readonly indice?: string) {
         this.correctos = 0;
         this.erroneos = 0;

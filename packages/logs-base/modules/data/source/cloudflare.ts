@@ -419,6 +419,8 @@ export class Cloudflare {
         }
     }
 
+    private static tiempo = 0;
+    private static registros = 0;
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
         let lineas = 0;
         const lector = readline.createInterface({
@@ -441,7 +443,14 @@ export class Cloudflare {
             lineas++;
         }
 
+        const start = Date.now();
         await bulk.run();
+        const diferencia = (Date.now() - start)/1000;
+        if (diferencia>this.tiempo || bulk.length>this.registros) {
+            this.tiempo = diferencia;
+            this.registros = bulk.length;
+            info(`Ingestados ${lineas} registros en ${diferencia}s`);
+        }
 
         return lineas;
     }
