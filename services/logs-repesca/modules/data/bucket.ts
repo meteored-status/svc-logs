@@ -44,12 +44,20 @@ export class Bucket extends BucketBase {
     /* INSTANCE */
     public async pescarHuerfanos(google: Google, fechas: string[]) {
         const bloques = await Promise.all(fechas.map(fecha=>Storage.list(google, this.id, fecha)));
-        const files: IInsert[] = bloques.flat().map(file=>({
-            table: "repesca",
-            query: "INSERT INTO repesca (bucket, archivo, origen) VALUES (?, ?, ?)",
-            params: [this.id, file.name, "huerfano"],
-            duplicate: ["bucket", "archivo"],
-        }));
+        const files: IInsert[] = bloques.flat().map(file=>{
+            const data = file.name.split("/")
+                .at(-1)!
+                .split("_")
+                .at(0)!
+                .replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, "$1-$2-$3T$4:$5:$6Z"); // esto incluye la fecha
+            const fecha = new Date(`${data.substring(0,4)}-${data.substring(4,6)}-${data.substring(6,8)}`);
+            return {
+                table: "repesca",
+                query: "INSERT INTO repesca (bucket, archivo, origen, fecha) VALUES (?, ?, ?, ?)",
+                params: [this.id, file.name, "huerfano", fecha],
+                duplicate: ["bucket", "archivo"],
+            };
+        });
         await db.bulkInsert(files);
         await db.update("UPDATE repesca, procesando SET repesca.tratando=1 WHERE repesca.bucket=procesando.bucket AND repesca.archivo=procesando.archivo");
     }
