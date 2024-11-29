@@ -394,50 +394,53 @@ export class Cloudflare {
 
     public static async limpiarDuplicados(cliente: ICliente, source: string): Promise<void> {
         const index = Registro.getIndex(cliente);
-        let cantidad = 0;
-        let total = 0;
-        do {
-            try {
-                cantidad = await this.limpiarDuplicadosEjecutar(index, source);
-                total += cantidad;
-            } catch (err) {
-                if (err instanceof Error) {
-                    if (err.message!="Request timed out") {
-                        return Promise.reject(err);
-                    }
-                    // en este caso reintentamos tras 1-2 segundos
-                    await PromiseDelayed(1000+Math.floor(Math.random()*1000));
-                } else {
-                    return Promise.reject(err);
-                }
-            }
-        } while (cantidad>0);
+        // let cantidad = 0;
+        const total = await this.limpiarDuplicadosEjecutar(index, source);
+        // do {
+        //     try {
+        //         cantidad = await this.limpiarDuplicadosEjecutar(index, source);
+        //         total += cantidad;
+        //     } catch (err) {
+        //         if (err instanceof Error) {
+        //             if (err.message!="Request timed out") {
+        //                 return Promise.reject(err);
+        //             }
+        //             // en este caso reintentamos tras 1-2 segundos
+        //             await PromiseDelayed(1000+Math.floor(Math.random()*1000));
+        //         } else {
+        //             return Promise.reject(err);
+        //         }
+        //     }
+        // } while (cantidad>0);
         if (total>0) {
             info(`Eliminados ${total} registros duplicados de ${cliente.id} ${cliente.grupo??"-"} ${source}`);
         }
     }
 
     private static async limpiarDuplicadosEjecutar(index: string, source: string): Promise<number> {
-        const hits = await elastic.search({
+        const hits = await elastic.deleteByQuery({
             index,
             query: {
                 term: {
                     "metadata.source": source,
                 },
             },
-            _source: false,
-            size: 10000,
-        })
-            .then(data=>data.hits.hits);
+        });
 
-        const bulk = Bulk.init(elastic, {refresh: "wait_for"});
-        for (const actual of hits) {
-            bulk.delete({index: actual._index, id: actual._id!});
+        // const bulk = Bulk.init(elastic, {refresh: "wait_for"});
+        // for (const actual of hits) {
+        //     bulk.delete({index: actual._index, id: actual._id!});
+        // }
+        //
+        // await bulk.run();
+        const borrados = hits.deleted??0;
+        if (hits.failures==undefined || hits.failures.length==0) {
+            return borrados;
         }
 
-        await bulk.run();
+        await PromiseDelayed(Math.floor(Math.random()*1000));
 
-        return hits.length;
+        return borrados + await this.limpiarDuplicadosEjecutar(index, source);
     }
 
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
