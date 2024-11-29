@@ -46,22 +46,21 @@ export class Bulk {
     public correctos: number;
     public erroneos: number;
     public finalizado: boolean;
+    public length: number;
     public ok: boolean;
     public tiempoEnvio: number;
     public tiempoTotal: number;
 
-    protected readonly indice?: string;
-    protected operaciones: BulkOperation<any>[];
-    protected readonly refresh: Refresh;
-
+    private readonly indice?: string;
+    private operaciones: BulkOperation<any>[];
+    private readonly refresh: Refresh;
     private readonly start: number;
 
-    public get length(): number { return this.operaciones.length; }
-
-    protected constructor(protected readonly elastic: Elasticsearch, {index, refresh = false}: BulkConfig) {
+    protected constructor(private readonly elastic: Elasticsearch, {index, refresh = false}: BulkConfig) {
         this.correctos = 0;
         this.erroneos = 0;
         this.finalizado = false;
+        this.length = 0;
         this.ok = false;
         this.tiempoEnvio = 0;
         this.tiempoTotal = 0;
@@ -73,7 +72,7 @@ export class Bulk {
         this.start = Date.now();
     }
 
-    private checkIndex(index?: string): string {
+    private checkOperacion(index?: string): string {
         if (this.finalizado) {
             throw new Error("This Bulk is closed");
         }
@@ -86,39 +85,31 @@ export class Bulk {
         return index;
     }
 
-    public create<T>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation<T> {
-        const operacion = new BulkOperationCreate(this.checkIndex(index), doc, id);
-        this.operaciones.push(operacion);
+    private push<T>(op: BulkOperation<T>): BulkOperation<T> {
+        this.length++;
+        this.operaciones.push(op);
 
-        return operacion;
+        return op;
+    }
+
+    public create<T>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation<T> {
+        return this.push(new BulkOperationCreate(this.checkOperacion(index), doc, id));
     }
 
     public delete({index, id}: IBulkParamsID): BulkOperation {
-        const operacion = new BulkOperationDelete(this.checkIndex(index), id);
-        this.operaciones.push(operacion);
-
-        return operacion;
+        return this.push(new BulkOperationDelete(this.checkOperacion(index), id));
     }
 
     public index<T>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation<T> {
-        const operacion = new BulkOperationCreate(this.checkIndex(index), doc, id);
-        this.operaciones.push(operacion);
-
-        return operacion;
+        return this.push(new BulkOperationCreate(this.checkOperacion(index), doc, id));
     }
 
     public script({index, id, script}: IBulkParamsScript): BulkOperation {
-        const operacion = new BulkOperationScript(this.checkIndex(index), id, script);
-        this.operaciones.push(operacion);
-
-        return operacion;
+        return this.push(new BulkOperationScript(this.checkOperacion(index), id, script));
     }
 
     public update<T>({index, id, doc, crear, upsert}: IBulkParamsUpdate<T>): BulkOperation<Partial<T>> {
-        const operacion = new BulkOperationUpdate(this.checkIndex(index), id, doc, crear, upsert);
-        this.operaciones.push(operacion);
-
-        return operacion;
+        return this.push(new BulkOperationUpdate(this.checkOperacion(index), id, doc, crear, upsert));
     }
 
     public async run(): Promise<boolean> {
@@ -129,59 +120,59 @@ export class Bulk {
         this.finalizado = true;
 
         const start = Date.now();
-        this.ok = await this.ejecutar(this.operaciones);
+        this.ok = await this.ejecutar();
         this.tiempoEnvio = Date.now() - start;
         this.tiempoTotal = Date.now() - this.start;
 
         return this.ok;
     }
 
-    private async ejecutar(operaciones: BulkOperation[]): Promise<boolean> {
-        if (operaciones.length==0) {
+    private async ejecutar(): Promise<boolean> {
+        if (this.operaciones.length==0) {
             return true;
         }
 
         const data = await this.elastic.bulk({
             index: this.indice,
-            operations: operaciones.flatMap(op=>op.operations),
+            operations: this.operaciones.flatMap(op=>op.operations),
             refresh: this.refresh,
         })
 
         if (!data.errors) {
-            this.correctos = operaciones.length;
-            for (const operacion of operaciones) {
-                operacion.resolve();
+            this.correctos = this.operaciones.length;
+            for (const op of this.operaciones) {
+                op.resolve();
             }
+            this.operaciones = [];
             return true;
         }
 
         let ok = true;
         const repesca: BulkOperation[] = [];
         const reportados: string[] = [];
-        for (let i=0, len=operaciones.length; i<len; i++) {
-            const actual = data.items[i].create!;
-            if (actual.error!=undefined) {
-                if (actual.status==429) {
-                    repesca.push(operaciones[i]);
+        for (let i=0, len=this.operaciones.length; i<len; i++) {
+            const item = data.items[i].create!;
+            const op = this.operaciones[i];
+
+            if (item.error!=undefined) {
+                if (item.status==429) {
+                    repesca.push(op);
                 } else {
-                    if (!reportados.includes(actual.error.type)) {
-                        reportados.push(actual.error.type);
-                        error("Error irrecuperable de Bulk", JSON.stringify(actual.error));
+                    if (!reportados.includes(item.error.type)) {
+                        reportados.push(item.error.type);
+                        error("Error irrecuperable de Bulk", JSON.stringify(item.error));
                     }
                     this.erroneos++;
                     ok = false;
-                    operaciones[i].reject(actual.error);
+                    op.reject(item.error);
                 }
             } else {
                 this.correctos++;
-                operaciones[i].resolve();
+                op.resolve();
             }
         }
 
-        if (repesca.length==0) {
-            return ok;
-        }
-
-        return await this.ejecutar(repesca) && ok;
+        this.operaciones = repesca;
+        return await this.ejecutar() && ok;
     }
 }
