@@ -1,8 +1,10 @@
 import {Bucket as BucketBase, type ICliente} from "logs-base/modules/data/bucket";
+import {Cloudflare} from "logs-base/modules/data/source/cloudflare";
 import type {INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {type IInsert} from "services-comun/modules/database/mysql";
 import {Storage} from "services-comun/modules/fs/storage";
 import {Google} from "services-comun/modules/utiles/config";
+import {error} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
 
 import type {Configuracion} from "../utiles/config";
@@ -29,6 +31,13 @@ export class Bucket extends BucketBase {
         }
 
         await this.repescando(notify);
+
+        try {
+            await Cloudflare.limpiarDuplicados(cliente, notify.objectId);
+        } catch (err) {
+            error("Error limpiando duplicados", err);
+            return;
+        }
 
         await bucket.ingest(config.pod, config.google, notify)
             .then(()=>this.endProcesando(notify))
