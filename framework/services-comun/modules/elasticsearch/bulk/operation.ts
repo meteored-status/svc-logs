@@ -1,7 +1,7 @@
 import type {BulkOperationContainer, ESBulkOperation, Script} from "..";
 import {Deferred} from "../../utiles/promise";
 
-export abstract class BulkOperation<T=void> extends Deferred<boolean> {
+export abstract class BulkOperation<T=void> extends Deferred {
     /* INSTANCE */
     protected constructor(protected op: BulkOperationContainer) {
         super();

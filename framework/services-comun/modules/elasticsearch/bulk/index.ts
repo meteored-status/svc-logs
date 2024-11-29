@@ -1,181 +1,178 @@
+import {error} from "../../utiles/log";
 import {
-    type BulkBase,
-    BulkCreate,
-    BulkDelete,
-    BulkIndex,
-    BulkScript,
-    BulkUpdate,
-    type IBulkBase,
-} from "./documento";
-import type {Elasticsearch, ESBulkResponse as ESBulkResponseBase, BulkResponseItem, Script} from "..";
-import {arrayChop} from "../../utiles/array";
-import {error, info} from "../../utiles/log";
-import {PromiseDelayed} from "../../utiles/promise";
+    type BulkOperation,
+    BulkOperationCreate,
+    BulkOperationDelete,
+    BulkOperationScript,
+    BulkOperationUpdate,
+} from "./operation";
+import type {Elasticsearch, Script} from "..";
 
-export interface ESBulkResponse extends ESBulkResponseBase {}
+interface IBulkParams {
+    index?: string;
+    id?: string;
+}
+
+interface IBulkParamsID extends IBulkParams {
+    id: string;
+}
+
+interface IBulkParamsDoc<T> extends IBulkParams {
+    doc: T;
+}
+
+interface IBulkParamsScript extends IBulkParamsID {
+    script: Script;
+}
+
+interface IBulkParamsUpdate<T> extends IBulkParamsID {
+    doc: Partial<T>;
+    crear?: boolean;
+    upsert?: T;
+}
 
 export class Bulk {
     /* STATIC */
-    private static readonly MAX_LENGTH = 100;
+    public static init(elastic: Elasticsearch, index?: string): Bulk {
+        return new this(elastic, index);
+    }
 
     /* INSTANCE */
-    private enviando: number;
-    private interval: NodeJS.Timeout | undefined;
-    private readonly queue: BulkBase<any>[];
+    public correctos: number;
+    public erroneos: number;
+    public finalizado: boolean;
+    public ok: boolean;
+    public tiempoEnvio: number;
+    public tiempoTotal: number;
 
-    public get idle(): boolean { return this.interval==undefined && this.enviando==0 && this.length==0; }
-    public get length(): number { return this.queue.length; }
+    protected operaciones: BulkOperation<any>[];
 
-    public constructor(protected readonly ES: Elasticsearch) {
-        this.enviando = 0;
-        this.queue = [];
+    private readonly start: number;
+
+    public get length(): number { return this.operaciones.length; }
+
+    protected constructor(protected readonly elastic: Elasticsearch, protected readonly indice?: string) {
+        this.correctos = 0;
+        this.erroneos = 0;
+        this.finalizado = false;
+        this.ok = false;
+        this.tiempoEnvio = 0;
+        this.tiempoTotal = 0;
+
+        this.operaciones = [];
+
+        this.start = Date.now();
     }
 
-    public async wait(): Promise<void> {
-        while(!this.idle) {
-            await PromiseDelayed(10000);
+    private checkIndex(index?: string): string {
+        if (this.finalizado) {
+            throw new Error("This Bulk is closed");
         }
+
+        index ??= this.indice;
+        if (index==undefined) {
+            throw new Error("Index is required");
+        }
+
+        return index;
     }
 
-    public async create<T>(doc: IBulkBase<T>, prioritario: boolean = false): Promise<BulkResponseItem> {
-        await PromiseDelayed();
-        return new Promise<BulkResponseItem>((resolver: Function, rejecter: Function)=>{
-            this.push(new BulkCreate<T>(doc, resolver, rejecter), prioritario);
-        });
+    public create<T>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation<T> {
+        const operacion = new BulkOperationCreate(this.checkIndex(index), doc, id);
+        this.operaciones.push(operacion);
+
+        return operacion;
     }
 
-    public async index<T>(doc: IBulkBase<T>, prioritario: boolean = false): Promise<BulkResponseItem> {
-        await PromiseDelayed();
-        return new Promise<BulkResponseItem>((resolver: Function, rejecter: Function)=>{
-            this.push(new BulkIndex<T>(doc, resolver, rejecter), prioritario);
-        });
+    public delete({index, id}: IBulkParamsID): BulkOperation {
+        const operacion = new BulkOperationDelete(this.checkIndex(index), id);
+        this.operaciones.push(operacion);
+
+        return operacion;
     }
 
-    public async update<T>(doc: IBulkBase<T>, crear: boolean = false, prioritario: boolean = false): Promise<BulkResponseItem> {
-        await PromiseDelayed();
-        if (doc.id==undefined) {
-            if (crear) {
-                return this.index(doc, prioritario);
+    public index<T>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation<T> {
+        const operacion = new BulkOperationCreate(this.checkIndex(index), doc, id);
+        this.operaciones.push(operacion);
+
+        return operacion;
+    }
+
+    public script({index, id, script}: IBulkParamsScript): BulkOperation {
+        const operacion = new BulkOperationScript(this.checkIndex(index), id, script);
+        this.operaciones.push(operacion);
+
+        return operacion;
+    }
+
+    public update<T>({index, id, doc, crear, upsert}: IBulkParamsUpdate<T>): BulkOperation<Partial<T>> {
+        const operacion = new BulkOperationUpdate(this.checkIndex(index), id, doc, crear, upsert);
+        this.operaciones.push(operacion);
+
+        return operacion;
+    }
+
+    public async run(): Promise<boolean> {
+        if (this.finalizado) {
+            return this.ok;
+        }
+
+        this.finalizado = true;
+
+        const start = Date.now();
+        this.ok = await this.ejecutar(this.operaciones);
+        this.tiempoEnvio = Date.now() - start;
+        this.tiempoTotal = Date.now() - this.start;
+
+        return this.ok;
+    }
+
+    private async ejecutar(operaciones: BulkOperation[]): Promise<boolean> {
+        if (operaciones.length==0) {
+            return true;
+        }
+
+        const data = await this.elastic.bulk({
+            index: this.indice,
+            operations: operaciones.flatMap(op=>op.operations),
+            refresh: "wait_for",
+        })
+
+        if (!data.errors) {
+            this.correctos = operaciones.length;
+            for (const operacion of operaciones) {
+                operacion.resolve();
             }
-            return Promise.reject("Falta el ID del documento para actualizarlo");
-        }
-        return new Promise<BulkResponseItem>((resolver: Function, rejecter: Function)=>{
-            this.push(new BulkUpdate<T>(doc, resolver, rejecter, crear), prioritario);
-        });
-    }
-
-    public async delete(doc: IBulkBase<undefined>, prioritario: boolean = false): Promise<BulkResponseItem> {
-        await PromiseDelayed();
-        return new Promise<BulkResponseItem>((resolver: Function, rejecter: Function)=>{
-            this.push(new BulkDelete(doc, resolver, rejecter), prioritario);
-        });
-    }
-
-    public async script(doc: IBulkBase<Script>, prioritario: boolean = false): Promise<BulkResponseItem> {
-        await PromiseDelayed();
-        return new Promise<BulkResponseItem>((resolver: Function, rejecter: Function)=>{
-            this.push(new BulkScript(doc, resolver, rejecter), prioritario);
-        });
-    }
-
-    private push<T>(documento: BulkBase<T>, prioritario: boolean): void {
-        if (!prioritario) {
-            this.queue.push(documento);
-        } else {
-            this.queue.unshift(documento);
+            return true;
         }
 
-        this.start();
-    }
-
-    private start(): void {
-        if (this.interval!=undefined) {
-            return;
-        }
-
-        if (!PRODUCCION && process.env["DEBUG"]!=undefined) {
-            info("ElasticSearch => Iniciando bulk");
-        }
-        let time = Date.now();
-        this.interval = setInterval(()=>{
-            if (this.queue.length==0) {
-                if (Date.now()-time>10000) {
-                    if (!PRODUCCION && process.env["DEBUG"]!=undefined) {
-                        info("ElasticSearch => Parando bulk");
+        let ok = true;
+        const repesca: BulkOperation[] = [];
+        const reportados: string[] = [];
+        for (let i=0, len=operaciones.length; i<len; i++) {
+            const actual = data.items[i].create!;
+            if (actual.error!=undefined) {
+                if (actual.status==429) {
+                    repesca.push(operaciones[i]);
+                } else {
+                    if (!reportados.includes(actual.error.type)) {
+                        reportados.push(actual.error.type);
+                        error("Error irrecuperable de Bulk", JSON.stringify(actual.error));
                     }
-                    clearInterval(this.interval);
-                    this.interval = undefined;
+                    this.erroneos++;
+                    ok = false;
+                    operaciones[i].reject(actual.error);
                 }
-                return;
+            } else {
+                this.correctos++;
+                operaciones[i].resolve();
             }
-
-            time = Date.now();
-            this.intervalo();
-        }, 1000);
-    }
-
-    // private maxlen = 0;
-    private intervalo(): void {
-        this.enviando++;
-
-        const length = this.queue.length < Bulk.MAX_LENGTH ?
-            this.queue.length :
-            Math.floor(this.queue.length/Bulk.MAX_LENGTH)*Bulk.MAX_LENGTH;
-        // if (length>this.maxlen) {
-        //     this.maxlen = length;
-        //     info("ElasticSearch Bulk => Max length", this.maxlen);
-        // }
-        const bloques = arrayChop(this.queue.splice(0, length), Bulk.MAX_LENGTH);
-
-        PromiseDelayed()
-            .then(()=>this.procesar(bloques))
-            .catch((err)=>error(err)) // nunca se va a ejecutar
-            .finally(()=>{
-                if (!PRODUCCION && process.env["DEBUG"]!=undefined) {
-                    info({
-                        enviados: length,
-                        pendientes: this.queue.length,
-                    });
-                }
-                this.enviando--;
-            });
-    }
-
-    private async procesar(bloques: BulkBase[][]): Promise<void> {
-        const promesas: Promise<void>[] = [];
-        for (const actual of bloques) {
-            promesas.push(this.procesarEjecutar(actual));
-            await PromiseDelayed();
-        }
-        await Promise.all(promesas);
-        // await Promise.all(bloques.map(actual=>this.procesarEjecutar(actual)));
-    }
-
-    private async procesarEjecutar(operaciones: BulkBase[]): Promise<void> {
-        try {
-            const data = await this.ES.bulk({
-                operations: operaciones.flatMap((actual) => actual.bulk),
-            });
-
-            let errores = 0;
-            for (let i = 0, len = operaciones.length; i < len; i++) {
-                const actual = data.items[i];
-                if (!operaciones[i].end(actual)) {
-                    errores++;
-                }
-            }
-            if (errores > 0 && !PRODUCCION) {
-                error("Errores en bulk", errores);
-            }
-
-        } catch (err: any) {
-
-            // error("Error de bulk");//, JSON.stringify(err?.meta?.body ?? (err?.body ?? err)));
-            for (const actual of operaciones) {
-                actual.reject(err?.body ?? err);
-            }
-
         }
 
+        if (repesca.length==0) {
+            return ok;
+        }
+
+        return await this.ejecutar(repesca) && ok;
     }
 }
