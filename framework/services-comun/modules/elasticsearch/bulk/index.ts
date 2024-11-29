@@ -1,3 +1,4 @@
+import {arrayChop} from "../../utiles/array";
 import {error} from "../../utiles/log";
 import {
     type BulkOperation,
@@ -33,6 +34,7 @@ interface IBulkParamsUpdate<T> extends IBulkParamsID {
 
 export interface BulkConfig {
     index?: string;
+    limit?: number;
     refresh?: Refresh;
 }
 
@@ -51,6 +53,7 @@ export class Bulk {
     public tiempoEnvio: number;
     public tiempoTotal: number;
 
+    private readonly limit?: number;
     private readonly indice?: string;
     private operaciones: BulkOperation<any>[];
     private readonly refresh: Refresh;
@@ -65,10 +68,10 @@ export class Bulk {
         this.tiempoEnvio = 0;
         this.tiempoTotal = 0;
 
+        // this.limit = Number.MAX_SAFE_INTEGER;
         this.indice = index;
         this.operaciones = [];
         this.refresh = refresh;
-
         this.start = Date.now();
     }
 
@@ -132,31 +135,36 @@ export class Bulk {
             return true;
         }
 
+        const oks = await Promise.all(arrayChop(this.operaciones.splice(0), this.limit).map(bloque=>this.ejecutarBloque(bloque)));
+        const ok = oks.every(ok=>ok);
+
+        return await this.ejecutar() && ok;
+    }
+
+    private async ejecutarBloque(operaciones: BulkOperation[]): Promise<boolean> {
         const data = await this.elastic.bulk({
             index: this.indice,
-            operations: this.operaciones.flatMap(op=>op.operations),
+            operations: operaciones.flatMap(op=>op.operations),
             refresh: this.refresh,
-        })
+        });
 
         if (!data.errors) {
-            this.correctos = this.operaciones.length;
-            for (const op of this.operaciones) {
+            this.correctos += operaciones.length;
+            for (const op of operaciones) {
                 op.resolve();
             }
-            this.operaciones = [];
             return true;
         }
 
         let ok = true;
-        const repesca: BulkOperation[] = [];
         const reportados: string[] = [];
-        for (let i=0, len=this.operaciones.length; i<len; i++) {
+        for (let i=0, len=operaciones.length; i<len; i++) {
             const item = data.items[i].create!;
-            const op = this.operaciones[i];
+            const op = operaciones[i];
 
             if (item.error!=undefined) {
                 if (item.status==429) {
-                    repesca.push(op);
+                    this.operaciones.push(op);
                 } else {
                     if (!reportados.includes(item.error.type)) {
                         reportados.push(item.error.type);
@@ -172,7 +180,6 @@ export class Bulk {
             }
         }
 
-        this.operaciones = repesca;
-        return await this.ejecutar() && ok;
+        return ok;
     }
 }

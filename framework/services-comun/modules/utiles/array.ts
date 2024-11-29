@@ -8,10 +8,15 @@ export function unique<T extends TEscalares>(array: T[]): T[] {
     return array.filter((item, i, ar)=>ar.indexOf(item)===i);
 }
 
-export function arrayChop<T>(array: T[], length: number): T[][] {
+export function arrayChop<T>(array: T[], length: number=array.length): T[][] {
     if (length<=0) {
         length = array.length;
     }
+
+    if (length>=array.length) {
+        return [array];
+    }
+
     const salida: T[][] = [];
     const total = array.length;
     let inicio = 0;
