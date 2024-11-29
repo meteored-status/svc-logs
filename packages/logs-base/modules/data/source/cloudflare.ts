@@ -448,7 +448,7 @@ export class Cloudflare {
 
         const start = Date.now();
         await bulk.run();
-        const diferencia = (Date.now() - start)/1000;
+        const diferencia = Math.floor((Date.now() - start)/1000);
         if (diferencia>this.tiempo || bulk.length>this.registros) {
             this.tiempo = diferencia;
             this.registros = bulk.length;
