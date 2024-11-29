@@ -39,9 +39,18 @@ export class Bucket extends BucketBase {
             return;
         }
 
-        await bucket.ingest(config.pod, config.google, notify)
-            .then(()=>this.endProcesando(notify))
-            .catch(err=>this.addRepesca(notify, true, cliente, err));
+        try {
+            await bucket.ingest(config.pod, config.google, notify)
+            await this.endProcesando(notify)
+                .catch((err)=>{
+                    error("Error en fin de proceso", err);
+                });
+        } catch (err) {
+            await this.addRepesca(notify, true, cliente, err)
+                .catch((err)=>{
+                    error("Error en add de repesca", err);
+                });
+        }
     }
 
     public static async searchBuckets(): Promise<Bucket[]> {
