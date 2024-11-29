@@ -429,7 +429,10 @@ export class Cloudflare {
             terminal: false,
         });
 
-        const bulk = Bulk.init(elastic, Registro.getIndex(cliente));
+        const bulk = Bulk.init(elastic, {
+            index: Registro.getIndex(cliente),
+            refresh: false,
+        });
         for await (const linea of lector) {
             if (linea.length==0) {
                 continue;
