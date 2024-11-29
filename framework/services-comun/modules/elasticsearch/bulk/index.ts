@@ -6,7 +6,7 @@ import {
     BulkOperationScript,
     BulkOperationUpdate,
 } from "./operation";
-import type {Elasticsearch, Script} from "..";
+import {Elasticsearch, Refresh, Script} from "..";
 
 interface IBulkParams {
     index?: string;
@@ -31,10 +31,15 @@ interface IBulkParamsUpdate<T> extends IBulkParamsID {
     upsert?: T;
 }
 
+export interface BulkConfig {
+    index?: string;
+    refresh?: Refresh;
+}
+
 export class Bulk {
     /* STATIC */
-    public static init(elastic: Elasticsearch, index?: string): Bulk {
-        return new this(elastic, index);
+    public static init(elastic: Elasticsearch, config: BulkConfig={}): Bulk {
+        return new this(elastic, config);
     }
 
     /* INSTANCE */
@@ -45,13 +50,15 @@ export class Bulk {
     public tiempoEnvio: number;
     public tiempoTotal: number;
 
+    protected readonly indice?: string;
     protected operaciones: BulkOperation<any>[];
+    protected readonly refresh: Refresh;
 
     private readonly start: number;
 
     public get length(): number { return this.operaciones.length; }
 
-    protected constructor(protected readonly elastic: Elasticsearch, protected readonly indice?: string) {
+    protected constructor(protected readonly elastic: Elasticsearch, {index, refresh = false}: BulkConfig) {
         this.correctos = 0;
         this.erroneos = 0;
         this.finalizado = false;
@@ -59,7 +66,9 @@ export class Bulk {
         this.tiempoEnvio = 0;
         this.tiempoTotal = 0;
 
+        this.indice = index;
         this.operaciones = [];
+        this.refresh = refresh;
 
         this.start = Date.now();
     }
@@ -135,7 +144,7 @@ export class Bulk {
         const data = await this.elastic.bulk({
             index: this.indice,
             operations: operaciones.flatMap(op=>op.operations),
-            refresh: "wait_for",
+            refresh: this.refresh,
         })
 
         if (!data.errors) {

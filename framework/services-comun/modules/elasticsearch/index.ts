@@ -48,6 +48,7 @@ export type InfoResponse = elastic.estypes.InfoResponse;
 export type OpenPointInTimeRequest = elastic.estypes.OpenPointInTimeRequest;
 export type OpenPointInTimeResponse = elastic.estypes.OpenPointInTimeResponse;
 export type QueryDslQueryContainer = elastic.estypes.QueryDslQueryContainer;
+export type Refresh = elastic.estypes.Refresh;
 export type ReindexRequest = elastic.estypes.ReindexRequest;
 export type ReindexResponse = elastic.estypes.ReindexResponse;
 export type Script = elastic.estypes.Script;
