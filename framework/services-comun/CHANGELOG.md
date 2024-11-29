@@ -1,7 +1,7 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
-## 2024.11.28+2
+## 2024.11.29+1
 
 ### Added
 - [Jose] Añadidas estadísticas al nuevo módulo de Bulk
@@ -10,7 +10,10 @@
 - [Jose] Se ha movido el módulo `modules/elasticsearch/elastic/bulk` a `modules/elasticsearch/elastic/bulk-old`:
     - El módulo `modules/utiles/elastic/bulk` ahora apunta a la ruta nueva por lo que no sería necesario hacer cambios en la mayoría de los casos
 - [Jose] Se ha movido el módulo `modules/elasticsearch/elastic/bloque` a `modules/elasticsearch/elastic/bulk`:
-    - En este casi si que habría que renombrar las importaciones
+    - En este caso sí que habría que renombrar las importaciones
+
+### Changed
+- [Jose] Se ha mejorado el método `arrayChop` de `modules/utiles/array.ts`. Ahora el parámetro `length` es opcional y si solo hay 1 bloque se devuelve tal cual sin procesar nada
 
 ---
 ## 2024.11.28+1
