@@ -169,7 +169,7 @@ export class Bulk {
                 } else {
                     if (!reportados.includes(item.error.type)) {
                         reportados.push(item.error.type);
-                        error("Error irrecuperable de Bulk", JSON.stringify(item.error));
+                        error("Error irrecuperable de Bulk", JSON.stringify(item.error), JSON.stringify(op.operations));
                     }
                     this.erroneos++;
                     ok = false;
