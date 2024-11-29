@@ -446,7 +446,7 @@ export class Cloudflare {
 
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
         let memoryOK = false;
-        while (process.memoryUsage().heapUsed > 3.5 * 1024*1024*1024) {
+        while (process.memoryUsage().heapUsed > 3 * 1024*1024*1024) {
             if (!memoryOK) {
                 info("Esperando por memoria");
                 memoryOK = true;
