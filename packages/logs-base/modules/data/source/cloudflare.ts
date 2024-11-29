@@ -1,4 +1,5 @@
 import readline from "node:readline/promises";
+import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {z} from "zod";
 
 import {Bulk} from "services-comun/modules/elasticsearch/bulk";
@@ -396,27 +397,47 @@ export class Cloudflare {
         let cantidad = 0;
         let total = 0;
         do {
-            const bulk = Bulk.init(elastic);
-            const data = await elastic.search({
-                index,
-                query: {
-                    term: {
-                        "metadata.source": source,
-                    },
-                },
-                _source: false,
-                size: 10000,
-            });
-            for (const actual of data.hits.hits) {
-                bulk.delete({index, id: actual._id!});
+            try {
+                cantidad = await this.limpiarDuplicadosEjecutar(index, source);
+                total += cantidad;
+            } catch (err) {
+                if (err instanceof Error) {
+                    if (err.message!="Request timed out") {
+                        return Promise.reject(err);
+                    }
+                    // en este caso reintentamos tras 1-2 segundos
+                    await PromiseDelayed(1000+Math.floor(Math.random()*1000));
+                } else {
+                    return Promise.reject(err);
+                }
             }
-            cantidad = data.hits.hits.length;
-            await bulk.run();
-            total += cantidad;
         } while (cantidad>0);
         if (total>0) {
             info(`Eliminados ${total} registros duplicados de ${cliente.id} ${cliente.grupo??"-"} ${source}`);
         }
+    }
+
+    private static async limpiarDuplicadosEjecutar(index: string, source: string): Promise<number> {
+        const hits = await elastic.search({
+            index,
+            query: {
+                term: {
+                    "metadata.source": source,
+                },
+            },
+            _source: false,
+            size: 10000,
+        })
+            .then(data=>data.hits.hits);
+
+        const bulk = Bulk.init(elastic);
+        for (const actual of hits) {
+            bulk.delete({index, id: actual._id!});
+        }
+
+        await bulk.run();
+
+        return hits.length;
     }
 
     // private static tiempo = 5;
