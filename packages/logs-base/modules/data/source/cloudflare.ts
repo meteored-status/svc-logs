@@ -449,6 +449,9 @@ export class Cloudflare {
             }
             await PromiseDelayed(Math.floor(Math.random()*1000));
         }
+        if (memoryOK) {
+            info("Memoria OK");
+        }
 
         let lineas = 0;
         const lector = readline.createInterface({
