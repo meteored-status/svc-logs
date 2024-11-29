@@ -159,7 +159,8 @@ export class Bulk {
         let ok = true;
         const reportados: string[] = [];
         for (let i=0, len=operaciones.length; i<len; i++) {
-            const item = data.items[i].create!;
+            const obj = data.items[i];
+            const item = obj.index ?? obj.create ?? obj.update ?? obj.delete!;
             const op = operaciones[i];
 
             if (item.error!=undefined) {
