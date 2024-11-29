@@ -430,7 +430,7 @@ export class Cloudflare {
         })
             .then(data=>data.hits.hits);
 
-        const bulk = Bulk.init(elastic);
+        const bulk = Bulk.init(elastic, {refresh: "wait_for"});
         for (const actual of hits) {
             bulk.delete({index: actual._index, id: actual._id!});
         }
