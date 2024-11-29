@@ -50,7 +50,7 @@ export class Bucket extends BucketBase {
                 .split("_")
                 .at(0)!
                 .replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, "$1-$2-$3T$4:$5:$6Z"); // esto incluye la fecha
-            const fecha = new Date(`${data.substring(0,4)}-${data.substring(4,6)}-${data.substring(6,8)}`);
+            const fecha = new Date(data);
             return {
                 table: "repesca",
                 query: "INSERT INTO repesca (bucket, archivo, origen, fecha) VALUES (?, ?, ?, ?)",

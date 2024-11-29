@@ -44,7 +44,7 @@ export class BulkOperationDelete extends BulkOperation<void> {
     /* INSTANCE */
     public constructor(index: string, id: string) {
         super({
-            create: {
+            delete: {
                 _index: index,
                 _id: id,
             },

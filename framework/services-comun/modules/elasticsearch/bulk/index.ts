@@ -159,9 +159,13 @@ export class Bulk {
         let ok = true;
         const reportados: string[] = [];
         for (let i=0, len=operaciones.length; i<len; i++) {
-            const obj = data.items[i];
-            const item = obj.index ?? obj.create ?? obj.update ?? obj.delete!;
             const op = operaciones[i];
+            const obj = data.items[i];
+            if (obj==null) {
+                console.log("Tenemos un item a NULL", i, len, operaciones.length, data.items.length);
+                continue;
+            }
+            const item = obj.index ?? obj.create ?? obj.update ?? obj.delete!;
 
             if (item.error!=undefined) {
                 if (item.status==429) {
