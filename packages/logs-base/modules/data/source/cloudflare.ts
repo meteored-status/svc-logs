@@ -425,6 +425,7 @@ export class Cloudflare {
                     "metadata.source": source,
                 },
             },
+            conflicts: "proceed",
         });
 
         // const bulk = Bulk.init(elastic, {refresh: "wait_for"});
