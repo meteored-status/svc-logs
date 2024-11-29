@@ -409,7 +409,7 @@ export class Cloudflare {
                 size: 10000,
             });
             for (const actual of data.hits.hits) {
-                bulk.delete({index: actual._index, id: actual._id!});
+                bulk.delete({index, id: actual._id!});
                 // operations.push({
                 //     delete: {
                 //         _index: actual._index,
