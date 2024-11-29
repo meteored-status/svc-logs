@@ -1,7 +1,7 @@
 import readline from "node:readline/promises";
 import {z} from "zod";
 
-import {Bulk} from "services-comun/modules/elasticsearch/bloque";
+import {Bulk} from "services-comun/modules/elasticsearch/bulk";
 import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
@@ -397,7 +397,6 @@ export class Cloudflare {
         let total = 0;
         do {
             const bulk = Bulk.init(elastic);
-            // const operations: BulkOperationContainer[] = [];
             const data = await elastic.search({
                 index,
                 query: {
@@ -410,21 +409,9 @@ export class Cloudflare {
             });
             for (const actual of data.hits.hits) {
                 bulk.delete({index, id: actual._id!});
-                // operations.push({
-                //     delete: {
-                //         _index: actual._index,
-                //         _id: actual._id,
-                //     },
-                // });
             }
             cantidad = data.hits.hits.length;
             await bulk.run();
-            // if (cantidad>0) {
-            //     const data = await elastic.bulk({
-            //         operations,
-            //         refresh: "wait_for",
-            //     })
-            // }
             total += cantidad;
         } while (cantidad>0);
         if (total>0) {
@@ -441,12 +428,6 @@ export class Cloudflare {
         });
 
         const bulk = Bulk.init(elastic, Registro.getIndex(cliente));
-        // const bulk: [BulkOperationContainer, IRegistroES][] = [];
-        // const index: BulkOperationContainer = {
-        //     create: {
-        //         _index: Registro.getIndex(cliente),
-        //     },
-        // };
         for await (const linea of lector) {
             if (linea.length==0) {
                 continue;
@@ -456,43 +437,12 @@ export class Cloudflare {
             const registro = Registro.build(cliente, cf, pod, notify.objectId);
             if (!this.FILTRAR_PATHS_PREFIX.some(path=>registro.peticion.uri.startsWith(path))) {
                 bulk.create({doc: registro.toJSON()});
-                // bulk.push([index, registro.toJSON()]);
             }
             lineas++;
         }
 
         await bulk.run();
-        // if (bulk.length>0) {
-        //     await this.crear(bulk);
-        // }
 
         return lineas;
     }
-
-    // private static async crear(bulk: [BulkOperationContainer, IRegistroES][]): Promise<void> {
-    //     const data = await elastic.bulk({
-    //         operations: bulk.flat(),
-    //         refresh: "wait_for",
-    //     })
-    //     if (!data.errors) {
-    //         return;
-    //     }
-    //
-    //     let repesca: [BulkOperationContainer, IRegistroES][] = [];
-    //     for (let i=0, len=bulk.length; i<len; i++) {
-    //         const actual = data.items[i].create!;
-    //         if (actual.error!=undefined) {
-    //             if (actual.status==429) {
-    //                 repesca.push(bulk[i]);
-    //             } else {
-    //                 if (!["index_not_found_exception"].includes(actual.error.type)) {
-    //                     error("Error", JSON.stringify(actual.error));
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     if (repesca.length>0) {
-    //         return this.crear(bulk)
-    //     }
-    // }
 }
