@@ -419,8 +419,8 @@ export class Cloudflare {
         }
     }
 
-    private static tiempo = 5;
-    private static registros = 25000;
+    // private static tiempo = 5;
+    // private static registros = 25000;
     public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
         let lineas = 0;
         const lector = readline.createInterface({
@@ -446,14 +446,14 @@ export class Cloudflare {
             lineas++;
         }
 
-        const start = Date.now();
+        // const start = Date.now();
         await bulk.run();
-        const diferencia = Math.floor((Date.now() - start)/1000);
-        if (diferencia>this.tiempo || (bulk.length>this.registros && this.registros<100000)) {
-            this.tiempo = diferencia;
-            this.registros = bulk.length;
-            info(`Ingestados ${lineas} registros en ${diferencia}s`);
-        }
+        // const diferencia = Math.floor((Date.now() - start)/1000);
+        // if (diferencia>this.tiempo || (bulk.length>this.registros && this.registros<100000)) {
+        //     this.tiempo = diferencia;
+        //     this.registros = bulk.length;
+        //     info(`Ingestados ${lineas} registros en ${diferencia}s`);
+        // }
 
         return lineas;
     }
