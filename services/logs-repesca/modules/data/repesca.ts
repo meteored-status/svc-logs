@@ -30,11 +30,16 @@ export class Repesca {
     private static PARAR = false;
 
     public static async run(config: Configuracion): Promise<void> {
+        const pendiente = new Date().setUTCMinutes(55,0,0)-Date.now();
+        if (pendiente<=0) {
+            info("No hay tiempo para una nueva ejecución");
+            return;
+        }
         let timeout: NodeJS.Timeout|undefined = setTimeout(()=>{
             info("Solicitando parada");
             this.PARAR = true;
             timeout = undefined;
-        }, 3300000); // 55 minutos para parar el proceso para evitar que se quede a medias cuando se borre el POD
+        }, pendiente); // paramos en el minuto 55 de la hora actual
 
         await this.reset();
         await this.liberarBloqueados();
