@@ -180,7 +180,11 @@ export class Elasticsearch {
 
     public async bulk(params: BulkRequest): Promise<BulkResponse> {
         const cliente = await this.load();
-        return cliente.bulk(params);
+        try {
+            return await cliente.bulk(params);
+        } finally {
+            await cliente.close();
+        }
     }
 
     public async info(params: InfoRequest = {}): Promise<InfoResponse> {

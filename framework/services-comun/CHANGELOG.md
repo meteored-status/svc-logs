@@ -1,6 +1,13 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.11.30+1
+
+### Fixed
+- [Jose] Corregido memory leak en el método `bulk` de ElasticSearch
+  - Se abría la conexión pero nunca se cerraba
+
+---
 ## 2024.11.29+1
 
 ### Added
