@@ -33,8 +33,8 @@ interface IBulkParamsUpdate<T> extends IBulkParamsID {
 }
 
 export interface BulkConfig {
+    blockSize?: number;
     index?: string;
-    limit?: number;
     refresh?: Refresh;
 }
 
@@ -53,13 +53,13 @@ export class Bulk {
     public tiempoEnvio: number;
     public tiempoTotal: number;
 
-    private readonly limit?: number;
+    private readonly blockSize?: number;
     private readonly indice?: string;
     private operaciones: BulkOperation<any>[];
     private readonly refresh: Refresh;
     private readonly start: number;
 
-    protected constructor(private readonly elastic: Elasticsearch, {index, refresh = false}: BulkConfig) {
+    protected constructor(private readonly elastic: Elasticsearch, {blockSize, index, refresh = false}: BulkConfig) {
         this.correctos = 0;
         this.erroneos = 0;
         this.finalizado = false;
@@ -68,7 +68,7 @@ export class Bulk {
         this.tiempoEnvio = 0;
         this.tiempoTotal = 0;
 
-        // this.limit = Number.MAX_SAFE_INTEGER;
+        this.blockSize = blockSize;
         this.indice = index;
         this.operaciones = [];
         this.refresh = refresh;
@@ -135,7 +135,7 @@ export class Bulk {
             return true;
         }
 
-        const oks = await Promise.all(arrayChop(this.operaciones.splice(0), this.limit).map(bloque=>this.ejecutarBloque(bloque)));
+        const oks = await Promise.all(arrayChop(this.operaciones.splice(0), this.blockSize).map(bloque=>this.ejecutarBloque(bloque)));
         const ok = oks.every(ok=>ok);
 
         return await this.ejecutar() && ok;

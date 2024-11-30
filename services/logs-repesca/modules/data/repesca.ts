@@ -53,7 +53,7 @@ export class Repesca {
     }
 
     protected static async liberarBloqueados(): Promise<void> {
-        await db.insert("INSERT IGNORE INTO repesca (bucket, archivo, cliente, grupo, backends, fecha) SELECT bucket, archivo, cliente, grupo, backends, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-10800000)]);
+        await db.insert("INSERT IGNORE INTO repesca (bucket, archivo, cliente, grupo, backends, fecha) SELECT bucket, archivo, cliente, grupo, backends, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-900000)]);
         await db.delete("DELETE FROM procesando WHERE (bucket, archivo) IN (SELECT bucket, archivo FROM repesca)");
     }
 

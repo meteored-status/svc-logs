@@ -465,6 +465,7 @@ export class Cloudflare {
         });
 
         const bulk = Bulk.init(elastic, {
+            blockSize: 25000,
             index: Registro.getIndex(cliente),
             refresh: false,
         });
