@@ -414,6 +414,7 @@ export class Cloudflare {
         // } while (cantidad>0);
         if (total>0) {
             info(`Eliminados ${total} registros duplicados de ${cliente.id} ${cliente.grupo??"-"} ${source}`);
+            await PromiseDelayed(5000);
         }
     }
 
