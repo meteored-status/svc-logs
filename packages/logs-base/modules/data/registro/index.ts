@@ -319,7 +319,7 @@ export class Registro implements IRegistro {
         return `${this.INDEX}-${cliente.id}`;
     }
 
-    public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string): Registro {
+    public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string, idx: number): Registro {
         const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
         const metadata = RegistroMetadata.build({
             proyecto: client.id,
@@ -328,6 +328,7 @@ export class Registro implements IRegistro {
             pod: pod.host,
             version: pod.version,
             source,
+            idx,
         });
         const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
         const cache = RegistroCache.build(data.cache);

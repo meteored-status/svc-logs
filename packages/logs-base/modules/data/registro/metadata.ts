@@ -5,6 +5,7 @@ export interface IRegistroMetadata {
     pod: string;
     version: string;
     source: string;
+    idx: number;
 }
 
 export interface IRegistroMetadataES {
@@ -14,6 +15,7 @@ export interface IRegistroMetadataES {
     pod: string;
     version: string;
     source: string;
+    idx: number;
 }
 
 export class RegistroMetadata implements IRegistroMetadata {
@@ -26,6 +28,7 @@ export class RegistroMetadata implements IRegistroMetadata {
             pod: data.pod,
             version: data.version,
             source: data.source,
+            idx: data.idx,
         });
     }
 
@@ -36,6 +39,7 @@ export class RegistroMetadata implements IRegistroMetadata {
     public get pod(): string { return this.data.pod; }
     public get version(): string { return this.data.version; }
     public get source(): string { return this.data.source; }
+    public get idx(): number { return this.data.idx; }
 
     protected constructor(private data: IRegistroMetadata) {
     }
@@ -48,6 +52,7 @@ export class RegistroMetadata implements IRegistroMetadata {
             pod: this.data.pod,
             version: this.data.version,
             source: this.data.source,
+            idx: this.data.idx,
         };
     }
 }
