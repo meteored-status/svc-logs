@@ -350,7 +350,7 @@
     "metadata": {
       "properties": {
         "proyecto": {
-          "type": "keyword"
+          "type": "constant_keyword"
         },
         "subproyecto": {
           "type": "keyword"
@@ -366,6 +366,9 @@
         },
         "source": {
           "type": "keyword"
+        },
+        "idx": {
+          "type": "integer"
         }
       }
     }

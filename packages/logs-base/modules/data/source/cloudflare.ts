@@ -476,7 +476,7 @@ export class Cloudflare {
             }
 
             const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(linea.trim()));
-            const registro = Registro.build(cliente, cf, pod, notify.objectId);
+            const registro = Registro.build(cliente, cf, pod, notify.objectId, lineas);
             if (!this.FILTRAR_PATHS_PREFIX.some(path=>registro.peticion.uri.startsWith(path))) {
                 bulk.create({doc: registro.toJSON()});
             }
