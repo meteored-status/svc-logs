@@ -6,6 +6,7 @@ import {Storage} from "services-comun/modules/fs/storage";
 import db from "services-comun/modules/utiles/mysql";
 
 import {Cloudflare} from "./source/cloudflare";
+import {Telemetry} from "./telemetry";
 
 export interface IBucketMySQL {
     id: string;
@@ -132,8 +133,11 @@ export class Bucket {
             return;
         }
 
-        await Cloudflare.ingest(pod, this.getCliente(), notify, data);
+        const cliente = this.getCliente();
+        const telemetry = Telemetry.build(cliente, pod, notify.objectId);
+        await Cloudflare.ingest(telemetry, cliente.backends, data);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
         await data.delete();
+        await telemetry.toElastic();
     }
 }

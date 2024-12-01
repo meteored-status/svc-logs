@@ -1,26 +1,27 @@
 import type {BulkOperationContainer, ESBulkOperation, Script} from "..";
 import {Deferred} from "../../utiles/promise";
 
-export abstract class BulkOperation<T=void> extends Deferred {
+abstract class BulkOperation extends Deferred {
     /* INSTANCE */
     protected constructor(protected op: BulkOperationContainer) {
         super();
     }
 
-    public get operations(): ESBulkOperation<T>[] {
+    public get operations(): ESBulkOperation<any>[] {
         return [
             this.op,
         ];
     }
 }
+export {type BulkOperation};
 
-abstract class BulkOperationDoc<T> extends BulkOperation<T> {
+abstract class BulkOperationDoc<T extends object> extends BulkOperation {
     /* INSTANCE */
     protected constructor(op: BulkOperationContainer, protected doc: T) {
         super(op);
     }
 
-    public override get operations(): ESBulkOperation<T>[] {
+    public override get operations(): ESBulkOperation<any>[] {
         return [
             this.op,
             this.doc,
@@ -28,9 +29,14 @@ abstract class BulkOperationDoc<T> extends BulkOperation<T> {
     }
 }
 
-export class BulkOperationCreate<T> extends BulkOperationDoc<T> {
+export class BulkOperationCreate<T extends object> extends BulkOperationDoc<T> {
+    /* STATIC */
+    public static build<T extends object>(index: string, doc: T, id?: string): BulkOperationCreate<T> {
+        return new this<T>(index, doc, id);
+    }
+
     /* INSTANCE */
-    public constructor(index: string, doc: T, id?: string) {
+    private constructor(index: string, doc: T, id?: string) {
         super({
             create: {
                 _index: index,
@@ -40,9 +46,14 @@ export class BulkOperationCreate<T> extends BulkOperationDoc<T> {
     }
 }
 
-export class BulkOperationDelete extends BulkOperation<void> {
+export class BulkOperationDelete extends BulkOperation {
+    /* STATIC */
+    public static build(index: string, id: string): BulkOperationDelete {
+        return new this(index, id);
+    }
+
     /* INSTANCE */
-    public constructor(index: string, id: string) {
+    private constructor(index: string, id: string) {
         super({
             delete: {
                 _index: index,
@@ -52,9 +63,14 @@ export class BulkOperationDelete extends BulkOperation<void> {
     }
 }
 
-export class BulkOperationIndex<T> extends BulkOperationDoc<T> {
+export class BulkOperationIndex<T extends object> extends BulkOperationDoc<T> {
+    /* STATIC */
+    public static build<T extends object>(index: string, doc: T, id?: string): BulkOperationIndex<T> {
+        return new this<T>(index, doc, id);
+    }
+
     /* INSTANCE */
-    public constructor(index: string, doc: T, id?: string) {
+    private constructor(index: string, doc: T, id?: string) {
         super({
             index: {
                 _index: index,
@@ -64,9 +80,14 @@ export class BulkOperationIndex<T> extends BulkOperationDoc<T> {
     }
 }
 
-export class BulkOperationScript extends BulkOperation<void> {
+export class BulkOperationScript extends BulkOperation {
+    /* STATIC */
+    public static build(index: string, id: string, script: Script): BulkOperationScript {
+        return new this(index, id, script);
+    }
+
     /* INSTANCE */
-    public constructor(index: string, id: string, protected script: Script) {
+    private constructor(index: string, id: string, protected script: Script) {
         super({
             update: {
                 _index: index,
@@ -86,11 +107,16 @@ export class BulkOperationScript extends BulkOperation<void> {
     }
 }
 
-export class BulkOperationUpdate<T> extends BulkOperationDoc<Partial<T>> {
+export class BulkOperationUpdate<T extends object> extends BulkOperationDoc<Partial<T>> {
+    /* STATIC */
+    public static build<T extends object>(index: string, id: string, doc: Partial<T>, crear=false, upsert?: T): BulkOperationUpdate<T> {
+        return new this<T>(index, id, doc, crear, upsert);
+    }
+
     /* INSTANCE */
     protected documento: ESBulkOperation<T>;
 
-    public constructor(index: string, id: string, doc: Partial<T>, private crear=false, private upsert?: T) {
+    private constructor(index: string, id: string, doc: Partial<T>, private crear=false, private upsert?: T) {
         super({
             update: {
                 _index: index,

@@ -1,0 +1,34 @@
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "proyecto": {
+      "type": "keyword"
+    },
+    "subproyecto": {
+      "type": "keyword"
+    },
+    "servicio": {
+      "type": "keyword"
+    },
+    "version": {
+      "type": "keyword"
+    },
+    "source": {
+      "type": "keyword"
+    },
+    "ingestTime": {
+      "type": "integer"
+    },
+    "start": {
+      "type": "date"
+    },
+    "end": {
+      "type": "date"
+    },
+    "records": {
+      "type": "integer"
+    }
+  }
+}

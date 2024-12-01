@@ -1,9 +1,3 @@
-import {Fecha} from "services-comun/modules/utiles/fecha";
-import type {IPodInfo} from "services-comun/modules/utiles/config";
-import elastic from "services-comun/modules/utiles/elastic";
-import {error} from "services-comun/modules/utiles/log";
-
-import type {ICliente} from "../bucket";
 import {RegistroCache, type IRegistroCache} from "./cache";
 import {RegistroCliente, type IRegistroCliente} from "./cliente";
 import {RegistroExtremo, type IRegistroExtremo} from "./extremo";
@@ -11,6 +5,7 @@ import {RegistroMetadata, type IRegistroMetadata, type IRegistroMetadataES} from
 import {RegistroOrigen, type IRegistroOrigen} from "./origen";
 import {RegistroPeticion, type IRegistroPeticion} from "./peticion";
 import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} from "./respuesta";
+import type {Telemetry} from "../telemetry";
 
 export interface IRAWDataClient {
     asn: number;
@@ -302,40 +297,31 @@ interface IObj {
     origen?: RegistroOrigen;
 }
 
-declare var PRODUCCION: boolean;
-declare var TEST: boolean;
-
 export class Registro implements IRegistro {
     /* STATIC */
     private static INDEX = `mr-log-accesos`;
 
-    public static getIndex(cliente: ICliente): string {
-        if (!PRODUCCION || TEST) {
-            const fecha = Fecha.generarFechaElastic(new Date(), {
-                dia: false,
-            });
-            return `${this.INDEX}-${cliente.id}-${fecha}`;
-        }
-        return `${this.INDEX}-${cliente.id}`;
+    public static getIndex(cliente: string): string {
+        return `${this.INDEX}-${cliente}`;
     }
 
-    public static build(client: ICliente, data: IRAWData, pod: IPodInfo, source: string, idx: number): Registro {
+    public static build(data: IRAWData, telemetry: Telemetry, backends: Record<string, string>): Registro {
         const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
         const metadata = RegistroMetadata.build({
-            proyecto: client.id,
-            subproyecto: client.grupo,
+            proyecto: telemetry.proyecto,
+            subproyecto: telemetry.subproyecto,
             ingest: new Date(),
-            pod: pod.host,
-            version: pod.version,
-            source,
-            idx,
+            pod: telemetry.servicio,
+            version: telemetry.version,
+            source: telemetry.source,
+            idx: telemetry.idx,
         });
         const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
         const cache = RegistroCache.build(data.cache);
         const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
         const cliente = RegistroCliente.build(data.client);
         const extremo = RegistroExtremo.build(data.edge);
-        const origen = RegistroOrigen.build(data.origin, client.backends);
+        const origen = RegistroOrigen.build(data.origin, backends);
 
         return new this({
             timestamp: data.edge.timestamp.start,

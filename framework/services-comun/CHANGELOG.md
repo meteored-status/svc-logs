@@ -3,6 +3,10 @@
 ---
 ## 2024.11.30+1
 
+### Changed
+- [Jose] Corregidos los tipos genéricos de la clase `Bulk` de ElasticSearch
+- [Jose] Todas las clases Operacion de Bulk ahora son finales (no se pueden extender)
+
 ### Fixed
 - [Jose] Corregido memory leak en el método `bulk` de ElasticSearch
   - Se abría la conexión pero nunca se cerraba
