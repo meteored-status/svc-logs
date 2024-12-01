@@ -94,7 +94,7 @@ export class Telemetry implements ITelemetry {
             start: this.data.start.toISOString(),
             end: this.data.end.toISOString(),
             records: this.records,
-            rps: this.data.ingestTime>0 ? Math.round(this.records / this.data.ingestTime) : undefined,
+            rps: this.data.ingestTime>0 ? Math.round((this.records / this.data.ingestTime) * 1000) : undefined,
         };
     }
 
