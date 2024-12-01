@@ -3,14 +3,13 @@ import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {z} from "zod";
 
 import {Bulk} from "services-comun/modules/elasticsearch/bulk";
-import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
-import {IPodInfo} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
 import {info} from "services-comun/modules/utiles/log";
 import elastic from "services-comun/modules/utiles/elastic";
 
 import type {ICliente} from "../bucket";
 import {type IRAWData, Registro} from "../registro/";
+import type {Telemetry} from "../telemetry";
 
 export class Cloudflare {
     /* STATIC */
@@ -393,7 +392,7 @@ export class Cloudflare {
     });
 
     public static async limpiarDuplicados(cliente: ICliente, source: string): Promise<void> {
-        const index = Registro.getIndex(cliente);
+        const index = Registro.getIndex(cliente.id);
         // let cantidad = 0;
         const total = await this.limpiarDuplicadosEjecutar(index, source);
         // do {
@@ -445,7 +444,7 @@ export class Cloudflare {
         return borrados + await this.limpiarDuplicadosEjecutar(index, source);
     }
 
-    public static async ingest(pod: IPodInfo, cliente: ICliente, notify: INotify, storage: Storage): Promise<number> {
+    public static async ingest(telemetry: Telemetry, backends: Record<string, string>, storage: Storage): Promise<void> {
         let memoryOK = false;
         while (process.memoryUsage().heapUsed > 3 * 1024*1024*1024) {
             if (!memoryOK) {
@@ -458,7 +457,8 @@ export class Cloudflare {
             info("Memoria OK");
         }
 
-        let lineas = 0;
+        telemetry.initTimer();
+
         const lector = readline.createInterface({
             input: storage.stream,
             crlfDelay: Infinity,
@@ -466,8 +466,8 @@ export class Cloudflare {
         });
 
         const bulk = Bulk.init(elastic, {
-            blockSize: 25000,
-            index: Registro.getIndex(cliente),
+            // blockSize: 25000,
+            index: Registro.getIndex(telemetry.proyecto),
             refresh: false,
         });
         for await (const linea of lector) {
@@ -476,15 +476,14 @@ export class Cloudflare {
             }
 
             const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(linea.trim()));
-            const registro = Registro.build(cliente, cf, pod, notify.objectId, lineas);
+            const registro = Registro.build(cf, telemetry, backends);
             if (!this.FILTRAR_PATHS_PREFIX.some(path=>registro.peticion.uri.startsWith(path))) {
                 bulk.create({doc: registro.toJSON()});
             }
-            lineas++;
         }
 
         await bulk.run();
 
-        return lineas;
+        telemetry.endTimer();
     }
 }

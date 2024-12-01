@@ -55,7 +55,7 @@ export class Bulk {
 
     private readonly blockSize?: number;
     private readonly indice?: string;
-    private operaciones: BulkOperation<any>[];
+    private operaciones: BulkOperation[];
     private readonly refresh: Refresh;
     private readonly start: number;
 
@@ -88,31 +88,31 @@ export class Bulk {
         return index;
     }
 
-    private push<T>(op: BulkOperation<T>): BulkOperation<T> {
+    private push(op: BulkOperation): BulkOperation {
         this.length++;
         this.operaciones.push(op);
 
         return op;
     }
 
-    public create<T>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation<T> {
-        return this.push(new BulkOperationCreate(this.checkOperacion(index), doc, id));
+    public create<T extends object>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation {
+        return this.push(BulkOperationCreate.build(this.checkOperacion(index), doc, id));
     }
 
     public delete({index, id}: IBulkParamsID): BulkOperation {
-        return this.push(new BulkOperationDelete(this.checkOperacion(index), id));
+        return this.push(BulkOperationDelete.build(this.checkOperacion(index), id));
     }
 
-    public index<T>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation<T> {
-        return this.push(new BulkOperationCreate(this.checkOperacion(index), doc, id));
+    public index<T extends object>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation {
+        return this.push(BulkOperationCreate.build(this.checkOperacion(index), doc, id));
     }
 
     public script({index, id, script}: IBulkParamsScript): BulkOperation {
-        return this.push(new BulkOperationScript(this.checkOperacion(index), id, script));
+        return this.push(BulkOperationScript.build(this.checkOperacion(index), id, script));
     }
 
-    public update<T>({index, id, doc, crear, upsert}: IBulkParamsUpdate<T>): BulkOperation<Partial<T>> {
-        return this.push(new BulkOperationUpdate(this.checkOperacion(index), id, doc, crear, upsert));
+    public update<T extends object>({index, id, doc, crear, upsert}: IBulkParamsUpdate<T>): BulkOperation {
+        return this.push(BulkOperationUpdate.build(this.checkOperacion(index), id, doc, crear, upsert));
     }
 
     public async run(): Promise<boolean> {

@@ -16,6 +16,8 @@ export type ClearScrollRequest = elastic.estypes.ClearScrollRequest;
 export type ClearScrollResponse = elastic.estypes.ClearScrollResponse;
 export type ClosePointInTimeRequest = elastic.estypes.ClosePointInTimeRequest;
 export type ClosePointInTimeResponse = elastic.estypes.ClosePointInTimeResponse;
+export type CreateRequest = elastic.estypes.CreateRequest;
+export type CreateResponse = elastic.estypes.CreateResponse;
 export type CountRequest = elastic.estypes.CountRequest;
 export type CountResponse = elastic.estypes.CountResponse;
 export type DeleteByQueryRequest = elastic.estypes.DeleteByQueryRequest;
@@ -139,6 +141,11 @@ export class Elasticsearch {
     }
 
     public async index(params: IndexRequest): Promise<IndexResponse> {
+        const cliente = await this.cliente;
+        return cliente.index(params);
+    }
+
+    public async create(params: CreateRequest): Promise<CreateResponse> {
         const cliente = await this.cliente;
         return cliente.index(params);
     }
