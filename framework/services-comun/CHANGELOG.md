@@ -1,6 +1,12 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.1+1
+
+### Fixed
+- [Jose] Solucionado warning producido en determinadas circunstandcias cuando un servicio se inicia como cluster y utiliza TLS en alguna dependencia
+
+---
 ## 2024.11.30+1
 
 ### Changed

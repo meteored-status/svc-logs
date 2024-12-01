@@ -25,6 +25,7 @@ interface ITelemetryES {
     start: string;
     end: string;
     records: number;
+    rps?: number;
 }
 
 export class Telemetry implements ITelemetry {
@@ -93,6 +94,7 @@ export class Telemetry implements ITelemetry {
             start: this.data.start.toISOString(),
             end: this.data.end.toISOString(),
             records: this.records,
+            rps: this.data.ingestTime>0 ? Math.round(this.records / this.data.ingestTime) : undefined,
         };
     }
 

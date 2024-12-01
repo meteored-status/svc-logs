@@ -29,6 +29,9 @@
     },
     "records": {
       "type": "integer"
+    },
+    "rps": {
+      "type": "integer"
     }
   }
 }
