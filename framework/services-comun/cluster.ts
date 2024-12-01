@@ -32,7 +32,10 @@ export class Main extends MainBase {
     private static SLAVES: Map<Worker, ClusterStatus> = new Map<Worker, ClusterStatus>();
 
     private static addSlave(): void {
-        const worker = cluster.fork(process.env);
+        const worker = cluster.fork({
+            ...process.env,
+            NODE_NO_WARNINGS: "1",
+        });
 
         this.SLAVES.set(worker, ClusterStatus.RUNNING);
 
