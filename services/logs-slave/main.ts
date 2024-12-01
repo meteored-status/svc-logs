@@ -1,4 +1,4 @@
-import {Main} from "services-comun/main";
+import {Main} from "services-comun/cluster";
 
 import {Configuracion} from "./modules/utiles/config";
 import {Engine} from "./modules/engine";
