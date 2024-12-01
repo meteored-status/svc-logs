@@ -95,7 +95,7 @@ export class Main extends MainBase {
                 return;
             }
 
-            warning("Advertencia:", warn.stack);
+            warning("Advertencia:", warn.name, warn.stack);
         });
     }
 

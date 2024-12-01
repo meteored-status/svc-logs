@@ -122,7 +122,7 @@ export class Main {
                     return;
                 }
 
-                warning("Advertencia:", warn.stack);
+                warning("Advertencia:", warn.name, warn.stack);
             });
         }
     }
