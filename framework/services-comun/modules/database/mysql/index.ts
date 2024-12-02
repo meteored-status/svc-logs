@@ -258,7 +258,7 @@ export class MySQL implements Disposable {
         return row ?? await Promise.reject(`No se encontró ningún registro`);
     }
 
-    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
+    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=false}: ISelectOptions<T, S>={}): Promise<S[]> {
         let registros: T[];
 
         if (transaction) {
