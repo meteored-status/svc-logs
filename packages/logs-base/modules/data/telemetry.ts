@@ -121,7 +121,7 @@ export class Telemetry implements ITelemetry {
                         await PromiseDelayed(Math.floor(Math.random() * 1000) + 1000);
                         return this.toElastic();
                     }
-                    error("Error guardando telemetría", err.name, err.message, JSON.stringify(this.toJSON()))
+                    error("Error guardando telemetría", err.name, err.message, JSON.stringify(this.toJSON()));
                 }
                 return Promise.reject(err);
             });
