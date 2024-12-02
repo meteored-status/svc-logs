@@ -30,6 +30,9 @@
     "records": {
       "type": "integer"
     },
+    "saltados": {
+      "type": "integer"
+    },
     "rps": {
       "type": "integer"
     }
