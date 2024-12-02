@@ -1,6 +1,15 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.2+1
+
+### Changed
+- [Jose] Se ha añadido soporte a cacheo de `prepared statements` en mysql (habilitado por defecto)
+  - Esto debería mejorar el rendimiento de las consultas (de las bien construidas con parámetros)
+  - Se puede deshabilitar pasando la opción `statementCache: false` del objeto de configuración de cada consulta
+  - Nota: La caché no está habilitada en transacciones
+
+---
 ## 2024.12.1+1
 
 ### Fixed

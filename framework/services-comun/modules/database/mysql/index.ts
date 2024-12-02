@@ -53,7 +53,7 @@ interface IMySQLCluster {
 export type TipoRegistro = string|number|boolean|Date|null|undefined|string[]|number[]|boolean[]|Date[]|string[][]|number[][]|boolean[][]|Date[][];
 
 interface IQueryOptionsBase {
-    preparedCache?: boolean;
+    statementCache?: boolean;
 }
 
 interface IQueryOptions extends IQueryOptionsBase {
@@ -229,7 +229,7 @@ export class MySQL implements Disposable {
         return escape(value);
     }
 
-    public async query<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
+    public async query<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, statementCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
         const select = sql.startsWith("SELECT") || sql.startsWith("select");
         if (!select) {
             error(`Consulta no select: ${sql} => use la función adecuada en lugar de db.query`)
@@ -263,7 +263,24 @@ export class MySQL implements Disposable {
         return await connection.prepare(sql);
     }
 
-    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
+    private async queryStatement<T>(db: PoolNamespace, sql: string, params: TipoRegistro[]=[]): Promise<T[]> {
+        const query = await (this.queries[sql] ??= this.getStatement(db, sql));
+        const [rows] = await query.execute(params)
+            .catch((err)=>{
+                delete this.queries[sql];
+                return Promise.reject(err);
+            });
+
+        return rows as T[];
+    }
+
+    private async queryDirect<T>(db: PoolNamespace, sql: string, params: TipoRegistro[]=[]): Promise<T[]> {
+        const [rows] = await db.query(sql, params);
+
+        return rows as T[];
+    }
+
+    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, statementCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
         let registros: T[];
 
         if (transaction) {
@@ -271,17 +288,10 @@ export class MySQL implements Disposable {
         } else {
             const pool = !master ? this.slave : this.master;
             const db = await pool;
-            if (preparedCache) {
-                const query = await (this.queries[sql] ??= this.getStatement(db, sql));
-                const [rows] = await query.execute(params)
-                    .catch((err)=>{
-                        delete this.queries[sql];
-                        return Promise.reject(err);
-                    });
-                registros = rows as T[];
+            if (statementCache) {
+                registros = await this.queryStatement<T>(db, sql, params);
             } else {
-                const [rows] = await db.query(sql, params);
-                registros = rows as T[];
+                registros = await this.queryDirect<T>(db, sql, params);
             }
         }
 
@@ -299,10 +309,10 @@ export class MySQL implements Disposable {
         return rows as T[];
     }
 
-    private async masterQuery(sql: string, params: TipoRegistro[]=[], {preparedCache=true}: IQueryOptionsBase, retry: number = 0): Promise<ResultSetHeader> {
+    private async masterQuery(sql: string, params: TipoRegistro[]=[], {statementCache=true}: IQueryOptionsBase, retry: number = 0): Promise<ResultSetHeader> {
         const db = await this.master;
         try {
-            if (preparedCache) {
+            if (statementCache) {
                 const query = await (this.queries[sql] ??= this.getStatement(db, sql));
                 const [rows] = await query.execute(params)
                     .catch((err)=>{
@@ -320,7 +330,7 @@ export class MySQL implements Disposable {
             if (err.code=="ER_LOCK_DEADLOCK" && retry<10) {
                 await PromiseDelayed(Math.floor(Math.random()*100) + retry*1000);
 
-                return this.masterQuery(sql, params, {preparedCache}, retry+1);
+                return this.masterQuery(sql, params, {statementCache}, retry+1);
             }
 
             warning(`DEADLOCK en consulta "${sql}" ${retry}`);
@@ -328,35 +338,35 @@ export class MySQL implements Disposable {
         }
     }
 
-    public async insert(sql: string, params: TipoRegistro[]=[], {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async insert(sql: string, params: TipoRegistro[]=[], {transaction, statementCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.insert(sql, params);
         }
-        return this.masterQuery(sql, params, {preparedCache});
+        return this.masterQuery(sql, params, {statementCache});
     }
 
-    public async update(sql: string, params: TipoRegistro[]=[], {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async update(sql: string, params: TipoRegistro[]=[], {transaction, statementCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.update(sql, params);
         }
-        return this.masterQuery(sql, params, {preparedCache});
+        return this.masterQuery(sql, params, {statementCache});
     }
 
-    public async delete(sql: string, params: TipoRegistro[]=[], {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async delete(sql: string, params: TipoRegistro[]=[], {transaction, statementCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.delete(sql, params);
         }
-        return this.masterQuery(sql, params, {preparedCache});
+        return this.masterQuery(sql, params, {statementCache});
     }
 
-    public async truncate(table: string, {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async truncate(table: string, {transaction, statementCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.truncate(table);
         }
-        return this.masterQuery(`TRUNCATE TABLE ${table};`, [], {preparedCache});
+        return this.masterQuery(`TRUNCATE TABLE ${table};`, [], {statementCache});
     }
 
-    public async bulkInsert(registros: IInsert[], {transaction, preparedCache=true, size, delay}: IBulkOptions = {}): Promise<void> {
+    public async bulkInsert(registros: IInsert[], {transaction, statementCache=true, size, delay}: IBulkOptions = {}): Promise<void> {
         if (registros.length>0) {
             const blockSize = size??0;
             const grupos = new Map<string, IInsert[]>();
@@ -390,7 +400,7 @@ export class MySQL implements Disposable {
             });
 
             for (const insert of inserts) {
-                await this.insert(insert, [], {transaction, preparedCache}).catch(async (err) => {
+                await this.insert(insert, [], {transaction, statementCache}).catch(async (err) => {
                     warning(`ERROR Insertando registros`, err, insert as any);
                     if (transaction) {
                         return Promise.reject(err);
