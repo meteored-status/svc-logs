@@ -1,5 +1,3 @@
-import {arrayChop} from "../../utiles/array";
-import {error} from "../../utiles/log";
 import {
     type BulkOperation,
     BulkOperationCreate,
@@ -8,6 +6,8 @@ import {
     BulkOperationUpdate,
 } from "./operation";
 import {Elasticsearch, Refresh, Script} from "..";
+import {arrayChop} from "../../utiles/array";
+import {error} from "../../utiles/log";
 
 interface IBulkParams {
     index?: string;
@@ -146,6 +146,11 @@ export class Bulk {
             index: this.indice,
             operations: operaciones.flatMap(op=>op.operations),
             refresh: this.refresh,
+        }).catch((err)=>{
+            if (err instanceof Error) {
+                error("Error enpetición Bulk", err.name, err.message);
+            }
+            return Promise.reject(err);
         });
 
         if (!data.errors) {
