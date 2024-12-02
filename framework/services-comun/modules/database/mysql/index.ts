@@ -4,8 +4,8 @@ import {
     type ResultSetHeader,
     type Pool,
     type PoolCluster,
+    type PreparedStatementInfo,
     type QueryOptions,
-    type PoolNamespace,
     type SslOptions,
 } from "mysql2/promise";
 import {FSWatcher, watch} from "node:fs";
@@ -52,18 +52,22 @@ interface IMySQLCluster {
 
 export type TipoRegistro = string|number|boolean|Date|null|undefined|string[]|number[]|boolean[]|Date[]|string[][]|number[][]|boolean[][]|Date[][];
 
-interface IQueryOptions {
+interface IQueryOptionsBase {
+    preparedCache?: boolean;
+}
+
+interface IQueryOptions extends IQueryOptionsBase {
     transaction?: Transaction;
+}
+
+interface ISelectOptions<T, S=T> extends IQueryOptions {
+    fn?: (rows: T)=>S|Promise<S>;
+    master?: boolean;
 }
 
 interface IBulkOptions extends IQueryOptions {
     size?: number;
     delay?: number;
-}
-
-interface ISelectOptions<T, S=T> extends IQueryOptions {
-    master?: boolean;
-    fn?: (rows: T)=>S|Promise<S>;
 }
 
 export interface IInsert {
@@ -100,20 +104,22 @@ export class MySQL implements Disposable {
         return this._cluster ??= this.open();
     }
 
-    private _master?: Promise<Pool | PoolNamespace>;
-    private get master(): Promise<Pool | PoolNamespace> {
-        return this._master ??= this.cluster.then(cluster=>cluster.of("MASTER"));
+    private _master?: Promise<Pool>;
+    private get master(): Promise<Pool> {
+        return this._master ??= this.cluster.then(cluster=>cluster.of("MASTER") as Pool);
     }
 
-    private _slave?: Promise<Pool | PoolNamespace>;
-    private get slave(): Promise<Pool | PoolNamespace> {
-        return this._slave ??= this.cluster.then(cluster=>cluster.of("SLAVE*"));
+    private _slave?: Promise<Pool>;
+    private get slave(): Promise<Pool> {
+        return this._slave ??= this.cluster.then(cluster=>cluster.of("SLAVE*") as Pool);
     }
 
     private watcher?: FSWatcher;
+    private readonly queries: Record<string, Promise<PreparedStatementInfo>>;
 
     // LLAMAR AL CONSTRUCTOR DIRÉCTAMENTE QUEDA PROHIBIDO, USAR MySQL.build() EN SU LUGAR
     protected constructor(protected readonly credenciales: string, public readonly database?: string) {
+        this.queries = {};
     }
 
     public [Symbol.dispose](): void {
@@ -223,7 +229,7 @@ export class MySQL implements Disposable {
         return escape(value);
     }
 
-    public async query<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn}: ISelectOptions<T, S>={}): Promise<S[]> {
+    public async query<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
         const select = sql.startsWith("SELECT") || sql.startsWith("select");
         if (!select) {
             error(`Consulta no select: ${sql} => use la función adecuada en lugar de db.query`)
@@ -252,7 +258,7 @@ export class MySQL implements Disposable {
         return row ?? await Promise.reject(`No se encontró ningún registro`);
     }
 
-    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn}: ISelectOptions<T, S>={}): Promise<S[]> {
+    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
         let registros: T[];
 
         if (transaction) {
@@ -260,8 +266,18 @@ export class MySQL implements Disposable {
         } else {
             const pool = !master ? this.slave : this.master;
             const db = await pool;
-            const [rows] = await db.query(sql, params);
-            registros = rows as T[];
+            if (preparedCache) {
+                const query = await (this.queries[sql] ??= db.prepare(sql));
+                const [rows] = await query.execute(params)
+                    .catch((err)=>{
+                        delete this.queries[sql];
+                        return Promise.reject(err);
+                    });
+                registros = rows as T[];
+            } else {
+                const [rows] = await db.query(sql, params);
+                registros = rows as T[];
+            }
         }
 
         if (fn!=undefined) {
@@ -278,9 +294,20 @@ export class MySQL implements Disposable {
         return rows as T[];
     }
 
-    private async masterQuery(sql: string, params: TipoRegistro[]=[], retry: number = 0): Promise<ResultSetHeader> {
+    private async masterQuery(sql: string, params: TipoRegistro[]=[], {preparedCache=true}: IQueryOptionsBase, retry: number = 0): Promise<ResultSetHeader> {
         const db = await this.master;
         try {
+            if (preparedCache) {
+                const query = await (this.queries[sql] ??= db.prepare(sql));
+                const [rows] = await query.execute(params)
+                    .catch((err)=>{
+                        delete this.queries[sql];
+                        return Promise.reject(err);
+                    });
+
+                return rows as ResultSetHeader;
+            }
+
             const [rows] = await db.query<ResultSetHeader>(sql, params);
 
             return rows;
@@ -288,7 +315,7 @@ export class MySQL implements Disposable {
             if (err.code=="ER_LOCK_DEADLOCK" && retry<10) {
                 await PromiseDelayed(Math.floor(Math.random()*100) + retry*1000);
 
-                return this.masterQuery(sql, params, retry+1);
+                return this.masterQuery(sql, params, {preparedCache}, retry+1);
             }
 
             warning(`DEADLOCK en consulta "${sql}" ${retry}`);
@@ -296,35 +323,35 @@ export class MySQL implements Disposable {
         }
     }
 
-    public async insert(sql: string, params: TipoRegistro[]=[], {transaction}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async insert(sql: string, params: TipoRegistro[]=[], {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.insert(sql, params);
         }
-        return this.masterQuery(sql, params);
+        return this.masterQuery(sql, params, {preparedCache});
     }
 
-    public async update(sql: string, params: TipoRegistro[]=[], {transaction}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async update(sql: string, params: TipoRegistro[]=[], {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.update(sql, params);
         }
-        return this.masterQuery(sql, params);
+        return this.masterQuery(sql, params, {preparedCache});
     }
 
-    public async delete(sql: string, params: TipoRegistro[]=[], {transaction}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async delete(sql: string, params: TipoRegistro[]=[], {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.delete(sql, params);
         }
-        return this.masterQuery(sql, params);
+        return this.masterQuery(sql, params, {preparedCache});
     }
 
-    public async truncate(table: string, {transaction}: IQueryOptions = {}): Promise<ResultSetHeader> {
+    public async truncate(table: string, {transaction, preparedCache}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.truncate(table);
         }
-        return this.masterQuery(`TRUNCATE TABLE ${table};`);
+        return this.masterQuery(`TRUNCATE TABLE ${table};`, [], {preparedCache});
     }
 
-    public async bulkInsert(registros: IInsert[], {transaction, size, delay}: IBulkOptions = {}): Promise<void> {
+    public async bulkInsert(registros: IInsert[], {transaction, preparedCache=true, size, delay}: IBulkOptions = {}): Promise<void> {
         if (registros.length>0) {
             const blockSize = size??0;
             const grupos = new Map<string, IInsert[]>();
@@ -358,7 +385,7 @@ export class MySQL implements Disposable {
             });
 
             for (const insert of inserts) {
-                await this.insert(insert, [], {transaction}).catch(async (err) => {
+                await this.insert(insert, [], {transaction, preparedCache}).catch(async (err) => {
                     warning(`ERROR Insertando registros`, err, insert as any);
                     if (transaction) {
                         return Promise.reject(err);
