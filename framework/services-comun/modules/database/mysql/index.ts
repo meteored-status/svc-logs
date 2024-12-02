@@ -2,7 +2,7 @@ import {
     createPoolCluster,
     escape,
     type ResultSetHeader,
-    type Pool,
+    type PoolNamespace,
     type PoolCluster,
     type PreparedStatementInfo,
     type QueryOptions,
@@ -104,14 +104,14 @@ export class MySQL implements Disposable {
         return this._cluster ??= this.open();
     }
 
-    private _master?: Promise<Pool>;
-    private get master(): Promise<Pool> {
-        return this._master ??= this.cluster.then(cluster=>cluster.of("MASTER") as Pool);
+    private _master?: Promise<PoolNamespace>;
+    private get master(): Promise<PoolNamespace> {
+        return this._master ??= this.cluster.then(cluster=>cluster.of("MASTER"));
     }
 
-    private _slave?: Promise<Pool>;
-    private get slave(): Promise<Pool> {
-        return this._slave ??= this.cluster.then(cluster=>cluster.of("SLAVE*") as Pool);
+    private _slave?: Promise<PoolNamespace>;
+    private get slave(): Promise<PoolNamespace> {
+        return this._slave ??= this.cluster.then(cluster=>cluster.of("SLAVE*"));
     }
 
     private watcher?: FSWatcher;
@@ -258,7 +258,12 @@ export class MySQL implements Disposable {
         return row ?? await Promise.reject(`No se encontró ningún registro`);
     }
 
-    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=false}: ISelectOptions<T, S>={}): Promise<S[]> {
+    private async getStatement(pool: PoolNamespace, sql: string): Promise<PreparedStatementInfo> {
+        const connection = await pool.getConnection();
+        return await connection.prepare(sql);
+    }
+
+    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, preparedCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
         let registros: T[];
 
         if (transaction) {
@@ -267,7 +272,7 @@ export class MySQL implements Disposable {
             const pool = !master ? this.slave : this.master;
             const db = await pool;
             if (preparedCache) {
-                const query = await (this.queries[sql] ??= db.prepare(sql));
+                const query = await (this.queries[sql] ??= this.getStatement(db, sql));
                 const [rows] = await query.execute(params)
                     .catch((err)=>{
                         delete this.queries[sql];
@@ -298,7 +303,7 @@ export class MySQL implements Disposable {
         const db = await this.master;
         try {
             if (preparedCache) {
-                const query = await (this.queries[sql] ??= db.prepare(sql));
+                const query = await (this.queries[sql] ??= this.getStatement(db, sql));
                 const [rows] = await query.execute(params)
                     .catch((err)=>{
                         delete this.queries[sql];
