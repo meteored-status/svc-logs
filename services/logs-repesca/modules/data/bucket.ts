@@ -4,7 +4,7 @@ import type {INotify} from "services-comun-status/modules/services/logs-slave/ba
 import {type IInsert} from "services-comun/modules/database/mysql";
 import {Storage} from "services-comun/modules/fs/storage";
 import {Google} from "services-comun/modules/utiles/config";
-import {error} from "services-comun/modules/utiles/log";
+import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
 
 import type {Configuracion} from "../utiles/config";
@@ -32,15 +32,13 @@ export class Bucket extends BucketBase {
 
         await this.repescando(notify);
 
-        try {
-            await Cloudflare.limpiarDuplicados(cliente, notify.objectId);
-        } catch (err) {
-            error("Error limpiando duplicados", err);
-            return;
+        const idx = await Cloudflare.getIDX(cliente, notify.objectId);
+        if (idx!=undefined) {
+            info(`Saltamos ${idx+1} registros ya indexados de ${cliente.id} ${cliente.grupo??"-"} ${notify.objectId}`);
         }
 
         try {
-            await bucket.ingest(config.pod, config.google, notify)
+            await bucket.ingest(config.pod, config.google, notify, idx)
             await this.endProcesando(notify)
                 .catch((err)=>{
                     error("Error en fin de proceso", err);

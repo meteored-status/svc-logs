@@ -127,7 +127,7 @@ export class Bucket {
         }
     }
 
-    public async ingest(pod: IPodInfo, storage: Google, notify: INotify): Promise<void> {
+    public async ingest(pod: IPodInfo, storage: Google, notify: INotify, idx?: number): Promise<void> {
         const data = await this.getArchivo(storage, notify.bucketId, notify.objectId);
         if (data==null) {
             return;
@@ -135,7 +135,7 @@ export class Bucket {
 
         const cliente = this.getCliente();
         const telemetry = Telemetry.build(cliente, pod, notify.objectId);
-        await Cloudflare.ingest(telemetry, cliente.backends, data);
+        await Cloudflare.ingest(telemetry, cliente.backends, data, idx);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [notify.bucketId, notify.objectId]);
         await data.delete();
         await telemetry.toElastic();
