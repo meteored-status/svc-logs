@@ -14,6 +14,7 @@ interface ITelemetry {
     start: Date;
     end: Date;
     records?: number;
+    saltados?: number;
 }
 
 interface ITelemetryES {
@@ -27,6 +28,7 @@ interface ITelemetryES {
     start: string;
     end: string;
     records: number;
+    saltados: number;
     rps?: number;
 }
 
@@ -63,6 +65,7 @@ export class Telemetry implements ITelemetry {
     public get start(): Date { return this.data.start; }
     public get end(): Date { return this.data.end; }
     public records: number;
+    public saltados: number;
 
     public get idx(): number {
         return this.records++;
@@ -73,6 +76,7 @@ export class Telemetry implements ITelemetry {
     public constructor(private readonly data: ITelemetry) {
         this.timestamp = new Date();
         this.records = data.records??0;
+        this.saltados = data.saltados??0;
         this.time = this.timestamp.getTime();
     }
 
@@ -82,6 +86,11 @@ export class Telemetry implements ITelemetry {
 
     public endTimer(): void {
         this.data.ingestTime = Date.now() - this.time;
+    }
+
+    public saltar(): void {
+        this.saltados++;
+        this.records++;
     }
 
     public toJSON(): ITelemetryES {
@@ -96,6 +105,7 @@ export class Telemetry implements ITelemetry {
             start: this.data.start.toISOString(),
             end: this.data.end.toISOString(),
             records: this.records,
+            saltados: this.saltados,
             rps: this.data.ingestTime>0 ? Math.round((this.records / this.data.ingestTime) * 1000) : undefined,
         };
     }

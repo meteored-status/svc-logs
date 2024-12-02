@@ -391,60 +391,29 @@ export class Cloudflare {
         };
     });
 
-    public static async limpiarDuplicados(cliente: ICliente, source: string): Promise<void> {
-        const index = Registro.getIndex(cliente.id);
-        // let cantidad = 0;
-        const total = await this.limpiarDuplicadosEjecutar(index, source);
-        // do {
-        //     try {
-        //         cantidad = await this.limpiarDuplicadosEjecutar(index, source);
-        //         total += cantidad;
-        //     } catch (err) {
-        //         if (err instanceof Error) {
-        //             if (err.message!="Request timed out") {
-        //                 return Promise.reject(err);
-        //             }
-        //             // en este caso reintentamos tras 1-2 segundos
-        //             await PromiseDelayed(1000+Math.floor(Math.random()*1000));
-        //         } else {
-        //             return Promise.reject(err);
-        //         }
-        //     }
-        // } while (cantidad>0);
-        if (total>0) {
-            info(`Eliminados ${total} registros duplicados de ${cliente.id} ${cliente.grupo??"-"} ${source}`);
-            await PromiseDelayed(5000);
-        }
-    }
-
-    private static async limpiarDuplicadosEjecutar(index: string, source: string): Promise<number> {
-        const hits = await elastic.deleteByQuery({
-            index,
+    public static async getIDX(cliente: ICliente, source: string): Promise<number|undefined> {
+        const hits = await elastic.search<{metadata: {idx: number}}>({
+            index: Registro.getIndex(cliente.id),
             query: {
                 term: {
                     "metadata.source": source,
                 },
             },
-            conflicts: "proceed",
+            sort: [
+                {
+                    "metadata.idx": "desc",
+                },
+            ],
+            size: 1,
+            _source: [
+                "metadata.idx",
+            ],
         });
 
-        // const bulk = Bulk.init(elastic, {refresh: "wait_for"});
-        // for (const actual of hits) {
-        //     bulk.delete({index: actual._index, id: actual._id!});
-        // }
-        //
-        // await bulk.run();
-        const borrados = hits.deleted??0;
-        if (hits.failures==undefined || hits.failures.length==0) {
-            return borrados;
-        }
-
-        await PromiseDelayed(Math.floor(Math.random()*1000));
-
-        return borrados + await this.limpiarDuplicadosEjecutar(index, source);
+        return hits.hits.hits[0]?._source?.metadata.idx;
     }
 
-    public static async ingest(telemetry: Telemetry, backends: Record<string, string>, storage: Storage): Promise<void> {
+    public static async ingest(telemetry: Telemetry, backends: Record<string, string>, storage: Storage, idx?: number): Promise<void> {
         let memoryOK = false;
         while (process.memoryUsage().heapUsed > 3 * 1024*1024*1024) {
             if (!memoryOK) {
@@ -470,16 +439,25 @@ export class Cloudflare {
             index: Registro.getIndex(telemetry.proyecto),
             refresh: false,
         });
+
+        idx ??=-1;
         for await (const linea of lector) {
             if (linea.length==0) {
+                // en este caso no nos saltamos linea de telemetría, ignoramos las lineas vacías tal como puede ser la de final de archivo
+                continue;
+            }
+            if (idx>=telemetry.records) {
+                telemetry.saltar();
                 continue;
             }
 
             const cf: IRAWData = Cloudflare.SCHEMA.parse(JSON.parse(linea.trim()));
-            const registro = Registro.build(cf, telemetry, backends);
-            if (!this.FILTRAR_PATHS_PREFIX.some(path=>registro.peticion.uri.startsWith(path))) {
-                bulk.create({doc: registro.toJSON()});
+            if (this.FILTRAR_PATHS_PREFIX.some(path=>cf.client.request.path.startsWith(path))) {
+                telemetry.saltar();
+                continue;
             }
+
+            bulk.create({doc: Registro.build(cf, telemetry, backends).toJSON()});
         }
 
         await bulk.run();
