@@ -3,6 +3,12 @@
 ---
 ## 2024.12.3+1
 
+### Added
+- [Jose] Añadida clase BulkAuto en `services-comun/modules/elasticsearch/bulk/auto`
+  - Se crea como la clase Bulk con una opción de configuración extra (`interval`) que indica el intervalo mínimo de envíos
+  - Una vez creada la instancia, se ha de iniciar el envío llamando al método `.start()` y al terminar se debe detener el envío llamando al método `.end()`
+  - Al detener el envío se programa un último envío si hay operaciones pendientes
+
 ### Changed
 - [Jose] Se han eliminado los `prepared statements` ya que no funcionan según lo esperado
 

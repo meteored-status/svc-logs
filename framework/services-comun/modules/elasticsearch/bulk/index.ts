@@ -1,44 +1,10 @@
-import {
-    type BulkOperation,
-    BulkOperationCreate,
-    BulkOperationDelete,
-    BulkOperationScript,
-    BulkOperationUpdate,
-} from "./operation";
-import {Elasticsearch, Refresh, Script} from "..";
+import {BulkBase, type BulkConfig} from "./base";
+import type {BulkOperation,} from "./operation";
+import {Elasticsearch} from "..";
 import {arrayChop} from "../../utiles/array";
 import {error} from "../../utiles/log";
 
-interface IBulkParams {
-    index?: string;
-    id?: string;
-}
-
-interface IBulkParamsID extends IBulkParams {
-    id: string;
-}
-
-interface IBulkParamsDoc<T> extends IBulkParams {
-    doc: T;
-}
-
-interface IBulkParamsScript extends IBulkParamsID {
-    script: Script;
-}
-
-interface IBulkParamsUpdate<T> extends IBulkParamsID {
-    doc: Partial<T>;
-    crear?: boolean;
-    upsert?: T;
-}
-
-export interface BulkConfig {
-    blockSize?: number;
-    index?: string;
-    refresh?: Refresh;
-}
-
-export class Bulk {
+export class Bulk extends BulkBase {
     /* STATIC */
     public static init(elastic: Elasticsearch, config: BulkConfig={}): Bulk {
         return new this(elastic, config);
@@ -53,13 +19,11 @@ export class Bulk {
     public tiempoEnvio: number;
     public tiempoTotal: number;
 
-    private readonly blockSize?: number;
-    private readonly indice?: string;
-    private operaciones: BulkOperation[];
-    private readonly refresh: Refresh;
     private readonly start: number;
 
-    protected constructor(private readonly elastic: Elasticsearch, {blockSize, index, refresh = false}: BulkConfig) {
+    protected constructor(elastic: Elasticsearch, config: BulkConfig) {
+        super(elastic, config);
+
         this.correctos = 0;
         this.erroneos = 0;
         this.finalizado = false;
@@ -68,51 +32,26 @@ export class Bulk {
         this.tiempoEnvio = 0;
         this.tiempoTotal = 0;
 
-        this.blockSize = blockSize;
-        this.indice = index;
-        this.operaciones = [];
-        this.refresh = refresh;
         this.start = Date.now();
     }
 
-    private checkOperacion(index?: string): string {
+    protected override checkOperacion(index?: string): string {
         if (this.finalizado) {
             throw new Error("This Bulk is closed");
         }
 
-        index ??= this.indice;
-        if (index==undefined) {
-            throw new Error("Index is required");
+        return super.checkOperacion(index);
+    }
+
+    public add(...ops: BulkOperation[]): void {
+        for (const op of ops) {
+            this.push(op);
         }
-
-        return index;
     }
 
-    private push(op: BulkOperation): BulkOperation {
+    protected override push(op: BulkOperation): BulkOperation {
         this.length++;
-        this.operaciones.push(op);
-
-        return op;
-    }
-
-    public create<T extends object>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation {
-        return this.push(BulkOperationCreate.build(this.checkOperacion(index), doc, id));
-    }
-
-    public delete({index, id}: IBulkParamsID): BulkOperation {
-        return this.push(BulkOperationDelete.build(this.checkOperacion(index), id));
-    }
-
-    public index<T extends object>({index, id, doc}: IBulkParamsDoc<T>): BulkOperation {
-        return this.push(BulkOperationCreate.build(this.checkOperacion(index), doc, id));
-    }
-
-    public script({index, id, script}: IBulkParamsScript): BulkOperation {
-        return this.push(BulkOperationScript.build(this.checkOperacion(index), id, script));
-    }
-
-    public update<T extends object>({index, id, doc, crear, upsert}: IBulkParamsUpdate<T>): BulkOperation {
-        return this.push(BulkOperationUpdate.build(this.checkOperacion(index), id, doc, crear, upsert));
+        return super.push(op);
     }
 
     public async run(): Promise<boolean> {
@@ -135,7 +74,7 @@ export class Bulk {
             return true;
         }
 
-        const oks = await Promise.all(arrayChop(this.operaciones.splice(0), this.blockSize).map(bloque=>this.ejecutarBloque(bloque)));
+        const oks = await Promise.all(arrayChop(this.operaciones.splice(0), this.config.blockSize).map(bloque=>this.ejecutarBloque(bloque)));
         const ok = oks.every(ok=>ok);
 
         return await this.ejecutar() && ok;
@@ -143,9 +82,9 @@ export class Bulk {
 
     private async ejecutarBloque(operaciones: BulkOperation[]): Promise<boolean> {
         const data = await this.elastic.bulk({
-            index: this.indice,
+            index: this.config.index,
             operations: operaciones.flatMap(op=>op.operations),
-            refresh: this.refresh,
+            refresh: this.config.refresh ?? false,
         }).catch((err)=>{
             if (err instanceof Error) {
                 error("Error enpetición Bulk", err.name, err.message);
