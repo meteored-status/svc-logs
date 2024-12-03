@@ -1,10 +1,14 @@
-import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {RouteGroup} from "services-comun/modules/net/routes/group";
 import {type IRouteGroup} from "services-comun/modules/net/routes/group/block";
 import {error} from "services-comun/modules/utiles/log";
 
 import {Bucket, type INotifyPubSub} from "../../data/bucket";
 import {type Configuracion} from "../../utiles/config";
+
+interface INotify {
+    bucketId: string;
+    objectId: string;
+}
 
 interface IPubSub {
     message: {

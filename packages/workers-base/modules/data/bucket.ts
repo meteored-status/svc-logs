@@ -1,10 +1,14 @@
-import {Google, IPodInfo} from "services-comun/modules/utiles/config";
-import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
+import {Google} from "services-comun/modules/utiles/config";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {Storage} from "services-comun/modules/fs/storage";
 import db from "services-comun/modules/utiles/mysql";
 
 import {Cloudflare} from "./source/cloudflare";
+
+interface INotify {
+    bucketId: string;
+    objectId: string;
+}
 
 export interface IBucketMySQL {
     id: string;

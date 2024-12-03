@@ -2,7 +2,8 @@ import {IPodInfo} from "services-comun/modules/utiles/config";
 import elastic from "services-comun/modules/utiles/elastic";
 import {error} from "services-comun/modules/utiles/log";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
-import {ICliente} from "./bucket";
+
+import type {Cliente} from "./cliente";
 
 interface ITelemetry {
     proyecto: string;
@@ -36,13 +37,13 @@ export class Telemetry implements ITelemetry {
     /* STATIC */
     private static INDEX = `mr-telemetry-accesos`;
 
-    public static build(cliente: ICliente, pod: IPodInfo, source: string): Telemetry {
+    public static build(cliente: Cliente, pod: IPodInfo, source: string): Telemetry {
         const [start, end] = source.split("/")
             .at(-1)!
             .split("_")
             .slice(0, 2)
             .map((data) => new Date(data.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, "$1-$2-$3T$4:$5:$6Z")));
-        return new this({
+        return new this(cliente, {
             proyecto: cliente.id,
             subproyecto: cliente.grupo,
             servicio: pod.servicio,
@@ -73,7 +74,7 @@ export class Telemetry implements ITelemetry {
 
     private time: number;
 
-    public constructor(private readonly data: ITelemetry) {
+    public constructor(public readonly cliente: Cliente, private readonly data: ITelemetry) {
         this.timestamp = new Date();
         this.records = data.records??0;
         this.saltados = data.saltados??0;

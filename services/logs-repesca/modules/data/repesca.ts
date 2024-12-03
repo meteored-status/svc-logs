@@ -1,53 +1,58 @@
+import {type BucketClienteGCS, ClienteGCS} from "logs-base/modules/data/cliente/gcs";
+import {Cloudflare} from "logs-base/modules/data/source/cloudflare";
 import {Fecha} from "services-comun/modules/utiles/fecha";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
 
-import {Bucket} from "./bucket";
 import {Configuracion} from "../utiles/config";
 
 export interface IRepesca {
     bucket: string;
     archivo: string;
-    cliente?: string;
-    grupo?: string;
-    backends?: Record<string, string>;
 }
 
 interface IRepescaMySQL {
     bucket: string;
     archivo: string;
-    cliente: string|null;
-    grupo: string|null;
-    backends: Record<string, string>|null;
-    // mensaje: string|null;
-    // contador: number;
-    // fecha: Date;
 }
 
 export class Repesca {
     /* STATIC */
+    private static PARALELOS = 5;
     private static PARAR = false;
+    private static TIMEOUT?: NodeJS.Timeout;
 
     public static async run(config: Configuracion): Promise<void> {
-        const pendiente = new Date().setUTCMinutes(55,0,0)-Date.now();
-        if (pendiente<=0) {
-            info("No hay tiempo para una nueva ejecución");
-            return;
-        }
-        let timeout: NodeJS.Timeout|undefined = setTimeout(()=>{
-            info("Solicitando parada");
-            this.PARAR = true;
-            timeout = undefined;
-        }, pendiente); // paramos en el minuto 55 de la hora actual
+        this.initTimer();
 
         await this.reset();
         await this.liberarBloqueados();
-        await this.liberarHuerfanos(config);
-        await this.repescarPendientes(config);
+        const buckets = await this.liberarHuerfanos(config);
 
-        if (timeout!=undefined) {
-            clearTimeout(timeout);
+        await Promise.all(Array.from({ length: this.PARALELOS }, (_, i) => this.repescarPendientes(buckets, config, i)));
+
+        this.endTimer();
+    }
+
+    private static initTimer(): void {
+        const pendiente = new Date().setUTCMinutes(55,0,0)-Date.now();
+        if (pendiente<=0) {
+            info("No hay tiempo para una nueva ejecución");
+            this.PARAR = true;
+            return;
+        }
+        this.TIMEOUT = setTimeout(()=>{
+            info("Solicitando parada");
+            this.PARAR = true;
+            this.TIMEOUT = undefined;
+        }, pendiente); // paramos en el minuto 55 de la hora actual
+    }
+
+    private static endTimer(): void {
+        if (this.TIMEOUT!=undefined) {
+            clearTimeout(this.TIMEOUT);
+            this.TIMEOUT = undefined;
         } else {
             info("Solicitando parada => OK");
         }
@@ -55,14 +60,15 @@ export class Repesca {
 
     private static async reset(): Promise<void> {
         await db.update("UPDATE repesca SET tratando=0 WHERE tratando=1");
+        await db.update("UPDATE repesca SET i=NULL WHERE i IS NOT NULL");
     }
 
     protected static async liberarBloqueados(): Promise<void> {
-        await db.insert("INSERT IGNORE INTO repesca (bucket, archivo, cliente, grupo, backends, fecha) SELECT bucket, archivo, cliente, grupo, backends, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-900000)]);
+        await db.insert("INSERT IGNORE INTO repesca (bucket, archivo, fecha) SELECT bucket, archivo, fecha FROM procesando WHERE fecha<?", [new Date(Date.now()-900000)]);
         await db.delete("DELETE FROM procesando WHERE (bucket, archivo) IN (SELECT bucket, archivo FROM repesca)");
     }
 
-    private static async liberarHuerfanos(config: Configuracion): Promise<void> {
+    private static async liberarHuerfanos(config: Configuracion): Promise<BucketClienteGCS> {
         const fechas: string[] = [];
         const hoy = new Date();
         if (hoy.getUTCHours()<4) {
@@ -72,92 +78,86 @@ export class Repesca {
             hoy.setUTCDate(hoy.getUTCDate()-1);
             fechas.unshift(Fecha.generarFechaBloque(hoy));
         }
-        for (const bucket of await Bucket.searchBuckets()) {
+        const buckets = await ClienteGCS.searchAll();
+        for (const bucket of Object.values(buckets)) {
             await bucket.pescarHuerfanos(config.google, fechas);
         }
+
+        return buckets;
     }
 
-    protected static async repescarPendientes(config: Configuracion): Promise<void> {
-        let registros: Repesca[] = [];
-        do {
-            registros = await this.getPendientes();
-            await this.repescar(config, registros);
-        } while (registros.length>0 && !this.PARAR);
-    }
-
-    protected static async repescar(config: Configuracion, registros: Repesca[]): Promise<void> {
-        const promesas: Promise<void>[] = [];
-        for (const registro of registros) {
-            if (registro.cliente!=undefined) {
-                if (registro.grupo!=undefined) {
-                    info(`Repescando [${registro.cliente}: ${registro.grupo}]`, registro.bucket, registro.archivo);
-                } else {
-                    info(`Repescando [${registro.cliente}]`, registro.bucket, registro.archivo);
-                }
-            } else {
-                info(`Repescando []`, registro.bucket, registro.archivo);
-            }
-            promesas.push(registro.ingest(config).catch(err=>error(err)));
-            await PromiseDelayed(1000);
-            // await registro.ingest(config, signal).catch(err=>error(err));
+    protected static async repescarPendientes(buckets: BucketClienteGCS, config: Configuracion, i: number): Promise<void> {
+        if (this.PARAR) {
+            return;
         }
-        await Promise.all(promesas);
+
+        const resultado = await db.update("UPDATE repesca SET i=? WHERE i IS NULL ORDER BY fecha LIMIT 1", [i]);
+        if (resultado.affectedRows==0) {
+            return;
+        }
+
+        let registro: Repesca|undefined;
+        do {
+            [registro] = await db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo FROM repesca WHERE i=? LIMIT 1", [i], {
+                master: true,
+                fn: (row) => new Repesca({
+                    bucket: row.bucket,
+                    archivo: row.archivo,
+                }, buckets[row.bucket]),
+            });
+            if (registro==undefined) {
+                await PromiseDelayed(Math.floor(Math.random()*1000));
+            }
+        } while (registro==undefined && !this.PARAR);
+
+        if (this.PARAR) {
+            return;
+        }
+
+        await this.repescar(config, registro);
+
+        return this.repescarPendientes(buckets, config, i);
     }
 
-    protected static async getPendientes(): Promise<Repesca[]> {
-        return db.select<IRepescaMySQL, Repesca>("SELECT bucket, archivo, cliente, grupo, backends FROM repesca WHERE tratando=0 ORDER BY fecha LIMIT 5", [], {
-            master: true,
-            fn: (row)=>new Repesca({
-                bucket: row.bucket,
-                archivo: row.archivo,
-                cliente: row.cliente??undefined,
-                grupo: row.grupo??undefined,
-                backends: row.backends??undefined,
-            }),
-        });
-    }
-
-    /* INSTANCE */
-    public get bucket(): string { return this.data.bucket; }
-    public get archivo(): string { return this.data.archivo; }
-    public get cliente(): string|undefined { return this.data.cliente; }
-    public get grupo(): string|undefined { return this.data.grupo; }
-    public get backends(): Record<string, string>|undefined { return this.data.backends; }
-
-    private constructor(protected data: IRepesca) {
-    }
-
-    public async ingest(config: Configuracion): Promise<void> {
-        await this.tratar();
+    protected static async repescar(config: Configuracion, registro: Repesca): Promise<void> {
+        info(`Repescando []`, registro.bucket, registro.archivo);
         try {
-
-            await Bucket.run(config, {
-                bucketId: this.bucket,
-                objectId: this.archivo,
-            }, this.cliente != undefined ? {
-                id: this.cliente,
-                grupo: this.grupo,
-                backends: this.backends ?? {},
-            } : undefined);
-
-            await this.delete();
-
+            await registro.ingest(config).catch(err => error(err));
         } catch (err) {
-
             if (err instanceof Error) {
                 error(err.message);
             } else {
                 error(err);
             }
-
         }
     }
 
-    private async tratar(): Promise<void> {
-        await db.update("UPDATE repesca SET tratando=1 WHERE bucket = ? AND archivo = ?", [this.bucket, this.archivo]);
+    /* INSTANCE */
+    public get bucket(): string { return this.data.bucket; }
+    public get archivo(): string { return this.data.archivo; }
+
+    private constructor(protected data: IRepesca, private gcs: ClienteGCS) {
     }
 
-    private async delete(): Promise<void> {
+    private async addStatusTerminado(): Promise<void> {
         await db.delete("DELETE FROM repesca WHERE bucket = ? AND archivo = ?", [this.bucket, this.archivo]);
+    }
+
+    public async ingest(config: Configuracion): Promise<void> {
+        await this.gcs.addStatusRepescando(this.archivo);
+
+        const idx = await Cloudflare.getIDX(this.gcs.cliente, this.archivo);
+        if (idx!=undefined) {
+            info(`Saltamos ${idx+1} registros ya indexados de ${this.gcs.cliente.id} ${this.gcs.cliente.grupo??"-"} ${this.archivo}`);
+        }
+
+        try {
+            await this.gcs.ingest(config.pod, config.google, this.archivo, idx)
+            await this.gcs.addStatusTerminado(this.archivo);
+            await this.addStatusTerminado();
+        } catch (err) {
+            await this.gcs.addStatusRepesca(this.archivo, true, err);
+            await this.gcs.addStatusError(this.archivo);
+        }
     }
 }
