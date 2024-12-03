@@ -168,6 +168,7 @@ export class ClienteGCS implements IClienteGCS {
         await Cloudflare.ingest(telemetry, data, idx);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
         await data.delete();
+        await this.addStatusTerminado(source);
         await telemetry.toElastic();
     }
 }
