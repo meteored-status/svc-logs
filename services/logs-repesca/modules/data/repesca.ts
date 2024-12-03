@@ -59,7 +59,6 @@ export class Repesca {
     }
 
     private static async reset(): Promise<void> {
-        await db.update("UPDATE repesca SET tratando=0 WHERE tratando=1");
         await db.update("UPDATE repesca SET i=NULL WHERE i IS NOT NULL");
     }
 
