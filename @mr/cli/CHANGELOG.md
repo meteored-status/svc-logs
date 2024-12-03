@@ -6,6 +6,7 @@
 ### Updated
 - [Jose] Update de librerías:
     - [sass](https://www.npmjs.com/package/sass) 1.81.1
+    - [webpack](https://www.npmjs.com/package/webpack) 5.97.0
 
 ---
 ## 2024.11.28+1
