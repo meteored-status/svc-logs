@@ -1,4 +1,5 @@
 import {BulkBase, type BulkConfig} from "./base";
+import {BulkError} from "./error";
 import type {BulkOperation,} from "./operation";
 import {Elasticsearch} from "..";
 import {arrayChop} from "../../utiles/array";
@@ -37,7 +38,7 @@ export class Bulk extends BulkBase {
 
     protected override checkOperacion(index?: string): string {
         if (this.finalizado) {
-            throw new Error("This Bulk is closed");
+            throw new BulkError("This Bulk is closed");
         }
 
         return super.checkOperacion(index);

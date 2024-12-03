@@ -1,3 +1,4 @@
+import {BulkError} from "./error";
 import {
     BulkOperation,
     BulkOperationCreate,
@@ -51,7 +52,7 @@ export abstract class BulkBase {
     protected checkOperacion(index?: string): string {
         index ??= this.config.index;
         if (index==undefined) {
-            throw new Error("Index is required");
+            throw new BulkError("Index is required");
         }
 
         return index;
