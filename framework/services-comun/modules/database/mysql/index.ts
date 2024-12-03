@@ -229,7 +229,7 @@ export class MySQL implements Disposable {
         return escape(value);
     }
 
-    public async query<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, statementCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
+    public async query<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, statementCache=false}: ISelectOptions<T, S>={}): Promise<S[]> {
         const select = sql.startsWith("SELECT") || sql.startsWith("select");
         if (!select) {
             error(`Consulta no select: ${sql} => use la función adecuada en lugar de db.query`)
@@ -280,7 +280,7 @@ export class MySQL implements Disposable {
         return rows as T[];
     }
 
-    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, statementCache=true}: ISelectOptions<T, S>={}): Promise<S[]> {
+    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, statementCache=false}: ISelectOptions<T, S>={}): Promise<S[]> {
         let registros: T[];
 
         if (transaction) {
@@ -309,7 +309,7 @@ export class MySQL implements Disposable {
         return rows as T[];
     }
 
-    private async masterQuery(sql: string, params: TipoRegistro[]=[], {statementCache=true}: IQueryOptionsBase, retry: number = 0): Promise<ResultSetHeader> {
+    private async masterQuery(sql: string, params: TipoRegistro[]=[], {statementCache=false}: IQueryOptionsBase, retry: number = 0): Promise<ResultSetHeader> {
         const db = await this.master;
         try {
             if (statementCache) {
@@ -366,7 +366,7 @@ export class MySQL implements Disposable {
         return this.masterQuery(`TRUNCATE TABLE ${table};`, [], {statementCache});
     }
 
-    public async bulkInsert(registros: IInsert[], {transaction, statementCache=true, size, delay}: IBulkOptions = {}): Promise<void> {
+    public async bulkInsert(registros: IInsert[], {transaction, statementCache=false, size, delay}: IBulkOptions = {}): Promise<void> {
         if (registros.length>0) {
             const blockSize = size??0;
             const grupos = new Map<string, IInsert[]>();
