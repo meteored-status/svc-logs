@@ -1,6 +1,12 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.3+1
+
+### Changed
+- [Jose] Se han eliminado los `prepared statements` ya que no funcionan según lo esperado
+
+---
 ## 2024.12.2+1
 
 ### Changed

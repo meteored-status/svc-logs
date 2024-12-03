@@ -85,6 +85,8 @@ export class Repesca {
         return buckets;
     }
 
+    public static FECHA: string = "";
+
     protected static async repescarPendientes(buckets: BucketClienteGCS, config: Configuracion, i: number): Promise<void> {
         if (this.PARAR) {
             return;
@@ -119,7 +121,11 @@ export class Repesca {
     }
 
     protected static async repescar(config: Configuracion, registro: Repesca): Promise<void> {
-        info(`Repescando []`, registro.bucket, registro.archivo);
+        const actual = registro.archivo.split("/").at(-1)!.split("_").at(0)!.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, "$1-$2-$3T$4:$5:$6Z");
+        if (this.FECHA<actual) {
+            this.FECHA = actual;
+            info(`Repescando ${this.FECHA}`);
+        }
         try {
             await registro.ingest(config).catch(err => error(err));
         } catch (err) {
