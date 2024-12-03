@@ -6,6 +6,31 @@ CREATE TABLE `buckets` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE `clientes` (
+  `id` varchar(25) NOT NULL,
+  `backends` json DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `gcs` (
+  `bucket` varchar(125) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `cliente` varchar(25) NOT NULL,
+  `grupo` varchar(100) DEFAULT NULL,
+  `tipo` enum('cloudflare') NOT NULL,
+  PRIMARY KEY (`bucket`),
+  KEY `cliente` (`cliente`,`grupo`),
+  CONSTRAINT `gcs-cliente` FOREIGN KEY (`cliente`) REFERENCES `clientes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `gcs-grupo` FOREIGN KEY (`cliente`, `grupo`) REFERENCES `grupos` (`cliente`, `id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `grupos` (
+  `cliente` varchar(25) NOT NULL,
+  `id` varchar(100) NOT NULL,
+  `backends` json DEFAULT NULL,
+  PRIMARY KEY (`cliente`,`id`),
+  CONSTRAINT `cliente-grupo` FOREIGN KEY (`cliente`) REFERENCES `clientes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE `procesando` (
   `bucket` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `archivo` varchar(220) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -27,6 +52,7 @@ CREATE TABLE `repesca` (
   `cliente` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `grupo` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `backends` json DEFAULT NULL,
+  `i` tinyint unsigned DEFAULT NULL,
   `tratando` tinyint(1) NOT NULL DEFAULT '0',
   `mensaje` text,
   `contador` int unsigned NOT NULL DEFAULT '1',
@@ -37,3 +63,8 @@ CREATE TABLE `repesca` (
   KEY `archivo` (`archivo`),
   KEY `tratando` (`tratando`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+INSERT INTO clientes SELECT DISTINCT cliente, backends FROM buckets;
+INSERT INTO grupos SELECT cliente, grupo, NULL FROM buckets WHERE grupo IS NOT NULL;
+INSERT INTO gcs SELECT id, cliente, grupo, 'cloudflare' FROM buckets;
+ALTER TABLE `repesca` ADD `i` TINYINT  UNSIGNED  NULL  DEFAULT NULL  AFTER `backends`;

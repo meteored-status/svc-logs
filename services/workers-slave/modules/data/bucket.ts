@@ -1,8 +1,12 @@
 import {Bucket as BucketBase, type ICliente} from "workers-base/modules/data/bucket";
-import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
 import {info} from "services-comun/modules/utiles/log";
 
 import {type Configuracion} from "../utiles/config";
+
+interface INotify {
+    bucketId: string;
+    objectId: string;
+}
 
 export interface INotifyPubSub extends INotify {
     eventTime: string;

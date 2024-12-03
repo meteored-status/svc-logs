@@ -1,11 +1,20 @@
-import {type INotify} from "services-comun-status/modules/services/logs-slave/backend";
+import {ClienteGCS} from "logs-base/modules/data/cliente/gcs";
 import {RouteGroup} from "services-comun/modules/net/routes/group";
-import {type IRouteGroup} from "services-comun/modules/net/routes/group/block";
-import {error} from "services-comun/modules/utiles/log";
+import type {IRouteGroup} from "services-comun/modules/net/routes/group/block";
+import {error, info} from "services-comun/modules/utiles/log";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
-import {Bucket, type INotifyPubSub} from "../../data/bucket";
 import {type Configuracion} from "../../utiles/config";
+
+interface INotifyPubSub {
+    bucketId: string;
+    objectId: string;
+    eventTime: string;
+    eventType: string;
+    notificationConfig: string;
+    objectGeneration: string;
+    payloadFormat: string;
+}
 
 interface IPubSub {
     message: {
@@ -20,20 +29,27 @@ interface IPubSub {
 }
 
 class Slave extends RouteGroup<Configuracion>{
-    /* STATIC */
-
     /* INSTANCE */
-    public constructor(configuracion: Configuracion) {
-        super(configuracion);
-    }
-
-    private parseLog(data: INotifyPubSub): void {
+    private parseLog(notify: INotifyPubSub): void {
         PromiseDelayed()
             .then(async ()=>{
-                await Bucket.run(this.configuracion, data);
+                if (notify.eventType!="OBJECT_FINALIZE") {
+                    switch (notify.eventType) {
+                        case "OBJECT_DELETE":
+                            // deshabilitado por filtro de PubSub
+                            break;
+                        default:
+                            info("Evento todavía no soportado", notify.eventType, JSON.stringify(notify));
+                            break;
+                    }
+                    return;
+                }
+
+                await ClienteGCS.addStatusProcesando(notify.bucketId, notify.objectId);
+                const cliente = await ClienteGCS.searchBucket(notify.bucketId);
+                await cliente.ingest(this.configuracion.pod, this.configuracion.google, notify.objectId);
             })
             .catch(async (err)=>{
-                await Bucket.addRepesca(data, false, undefined, err);
                 if (err instanceof Error) {
                     if (err.message.startsWith("Duplicate entry")) {
                         return;
@@ -50,34 +66,6 @@ class Slave extends RouteGroup<Configuracion>{
 
     protected getHandlers(): IRouteGroup[] {
         return [
-            {
-                expresiones: [
-                    {
-                        metodos: ["POST"],
-                        prefix: "/private/logs/ingest/",
-                        checkQuery: false,
-                        resumen: "/private/logs/ingest/",
-                    },
-                ],
-                handler: async (conexion) => {
-                    const post = conexion.post as INotify;
-
-                    conexion.noCache();
-
-                    const salida = await this.sendRespuesta(conexion);
-
-                    this.parseLog({
-                        ...post,
-                        eventTime: "",
-                        eventType: "OBJECT_FINALIZE",
-                        notificationConfig: "",
-                        objectGeneration: "",
-                        payloadFormat: "",
-                    });
-
-                    return salida;
-                },
-            },
             {
                 expresiones: [
                     {

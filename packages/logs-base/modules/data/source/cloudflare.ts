@@ -7,7 +7,7 @@ import {Storage} from "services-comun/modules/fs/storage";
 import {info} from "services-comun/modules/utiles/log";
 import elastic from "services-comun/modules/utiles/elastic";
 
-import type {ICliente} from "../bucket";
+import type {Cliente} from "../cliente";
 import {type IRAWData, Registro} from "../registro/";
 import type {Telemetry} from "../telemetry";
 
@@ -391,7 +391,7 @@ export class Cloudflare {
         };
     });
 
-    public static async getIDX(cliente: ICliente, source: string): Promise<number|undefined> {
+    public static async getIDX(cliente: Cliente, source: string): Promise<number|undefined> {
         const hits = await elastic.search<{metadata: {idx: number}}>({
             index: Registro.getIndex(cliente.id),
             query: {
@@ -413,7 +413,7 @@ export class Cloudflare {
         return hits.hits.hits[0]?._source?.metadata.idx;
     }
 
-    public static async ingest(telemetry: Telemetry, backends: Record<string, string>, storage: Storage, idx?: number): Promise<void> {
+    public static async ingest(telemetry: Telemetry, storage: Storage, idx?: number): Promise<void> {
         let memoryOK = false;
         while (process.memoryUsage().heapUsed > 3 * 1024*1024*1024) {
             if (!memoryOK) {
@@ -457,7 +457,7 @@ export class Cloudflare {
                 continue;
             }
 
-            bulk.create({doc: Registro.build(cf, telemetry, backends).toJSON()});
+            bulk.create({doc: Registro.build(cf, telemetry).toJSON()});
         }
 
         await bulk.run();

@@ -305,7 +305,7 @@ export class Registro implements IRegistro {
         return `${this.INDEX}-${cliente}`;
     }
 
-    public static build(data: IRAWData, telemetry: Telemetry, backends: Record<string, string>): Registro {
+    public static build(data: IRAWData, telemetry: Telemetry): Registro {
         const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
         const metadata = RegistroMetadata.build({
             proyecto: telemetry.proyecto,
@@ -321,7 +321,7 @@ export class Registro implements IRegistro {
         const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
         const cliente = RegistroCliente.build(data.client);
         const extremo = RegistroExtremo.build(data.edge);
-        const origen = RegistroOrigen.build(data.origin, backends);
+        const origen = RegistroOrigen.build(data.origin, telemetry.cliente.backends);
 
         return new this({
             timestamp: data.edge.timestamp.start,
