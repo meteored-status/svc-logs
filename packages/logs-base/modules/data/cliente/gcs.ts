@@ -169,6 +169,10 @@ export class ClienteGCS implements IClienteGCS {
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
         await data.delete();
         await this.addStatusTerminado(source);
-        await telemetry.toElastic();
+        telemetry.toElastic()
+            .then(()=>{})
+            .catch((err)=>{
+                error("Error registrando telemetría en Elastic", err);
+            });
     }
 }
