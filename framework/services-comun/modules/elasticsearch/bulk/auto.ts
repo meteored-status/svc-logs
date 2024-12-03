@@ -1,4 +1,5 @@
 import {Bulk} from ".";
+import {PromiseDelayed} from "../../utiles/promise";
 import {BulkBase, type BulkConfig} from "./base";
 import type {Elasticsearch} from "..";
 import {error} from "../../utiles/log";
@@ -15,11 +16,20 @@ export class BulkAuto extends BulkBase {
     private sending: boolean;
     private timer?: NodeJS.Timeout;
     private timeout?: NodeJS.Timeout;
+    public get length(): number { return this.operaciones.length; }
 
-    public constructor(elastic: Elasticsearch, {interval=1000, ...config}: BulkAutoConfig) {
+    public constructor(elastic: Elasticsearch, {interval=1000, ...config}: BulkAutoConfig = {}) {
         super(elastic, config);
         this.interval = interval;
         this.sending = false;
+    }
+
+    public async wait(): Promise<void> {
+        this.stop();
+
+        while(this.timeout!=undefined && (this.length>0 || this.sending)) {
+            await PromiseDelayed(this.interval);
+        }
     }
 
     public start(): void {
@@ -51,6 +61,7 @@ export class BulkAuto extends BulkBase {
             });
             this.timeout = setTimeout(()=>{
                 this.send();
+                this.timeout = undefined;
             }, this.interval);
         }
     }
