@@ -12,6 +12,10 @@
 ### Changed
 - [Jose] Se han eliminado los `prepared statements` ya que no funcionan según lo esperado
 
+### Updated
+- [Jose] Update de librerías:
+    - [webpack](https://www.npmjs.com/package/webpack) 5.97.0
+
 ---
 ## 2024.12.2+1
 
