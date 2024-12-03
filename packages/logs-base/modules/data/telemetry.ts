@@ -1,7 +1,8 @@
-import {IPodInfo} from "services-comun/modules/utiles/config";
-import elastic from "services-comun/modules/utiles/elastic";
+import {BulkAuto} from "services-comun/modules/elasticsearch/bulk/auto";
+import type {IPodInfo} from "services-comun/modules/utiles/config";
 import {error} from "services-comun/modules/utiles/log";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
+import elastic from "services-comun/modules/utiles/elastic";
 
 import type {Cliente} from "./cliente";
 
@@ -53,6 +54,18 @@ export class Telemetry implements ITelemetry {
             start,
             end,
         });
+    }
+
+    private static bulk: BulkAuto = new BulkAuto(elastic, {
+        index: this.INDEX,
+    });
+
+    static {
+        this.bulk.start();
+    }
+
+    public static async stop(): Promise<void> {
+        return this.bulk.wait();
     }
 
     /* INSTANCE */
@@ -112,19 +125,22 @@ export class Telemetry implements ITelemetry {
     }
 
     public async toElastic(): Promise<void> {
-        await elastic.index({
-            index: Telemetry.INDEX,
-            document: this.toJSON(),
-        })
-            .catch(async (err) => {
-                if (err instanceof Error) {
-                    if (err.name == "TimeoutError") {
-                        await PromiseDelayed(Math.floor(Math.random() * 1000) + 1000);
-                        return this.toElastic();
-                    }
-                    error("Error guardando telemetría", err.name, err.message, JSON.stringify(this.toJSON()));
-                }
-                return Promise.reject(err);
-            });
+        Telemetry.bulk.create({
+            doc: this.toJSON(),
+        });
+        // await elastic.index({
+        //     index: Telemetry.INDEX,
+        //     document: this.toJSON(),
+        // })
+        //     .catch(async (err) => {
+        //         if (err instanceof Error) {
+        //             if (err.name == "TimeoutError") {
+        //                 await PromiseDelayed(Math.floor(Math.random() * 1000) + 1000);
+        //                 return this.toElastic();
+        //             }
+        //             error("Error guardando telemetría", err.name, err.message, JSON.stringify(this.toJSON()));
+        //         }
+        //         return Promise.reject(err);
+        //     });
     }
 }
