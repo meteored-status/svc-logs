@@ -249,7 +249,7 @@ export class Cloudflare {
                 source,
             };
         } catch (e) {
-            error("Cloudflare.parse", JSON.stringify(e));
+            error("Cloudflare.parse", json, JSON.stringify(e));
             return null;
         }
     }
