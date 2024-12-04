@@ -214,14 +214,45 @@ export class PaqueteDirectory extends PaqueteFile {
         }
     }
 
-    protected async checkCambiosEjecutar(basedir: string, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles): Promise<boolean> {
+    protected async checkCambiosEjecutar(basedir: string, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean): Promise<boolean> {
         let autor = this.autor;
         const archivos = Object.keys(this.archivos);
         const directorios = Object.keys(this.directorios);
         const promesas: Promise<boolean>[] = [];
+        const bins: string[] = [];
+        if (nuevo.status?.archivos[".mr-bin"]!=undefined) {
+            let archivo: PaqueteFile;
+            if (this.archivos[".mr-bin"]!=undefined) {
+                archivo = this.archivos[".mr-bin"];
+            } else {
+                archivo = PaqueteFile.build(".mr-bin", this.filename);
+                this.archivos[".mr-bin"] = archivo;
+                promesas.push(Promise.resolve(true));
+            }
+            const bin = nuevo.status.archivos[".mr-bin"];
+            const cambio = await archivo.checkCambios(basedir, this, {
+                status: antiguo.status?.archivos[".mr-bin"],
+                files: antiguo.files,
+            }, {
+                status: bin,
+                files: nuevo.files,
+            }, false).then((cambio)=>{
+                if (cambio) {
+                    autor = archivo.autor;
+                }
+                return cambio;
+            });
+            promesas.push(Promise.resolve(cambio));
+
+            const contenido = await archivo.getContents(basedir);
+            bins.push(...contenido.split("\n").map(line=>line.trim()).filter(line=>line.length>0));
+        }
 
         // comprobamos archivos actuales
         for (const key of archivos) {
+            if (key==".mr-bin") {
+                continue;
+            }
             const archivo = this.archivos[key];
             promesas.push(archivo.checkCambios(basedir, this, {
                 status: antiguo.status?.archivos[key],
@@ -229,7 +260,7 @@ export class PaqueteDirectory extends PaqueteFile {
             }, {
                 status: nuevo.status?.archivos[key],
                 files: nuevo.files,
-            }).then((cambio)=>{
+            }, bin||bins.includes(key)).then((cambio)=>{
                 if (cambio) {
                     autor = archivo.autor;
                 }
@@ -246,7 +277,7 @@ export class PaqueteDirectory extends PaqueteFile {
             }, {
                 status: nuevo.status?.directorios[key],
                 files: nuevo.files,
-            }).then((cambio)=>{
+            }, bin||bins.includes(key)).then((cambio)=>{
                 if (cambio) {
                     autor = directorio.autor;
                 }
@@ -271,7 +302,7 @@ export class PaqueteDirectory extends PaqueteFile {
                 }, {
                     status: nuevo.status.archivos[key],
                     files: nuevo.files,
-                }).then(()=>true));
+                }, bin||bins.includes(key)).then(()=>true));
             }
 
             // comprobamos directorios nuevos
@@ -288,7 +319,7 @@ export class PaqueteDirectory extends PaqueteFile {
                 }, {
                     status: nuevo.status.directorios[key],
                     files: nuevo.files,
-                }).then(()=>true));
+                }, bin||bins.includes(key)).then(()=>true));
             }
             if (cambio) {
                 this.resort();
@@ -304,7 +335,7 @@ export class PaqueteDirectory extends PaqueteFile {
         return cambio;
     }
 
-    public override async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles): Promise<boolean> {
+    public override async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean): Promise<boolean> {
         if (antiguo.status==undefined) {
             if (nuevo.status==undefined || this.hash==nuevo.status.hash) {
                 // este directorio es nuevo (local) => mantenemos lo que tenemos
@@ -314,7 +345,7 @@ export class PaqueteDirectory extends PaqueteFile {
             }
 
             // este directorio es nuevo (local y remoto) pero hay diferencias entre local y remoto => comprobamos contenidos
-            return this.checkCambiosEjecutar(basedir, antiguo, nuevo);
+            return this.checkCambiosEjecutar(basedir, antiguo, nuevo, bin);
         }
 
         if (nuevo.status==undefined) {
@@ -339,7 +370,7 @@ export class PaqueteDirectory extends PaqueteFile {
         }
 
         // este directorio es antiguo (local) y remoto pero hay diferencias entre local y remoto => comprobamos contenidos
-        return this.checkCambiosEjecutar(basedir, antiguo, nuevo);
+        return this.checkCambiosEjecutar(basedir, antiguo, nuevo, bin);
     }
 
     public override async resetCambios(basedir: string, nuevo: PaqueteDirectoryFiles): Promise<void> {

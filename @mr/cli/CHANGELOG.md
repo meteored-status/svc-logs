@@ -7,10 +7,13 @@
 - [Jose] El archivo tsconfig.json ya no depende de services-comun
 - [Jose] Añadida librería:
     - [@tsconfig/node22](https://www.npmjs.com/package/@tsconfig/node22) 22.0.0
+- [Jose] Los binarios del `cli` ahora también se comparten cuando se sube una nueva versión
+- [Jose] Se ha añadido la posibilidad de marcar ficheros/directorios como binarios para que no se mezclen sino que se sustituyan
 
 ### Updated
 - [Jose] Update de librerías:
     - [sass](https://www.npmjs.com/package/sass) 1.82.0
+    - [sass-loader](https://www.npmjs.com/package/sass-loader) 16.0.4
 
 ---
 ## 2024.12.3+1

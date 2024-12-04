@@ -104,7 +104,7 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
             return false;
         }
 
-        await this.checkCambios(this.basedir, this, antiguo, nuevo);
+        await this.checkCambios(this.basedir, this, antiguo, nuevo, false);
 
         const paquete = await nuevo.files["package.json"].async("text");
         await safeWrite(`${this.basedir}/package.json`, paquete, true);
