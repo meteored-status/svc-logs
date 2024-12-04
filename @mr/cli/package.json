@@ -37,7 +37,7 @@
     "mini-css-extract-plugin": "^2.9.2",
     "pug": "^3.0.3",
     "pug3-loader": "^2.4.3",
-    "sass": "^1.81.1",
+    "sass": "^1.82.0",
     "sass-loader": "^16.0.3",
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
@@ -51,5 +51,5 @@
     "webpack-cli": "^5.1.4",
     "webpack-manifest-plugin": "^5.0.0"
   },
-  "version": "2024.12.3+2-bixus"
+  "version": "2024.12.4+1-bixus"
 }
