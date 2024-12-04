@@ -1,0 +1,23 @@
+{
+  "name": "@mr/utils",
+  "version": "2024.12.4+1-bixus",
+  "description": "Utilidades varias de MR{FW}",
+  "author": "José Antonio Jiménez",
+  "config": {
+    "subible": true,
+    "tipo": "core"
+  },
+  "exports": {
+    "./tsconfig.json": {
+      "browser": "./tsconfig/browser.json",
+      "node": "./tsconfig/node.json",
+      "default": "./tsconfig.json"
+    }
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.0",
+    "@tsconfig/recommended": "^1.0.8",
+    "@types/node": "^22.10.1",
+    "services-comun": "workspace:*"
+  }
+}

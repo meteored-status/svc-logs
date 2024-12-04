@@ -523,6 +523,7 @@ __metadata:
   dependencies:
     "@google-cloud/storage": "npm:^7.14.0"
     "@inquirer/prompts": "npm:^7.1.0"
+    "@tsconfig/node22": "npm:^22.0.0"
     "@types/diff3": "npm:^0.0.2"
     "@types/node": "npm:^22.10.1"
     "@types/source-map-support": "npm:^0.5.10"
@@ -553,6 +554,17 @@ __metadata:
   bin:
     mrlang: bin/mrlang.js
     mrpack: bin/mrpack.js
+  languageName: unknown
+  linkType: soft
+
+"@mr/utils@workspace:@mr/core/utils":
+  version: 0.0.0-use.local
+  resolution: "@mr/utils@workspace:@mr/core/utils"
+  dependencies:
+    "@tsconfig/node22": "npm:^22.0.0"
+    "@tsconfig/recommended": "npm:^1.0.8"
+    "@types/node": "npm:^22.10.1"
+    services-comun: "workspace:*"
   languageName: unknown
   linkType: soft
 
@@ -1064,6 +1076,13 @@ __metadata:
   version: 22.0.0
   resolution: "@tsconfig/node22@npm:22.0.0"
   checksum: 10/9fc45789304640e1e37e1f1e04c02dca593c290d4f1cb55af7e9cab799fb2c6356e1cc15ee9f140185591a81f491a4c7f2d6c08c1e5a3d758658ba69f1afee6d
+  languageName: node
+  linkType: hard
+
+"@tsconfig/recommended@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "@tsconfig/recommended@npm:1.0.8"
+  checksum: 10/042c543554520359a8f21ed3a18c0c23e5deee1cea3acd8d407892634354a322d42c2e378f4b3b4c9fe391f61a5701cd4e628d5b4cc60f9f17dfb817f3d46a7a
   languageName: node
   linkType: hard
 

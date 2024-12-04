@@ -1,6 +1,12 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.4+1
+
+### Changed
+- [Jose] Se ha refactorizado el módulo `next.config.js`
+
+---
 ## 2024.12.3+1
 
 ### Added

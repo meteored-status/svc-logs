@@ -3,6 +3,11 @@
 ---
 ## 2024.12.4+1
 
+### Changed
+- [Jose] El archivo tsconfig.json ya no depende de services-comun
+- [Jose] Añadida librería:
+    - [@tsconfig/node22](https://www.npmjs.com/package/@tsconfig/node22) 22.0.0
+
 ### Updated
 - [Jose] Update de librerías:
     - [sass](https://www.npmjs.com/package/sass) 1.82.0
