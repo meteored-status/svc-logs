@@ -1,0 +1,41 @@
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "proyecto": {
+      "type": "constant_keyword"
+    },
+    "servicio": {
+      "type": "keyword"
+    },
+    "url": {
+      "type": "keyword"
+    },
+    "mensaje": {
+      "type": "text"
+    },
+    "archivo": {
+      "type": "text"
+    },
+    "linea": {
+      "type": "integer"
+    },
+    "traza": {
+      "type": "text",
+      "index": false
+    },
+    "ctx": {
+      "properties": {
+        "linea": {
+          "type": "integer",
+          "index": false
+        },
+        "codigo": {
+          "type": "keyword",
+          "index":  false
+        }
+      }
+    }
+  }
+}
