@@ -1,6 +1,24 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.4+1
+
+### Changed
+- [Jose] Se ha refactorizado el módulo `next.config.js`
+
+---
+## 2024.12.5+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@opentelemetry/core](https://www.npmjs.com/package/@opentelemetry/core) 1.29.0
+    - [@opentelemetry/instrumentation](https://www.npmjs.com/package/@opentelemetry/instrumentation) 0.56.0
+    - [@opentelemetry/instrumentation-http](https://www.npmjs.com/package/@opentelemetry/instrumentation-http) 0.56.0
+    - [@opentelemetry/resources](https://www.npmjs.com/package/@opentelemetry/resources) 1.29.0
+    - [@opentelemetry/sdk-trace-base](https://www.npmjs.com/package/@opentelemetry/sdk-trace-base) 1.29.0
+    - [@opentelemetry/sdk-trace-node](https://www.npmjs.com/package/@opentelemetry/sdk-trace-node) 1.29.0
+
+---
 ## 2024.12.3+1
 
 ### Added

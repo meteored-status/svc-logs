@@ -1,6 +1,10 @@
 const fs = require("node:fs");
 const {createHash} = require("node:crypto");
 
+const md5 = (data)=>{
+    return createHash('md5').update(data).digest("hex")
+}
+
 const hashDir = (dir) => {
     const hashes = [];
 
@@ -10,14 +14,14 @@ const hashDir = (dir) => {
             if (fs.statSync(path).isDirectory()) {
                 hashes.push(hashDir(path));
             } else {
-                hashes.push(createHash('md5').update(fs.readFileSync(path)).digest('hex'));
+                hashes.push(md5(fs.readFileSync(path)));
             }
         }
     } else {
-        hashes.push(createHash('md5').update(fs.readFileSync(dir)).digest('hex'));
+        hashes.push(md5(fs.readFileSync(dir)));
     }
 
-    return createHash('md5').update(hashes.join('')).digest("hex");
+    return md5(hashes.join(''));
 }
 
 module.exports = function (buildDirs) {
@@ -88,9 +92,7 @@ module.exports = function (buildDirs) {
     }
 
     if (buildDirs && buildDirs.length) {
-        salida.generateBuildId = async () => {
-            return createHash('md5').update(buildDirs.map(d => hashDir(d)).join('')).digest("hex");
-        }
+        salida.generateBuildId = async () => md5(buildDirs.map(d => hashDir(d)).join(''))
     }
 
     return salida;
