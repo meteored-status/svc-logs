@@ -83,11 +83,4 @@ export class LogServicio implements ILogServicio {
                 this.data.extra : undefined,
         };
     }
-
-    public toElastic(): void {
-        LogServicio.BULK.create({
-            index: LogServicio.getIndex(this.proyecto),
-            doc: this.toJSON(),
-        });
-    }
 }
