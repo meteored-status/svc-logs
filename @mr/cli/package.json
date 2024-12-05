@@ -1,6 +1,6 @@
 {
   "name": "@mr/cli",
-  "version": "2024.12.4+7-bixus",
+  "version": "2024.12.5+1-bixus",
   "description": "Herramientas de linea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
