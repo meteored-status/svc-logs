@@ -90,6 +90,10 @@ export class PaqueteFile {
         return await isFile(`${basedir}/${this.filename}`);
     }
 
+    public async getContents(basedir: string): Promise<string> {
+        return readFileString(`${basedir}/${this.filename}`);
+    }
+
     public async update(basedir: string, autor: string): Promise<string> {
         this.recalcularHash([await md5File(`${basedir}/${this.filename}`)], autor);
 
@@ -100,8 +104,16 @@ export class PaqueteFile {
         zip.file(this.filename, readFile(`${basedir}/${this.filename}`), {binary: true, compression: "DEFLATE", compressionOptions: {level: 9,}, createFolders: true});
     }
 
-    public async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteFileFiles, nuevo: PaqueteFileFiles): Promise<boolean> {
+    public async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteFileFiles, nuevo: PaqueteFileFiles, bin: boolean): Promise<boolean> {
         if (antiguo.status==undefined) {
+            if (nuevo.status==undefined && bin) {
+                // archivo nuevo en directorio binario => eliminar
+                console.log(" - Borrando        ", Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename));
+                await unlink(`${basedir}/${this.filename}`);
+                padre.deleteFile(this);
+
+                return true;
+            }
             if (nuevo.status==undefined || this.hash==nuevo.status.hash) {
                 // archivo nuevo => mantener
                 // archivo nuevo y sin cambios respecto al nuevo => mantener
@@ -152,7 +164,7 @@ export class PaqueteFile {
         if (antiguo.status.hash!=this.hash && nuevo.status.hash!=this.hash) {
             // el antiguo, el actual y el nuevo son diferentes => mezclar
             console.log(" - Mezclando       ", Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename));
-            this.recalcularHash([await this.mezclar(basedir, nuevo.files[this.filename], antiguo.files[this.filename])], nuevo.status.autor);
+            this.recalcularHash([await this.mezclar(basedir, nuevo.files[this.filename], !bin ? antiguo.files[this.filename] : undefined)], nuevo.status.autor);
 
             return true;
         }
@@ -177,7 +189,7 @@ export class PaqueteFile {
         } else {
             const [a, b, c] = await Promise.all([
                 antiguo.async("text"),
-                readFileString(`${basedir}/${this.filename}`),
+                this.getContents(basedir),
                 nuevo.async("text"),
             ]);
 

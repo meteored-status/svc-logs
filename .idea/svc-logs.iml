@@ -10,6 +10,8 @@
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
       <excludeFolder url="file://$MODULE_DIR$/services/workers-slave/files" />
       <excludeFolder url="file://$MODULE_DIR$/services/workers-slave/output" />
+      <excludeFolder url="file://$MODULE_DIR$/@mr/cli/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/@mr/cli/bin/min" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

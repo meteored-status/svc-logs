@@ -1,0 +1,26 @@
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "proyecto": {
+      "type": "constant_keyword"
+    },
+    "servicio": {
+      "type": "keyword"
+    },
+    "tipo": {
+      "type": "keyword"
+    },
+    "severidad": {
+      "type": "keyword"
+    },
+    "mensaje": {
+      "type": "text"
+    },
+    "extra": {
+      "type": "text",
+      "index": false
+    }
+  }
+}

@@ -1,28 +1,24 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "extends": "@tsconfig/recommended/tsconfig.json",
   "compilerOptions": {
+    "allowJs": true,
     "allowUnusedLabels": false,
+    "downlevelIteration": true,
     "importHelpers": true,
-    "isolatedModules": false,
-    "jsx": "react",
     "lib": [
-      "es2023",
-      "esnext.disposable",
+      "es2015",
       "dom"
     ],
-    "module": "preserve",
+    "module": "esnext",
     "moduleResolution": "bundler",
+    "noImplicitAny": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noPropertyAccessFromIndexSignature": true,
     "removeComments": false,
-    "resolveJsonModule": true,
     "sourceMap": true,
-    "strictNullChecks": true
-  },
-  "exclude": [
-    "node_modules",
-    "**/*.spec.ts",
-    "output/*"
-  ]
+    "strictNullChecks": true,
+    "target": "es2015",
+    "resolveJsonModule": true
+  }
 }

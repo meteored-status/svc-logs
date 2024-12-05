@@ -3,6 +3,7 @@ import {RouteGroup} from "services-comun/modules/net/routes/group";
 import type {IRouteGroup} from "services-comun/modules/net/routes/group/block";
 import {error, info} from "services-comun/modules/utiles/log";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
+import {ILogServicioPOST, LogServicio} from "../../data/servicio";
 
 import {type Configuracion} from "../../utiles/config";
 
@@ -66,6 +67,27 @@ class Slave extends RouteGroup<Configuracion>{
 
     protected getHandlers(): IRouteGroup[] {
         return [
+            {
+                expresiones: [
+                    {
+                        metodos: ["POST"],
+                        prefix: "/service/logs/service/",
+                        checkQuery: false,
+                        resumen: "/service/logs/service/",
+                    },
+                ],
+                handler: async (conexion) => {
+                    const post = conexion.post as ILogServicioPOST;
+
+                    conexion.noCache();
+
+                    const salida = await this.sendRespuesta(conexion);
+
+                    LogServicio.ingest(post);
+
+                    return salida;
+                },
+            },
             {
                 expresiones: [
                     {
