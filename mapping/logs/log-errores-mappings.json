@@ -3,6 +3,9 @@
     "@timestamp": {
       "type": "date"
     },
+    "checked": {
+      "type": "boolean"
+    },
     "proyecto": {
       "type": "constant_keyword"
     },
@@ -13,7 +16,12 @@
       "type": "keyword"
     },
     "mensaje": {
-      "type": "text"
+      "type": "keyword",
+      "fields": {
+        "text": {
+          "type": "text"
+        }
+      }
     },
     "archivo": {
       "type": "text"
