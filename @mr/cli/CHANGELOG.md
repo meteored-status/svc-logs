@@ -1,6 +1,14 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.10+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@inquirer/prompts](https://www.npmjs.com/package/@inquirer/prompts) 7.2.0
+    - [webpack](https://www.npmjs.com/package/webpack) 5.97.1
+
+---
 ## 2024.12.4+1
 
 ### Changed
