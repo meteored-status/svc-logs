@@ -16,7 +16,12 @@
       "type": "keyword"
     },
     "mensaje": {
-      "type": "text"
+      "type": "keyword",
+      "fields": {
+        "text": {
+          "type": "text"
+        }
+      }
     },
     "extra": {
       "type": "text",

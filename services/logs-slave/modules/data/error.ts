@@ -18,6 +18,7 @@ interface ILogErrorCTX {
 }
 interface ILogError {
     timestamp: Date;
+    checked: boolean;
     proyecto: string;
     servicio: string;
     url: string;
@@ -30,6 +31,7 @@ interface ILogError {
 
 interface ILogErrorES {
     "@timestamp": string;
+    checked: boolean;
     proyecto: string;
     servicio: string;
     url: string;
@@ -55,6 +57,7 @@ export class LogError implements ILogError {
     public static ingest(data: ILogErrorPOST): void {
         const documento = new this({
             timestamp: new Date(),
+            checked: false,
             proyecto: data.proyecto,
             servicio: data.servicio,
             url: data.url,
@@ -73,6 +76,7 @@ export class LogError implements ILogError {
 
     /* INSTANCE */
     public get timestamp(): Date { return this.data.timestamp; }
+    public get checked(): boolean { return this.data.checked; }
     public get proyecto(): string { return this.data.proyecto; }
     public get servicio(): string { return this.data.servicio; }
     public get url(): string { return this.data.url; }
@@ -88,6 +92,7 @@ export class LogError implements ILogError {
     public toJSON(): ILogErrorES {
         return {
             "@timestamp": this.data.timestamp.toISOString(),
+            checked: this.data.checked,
             proyecto: this.data.proyecto,
             servicio: this.data.servicio,
             url: this.data.url,
