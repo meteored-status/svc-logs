@@ -11,5 +11,6 @@ export type EPermission =
     "status.disable.notification.list"  |
     "status.subscription.list"          |
     "status.subscription.toggle"        |
-    "status.component.delete"
+    "status.component.delete"           |
+    "status.log.list"
 ;

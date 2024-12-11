@@ -1,4 +1,4 @@
-import {BulkOperationContainer, BulkResponseItem, BulkUpdateAction, Script} from "@elastic/elasticsearch/lib/api/types";
+import {BulkOperationContainer, BulkResponseItem, BulkUpdateAction, Script} from "..";
 
 import {ESBulkResponse} from "../index";
 
