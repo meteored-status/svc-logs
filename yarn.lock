@@ -4057,6 +4057,32 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"logs@workspace:services/logs":
+  version: 0.0.0-use.local
+  resolution: "logs@workspace:services/logs"
+  dependencies:
+    "@elastic/elasticsearch": "npm:8.16.2"
+    "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.4.1"
+    "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/core": "npm:^1.29.0"
+    "@opentelemetry/instrumentation": "npm:^0.56.0"
+    "@opentelemetry/instrumentation-http": "npm:^0.56.0"
+    "@opentelemetry/resources": "npm:^1.29.0"
+    "@opentelemetry/sdk-trace-base": "npm:^1.29.0"
+    "@opentelemetry/sdk-trace-node": "npm:^1.29.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.28.0"
+    "@types/node": "npm:^22.10.1"
+    chokidar: "npm:^4.0.1"
+    formidable: "npm:^3.5.2"
+    hexoid: "npm:^2.0.0"
+    logs-base: "workspace:*"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    source-map-support: "npm:^0.5.21"
+    tslib: "npm:^2.8.1"
+  languageName: unknown
+  linkType: soft
+
 "long@npm:^5.0.0, long@npm:^5.2.1":
   version: 5.2.3
   resolution: "long@npm:5.2.3"
