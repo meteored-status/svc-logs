@@ -1,6 +1,6 @@
 {
   "name": "@mr/cli",
-  "version": "2024.12.10+1-bixus",
+  "version": "2024.12.11+1-luis",
   "description": "Herramientas de linea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
@@ -24,14 +24,14 @@
     "@inquirer/prompts": "^7.2.0",
     "chokidar": "^4.0.1",
     "jszip": "^3.10.1",
-    "mysql2": "3.11.0",
+    "mysql2": "3.11.5",
     "source-map-support": "^0.5.21",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
     "@types/diff3": "^0.0.2",
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.10.2",
     "@types/source-map-support": "^0.5.10",
     "clean-webpack-plugin": "^4.0.0",
     "css-loader": "^7.1.2",

@@ -1,0 +1,141 @@
+import {RouteGroup} from "services-comun/modules/net/routes/group";
+import {Configuracion} from "../../utiles/config";
+import {IRouteGroup} from "services-comun/modules/net/routes/group/block";
+import {Conexion} from "services-comun/modules/net/conexion";
+import {error} from "services-comun/modules/utiles/log";
+import {LogServicio} from "logs-base/modules/data/log/servicio";
+import {IListIN, IListOUT} from "services-comun-status/modules/services/logs/logs/servicios/list/interface";
+import {
+    IAvaliableFiltersIN, IAvaliableFiltersOUT
+} from "services-comun-status/modules/services/logs/logs/servicios/available-filters/interface";
+
+class Servicio extends RouteGroup<Configuracion> {
+    /* STATIC */
+
+    /* INSTANCE */
+    private async handleList(conexion: Conexion): Promise<number> {
+        try {
+            const query: IListIN = conexion.getQuery<IListIN>();
+
+            if (!query.projects) {
+                return conexion.error(400, 'Bad Request');
+            }
+
+            const projects = query.projects.split(';');
+            let page = undefined;
+            if (query.page) {
+                page = parseInt(query.page);
+            }
+            let perPage = undefined;
+            if (query.perPage) {
+                perPage = parseInt(query.perPage);
+            }
+
+            let severity = query.severity;
+
+            const logs = await LogServicio.search({
+                projects,
+                severidad: severity
+            }, {
+                page,
+                perPage
+            });
+
+            return this.sendRespuesta<IListOUT>(conexion, {
+                data: {
+                    logs: logs.map(log => {
+                        return {
+                            timestamp: log.timestamp.getTime(),
+                            project: log.proyecto,
+                            message: log.mensaje,
+                            service: log.servicio,
+                            type: log.tipo,
+                            severity: parseInt(log.severidad),
+                    }}),
+                }
+            });
+        } catch (e) {
+            error('Logs.handleList', e);
+            return conexion.error(500, 'Internal Server Error');
+        }
+    }
+
+    private async handleAvailableFilters(conexion: Conexion): Promise<number> {
+        try {
+            const query: IAvaliableFiltersIN = conexion.getQuery<IAvaliableFiltersIN>();
+
+            if (!query.projects) {
+                return conexion.error(400, 'Bad Request');
+            }
+
+            const filtros = await LogServicio.filterValues(query.projects.split(';'));
+
+            return this.sendRespuesta<IAvaliableFiltersOUT>(conexion, {
+                data: {
+                    services: filtros.servicio,
+                    types: filtros.tipo
+                }
+            });
+        } catch (e) {
+            error('Logs.handleAvailableFilters', e);
+            return conexion.error(500, 'Internal Server Error');
+        }
+    }
+
+    protected override getHandlers(): IRouteGroup[] {
+        return [
+            {
+                expresiones: [
+                    {
+                        metodos: ['GET'],
+                        exact: '/private/logs/servicio/list/',
+                        resumen: '/private/logs/servicio/list/',
+                        internal: true,
+                        query: {
+                            projects: {
+                                regex: /[a-z]+(?:(?:;[a-z]+)?)+/
+                            },
+                            page: {
+                                regex: /\d+/,
+                                opcional: true
+                            },
+                            perPage: {
+                                regex: /\d+/,
+                                opcional: true
+                            },
+                            severity: {
+                                regex: /[0123]/,
+                                opcional: true
+                            }
+                        }
+                    }
+                ],
+                handler: async (conexion) => {
+
+                    return await this.handleList(conexion);
+                }
+            },
+            {
+                expresiones: [
+                    {
+                        metodos: ['GET'],
+                        exact: '/private/logs/servicio/available-filters/',
+                        resumen: '/private/logs/servicio/available-filters/',
+                        internal: true,
+                        query: {
+                            projects: {
+                                regex: /[a-z]+(?:(?:;[a-z]+)?)+/
+                            }
+                        }
+                    }
+                ],
+                handler: async (conexion) => {
+                    return await this.handleAvailableFilters(conexion);
+                }
+            }
+        ];
+    }
+}
+
+let instance: Servicio|null = null;
+export default (config: Configuracion) => instance??= new Servicio(config);

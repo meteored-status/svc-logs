@@ -3,12 +3,15 @@ import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import type {Configuracion} from "./utiles/config";
 
+import Servicio from "./net/handlers/servicio";
+
 export class Engine extends EngineServer<Configuracion> {
     /* STATIC */
 
     /* INSTANCE */
     public override async ejecutar(): Promise<void> {
         this.initWebServer([
+            Servicio(this.configuracion)
         ], this.configuracion.net);
 
         await super.ejecutar();

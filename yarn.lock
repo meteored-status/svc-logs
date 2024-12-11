@@ -525,7 +525,7 @@ __metadata:
     "@inquirer/prompts": "npm:^7.2.0"
     "@tsconfig/node22": "npm:^22.0.0"
     "@types/diff3": "npm:^0.0.2"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     "@types/source-map-support": "npm:^0.5.10"
     chokidar: "npm:^4.0.1"
     clean-webpack-plugin: "npm:^4.0.0"
@@ -533,7 +533,7 @@ __metadata:
     diff3: "npm:^0.0.4"
     jszip: "npm:^3.10.1"
     mini-css-extract-plugin: "npm:^2.9.2"
-    mysql2: "npm:3.11.0"
+    mysql2: "npm:3.11.5"
     pug: "npm:^3.0.3"
     pug3-loader: "npm:^2.4.3"
     sass: "npm:^1.82.0"
@@ -563,7 +563,7 @@ __metadata:
   dependencies:
     "@tsconfig/node22": "npm:^22.0.0"
     "@tsconfig/recommended": "npm:^1.0.8"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     services-comun: "workspace:*"
   languageName: unknown
   linkType: soft
@@ -1204,12 +1204,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^22.10.1":
-  version: 22.10.1
-  resolution: "@types/node@npm:22.10.1"
+"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^22.10.2":
+  version: 22.10.2
+  resolution: "@types/node@npm:22.10.2"
   dependencies:
     undici-types: "npm:~6.20.0"
-  checksum: 10/c802a526da2f3fa3ccefd00a71244e7cb825329951719e79e8fec62b1dbc2855388c830489770611584665ce10be23c05ed585982038b24924e1ba2c2cce03fd
+  checksum: 10/451adfefed4add58b069407173e616220fd4aaa3307cdde1bb701aa053b65b54ced8483db2f870dcedec7a58cb3b06101fbc19d85852716672ec1fd3660947fa
   languageName: node
   linkType: hard
 
@@ -3991,7 +3991,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^8.16.2"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     crawler-user-agents: "npm:^1.0.154"
     geoip-lite: "npm:^1.4.10"
     services-comun: "workspace:*"
@@ -4009,11 +4009,11 @@ __metadata:
     "@elastic/elasticsearch": "npm:8.16.2"
     "@google-cloud/storage": "npm:^7.14.0"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     crawler-user-agents: "npm:^1.0.154"
     geoip-lite: "npm:^1.4.10"
     logs-base: "workspace:*"
-    mysql2: "npm:3.11.0"
+    mysql2: "npm:3.11.5"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -4039,7 +4039,7 @@ __metadata:
     "@opentelemetry/sdk-trace-node": "npm:^1.29.0"
     "@opentelemetry/semantic-conventions": "npm:^1.28.0"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     "@types/ua-parser-js": "npm:^0.7.39"
     chokidar: "npm:^4.0.1"
     crawler-user-agents: "npm:^1.0.154"
@@ -4047,7 +4047,7 @@ __metadata:
     geoip-lite: "npm:^1.4.10"
     hexoid: "npm:^2.0.0"
     logs-base: "workspace:*"
-    mysql2: "npm:3.11.0"
+    mysql2: "npm:3.11.5"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -4071,7 +4071,7 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.29.0"
     "@opentelemetry/sdk-trace-node": "npm:^1.29.0"
     "@opentelemetry/semantic-conventions": "npm:^1.28.0"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     chokidar: "npm:^4.0.1"
     formidable: "npm:^3.5.2"
     hexoid: "npm:^2.0.0"
@@ -5442,7 +5442,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "services-comun-status@workspace:framework/services-comun-status"
   dependencies:
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     "@types/qs": "npm:^6.9.17"
     qs: "npm:^6.13.1"
     services-comun: "workspace:*"
@@ -5471,7 +5471,7 @@ __metadata:
     "@tsconfig/node22": "npm:^22.0.0"
     "@types/diff3": "npm:^0.0.2"
     "@types/formidable": "npm:^3.4.5"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     "@types/pidusage": "npm:^2.0.5"
     "@types/qs": "npm:^6.9.17"
     "@types/sparkpost": "npm:^2.1.8"
@@ -5480,7 +5480,7 @@ __metadata:
     fork-ts-checker-webpack-plugin: "npm:^9.0.2"
     formidable: "npm:^3.5.2"
     isbot: "npm:^5.1.17"
-    mysql2: "npm:3.11.0"
+    mysql2: "npm:3.11.5"
     node-ical: "npm:^0.20.1"
     pidusage: "npm:^3.0.2"
     qs: "npm:^6.13.1"
@@ -6443,7 +6443,7 @@ __metadata:
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
     "@elastic/elasticsearch": "npm:^8.16.2"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     tslib: "npm:^2.8.1"
@@ -6466,11 +6466,11 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.29.0"
     "@opentelemetry/sdk-trace-node": "npm:^1.29.0"
     "@opentelemetry/semantic-conventions": "npm:^1.28.0"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     chokidar: "npm:^4.0.1"
     formidable: "npm:^3.5.2"
     hexoid: "npm:^2.0.0"
-    mysql2: "npm:3.11.0"
+    mysql2: "npm:3.11.5"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
