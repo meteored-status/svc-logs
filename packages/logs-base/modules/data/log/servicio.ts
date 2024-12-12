@@ -23,6 +23,10 @@ interface ILogServicioES {
 interface SearchFilter {
     projects: string[];
     severidad?: string;
+    servicios?: string[];
+    tipos?: string[];
+    ts_from?: number;
+    ts_to?: number;
 }
 
 interface SearchPagination {
@@ -82,7 +86,32 @@ export class LogServicio implements ILogServicio {
             });
         }
 
-        console.log(JSON.stringify(must));
+        if (filter.servicios != undefined && filter.servicios.length > 0) {
+            must.push({
+                terms: {
+                    servicio: filter.servicios
+                }
+            });
+        }
+
+        if (filter.tipos != undefined && filter.tipos.length > 0) {
+            must.push({
+                terms: {
+                    tipo: filter.tipos
+                }
+            });
+        }
+
+        if (filter.ts_from || filter.ts_to) {
+            must.push({
+                range: {
+                    "@timestamp": {
+                        gte: filter.ts_from,
+                        lte: filter.ts_to
+                    }
+                }
+            });
+        }
 
         const salida = await elastic.search<ILogServicioES>({
             index: this.getAlias(),

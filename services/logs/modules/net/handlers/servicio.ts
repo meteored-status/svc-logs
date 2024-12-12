@@ -31,11 +31,27 @@ class Servicio extends RouteGroup<Configuracion> {
                 perPage = parseInt(query.perPage);
             }
 
-            let severity = query.severity;
+            const severity = query.severity;
+            const services = query.services?.split(';');
+            const types = query.types?.split(';');
+
+            let ts_from = undefined;
+            if (query.ts_from) {
+                ts_from = parseInt(query.ts_from);
+            }
+
+            let ts_to = undefined;
+            if (query.ts_to) {
+                ts_to = parseInt(query.ts_to);
+            }
 
             const logs = await LogServicio.search({
                 projects,
-                severidad: severity
+                severidad: severity,
+                servicios: services,
+                tipos: types,
+                ts_from,
+                ts_to
             }, {
                 page,
                 perPage
@@ -105,6 +121,22 @@ class Servicio extends RouteGroup<Configuracion> {
                             },
                             severity: {
                                 regex: /[0123]/,
+                                opcional: true
+                            },
+                            services: {
+                                regex: /\w+(?:(?:;\w+)?)+/,
+                                opcional: true
+                            },
+                            types: {
+                                regex: /\w+(?:(?:;\w+)?)+/,
+                                opcional: true
+                            },
+                            ts_from: {
+                                regex: /\d+/,
+                                opcional: true
+                            },
+                            ts_to: {
+                                regex: /\d+/,
                                 opcional: true
                             }
                         }

@@ -5,6 +5,10 @@ export interface IListIN {
     page?: string;
     perPage?: string;
     severity?: string;
+    services?: string;
+    types?: string;
+    ts_from?: string;
+    ts_to?: string;
 }
 
 export interface IListOUT {
