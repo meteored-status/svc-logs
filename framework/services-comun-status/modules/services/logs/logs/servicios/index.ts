@@ -3,10 +3,13 @@ import {EService, SERVICES} from "../../../config";
 import {logRejection} from "services-comun/modules/decorators/metodo";
 import {IListOUT} from "./list/interface";
 import {ESeverity} from "../interface";
+import {IAvaliableFiltersOUT} from "./available-filters/interface";
 
 interface ListFilter {
     projects: string[];
     severity?: ESeverity;
+    services?: string[];
+    types?: string[];
 }
 
 interface ListPagination {
@@ -32,6 +35,14 @@ export default class Index extends BackendRequest {
             params.push(`severity=${severity}`);
         }
 
+        if (filters.services !== undefined) {
+            params.push(`services=${filters.services.join(';')}`);
+        }
+
+        if (filters.types !== undefined) {
+            params.push(`types=${filters.types.join(';')}`);
+        }
+
         if (page) {
             params.push(`page=${page}`);
             if (perPage) {
@@ -44,6 +55,12 @@ export default class Index extends BackendRequest {
         }
 
         return await this.get<IListOUT>(url);
+    }
+
+    @logRejection(true)
+    public static async availableFilters(projects: string[]): Promise<RequestResponse<IAvaliableFiltersOUT>> {
+        const url = `${this.SERVICIO}/private/logs/servicio/available-filters/?projects=${projects.join(';')}`;
+        return await this.get<IAvaliableFiltersOUT>(url);
     }
 
     /* INSTANCE */
