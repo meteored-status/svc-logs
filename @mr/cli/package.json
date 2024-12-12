@@ -1,6 +1,6 @@
 {
   "name": "@mr/cli",
-  "version": "2024.12.11+3-juancmartinez",
+  "version": "2024.12.11+4-frangarcia",
   "description": "Herramientas de linea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
