@@ -18,7 +18,7 @@ interface ILogServicioES {
     extra?: string|string[];
 }
 
-export class LogServicio implements ILogServicio {
+export abstract class LogServicio implements ILogServicio {
     /* STATIC */
     private static INDEX = "mr-log-servicios";
     protected static getIndex(proyecto: string): string {
@@ -34,7 +34,7 @@ export class LogServicio implements ILogServicio {
     public get mensaje(): string { return this.data.mensaje; }
     public get extra(): string[] { return this.data.extra; }
 
-    public constructor(private data: ILogServicio) {
+    protected constructor(private data: ILogServicio) {
     }
 
     public toJSON(): ILogServicioES {

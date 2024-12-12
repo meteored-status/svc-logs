@@ -1,4 +1,5 @@
 import db from "services-comun/modules/utiles/mysql";
+import builder from "services-comun/modules/database/mysql/cache/memory";
 
 import type {Backends} from "./backends";
 import {ClienteError} from "./error";
@@ -15,6 +16,11 @@ export class Cliente {
     public static async searchID(id: string): Promise<Cliente> {
         const [cliente] = await db.select<ICliente, Cliente>("SELECT * FROM clientes WHERE id=?", [id], {
             fn: (row)=>new this(row),
+            cache: {
+                builder,
+                key: id,
+                ttl: 600000,
+            },
         });
         if (cliente==undefined) {
             return Promise.reject(new ClienteError(`Cliente ${id} no encontrado`));
