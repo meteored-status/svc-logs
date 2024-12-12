@@ -1,6 +1,6 @@
 {
   "name": "@mr/cli",
-  "version": "2024.12.10+1-bixus",
+  "version": "2024.12.12+1-bixus",
   "description": "Herramientas de linea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
@@ -31,7 +31,7 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
     "@types/diff3": "^0.0.2",
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.10.2",
     "@types/source-map-support": "^0.5.10",
     "clean-webpack-plugin": "^4.0.0",
     "css-loader": "^7.1.2",

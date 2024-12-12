@@ -1,6 +1,36 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.12+1
+
+### Added
+- [Jose] Se ha añadido la posibilidad de usar caché en las consultas de MySQL
+  - El objeto de configuración que se pasa como tercer parámetro a `db.select` y `db.selectOne` tiene una nueva propiedad `cache` que se puede usar para configurar el cacheo de la consulta:
+    ```typescript
+    interface ICacheConfig {
+      builder: ICacheBuilder; // builder del gestor de caché
+      cleanup?: boolean; // indica si se ha de programar el elemento para eliminarse de la caché al caducar
+      key?: string|number; // key para la caché
+      expires?: Date; // fecha caducidad del valor cacheado
+      ttl?: number;   // tiempo de vida del valor cacheado en segundos
+    }
+    ```
+    - `builder`: Es el builder del gestor de caché que se va a usar, actualmente se encuentran implementados estos 3:
+      - `mock`: No guarda nada, solo simula que guarda
+      - `memory`: Guarda en memoria
+      - `disk`: Guarda en un directorio del disco duro
+      - ***Nota***: Se pueden añadir el builder tal cual o la salida del método `.config()` del builder elegido para pasarle configuración
+    - `cleanup`: Indica si se ha de programar el elemento para eliminarse de la caché al caducar, cada builder tiene un valor por defecto si no se especifica
+    - `key`: Es la key que se va a utilizar para cachear la consulta, si no se especifica se genera a partir de los parámetros
+    - `expires`: Es la fecha de caducidad del valor cacheado, si no se especifica no caduca
+    - `ttl`: Es el tiempo de vida del valor cacheado en segundos, si no se especifica no caduca
+    - ***Nota***: `ttl` tiene preferencia sobre `expires`
+    - ***Nota 2***: Si no se especifica `expires` ni `ttl` entonces la consulta no caducará nunca
+
+### Deprecated
+- [Jose] Se ha deprecado los métodos `db.query` y `db.queryOne` de MySQL, ahora se debe usar `db.select` y `db.selectOne` respectivamente en su lugar
+
+---
 ## 2024.12.4+1
 
 ### Changed

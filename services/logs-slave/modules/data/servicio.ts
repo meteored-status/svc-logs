@@ -30,7 +30,7 @@ export class LogServicio extends LogServicioBase {
         });
 
         this.BULK.create({
-            index: LogServicio.getIndex(documento.proyecto),
+            index: this.getIndex(documento.proyecto),
             doc: documento.toJSON(),
         });
     }
