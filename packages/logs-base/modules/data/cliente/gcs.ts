@@ -1,4 +1,5 @@
 import type {IInsert} from "services-comun/modules/database/mysql";
+import builder from "services-comun/modules/database/mysql/cache/memory";
 import {Storage} from "services-comun/modules/fs/storage";
 import {Google, IPodInfo} from "services-comun/modules/utiles/config";
 import {error} from "services-comun/modules/utiles/log";
@@ -30,6 +31,11 @@ export class ClienteGCS implements IClienteGCS {
     public static async searchBucket(bucket: string): Promise<ClienteGCS> {
         const [cliente] = await db.select<IClienteGCSMySQL, ClienteGCS>(`SELECT * FROM gcs WHERE bucket=?`, [bucket], {
             fn: async (raw)=>new this(await Grupo.searchID(raw.cliente, raw.grupo), raw),
+            cache: {
+                builder,
+                key: bucket,
+                ttl: 600000,
+            },
         });
         if (cliente==undefined) {
             return Promise.reject(new ClienteError(`GCS ${bucket} no encontrado`));

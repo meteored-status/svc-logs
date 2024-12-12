@@ -6,6 +6,8 @@ import {PromiseDelayed} from "../utiles/promise";
 
 export type AggregateName = elastic.estypes.AggregateName;
 export type AggregationsAggregate = elastic.estypes.AggregationsAggregate;
+export type AggregationsStringTermsBucket = elastic.estypes.AggregationsStringTermsBucket;
+export type AggregationsStringTermsAggregate = elastic.estypes.AggregationsStringTermsAggregate;
 export type BulkOperationContainer = elastic.estypes.BulkOperationContainer;
 export type BulkOperationType = elastic.estypes.BulkOperationType;
 export type BulkRequest = elastic.estypes.BulkRequest;

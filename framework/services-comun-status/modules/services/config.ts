@@ -2,6 +2,7 @@ import {INetServiceBase} from "services-comun/modules/net/config/net";
 import {Service} from "services-comun/modules/net/service";
 
 export enum EService {
+    logs,
     logs_slave,
     status_backend,
     status_external,
@@ -12,6 +13,11 @@ export enum EService {
 
 const mapeo = new Map<EService, INetServiceBase>();
 
+mapeo.set(EService.logs, {
+    endpoint: "switch-svc-logs",
+    namespace: "services",
+    tags: ["logs"],
+});
 mapeo.set(EService.logs_slave, {
     endpoint: "proxy-svc-logs-slave",
     namespace: "services",

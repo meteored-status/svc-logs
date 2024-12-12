@@ -10,6 +10,7 @@ import {
 } from "mysql2/promise";
 import {FSWatcher, watch} from "node:fs";
 
+import type {ICacheConfig} from "./cache";
 import {PromiseDelayed} from "../../utiles/promise";
 import {Transaction} from "./transaction";
 import {arrayChop} from "../../utiles/array";
@@ -62,6 +63,7 @@ interface IQueryOptions extends IQueryOptionsBase {
 interface ISelectOptions<T, S=T> extends IQueryOptions {
     fn?: (rows: T)=>S|Promise<S>;
     master?: boolean;
+    cache?: ICacheConfig;
 }
 
 interface IBulkOptions extends IQueryOptions {
@@ -228,10 +230,14 @@ export class MySQL implements Disposable {
         return escape(value);
     }
 
+    /**
+     * @deprecated Use the `select` method instead.
+     */
     public async query<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn}: ISelectOptions<T, S>={}): Promise<S[]> {
+        error(`##### DB.query está deprecado, use DB.select en su lugar`);
         const select = sql.startsWith("SELECT") || sql.startsWith("select");
         if (!select) {
-            error(`Consulta no select: ${sql} => use la función adecuada en lugar de db.query`)
+            error(`Consulta no select: ${sql} => use la función adecuada en lugar de db.query`);
         }
         let registros: T[];
 
@@ -251,27 +257,40 @@ export class MySQL implements Disposable {
         return registros as never as S[];
     }
 
+    /**
+     * @deprecated Use the `selectOne` method instead.
+     */
     public async queryOne<T=any, S=T>(sql: string, params: TipoRegistro[]=[], options: ISelectOptions<T, S>={}): Promise<S> {
-        const [row] = await this.query<T, S>(sql, params, options);
+        error(`##### DB.queryOne está deprecado, use DB.selectOne en su lugar`);
+        return this.selectOne<T, S>(sql, params, options);
+    }
+
+    public async selectOne<T=any, S=T>(sql: string, params: TipoRegistro[]=[], options: ISelectOptions<T, S>={}): Promise<S> {
+        const [row] = await this.select<T, S>(sql, params, options);
 
         return row ?? await Promise.reject(`No se encontró ningún registro`);
     }
 
-    private async getStatement(pool: PoolNamespace, sql: string): Promise<PreparedStatementInfo> {
-        const connection = await pool.getConnection();
-        return await connection.prepare(sql);
-    }
-
-    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn}: ISelectOptions<T, S>={}): Promise<S[]> {
+    public async select<T=any, S=T>(sql: string, params: TipoRegistro[]=[], {master=false, transaction, fn, cache}: ISelectOptions<T, S>={}): Promise<S[]> {
         let registros: T[];
 
         if (transaction) {
             registros = await transaction.query<T>(sql, params);
         } else {
-            const pool = !master ? this.slave : this.master;
-            const db = await pool;
-            const [rows] = await db.query(sql, params);
-            registros = rows as T[];
+            if (cache==undefined) {
+                const pool = !master ? this.slave : this.master;
+                const db = await pool;
+                const [rows] = await db.query(sql, params);
+                registros = rows as T[];
+            } else {
+                const builder = await cache.builder.get<T>(sql);
+                registros = await builder.get(sql, params, async (sql, params)=>{
+                    const pool = !master ? this.slave : this.master;
+                    const db = await pool;
+                    const [rows] = await db.query(sql, params);
+                    return rows as T[];
+                }, cache);
+            }
         }
 
         if (fn!=undefined) {
