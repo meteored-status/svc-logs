@@ -45,6 +45,15 @@ type ESAggregator = {
     'by-tipo': Agregador;
 }
 
+interface IDeleteFilter {
+    projects: string[];
+    timestamp?: number;
+    severidades?: string[];
+    servicios?: string[];
+    tipos?: string[];
+    mensajes?: string[];
+}
+
 export class LogServicio implements ILogServicio {
     /* STATIC */
     private static INDEX = "mr-log-servicios";
@@ -141,7 +150,7 @@ export class LogServicio implements ILogServicio {
                 severidad: data.severidad,
                 mensaje: data.mensaje,
                 extra: data.extra ? (Array.isArray(data.extra) ? data.extra : [data.extra]) : []
-            }, hit._id)
+            })
         });
     }
 
@@ -194,6 +203,66 @@ export class LogServicio implements ILogServicio {
         return result;
     }
 
+    public static async delete(filter: IDeleteFilter): Promise<void> {
+        const {projects} = filter;
+        const must: QueryDslQueryContainer[] = [
+            {
+                terms: {
+                    proyecto: projects
+                }
+            }
+        ];
+
+        if (filter.timestamp) {
+            must.push({
+                term: {
+                    "@timestamp": filter.timestamp
+                }
+            });
+        }
+
+        if (filter.severidades != undefined && filter.severidades.length > 0) {
+            must.push({
+                terms: {
+                    severidad: filter.severidades
+                }
+            });
+        }
+
+        if (filter.servicios != undefined && filter.servicios.length > 0) {
+            must.push({
+                terms: {
+                    servicio: filter.servicios
+                }
+            });
+        }
+
+        if (filter.tipos != undefined && filter.tipos.length > 0) {
+            must.push({
+                terms: {
+                    tipo: filter.tipos
+                }
+            });
+        }
+
+        if (filter.mensajes != undefined && filter.mensajes.length > 0) {
+            must.push({
+                terms: {
+                    mensaje: filter.mensajes
+                }
+            });
+        }
+
+        await elastic.deleteByQuery({
+            index: this.getAlias(),
+            query: {
+                bool: {
+                    must
+                }
+            }
+        });
+    }
+
     /* INSTANCE */
     public get timestamp(): Date { return this.data.timestamp; }
     public get proyecto(): string { return this.data.proyecto; }
@@ -203,7 +272,7 @@ export class LogServicio implements ILogServicio {
     public get mensaje(): string { return this.data.mensaje; }
     public get extra(): string[] { return this.data.extra; }
 
-    public constructor(private data: ILogServicio, private id?: string) {
+    public constructor(private data: ILogServicio) {
     }
 
     public toJSON(): ILogServicioES {

@@ -6,8 +6,13 @@ import {error} from "services-comun/modules/utiles/log";
 import {LogServicio} from "logs-base/modules/data/log/servicio";
 import {IListIN, IListOUT} from "services-comun-status/modules/services/logs/logs/servicios/list/interface";
 import {
-    IAvaliableFiltersIN, IAvaliableFiltersOUT
+    IAvaliableFiltersIN,
+    IAvaliableFiltersOUT
 } from "services-comun-status/modules/services/logs/logs/servicios/available-filters/interface";
+import {
+    IDeleteIN,
+    IDeleteOUT
+} from "services-comun-status/modules/services/logs/logs/servicios/delete/interface";
 
 class Servicio extends RouteGroup<Configuracion> {
     /* STATIC */
@@ -98,6 +103,38 @@ class Servicio extends RouteGroup<Configuracion> {
         }
     }
 
+    private async handleDelete(conexion: Conexion): Promise<number> {
+        try {
+            const post: IDeleteIN = conexion.post as IDeleteIN;
+
+            if (!post.projects || !post.action || (
+                !post.action.timestamp &&
+                !post.action.severities?.length &&
+                !post.action.services?.length &&
+                !post.action.types?.length &&
+                !post.action.messages?.length
+            )) {
+                return conexion.error(400, 'Bad Request');
+            }
+
+            await LogServicio.delete({
+                projects: post.projects,
+                timestamp: post.action.timestamp,
+                severidades: post.action.severities,
+                servicios: post.action.services,
+                tipos: post.action.types,
+                mensajes: post.action.messages
+            });
+
+            return this.sendRespuesta<IDeleteOUT>(conexion, {
+                data: {}
+            });
+        } catch (e) {
+            error('Logs.handleDelete', e);
+            return conexion.error(500, 'Internal Server Error');
+        }
+    }
+
     protected override getHandlers(): IRouteGroup[] {
         return [
             {
@@ -163,6 +200,19 @@ class Servicio extends RouteGroup<Configuracion> {
                 ],
                 handler: async (conexion) => {
                     return await this.handleAvailableFilters(conexion);
+                }
+            },
+            {
+                expresiones: [
+                    {
+                        metodos: ['POST'],
+                        exact: '/private/logs/servicio/delete/',
+                        resumen: '/private/logs/servicio/delete/',
+                        internal: true,
+                    }
+                ],
+                handler: async (conexion) => {
+                    return await this.handleDelete(conexion);
                 }
             }
         ];
