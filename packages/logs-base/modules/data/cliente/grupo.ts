@@ -28,6 +28,11 @@ export class Grupo implements IGrupo {
 
         const [grupo] = await db.select<IGrupo, Grupo>("SELECT * FROM grupos WHERE id=? AND cliente=?", [grp, cliente.id], {
             fn: (row)=>new this(cliente, row),
+            // cache: {
+            //     builder,
+            //     key: `${cliente.id}-${grp}`,
+            //     ttl: 600000,
+            // },
         });
         if (grupo==undefined) {
             return Promise.reject(new ClienteError(`Grupo ${grp} no encontrado`));

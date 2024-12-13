@@ -11,6 +11,8 @@ interface ListFilter {
     severity?: ESeverity;
     services?: string[];
     types?: string[];
+    tsFrom?: number;
+    tsTo?: number;
 }
 
 interface ListPagination {
@@ -42,6 +44,14 @@ export default class Index extends BackendRequest {
 
         if (filters.types !== undefined) {
             params.push(`types=${filters.types.join(';')}`);
+        }
+
+        if (filters.tsFrom) {
+            params.push(`ts_from=${filters.tsFrom}`);
+        }
+
+        if (filters.tsTo) {
+            params.push(`ts_to=${filters.tsTo}`);
         }
 
         if (page) {

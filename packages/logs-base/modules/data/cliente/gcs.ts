@@ -30,6 +30,11 @@ export class ClienteGCS implements IClienteGCS {
     public static async searchBucket(bucket: string): Promise<ClienteGCS> {
         const [cliente] = await db.select<IClienteGCSMySQL, ClienteGCS>(`SELECT * FROM gcs WHERE bucket=?`, [bucket], {
             fn: async (raw)=>new this(await Grupo.searchID(raw.cliente, raw.grupo), raw),
+            // cache: {
+            //     builder,
+            //     key: bucket,
+            //     ttl: 600000,
+            // },
         });
         if (cliente==undefined) {
             return Promise.reject(new ClienteError(`GCS ${bucket} no encontrado`));

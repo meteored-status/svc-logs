@@ -3,7 +3,7 @@ import {Configuracion} from "../../utiles/config";
 import {IRouteGroup} from "services-comun/modules/net/routes/group/block";
 import {Conexion} from "services-comun/modules/net/conexion";
 import {error} from "services-comun/modules/utiles/log";
-import {LogServicio} from "logs-base/modules/data/log/servicio";
+import {LogServicio} from "../../data/log/log-servicio";
 import {IListIN, IListOUT} from "services-comun-status/modules/services/logs/logs/servicios/list/interface";
 import {
     IAvaliableFiltersIN,

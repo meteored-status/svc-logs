@@ -27,7 +27,7 @@
     "@opentelemetry/sdk-trace-node": "^1.29.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "chokidar": "^4.0.1",
-    "crawler-user-agents": "^1.0.154",
+    "crawler-user-agents": "^1.0.155",
     "geoip-lite": "^1.4.10",
     "hexoid": "^2.0.0",
     "mysql2": "3.11.0",

@@ -28,6 +28,8 @@
     "@types/pidusage": "^2.0.5",
     "@types/qs": "^6.9.17",
     "@types/sparkpost": "^2.1.8",
+    "@types/ungap__structured-clone": "^1.2.0",
+    "@ungap/structured-clone": "^1.2.1",
     "chokidar": "^4.0.1",
     "diff3": "^0.0.4",
     "fork-ts-checker-webpack-plugin": "^9.0.2",
@@ -44,5 +46,5 @@
     "webpack": "^5.97.1",
     "webpack-cli": "^5.1.4"
   },
-  "version": "2024.12.11+3-juancmartinez"
+  "version": "2024.12.12+2-bixus"
 }
