@@ -31,15 +31,6 @@ type ESAggregator = {
     'by-tipo': Agregador;
 }
 
-interface IDeleteFilter {
-    projects: string[];
-    timestamp?: number;
-    severidades?: string[];
-    servicios?: string[];
-    tipos?: string[];
-    mensajes?: string[];
-}
-
 export class LogServicio extends LogServicioBase {
     /* STATIC */
 
@@ -179,70 +170,6 @@ export class LogServicio extends LogServicioBase {
         result.tipo.sort();
 
         return result;
-    }
-
-    /**
-     * Elimina logs de servicios aplicando filtros.
-     * @param filter Filtros a aplicar
-     */
-    public static async delete(filter: IDeleteFilter): Promise<void> {
-        const {projects} = filter;
-        const must: QueryDslQueryContainer[] = [
-            {
-                terms: {
-                    proyecto: projects
-                }
-            }
-        ];
-
-        if (filter.timestamp) {
-            must.push({
-                term: {
-                    "@timestamp": filter.timestamp
-                }
-            });
-        }
-
-        if (filter.severidades != undefined && filter.severidades.length > 0) {
-            must.push({
-                terms: {
-                    severidad: filter.severidades
-                }
-            });
-        }
-
-        if (filter.servicios != undefined && filter.servicios.length > 0) {
-            must.push({
-                terms: {
-                    servicio: filter.servicios
-                }
-            });
-        }
-
-        if (filter.tipos != undefined && filter.tipos.length > 0) {
-            must.push({
-                terms: {
-                    tipo: filter.tipos
-                }
-            });
-        }
-
-        if (filter.mensajes != undefined && filter.mensajes.length > 0) {
-            must.push({
-                terms: {
-                    mensaje: filter.mensajes
-                }
-            });
-        }
-
-        await elastic.deleteByQuery({
-            index: this.getAlias(),
-            query: {
-                bool: {
-                    must
-                }
-            }
-        });
     }
 
     /* INSTANCE */
