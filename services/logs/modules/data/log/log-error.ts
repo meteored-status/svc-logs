@@ -1,16 +1,16 @@
-import {LogServicio as LogServicioBase, type ILogServicioES} from "logs-base/modules/data/log/servicio";
-import {
+import {LogError as LogErrorBase, type ILogErrorES} from "logs-base/modules/data/log/error";
+import elastic, {
     AggregationsStringTermsAggregate,
     AggregationsStringTermsBucket,
     QueryDslQueryContainer
-} from "services-comun/modules/elasticsearch";
-import elastic from "services-comun/modules/utiles/elastic";
+} from "services-comun/modules/utiles/elastic";
 
 interface SearchFilter {
     projects: string[];
-    severidad?: string;
-    servicios?: string[];
-    tipos?: string[];
+    servicio?: string[];
+    url?: string[];
+    linea?: number[];
+    archivo?: string[];
     ts_from?: number;
     ts_to?: number;
 }
@@ -22,25 +22,28 @@ interface SearchPagination {
 
 interface IFilterValues {
     servicio: string[];
-    tipo: string[];
+    archivo: string[];
+    linea: number[];
+    url: string[];
 }
 
 type Agregador = AggregationsStringTermsAggregate;
 type ESAggregator = {
     'by-servicio': Agregador;
-    'by-tipo': Agregador;
+    'by-archivo': Agregador;
+    'by-linea': Agregador;
+    'by-url': Agregador;
 }
 
-export class LogServicio extends LogServicioBase {
+export class LogError extends LogErrorBase {
     /* STATIC */
 
     /**
-     * Busca logs de servicios aplicando filtros y paginación.
+     * Busca logs de errores aplicando filtros y paginación.
      * @param filter Filtros a aplicar
      * @param pagination Paginación a aplicar
      */
-    public static async search(filter: SearchFilter, {page = 1, perPage= 15}: SearchPagination): Promise<LogServicio[]> {
-
+    public static async search(filter: SearchFilter, {page = 1, perPage= 15}: SearchPagination): Promise<LogError[]> {
         const {projects} = filter;
 
         const must: QueryDslQueryContainer[] = [
@@ -48,29 +51,42 @@ export class LogServicio extends LogServicioBase {
                 terms: {
                     proyecto: projects
                 }
+            },
+            {
+                term: {
+                    checked: false
+                }
             }
         ];
 
-        if (filter.severidad != undefined) {
+        if (filter.servicio) {
             must.push({
-                term: {
-                    severidad: filter.severidad
+                terms: {
+                    servicio: filter.servicio
                 }
             });
         }
 
-        if (filter.servicios != undefined && filter.servicios.length > 0) {
+        if (filter.url) {
             must.push({
                 terms: {
-                    servicio: filter.servicios
+                    url: filter.url
                 }
             });
         }
 
-        if (filter.tipos != undefined && filter.tipos.length > 0) {
+        if (filter.linea) {
             must.push({
                 terms: {
-                    tipo: filter.tipos
+                    linea: filter.linea
+                }
+            });
+        }
+
+        if (filter.archivo) {
+            must.push({
+                terms: {
+                    archivo: filter.archivo
                 }
             });
         }
@@ -86,8 +102,8 @@ export class LogServicio extends LogServicioBase {
             });
         }
 
-        const salida = await elastic.search<ILogServicioES>({
-            index: this.getAlias(),
+        const salida = await elastic.search<ILogErrorES>({
+            index: LogErrorBase.getAlias(),
             from: (page-1)*perPage,
             size: perPage,
             query: {
@@ -104,17 +120,21 @@ export class LogServicio extends LogServicioBase {
             ]
         });
 
+
         return salida.hits.hits.map(hit => {
             const data = hit._source!;
-            return new LogServicio({
+            return new LogError({
                 timestamp: new Date(data["@timestamp"]),
+                checked: data.checked,
                 proyecto: data.proyecto,
                 servicio: data.servicio,
-                tipo: data.tipo,
-                severidad: data.severidad,
+                url: data.url,
                 mensaje: data.mensaje,
-                extra: data.extra ? (Array.isArray(data.extra) ? data.extra : [data.extra]) : []
-            })
+                archivo: data.archivo,
+                linea: data.linea,
+                traza: data.traza ? (Array.isArray(data.traza) ? data.traza : [data.traza]) : [],
+                ctx: data.ctx ? (Array.isArray(data.ctx) ? data.ctx : [data.ctx]) : []
+            });
         });
     }
 
@@ -125,10 +145,12 @@ export class LogServicio extends LogServicioBase {
     public static async filterValues(projects: string[]): Promise<IFilterValues> {
         const result: IFilterValues = {
             servicio: [],
-            tipo: []
+            archivo: [],
+            linea: [],
+            url: []
         };
 
-        const salida = await elastic.search<ILogServicioES, ESAggregator>({
+        const salida = await elastic.search<ILogErrorES, ESAggregator>({
             index: this.getAlias(),
             size: 0,
             query: {
@@ -149,20 +171,36 @@ export class LogServicio extends LogServicioBase {
                         size: 100
                     }
                 },
-                'by-tipo': {
+                // 'by-archivo': {
+                //     terms: {
+                //         field: 'archivo',
+                //         size: 100
+                //     }
+                // },
+                'by-linea': {
                     terms: {
-                        field: 'tipo',
-                        size: 100
+                        field: 'linea',
+                        size: 500
+                    }
+                },
+                'by-url': {
+                    terms: {
+                        field: 'url',
+                        size: 500
                     }
                 }
             }
         });
 
-        result.servicio = (salida.aggregations?.['by-servicio'].buckets as AggregationsStringTermsBucket[]).map(bucket => bucket.key as string);
-        result.tipo = (salida.aggregations?.['by-tipo'].buckets as AggregationsStringTermsBucket[]).map(bucket => bucket.key as string);
+        result.servicio = (salida.aggregations?.['by-servicio']?.buckets as AggregationsStringTermsBucket[])?.map(bucket => bucket.key as string)||[];
+        result.archivo = (salida.aggregations?.['by-archivo']?.buckets as AggregationsStringTermsBucket[])?.map(bucket => bucket.key as string)||[];
+        result.linea = (salida.aggregations?.['by-linea']?.buckets as AggregationsStringTermsBucket[])?.map(bucket => parseInt(bucket.key as string)||0)||[];
+        result.url = (salida.aggregations?.['by-url']?.buckets as AggregationsStringTermsBucket[])?.map(bucket => bucket.key as string)||[];
 
         result.servicio.sort();
-        result.tipo.sort();
+        result.archivo.sort();
+        result.linea.sort();
+        result.url.sort();
 
         return result;
     }

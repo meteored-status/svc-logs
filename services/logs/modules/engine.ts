@@ -3,6 +3,7 @@ import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import type {Configuracion} from "./utiles/config";
 
+import Error from "./net/handlers/error";
 import Servicio from "./net/handlers/servicio";
 
 export class Engine extends EngineServer<Configuracion> {
@@ -11,6 +12,7 @@ export class Engine extends EngineServer<Configuracion> {
     /* INSTANCE */
     public override async ejecutar(): Promise<void> {
         this.initWebServer([
+            Error(this.configuracion),
             Servicio(this.configuracion)
         ], this.configuracion.net);
 

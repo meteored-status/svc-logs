@@ -16,7 +16,7 @@ export interface ILogError {
     ctx: ILogErrorCTX[];
 }
 
-interface ILogErrorES {
+export interface ILogErrorES {
     "@timestamp": string;
     checked: boolean;
     proyecto: string;
@@ -34,6 +34,10 @@ export abstract class LogError implements ILogError {
     private static INDEX = "mr-log-errores";
     protected static getIndex(proyecto: string): string {
         return `${this.INDEX}-${proyecto.toLowerCase()}`;
+    }
+
+    protected static getAlias(): string {
+        return this.INDEX;
     }
 
     /* INSTANCE */
