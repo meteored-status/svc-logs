@@ -8,5 +8,5 @@ export interface IDeleteIN {
 }
 
 export interface IDeleteOUT {
-
+    deleted: number;
 }

@@ -126,7 +126,7 @@ class Error extends RouteGroup<Configuracion> {
                 return conexion.error(400, 'Bad Request');
             }
 
-            await LogError.delete({
+            const deleted = await LogError.delete({
                 proyecto: post.project,
                 ts: post.ts,
                 servicio: post.service,
@@ -135,7 +135,11 @@ class Error extends RouteGroup<Configuracion> {
                 url: post.url
             });
 
-            return this.sendRespuesta<IDeleteOUT>(conexion, {});
+            return this.sendRespuesta<IDeleteOUT>(conexion, {
+                data: {
+                    deleted
+                }
+            });
         } catch (e) {
             error('Logs.handleDelete', e);
             return conexion.error(500, 'Internal Server Error');

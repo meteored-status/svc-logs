@@ -4,6 +4,7 @@ import elastic, {
     AggregationsStringTermsBucket,
     QueryDslQueryContainer
 } from "services-comun/modules/utiles/elastic";
+import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 interface SearchFilter {
     projects: string[];
@@ -214,7 +215,11 @@ export class LogError extends LogErrorBase {
         return result;
     }
 
-    public static async delete(request: IDelete): Promise<void> {
+    /**
+     * Marca como revisados los logs de errores que coincidan con los filtros.
+     * @param request Filtros a aplicar
+     */
+    public static async delete(request: IDelete): Promise<number> {
         const must: QueryDslQueryContainer[] = [
             {
                 term: {
@@ -263,7 +268,7 @@ export class LogError extends LogErrorBase {
             });
         }
 
-        await elastic.updateByQuery({
+        const result = await elastic.updateByQuery({
             index: this.getAlias(),
             query: {
                 bool: {
@@ -272,8 +277,11 @@ export class LogError extends LogErrorBase {
             },
             script: {
                 source: "ctx._source.checked = true"
-            }
+            },
+            refresh: true
         });
+
+        return result.updated??0;
     }
 
     /* INSTANCE */
