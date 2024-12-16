@@ -171,12 +171,12 @@ export class LogError extends LogErrorBase {
                         size: 100
                     }
                 },
-                // 'by-archivo': {
-                //     terms: {
-                //         field: 'archivo',
-                //         size: 100
-                //     }
-                // },
+                'by-archivo': {
+                    terms: {
+                        field: 'archivo',
+                        size: 100
+                    }
+                },
                 'by-linea': {
                     terms: {
                         field: 'linea',

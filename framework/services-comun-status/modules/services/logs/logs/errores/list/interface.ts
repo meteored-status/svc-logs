@@ -3,7 +3,7 @@ export interface IListIN {
     page?: string;
     perPage?: string;
     services?: string;
-    url?: string;
+    urls?: string;
     lines?: string;
     files?: string;
     ts_from?: string;

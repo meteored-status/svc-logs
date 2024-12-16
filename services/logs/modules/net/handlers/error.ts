@@ -35,7 +35,7 @@ class Error extends RouteGroup<Configuracion> {
             }
 
             const services = query.services?.split(';');
-            const urls = query.url?.split(';');
+            const urls = query.urls?.split(';');
             const lines = query.lines?.split(';').map(line => parseInt(line));
             const files = query.files?.split(';');
 
@@ -148,7 +148,7 @@ class Error extends RouteGroup<Configuracion> {
                                 opcional: true
                             },
                             urls: {
-                                regex: /\w+(?:(?:;\w+)?)+/,
+                                regex: /[A-Z\d\/.:]+(?:(?:;[A-Z\d\/.:]+)?)+/,
                                 opcional: true
                             },
                             ts_from: {
