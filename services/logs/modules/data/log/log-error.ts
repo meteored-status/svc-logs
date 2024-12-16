@@ -4,7 +4,6 @@ import elastic, {
     AggregationsStringTermsBucket,
     QueryDslQueryContainer
 } from "services-comun/modules/utiles/elastic";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 interface SearchFilter {
     projects: string[];
@@ -170,6 +169,11 @@ export class LogError extends LogErrorBase {
                             terms: {
                                 proyecto: projects
                             }
+                        },
+                        {
+                            term: {
+                                checked: false
+                            }
                         }
                     ]
                 }
@@ -209,7 +213,7 @@ export class LogError extends LogErrorBase {
 
         result.servicio.sort();
         result.archivo.sort();
-        result.linea.sort();
+        result.linea.sort((a, b) => a - b);
         result.url.sort();
 
         return result;
