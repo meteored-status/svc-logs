@@ -11,6 +11,7 @@ import {
 
 import {Configuracion} from "../../utiles/config";
 import {LogError} from "../../data/log/log-error";
+import {IDeleteIN, IDeleteOUT} from "services-comun-status/modules/services/logs/logs/errores/delete/interface";
 
 class Error extends RouteGroup<Configuracion> {
     /* STATIC */
@@ -114,6 +115,33 @@ class Error extends RouteGroup<Configuracion> {
         }
     }
 
+    private async handleDelete(conexion: Conexion): Promise<number> {
+        try {
+            const post: IDeleteIN = conexion.post as IDeleteIN;
+
+            if (!post || !post.project?.length
+                || (post.ts && (!post.service && !post.file && !post.line && !post.url))
+                || (!post.ts && !post.service && !post.file && !post.line && !post.url)
+            ) {
+                return conexion.error(400, 'Bad Request');
+            }
+
+            await LogError.delete({
+                proyecto: post.project,
+                ts: post.ts,
+                servicio: post.service,
+                archivo: post.file,
+                linea: post.line,
+                url: post.url
+            });
+
+            return this.sendRespuesta<IDeleteOUT>(conexion, {});
+        } catch (e) {
+            error('Logs.handleDelete', e);
+            return conexion.error(500, 'Internal Server Error');
+        }
+    }
+
     protected override getHandlers(): IRouteGroup[] {
         return [
             {
@@ -185,6 +213,19 @@ class Error extends RouteGroup<Configuracion> {
                     return await this.handleAvailableFilters(conexion);
                 }
             },
+            {
+                expresiones: [
+                    {
+                        metodos: ['POST'],
+                        exact: '/private/logs/error/delete/',
+                        resumen: '/private/logs/error/delete/',
+                        internal: true
+                    }
+                ],
+                handler: async (conexion) => {
+                    return await this.handleDelete(conexion);
+                }
+            }
         ];
     }
 }

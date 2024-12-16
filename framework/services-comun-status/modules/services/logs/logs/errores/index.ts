@@ -3,6 +3,7 @@ import {EService, SERVICES} from "../../../config";
 import {logRejection} from "services-comun/modules/decorators/metodo";
 import {IListOUT} from "./list/interface";
 import {IAvaliableFiltersOUT} from "./available-filters/interface";
+import {IDeleteIN, IDeleteOUT} from "./delete/interface";
 
 interface ListFilter {
     projects: string[];
@@ -75,6 +76,12 @@ export default class Index extends BackendRequest {
     public static async availableFilters(projects: string[]): Promise<RequestResponse<IAvaliableFiltersOUT>> {
         const url = `${this.SERVICIO}/private/logs/error/available-filters/?projects=${projects.join(';')}`;
         return await this.get<IAvaliableFiltersOUT>(url);
+    }
+
+    @logRejection(true)
+    public static async delete(post: IDeleteIN): Promise<RequestResponse<IDeleteOUT>> {
+        const url = `${this.SERVICIO}/private/logs/error/delete/`;
+        return await this.post<IDeleteOUT, IDeleteIN>(url, post);
     }
 
     /* INSTANCE */

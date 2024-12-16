@@ -35,6 +35,15 @@ type ESAggregator = {
     'by-url': Agregador;
 }
 
+interface IDelete {
+    proyecto: string;
+    ts?: number;
+    servicio?: string;
+    archivo?: string;
+    linea?: number;
+    url?: string;
+}
+
 export class LogError extends LogErrorBase {
     /* STATIC */
 
@@ -203,6 +212,68 @@ export class LogError extends LogErrorBase {
         result.url.sort();
 
         return result;
+    }
+
+    public static async delete(request: IDelete): Promise<void> {
+        const must: QueryDslQueryContainer[] = [
+            {
+                term: {
+                    proyecto: request.proyecto
+                }
+            }
+        ];
+
+        if (request.ts) {
+            must.push({
+                term: {
+                    "@timestamp": request.ts
+                }
+            });
+        }
+
+        if (request.servicio) {
+            must.push({
+                term: {
+                    servicio: request.servicio
+                }
+            });
+        }
+
+        if (request.archivo) {
+            must.push({
+                term: {
+                    archivo: request.archivo
+                }
+            });
+        }
+
+        if (request.linea) {
+            must.push({
+                term: {
+                    linea: request.linea
+                }
+            });
+        }
+
+        if (request.url) {
+            must.push({
+                term: {
+                    url: request.url
+                }
+            });
+        }
+
+        await elastic.updateByQuery({
+            index: this.getAlias(),
+            query: {
+                bool: {
+                    must
+                }
+            },
+            script: {
+                source: "ctx._source.checked = true"
+            }
+        });
     }
 
     /* INSTANCE */
