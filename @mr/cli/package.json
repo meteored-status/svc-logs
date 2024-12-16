@@ -1,6 +1,6 @@
 {
   "name": "@mr/cli",
-  "version": "2024.12.16+1-juancmartinez",
+  "version": "2024.12.16+2-bixus",
   "description": "Herramientas de linea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
@@ -39,7 +39,7 @@
     "mini-css-extract-plugin": "^2.9.2",
     "pug": "^3.0.3",
     "pug3-loader": "^2.4.3",
-    "sass": "^1.82.0",
+    "sass": "^1.83.0",
     "sass-loader": "^16.0.4",
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
