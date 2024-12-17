@@ -67,14 +67,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@elastic/elasticsearch@npm:8.16.2, @elastic/elasticsearch@npm:^8.16.2":
-  version: 8.16.2
-  resolution: "@elastic/elasticsearch@npm:8.16.2"
+"@elastic/elasticsearch@npm:8.17.0, @elastic/elasticsearch@npm:^8.17.0":
+  version: 8.17.0
+  resolution: "@elastic/elasticsearch@npm:8.17.0"
   dependencies:
     "@elastic/transport": "npm:^8.9.1"
     apache-arrow: "npm:^18.0.0"
     tslib: "npm:^2.4.0"
-  checksum: 10/bb276bd4d415e474ca14606b6a8ab1df588769bc7fef0945b8dd7c9874425a3b4eb4f0ab23b29f44b28d4ea4074400fcdac0657b8581fa1c5c9f7a24fad0f138
+  checksum: 10/4f106d7fdc5e643eb4a12dad02eb151e2470a525a99ffd1fea7bb37915a347275ca454359193e9f7a19b2ace7a663fed4e9208d794b312d2b5fb3f9e5df9cf84
   languageName: node
   linkType: hard
 
@@ -499,7 +499,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jridgewell/trace-mapping@npm:^0.3.20, @jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.25":
+"@jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.25":
   version: 0.3.25
   resolution: "@jridgewell/trace-mapping@npm:0.3.25"
   dependencies:
@@ -535,13 +535,13 @@ __metadata:
     mysql2: "npm:3.11.0"
     pug: "npm:^3.0.3"
     pug3-loader: "npm:^2.4.3"
-    sass: "npm:^1.82.0"
+    sass: "npm:^1.83.0"
     sass-loader: "npm:^16.0.4"
     services-comun: "workspace:*"
     source-map-loader: "npm:^5.0.0"
     source-map-support: "npm:^0.5.21"
     style-loader: "npm:^4.0.0"
-    terser-webpack-plugin: "npm:^5.3.10"
+    terser-webpack-plugin: "npm:^5.3.11"
     tree-kill: "npm:^1.2.2"
     ts-loader: "npm:^9.5.1"
     ts-node: "npm:^10.9.2"
@@ -3967,7 +3967,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.16.2"
+    "@elastic/elasticsearch": "npm:^8.17.0"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^22.10.2"
     crawler-user-agents: "npm:^1.0.155"
@@ -3984,7 +3984,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-repesca@workspace:services/logs-repesca"
   dependencies:
-    "@elastic/elasticsearch": "npm:8.16.2"
+    "@elastic/elasticsearch": "npm:8.17.0"
     "@google-cloud/storage": "npm:^7.14.0"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^22.10.2"
@@ -4006,7 +4006,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-slave@workspace:services/logs-slave"
   dependencies:
-    "@elastic/elasticsearch": "npm:8.16.2"
+    "@elastic/elasticsearch": "npm:8.17.0"
     "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.4.1"
     "@google-cloud/storage": "npm:^7.14.0"
     "@opentelemetry/api": "npm:^1.9.0"
@@ -4033,6 +4033,32 @@ __metadata:
     stream-shift: "npm:1.0.3"
     tslib: "npm:^2.8.1"
     ua-parser-js: "npm:^2.0.0"
+  languageName: unknown
+  linkType: soft
+
+"logs@workspace:services/logs":
+  version: 0.0.0-use.local
+  resolution: "logs@workspace:services/logs"
+  dependencies:
+    "@elastic/elasticsearch": "npm:8.17.0"
+    "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.4.1"
+    "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/core": "npm:^1.29.0"
+    "@opentelemetry/instrumentation": "npm:^0.56.0"
+    "@opentelemetry/instrumentation-http": "npm:^0.56.0"
+    "@opentelemetry/resources": "npm:^1.29.0"
+    "@opentelemetry/sdk-trace-base": "npm:^1.29.0"
+    "@opentelemetry/sdk-trace-node": "npm:^1.29.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.28.0"
+    "@types/node": "npm:^22.10.2"
+    chokidar: "npm:^4.0.1"
+    formidable: "npm:^3.5.2"
+    hexoid: "npm:^2.0.0"
+    logs-base: "workspace:*"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    source-map-support: "npm:^0.5.21"
+    tslib: "npm:^2.8.1"
   languageName: unknown
   linkType: soft
 
@@ -5323,9 +5349,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sass@npm:^1.82.0":
-  version: 1.82.0
-  resolution: "sass@npm:1.82.0"
+"sass@npm:^1.83.0":
+  version: 1.83.0
+  resolution: "sass@npm:1.83.0"
   dependencies:
     "@parcel/watcher": "npm:^2.4.1"
     chokidar: "npm:^4.0.0"
@@ -5336,7 +5362,7 @@ __metadata:
       optional: true
   bin:
     sass: sass.js
-  checksum: 10/35fca01aef652e8cb1fede83fe4214e3c2ba10c9af3d7f101eec7c3c3d1064001f9c7d09a7fdb9548062b60fee62e5f1f931d90aecac02f6bc8deaa4b7516c5f
+  checksum: 10/cae7c489ffeb1324ac7e766dda60206a6d7a318d0689b490290a32a6414ef1fd0f376f92d45fb1610e507baa6f6594f1a61d4d706df2f105122ff9a83d2a28e1
   languageName: node
   linkType: hard
 
@@ -5351,7 +5377,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"schema-utils@npm:^4.0.0":
+"schema-utils@npm:^4.0.0, schema-utils@npm:^4.3.0":
   version: 4.3.0
   resolution: "schema-utils@npm:4.3.0"
   dependencies:
@@ -5393,7 +5419,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"serialize-javascript@npm:^6.0.1":
+"serialize-javascript@npm:^6.0.2":
   version: 6.0.2
   resolution: "serialize-javascript@npm:6.0.2"
   dependencies:
@@ -5418,7 +5444,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "services-comun@workspace:framework/services-comun"
   dependencies:
-    "@elastic/elasticsearch": "npm:8.16.2"
+    "@elastic/elasticsearch": "npm:8.17.0"
     "@google-cloud/common": "npm:^5.0.2"
     "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.4.1"
     "@google-cloud/pubsub": "npm:^4.9.0"
@@ -5881,15 +5907,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"terser-webpack-plugin@npm:^5.3.10":
-  version: 5.3.10
-  resolution: "terser-webpack-plugin@npm:5.3.10"
+"terser-webpack-plugin@npm:^5.3.10, terser-webpack-plugin@npm:^5.3.11":
+  version: 5.3.11
+  resolution: "terser-webpack-plugin@npm:5.3.11"
   dependencies:
-    "@jridgewell/trace-mapping": "npm:^0.3.20"
+    "@jridgewell/trace-mapping": "npm:^0.3.25"
     jest-worker: "npm:^27.4.5"
-    schema-utils: "npm:^3.1.1"
-    serialize-javascript: "npm:^6.0.1"
-    terser: "npm:^5.26.0"
+    schema-utils: "npm:^4.3.0"
+    serialize-javascript: "npm:^6.0.2"
+    terser: "npm:^5.31.1"
   peerDependencies:
     webpack: ^5.1.0
   peerDependenciesMeta:
@@ -5899,11 +5925,11 @@ __metadata:
       optional: true
     uglify-js:
       optional: true
-  checksum: 10/fb1c2436ae1b4e983be043fa0a3d355c047b16b68f102437d08c736d7960c001e7420e2f722b9d99ce0dc70ca26a68cc63c0b82bc45f5b48671142b352a9d938
+  checksum: 10/a8f7c92c75aa42628adfa4d171d4695c366c1852ecb4a24e72dd6fec86e383e12ac24b627e798fedff4e213c21fe851cebc61be3ab5a2537e6e42bea46690aa3
   languageName: node
   linkType: hard
 
-"terser@npm:^5.26.0":
+"terser@npm:^5.31.1":
   version: 5.37.0
   resolution: "terser@npm:5.37.0"
   dependencies:
@@ -6060,9 +6086,9 @@ __metadata:
   linkType: hard
 
 "type-fest@npm:^4.14.0":
-  version: 4.30.0
-  resolution: "type-fest@npm:4.30.0"
-  checksum: 10/46c733df4feb87dfd281fba4fa3913dc38b45136be35adffbcef95e13414105a4669476c1f8686680b9c98e59ed5dc85efe42caf67adbaa04f48dfc41f8330fa
+  version: 4.30.1
+  resolution: "type-fest@npm:4.30.1"
+  checksum: 10/0a2af4d096053b89f6c4323108feeee1865a77f7440b16e2cafef8429afa28539ff1cb99fb8703f07c3893530b1f27e9b51f344dc1ff627d7d2fe2b7c07cc6f6
   languageName: node
   linkType: hard
 
@@ -6451,7 +6477,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.16.2"
+    "@elastic/elasticsearch": "npm:^8.17.0"
     "@types/node": "npm:^22.10.2"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
@@ -6464,7 +6490,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workers-slave@workspace:services/workers-slave"
   dependencies:
-    "@elastic/elasticsearch": "npm:8.16.2"
+    "@elastic/elasticsearch": "npm:8.17.0"
     "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.4.1"
     "@google-cloud/storage": "npm:^7.14.0"
     "@opentelemetry/api": "npm:^1.9.0"
