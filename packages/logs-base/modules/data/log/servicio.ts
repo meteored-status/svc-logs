@@ -8,7 +8,7 @@ export interface ILogServicio {
     extra: string[];
 }
 
-interface ILogServicioES {
+export interface ILogServicioES {
     "@timestamp": string;
     proyecto: string;
     servicio: string;
@@ -23,6 +23,10 @@ export abstract class LogServicio implements ILogServicio {
     private static INDEX = "mr-log-servicios";
     protected static getIndex(proyecto: string): string {
         return `${this.INDEX}-${proyecto.toLowerCase()}`;
+    }
+
+    protected static getAlias(): string {
+        return this.INDEX;
     }
 
     /* INSTANCE */

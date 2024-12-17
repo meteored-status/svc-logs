@@ -1,8 +1,8 @@
 {
-  "name": "logs-repesca",
-  "servicio": "logs-repesca",
+  "name": "logs",
+  "servicio": "logs",
   "version": "0000.00.00-000",
-  "description": "Servicio de repesca de logs",
+  "description": "Servicio para la consulta de logs de forma privada",
   "repository": "git+https://github.com/meteored-status/svc-logs.git",
   "author": "Jose Antonio Jiménez",
   "license": "ISC",
@@ -12,31 +12,35 @@
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "scripts": {
     "packd": "yarn g:packd",
-    "devel": "yarn node --no-warnings devel.js"
+    "devel": "yarn g:devel"
   },
   "dependencies": {
     "@elastic/elasticsearch": "8.17.0",
-    "@google-cloud/storage": "^7.14.0",
-    "crawler-user-agents": "^1.0.155",
-    "geoip-lite": "^1.4.10",
-    "mysql2": "3.11.0",
+    "@google-cloud/opentelemetry-cloud-trace-exporter": "^2.4.1",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/core": "^1.29.0",
+    "@opentelemetry/instrumentation": "^0.56.0",
+    "@opentelemetry/instrumentation-http": "^0.56.0",
+    "@opentelemetry/resources": "^1.29.0",
+    "@opentelemetry/sdk-trace-base": "^1.29.0",
+    "@opentelemetry/sdk-trace-node": "^1.29.0",
+    "@opentelemetry/semantic-conventions": "^1.28.0",
+    "chokidar": "^4.0.1",
+    "hexoid": "^2.0.0",
     "source-map-support": "^0.5.21",
-    "stream-shift": "1.0.3",
-    "superjson": "^2.2.2",
-    "tslib": "^2.8.1",
-    "ua-parser-js": "^2.0.0"
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@types/geoip-lite": "^1.4.4",
     "@types/node": "^22.10.2",
+    "formidable": "^3.5.2",
     "logs-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"
   },
   "main": "app.js",
   "config": {
-    "cronjob": true,
-    "devel": false,
+    "cronjob": false,
+    "devel": true,
     "deploy": true,
     "generar": true,
     "unico": true,
