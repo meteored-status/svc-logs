@@ -1,5 +1,6 @@
 {
   "name": "@mr/cli",
+  "version": "2024.12.16+2-bixus",
   "description": "Herramientas de linea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
@@ -21,7 +22,7 @@
   "dependencies": {
     "@google-cloud/storage": "^7.14.0",
     "@inquirer/prompts": "^7.2.0",
-    "chokidar": "4.0.1",
+    "chokidar": "^4.0.1",
     "jszip": "^3.10.1",
     "mysql2": "3.11.0",
     "source-map-support": "^0.5.21",
@@ -51,6 +52,5 @@
     "webpack": "^5.97.1",
     "webpack-cli": "^5.1.4",
     "webpack-manifest-plugin": "^5.0.0"
-  },
-  "version": "2024.12.17+2-juancmartinez"
+  }
 }

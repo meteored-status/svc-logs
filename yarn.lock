@@ -67,7 +67,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@elastic/elasticsearch@npm:8.17.0, @elastic/elasticsearch@npm:^8.16.2":
+"@elastic/elasticsearch@npm:8.17.0, @elastic/elasticsearch@npm:^8.17.0":
   version: 8.17.0
   resolution: "@elastic/elasticsearch@npm:8.17.0"
   dependencies:
@@ -526,7 +526,7 @@ __metadata:
     "@types/diff3": "npm:^0.0.2"
     "@types/node": "npm:^22.10.2"
     "@types/source-map-support": "npm:^0.5.10"
-    chokidar: "npm:4.0.1"
+    chokidar: "npm:^4.0.1"
     clean-webpack-plugin: "npm:^4.0.0"
     css-loader: "npm:^7.1.2"
     diff3: "npm:^0.0.4"
@@ -2076,15 +2076,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chokidar@npm:4.0.1, chokidar@npm:^4.0.0":
-  version: 4.0.1
-  resolution: "chokidar@npm:4.0.1"
-  dependencies:
-    readdirp: "npm:^4.0.1"
-  checksum: 10/62749d2173a60cc5632d6c6e0b7024f33aadce47b06d02e55ad03c7b8daaaf2fc85d4296c047473d04387fd992dab9384cc5263c70a3dc3018b7ebecfb5b5217
-  languageName: node
-  linkType: hard
-
 "chokidar@npm:^3.5.3":
   version: 3.6.0
   resolution: "chokidar@npm:3.6.0"
@@ -2101,6 +2092,15 @@ __metadata:
     fsevents:
       optional: true
   checksum: 10/c327fb07704443f8d15f7b4a7ce93b2f0bc0e6cea07ec28a7570aa22cd51fcf0379df589403976ea956c369f25aa82d84561947e227cd925902e1751371658df
+  languageName: node
+  linkType: hard
+
+"chokidar@npm:^4.0.0, chokidar@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "chokidar@npm:4.0.1"
+  dependencies:
+    readdirp: "npm:^4.0.1"
+  checksum: 10/62749d2173a60cc5632d6c6e0b7024f33aadce47b06d02e55ad03c7b8daaaf2fc85d4296c047473d04387fd992dab9384cc5263c70a3dc3018b7ebecfb5b5217
   languageName: node
   linkType: hard
 
@@ -3659,10 +3659,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isbot@npm:^5.1.18":
-  version: 5.1.18
-  resolution: "isbot@npm:5.1.18"
-  checksum: 10/286fe57a521e323074db0395a8848cc8fcb7905c6997b3b27f64714366dfe55db2631d2785b5dadfcf25147e2a64f3ce3d838662eedada36b40949e0ea384d11
+"isbot@npm:^5.1.17":
+  version: 5.1.17
+  resolution: "isbot@npm:5.1.17"
+  checksum: 10/c77c1fa2d8f78ea608f77e9a7a0e41758d3358f69149cc08e7ba13ac9530678cc1a5b3d5d51790e47384eb3fb56f5deb35bedcfd1511787e1a8123065d0677bc
   languageName: node
   linkType: hard
 
@@ -3967,7 +3967,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.16.2"
+    "@elastic/elasticsearch": "npm:^8.17.0"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^22.10.2"
     crawler-user-agents: "npm:^1.0.155"
@@ -4020,7 +4020,7 @@ __metadata:
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^22.10.2"
     "@types/ua-parser-js": "npm:^0.7.39"
-    chokidar: "npm:4.0.1"
+    chokidar: "npm:^4.0.1"
     crawler-user-agents: "npm:^1.0.155"
     formidable: "npm:^3.5.2"
     geoip-lite: "npm:^1.4.10"
@@ -4033,6 +4033,32 @@ __metadata:
     stream-shift: "npm:1.0.3"
     tslib: "npm:^2.8.1"
     ua-parser-js: "npm:^2.0.0"
+  languageName: unknown
+  linkType: soft
+
+"logs@workspace:services/logs":
+  version: 0.0.0-use.local
+  resolution: "logs@workspace:services/logs"
+  dependencies:
+    "@elastic/elasticsearch": "npm:8.17.0"
+    "@google-cloud/opentelemetry-cloud-trace-exporter": "npm:^2.4.1"
+    "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/core": "npm:^1.29.0"
+    "@opentelemetry/instrumentation": "npm:^0.56.0"
+    "@opentelemetry/instrumentation-http": "npm:^0.56.0"
+    "@opentelemetry/resources": "npm:^1.29.0"
+    "@opentelemetry/sdk-trace-base": "npm:^1.29.0"
+    "@opentelemetry/sdk-trace-node": "npm:^1.29.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.28.0"
+    "@types/node": "npm:^22.10.2"
+    chokidar: "npm:^4.0.1"
+    formidable: "npm:^3.5.2"
+    hexoid: "npm:^2.0.0"
+    logs-base: "workspace:*"
+    services-comun: "workspace:*"
+    services-comun-status: "workspace:*"
+    source-map-support: "npm:^0.5.21"
+    tslib: "npm:^2.8.1"
   languageName: unknown
   linkType: soft
 
@@ -5441,11 +5467,11 @@ __metadata:
     "@types/sparkpost": "npm:^2.1.8"
     "@types/ungap__structured-clone": "npm:^1.2.0"
     "@ungap/structured-clone": "npm:^1.2.1"
-    chokidar: "npm:4.0.1"
+    chokidar: "npm:^4.0.1"
     diff3: "npm:^0.0.4"
     fork-ts-checker-webpack-plugin: "npm:^9.0.2"
     formidable: "npm:^3.5.2"
-    isbot: "npm:^5.1.18"
+    isbot: "npm:^5.1.17"
     mysql2: "npm:3.11.0"
     node-ical: "npm:^0.20.1"
     pidusage: "npm:^3.0.2"
@@ -6060,9 +6086,9 @@ __metadata:
   linkType: hard
 
 "type-fest@npm:^4.14.0":
-  version: 4.30.0
-  resolution: "type-fest@npm:4.30.0"
-  checksum: 10/46c733df4feb87dfd281fba4fa3913dc38b45136be35adffbcef95e13414105a4669476c1f8686680b9c98e59ed5dc85efe42caf67adbaa04f48dfc41f8330fa
+  version: 4.30.1
+  resolution: "type-fest@npm:4.30.1"
+  checksum: 10/0a2af4d096053b89f6c4323108feeee1865a77f7440b16e2cafef8429afa28539ff1cb99fb8703f07c3893530b1f27e9b51f344dc1ff627d7d2fe2b7c07cc6f6
   languageName: node
   linkType: hard
 
@@ -6451,7 +6477,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.16.2"
+    "@elastic/elasticsearch": "npm:^8.17.0"
     "@types/node": "npm:^22.10.2"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
@@ -6476,7 +6502,7 @@ __metadata:
     "@opentelemetry/sdk-trace-node": "npm:^1.29.0"
     "@opentelemetry/semantic-conventions": "npm:^1.28.0"
     "@types/node": "npm:^22.10.2"
-    chokidar: "npm:4.0.1"
+    chokidar: "npm:^4.0.1"
     formidable: "npm:^3.5.2"
     hexoid: "npm:^2.0.0"
     mysql2: "npm:3.11.0"

@@ -30,11 +30,11 @@
     "@types/sparkpost": "^2.1.8",
     "@types/ungap__structured-clone": "^1.2.0",
     "@ungap/structured-clone": "^1.2.1",
-    "chokidar": "4.0.1",
+    "chokidar": "^4.0.1",
     "diff3": "^0.0.4",
     "fork-ts-checker-webpack-plugin": "^9.0.2",
     "formidable": "^3.5.2",
-    "isbot": "^5.1.18",
+    "isbot": "^5.1.17",
     "mysql2": "3.11.0",
     "node-ical": "^0.20.1",
     "pidusage": "^3.0.2",
@@ -46,5 +46,5 @@
     "webpack": "^5.97.1",
     "webpack-cli": "^5.1.4"
   },
-  "version": "2024.12.17+2-juancmartinez"
+  "version": "2024.12.16+1-bixus"
 }

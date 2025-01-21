@@ -12,6 +12,16 @@
       <excludeFolder url="file://$MODULE_DIR$/services/workers-slave/output" />
       <excludeFolder url="file://$MODULE_DIR$/@mr/cli/bin" />
       <excludeFolder url="file://$MODULE_DIR$/@mr/cli/bin/min" />
+      <excludePattern pattern=".credenciales" />
+      <excludePattern pattern=".pnp.*" />
+      <excludePattern pattern=".src" />
+      <excludePattern pattern=".yarn" />
+      <excludePattern pattern="bin" />
+      <excludePattern pattern="deprecated" />
+      <excludePattern pattern="files" />
+      <excludePattern pattern="output" />
+      <excludePattern pattern="tmp" />
+      <excludePattern pattern="yarn.lock" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
