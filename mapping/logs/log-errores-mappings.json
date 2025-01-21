@@ -16,15 +16,11 @@
       "type": "keyword"
     },
     "mensaje": {
-      "type": "keyword",
-      "fields": {
-        "text": {
-          "type": "text"
-        }
-      }
+      "type": "text",
+      "index": false
     },
     "archivo": {
-      "type": "text"
+      "type": "keyword"
     },
     "linea": {
       "type": "integer"
@@ -40,7 +36,7 @@
           "index": false
         },
         "codigo": {
-          "type": "keyword",
+          "type": "text",
           "index":  false
         }
       }

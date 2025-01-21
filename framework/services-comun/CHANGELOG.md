@@ -1,6 +1,14 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2024.12.16+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@elastic/elasticsearch](https://www.npmjs.com/package/@elastic/elasticsearch) 8.17.0
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.10.2
+
+---
 ## 2024.12.12+1
 
 ### Added

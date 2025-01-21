@@ -48,14 +48,12 @@ export class Workspace {
 
     protected initWatcher(): void {
         this.parar();
-        // if (os.platform()!="linux") {
         this.watcher = chokidar.watch(this.dir, {
             persistent: true,
             ignored: (path)=>path.endsWith("~"),
         }).on("change", () => {
             this.cambio();
         });
-        // }
     }
 
     public cambio(): void {

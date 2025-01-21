@@ -15,7 +15,7 @@
     "devel": "yarn node --no-warnings devel.js"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "8.16.2",
+    "@elastic/elasticsearch": "8.17.0",
     "@google-cloud/storage": "^7.14.0",
     "crawler-user-agents": "^1.0.155",
     "geoip-lite": "^1.4.10",
