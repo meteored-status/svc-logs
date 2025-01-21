@@ -9,9 +9,19 @@ export class Deploy {
     public static run(basedir: string, env: string): void {
         PromiseDelayed()
             .then(async ()=>{
-                const services = await readDir(`${basedir}/services/`);
+                const cronjobs: string[] = [];
+                const services: string[] = [];
+                if (await isDir(`${basedir}/cronjobs/`)) {
+                    cronjobs.push(...await readDir(`${basedir}/cronjobs/`));
+                }
+                if (await isDir(`${basedir}/services/`)) {
+                    services.push(...await readDir(`${basedir}/services/`));
+                }
 
-                const compilaciones = await Promise.all(services.map((service)=>Compilar.build(basedir, service)));
+                const compilaciones = await Promise.all([
+                    ...cronjobs.map((service)=>Compilar.build(basedir, service, "cronjobs")),
+                    ...services.map((service)=>Compilar.build(basedir, service, "services")),
+                ]);
                 const compilaciones_validas = compilaciones.filter((compilacion)=>compilacion!=null);
                 compilaciones_validas.forEach((compilacion)=>{
                     compilacion.checkDependencias(compilaciones_validas);

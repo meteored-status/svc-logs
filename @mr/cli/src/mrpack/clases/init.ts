@@ -43,16 +43,17 @@ export class Init {
         console.group();
 
         await this.checkCliente(basedir);
-        const [workspaces, scripts] = await this.initBase(basedir);
+        const [cronjobs, services, scripts] = await this.initBase(basedir);
         await this.deleteFiles(basedir);
         await this.limpiarLegacy(basedir);
         await this.corregirGITs(basedir);
         const config = this.reduceConfig([
-            await this.initServices(basedir, workspaces),
+            await this.initCronjobs(basedir, cronjobs),
+            await this.initServices(basedir, services),
             await this.initScripts(basedir, scripts),
         ]);
 
-        await this.initConfig(basedir, workspaces);
+        await this.initConfig(basedir, cronjobs, services);
         const cambio = await this.initYarnRC(basedir, config);
 
         if (await isDir(`${basedir}/i18n`)) {
@@ -106,10 +107,11 @@ export class Init {
         console.groupEnd();
     }
 
-    private static async initBase(basedir: string): Promise<[string[], string[]]> {
+    private static async initBase(basedir: string): Promise<[string[], string[], string[]]> {
         console.log(Colors.colorize([Colors.FgWhite], "Inicializando proyecto"));
         console.group();
-        const workspaces: string[] = [];
+        const cronjobs: string[] = [];
+        const services: string[] = [];
         const scripts: string[] = [];
 
         const paquete = await readJSON<IPackageJson>(`${basedir}/package.json`);
@@ -140,11 +142,22 @@ export class Init {
             }
         }
 
+        if (await isDir(`${basedir}/cronjobs`)) {
+            for (const actual of await readDir(`${basedir}/cronjobs`)) {
+                if (await this.isValid(`${basedir}/cronjobs/${actual}`)) {
+                    paquete.scripts[actual] = `yarn workspace ${actual}`;
+                    cronjobs.push(actual);
+                } else {
+                    await unlink(`${basedir}/cronjobs/${actual}`);
+                }
+            }
+        }
+
         if (await isDir(`${basedir}/services`)) {
             for (const actual of await readDir(`${basedir}/services`)) {
                 if (await this.isValid(`${basedir}/services/${actual}`)) {
                     paquete.scripts[actual] = `yarn workspace ${actual}`;
-                    workspaces.push(actual);
+                    services.push(actual);
                 } else {
                     await unlink(`${basedir}/services/${actual}`);
                 }
@@ -180,6 +193,7 @@ export class Init {
             "@mr/cli",
             "@mr/core/*",
             "@mr/client/*",
+            "cronjobs/*",
             "framework/*",
             "i18n",
             "packages/*",
@@ -216,7 +230,7 @@ export class Init {
         }
 
         console.groupEnd();
-        return [workspaces, scripts];
+        return [cronjobs, services, scripts];
     }
 
     // private static async migrarTraducciones(basedir: string): Promise<void> {
@@ -608,6 +622,208 @@ export class Init {
         return salida;
     }
 
+    private static async initCronjobs(basedir: string, workspaces: string[]): Promise<IConfiguracion> {
+        console.log(Colors.colorize([Colors.FgWhite], "Inicializando cronjobs"));
+        console.group();
+
+        const config = this.reduceConfig(await Promise.all(workspaces.map(workspace=>this.initCronjob(basedir, workspace))));
+
+        console.groupEnd();
+        return config;
+    }
+
+    private static async initCronjob(basedir: string, workspace: string): Promise<IConfiguracion> {
+        const salida: IConfiguracion = {
+            openTelemetry: false,
+            cambio: false,
+        };
+
+        const {devDependencies: paquetePropio={}} = await readJSON<IPackageJson>(`${basedir}/framework/services-comun/package.json`);
+        const paquete = await readJSON(`${basedir}/cronjobs/${workspace}/package.json`);
+        const hash = md5(JSON.stringify(paquete));
+        paquete.config ??= {};
+        if (paquete.config.nextjs!==undefined && typeof paquete.config.nextjs!=="object") {
+            paquete.config.nextjs = {};
+        }
+        const nextjs = paquete.config.nextjs ?? {};
+        const resources = paquete.config.resources??paquete.resources??false;
+
+        const config: Partial<IConfigService> = {};
+        config.cronjob = paquete.config.cronjob??paquete.cronjob??true;
+        config.devel = paquete.config.devel??paquete.devel??true;
+        config.deploy = paquete.config.deploy??true;
+        config.generar = paquete.config.generar??paquete.generar??false;
+        config.imagen = paquete.config.imagen;//??"node:lts-alpine";
+        config.unico = paquete.config.unico??paquete.unico??false;
+
+        config.deps = paquete.config.deps??[];
+        const storage = paquete.config.storage??paquete.storage;
+        if (Array.isArray(storage)) {
+            if (storage.length>0) {
+                config.storage = {
+                    buckets: storage,
+                };
+            }
+        } else {
+            config.storage = paquete.config.storage;
+        }
+
+        config.runtime = paquete.config.runtime??(!resources?ERuntime.node:ERuntime.browser);
+        if (paquete.config.framework!==undefined) {
+            config.framework = paquete.config.framework;
+        } else if (!nextjs.enabled) {
+            config.framework = EFramework.meteored;
+        } else {
+            config.framework = EFramework.nextjs;
+        }
+        config.kustomize = paquete.config.kustomize??"services";
+        if (paquete.config.credenciales!==undefined) {
+            config.credenciales = paquete.config.credenciales;
+        } else {
+            config.credenciales = nextjs.credenciales??[];
+        }
+        config.database = paquete.config.database;
+        config.bundle = paquete.config.bundle??{};
+
+        paquete.config = config;
+
+        if (paquete.nodemonConfig!=undefined) {
+            delete paquete.nodemonConfig;
+        }
+
+        if (paquete.config.generar) {
+            paquete.scripts ??= {};
+            switch(paquete.config.framework) {
+                case EFramework.meteored:
+                    switch(config.runtime) {
+                        case ERuntime.cfworker:
+                            paquete.scripts.packd = `yarn tsc --noemit --watch`;
+                            paquete.scripts.devel = "wrangler dev --remote --env test";
+                            break;
+                        case ERuntime.node:
+                            paquete.scripts.packd = `yarn g:packd`;
+                            if (!paquete.config.cronjob) {
+                                paquete.scripts.devel = "yarn g:devel";
+                            } else {
+                                paquete.scripts.devel = "yarn node --no-warnings devel.js";
+                            }
+                            paquete.version = "0000.00.00-000";
+                            break;
+                        default:
+                            paquete.scripts.packd = `yarn g:packd`;
+                            break;
+                    }
+                    break;
+
+                // case EFramework.astro:
+                //     paquete.scripts.build ??= "astro build";
+                //     paquete.scripts.dev ??= "astro dev";
+                //     paquete.scripts.preview ??= "astro preview";
+                //     paquete.scripts.start ??= "astro start";
+                //     break;
+
+                case EFramework.nextjs:
+                    paquete.scripts.dev ??= "yarn run next dev -- -p 8080";
+                    break;
+            }
+
+            if (config.runtime==ERuntime.node) {
+                paquete.dependencies??={};
+                paquete.devDependencies??={};
+
+                if (paquete.devDependencies["tslib"]!=undefined) {
+                    paquete.dependencies["tslib"] = paquete.devDependencies["tslib"];
+                    delete paquete.devDependencies["tslib"];
+                } else if (paquete.dependencies["tslib"]==undefined) {
+                    paquete.dependencies["tslib"] = "*";
+                }
+
+                if (config.framework!=EFramework.nextjs) {
+                    // const hash=`${md5(JSON.stringify(paquete.dependencies))}${md5(JSON.stringify(paquete.devDependencies))}`;
+
+                    paquete.dependencies["source-map-support"] ??= paquetePropio["source-map-support"]??"*";
+
+                    for (const [lib, version] of Object.entries(paquetePropio)) {
+                        if (paquete.dependencies[lib]!=undefined) {
+                            paquete.dependencies[lib] = version;
+                        }
+                        if (paquete.devDependencies[lib]!=undefined) {
+                            paquete.devDependencies[lib] = version;
+                        }
+                    }
+                    if (!config.cronjob) {
+                        paquete.dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= paquetePropio["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
+                        paquete.dependencies["@opentelemetry/api"] ??= paquetePropio["@opentelemetry/api"]??"*";
+                        paquete.dependencies["@opentelemetry/core"] ??= paquetePropio["@opentelemetry/core"]??"*";
+                        paquete.dependencies["@opentelemetry/instrumentation"] ??= paquetePropio["@opentelemetry/instrumentation"]??"*";
+                        paquete.dependencies["@opentelemetry/instrumentation-http"] ??= paquetePropio["@opentelemetry/instrumentation-http"]??"*";
+                        paquete.dependencies["@opentelemetry/resources"] ??= paquetePropio["@opentelemetry/resources"]??"*";
+                        paquete.dependencies["@opentelemetry/sdk-trace-base"] ??= paquetePropio["@opentelemetry/sdk-trace-base"]??"*";
+                        paquete.dependencies["@opentelemetry/sdk-trace-node"] ??= paquetePropio["@opentelemetry/sdk-trace-node"]??"*";
+                        paquete.dependencies["@opentelemetry/semantic-conventions"] ??= paquetePropio["@opentelemetry/semantic-conventions"]??"*";
+                        paquete.dependencies["chokidar"] ??= paquetePropio["chokidar"]??"*";
+                        paquete.dependencies["hexoid"] ??= paquetePropio["hexoid"]??"*";
+                        paquete.devDependencies["formidable"] ??= paquetePropio["formidable"]??"*";
+
+                        if (paquete.dependencies["@google-cloud/trace-agent"] !== undefined) {
+                            delete paquete.dependencies["@google-cloud/trace-agent"];
+                        }
+                        if (paquete.dependencies["@opentelemetry/context-async-hooks"] !== undefined) {
+                            delete paquete.dependencies["@opentelemetry/context-async-hooks"];
+                        }
+                        if (paquete.dependencies["formidable"] !== undefined) {
+                            delete paquete.dependencies["formidable"];
+                        }
+
+                        salida.openTelemetry = true;
+                    }
+
+                    if (paquete.devDependencies["source-map-support"]!==undefined) {
+                        delete paquete.devDependencies["source-map-support"];
+                    }
+
+                    if (Object.keys(paquete.dependencies).length==0) {
+                        delete paquete.dependencies;
+                    }
+                    if (Object.keys(paquete.devDependencies).length==0) {
+                        delete paquete.devDependencies;
+                    }
+                }
+            }
+
+            await safeWrite(`${basedir}/cronjobs/${workspace}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+        }
+
+        if (config.runtime==ERuntime.node && config.framework!=EFramework.nextjs) {
+            await Promise.all([
+                safeWrite(`${basedir}/cronjobs/${workspace}/app.js`, APP, true),
+                safeWrite(`${basedir}/cronjobs/${workspace}/devel.js`, DEVEL, true),
+                safeWrite(`${basedir}/cronjobs/${workspace}/init.js`, ``, false),
+            ]);
+        }
+
+        if (await isFile(`${basedir}/cronjobs/${workspace}/output/.foreverignore`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/output/.foreverignore`));
+            await unlink(`${basedir}/cronjobs/${workspace}/output/.foreverignore`);
+        }
+        if (await isFile(`${basedir}/cronjobs/${workspace}/output/devel.js`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/output/devel.js`));
+            await unlink(`${basedir}/cronjobs/${workspace}/output/devel.js`);
+        }
+        if (await isFile(`${basedir}/cronjobs/${workspace}/output/devel.js.map`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/output/devel.js.map`));
+            await unlink(`${basedir}/cronjobs/${workspace}/output/devel.js.map`);
+        }
+        if (await isFile(`${basedir}/cronjobs/${workspace}/pack.js`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/pack.js`));
+            await unlink(`${basedir}/cronjobs/${workspace}/pack.js`);
+        }
+
+        salida.cambio = hash!=md5(JSON.stringify(paquete));
+
+        return salida;
+    }
+
     private static async initScripts(basedir: string, scripts: string[]): Promise<IConfiguracion> {
         console.log(Colors.colorize([Colors.FgWhite], "Inicializando scripts"));
         console.group();
@@ -632,7 +848,7 @@ export class Init {
         };
     }
 
-    private static async initConfig(basedir: string, workspace: string[]): Promise<void> {
+    private static async initConfig(basedir: string, cronjobs: string[], services: string[]): Promise<void> {
         console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración de workspaces"));
         console.group();
 
@@ -652,15 +868,15 @@ export class Init {
         if (await isFile(file)) {
             try {
                 const config = await readJSON<IConfigServices>(file);
-                salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual=>workspace.includes(actual))??[]);
-                salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual=>workspace.includes(actual))??[]);
+                salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual=>cronjobs.includes(actual) || services.includes(actual))??[]);
+                salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual=>cronjobs.includes(actual) || services.includes(actual))??[]);
                 salida.i18n = config.i18n??true;
                 salida.services = config.services??{};
             } catch (e) {
 
             }
         }
-        for (const actual of workspace) {
+        for (const actual of [...cronjobs, ...services]) {
             if (!salida.devel.disabled.includes(actual)) {
                 salida.devel.available.push(actual);
             }

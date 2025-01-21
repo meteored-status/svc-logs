@@ -72,28 +72,39 @@ export class Devel {
         return devel.init().then(()=>devel);
     }
 
-    private static async ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, dependencias: Workspace[]): Promise<boolean> {
-        const config_global = await readJSON<IConfigServices>(`${basedir}/config.workspaces.json`).catch(()=>{
-            return {
-                devel: {
-                    available: [],
-                    disabled: [],
-                },
-                packd: {
-                    available: [],
-                    disabled: [],
-                },
-                i18n: true,
-                services: {},
-            } as IConfigServices;
-        });
+    private static async loadConfig(basedir: string): Promise<IConfigServices> {
+        return readJSON<IConfigServices>(`${basedir}/config.workspaces.json`).catch(()=>({
+            devel: {
+                available: [],
+                disabled: [],
+            },
+            packd: {
+                available: [],
+                disabled: [],
+            },
+            i18n: true,
+            services: {},
+        } as IConfigServices));
+    }
 
-        if (!await isDir(`${basedir}/services`)) {
+    private static async ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, dependencias: Workspace[]): Promise<boolean> {
+        const config_global = await this.loadConfig(basedir);
+
+        const cronjobs_list: string[] = [];
+        const services_list: string[] = [];
+        if (await isDir(`${basedir}/cronjobs`)) {
+            cronjobs_list.push(...await readDir(`${basedir}/cronjobs`));
+        }
+        if (await isDir(`${basedir}/services`)) {
+            services_list.push(...await readDir(`${basedir}/services`));
+        }
+        const length = Math.max(
+            cronjobs_list.reduce((a, b)=>Math.max(a, b.length), 0),
+            services_list.reduce((a, b)=>Math.max(a, b.length), 0),
+        );
+        if (length==0) {
             return false;
         }
-
-        const workspaces_list = await readDir(`${basedir}/services`);
-        const length = workspaces_list.reduce((a, b)=>Math.max(a, b.length), 0);
 
         let i18n: I18N | undefined;
         if (ejecucion.compilar && await isDir(`${basedir}/i18n`)) {
@@ -108,7 +119,26 @@ export class Devel {
         }
 
         const workspaces: Promise<Service>[] = [];
-        for (const workspace of workspaces_list) {
+        for (const workspace of cronjobs_list) {
+            const devel = new Service({
+                nombre: workspace,
+                path: "cronjobs",
+                root: basedir,
+                pad: length,
+                compilar: ejecucion.compilar,
+                ejecutar: ejecucion.ejecutar,
+                forzar: ejecucion.forzar,
+                global: config_global,
+            });
+
+            workspaces.push(devel.init().then(()=>{
+                for (const dependencia of dependencias) {
+                    dependencia.addHijo(devel);
+                }
+                return devel;
+            }));
+        }
+        for (const workspace of services_list) {
             const devel = new Service({
                 nombre: workspace,
                 path: "services",
@@ -132,21 +162,7 @@ export class Devel {
         chokidar.watch(`${basedir}/config.workspaces.json`, {
             persistent: true,
         }).on("change", ()=>{
-            readJSON<IConfigServices>(`${basedir}/config.workspaces.json`)
-                .catch(()=>{
-                    return {
-                        devel: {
-                            available: [],
-                            disabled: [],
-                        },
-                        packd: {
-                            available: [],
-                            disabled: [],
-                        },
-                        i18n: true,
-                        services: {},
-                    } as IConfigServices;
-                })
+            this.loadConfig(basedir)
                 .then(async (config_global)=>{
                     for (const actual of services) {
                         actual.updateGlobal(config_global);

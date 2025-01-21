@@ -19,15 +19,15 @@ interface ITag {
 
 export class Compilar {
     /* STATIC */
-    public static async build(basedir: string, name: string): Promise<Compilar|null> {
-        const dir = `${basedir}/services/${name}`;
+    public static async build(basedir: string, name: string, path: string): Promise<Compilar|null> {
+        const dir = `${basedir}/${path}/${name}`;
         if (!await isDir(dir) || !await isFile(`${dir}/package.json`)) {
             console.error(name, "[ERROR]", "Servicio no válido");
             return null;
         }
         const json = await readJSON<IPackageJson>(`${dir}/package.json`);
 
-        return new this(basedir, name, json);
+        return new this(basedir, name, path, json);
     }
 
     public static async md5Deps(basedir: string): Promise<void> {
@@ -50,11 +50,11 @@ export class Compilar {
     private readonly pendientes: NodeJS.Dict<null>;
     protected readonly dir: string;
 
-    protected constructor(protected basedir: string, public name: string, protected readonly packagejson: IPackageJson) {
+    protected constructor(protected basedir: string, public name: string, public path: string, protected readonly packagejson: IPackageJson) {
         this.config = packagejson.config;
         this.dependencias = [];
         this.pendientes = {};
-        this.dir = `${basedir}/services/${name}`;
+        this.dir = `${basedir}/${path}/${name}`;
         for (const dep of this.config.deps) {
             this.pendientes[dep] = null;
         }

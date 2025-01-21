@@ -1,7 +1,8 @@
-export interface IGeoJSON {
+export interface IGeoJSON<P extends IProperties=any> {
     type: "Feature"|"FeatureCollection";
-    properties: IProperties;
+    properties: P;
     geometry: IGeometry;
+    features?: IGeoJSON[];
 }
 
 export interface IProperties {

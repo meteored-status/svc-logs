@@ -1,20 +1,23 @@
 ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE} AS build
-ARG ws
+ARG RUTA
+ARG WS
 WORKDIR /usr/src/app
 RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
 COPY ./.yarn/plugins ./.yarn/plugins
 COPY ./.yarn/releases ./.yarn/releases
 COPY ./.yarnrc.yml ./
-COPY ./services/${ws} ./services/${ws}
+COPY ./${RUTA}/${WS} ./${RUTA}/${WS}
 COPY ./package.json ./
 COPY ./yarn.lock ./
-RUN yarn workspaces focus --production ${ws}
+RUN yarn workspaces focus --production ${WS}
 
 FROM ${BASE_IMAGE} AS app
-ARG ws
+ARG RUTA
+ARG WS
 WORKDIR /usr/src/app
+RUN echo "RUTA: ${RUTA}" && echo "WS: ${WS}"
 ENV NODE_ENV=production
 RUN mkdir ./.yarn && mkdir ./files
 COPY --from=build /usr/src/app/.yarn ./.yarn
@@ -22,14 +25,14 @@ COPY --from=build /usr/src/app/.pnp.* ./
 COPY --from=build /usr/src/app/.yarnrc* ./
 COPY --from=build /usr/src/app/yarn.lock ./
 COPY ./package.json ./
-COPY ./services/${ws}/assets ./services/${ws}/assets
-COPY ./services/${ws}/app.js ./services/${ws}
-COPY ./services/${ws}/init.js ./services/${ws}
-COPY ./services/${ws}/package.json ./services/${ws}
-COPY ./services/${ws}/output ./services/${ws}/output
+COPY ./${RUTA}/${WS}/assets ./${RUTA}/${WS}/assets
+COPY ./${RUTA}/${WS}/app.js ./${RUTA}/${WS}
+COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}
+COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}
+COPY ./${RUTA}/${WS}/output ./${RUTA}/${WS}/output
 RUN echo "#!/usr/bin/env bash" > run.sh
-RUN echo "yarn workspace ${ws} node --no-warnings app.js" >> run.sh
-WORKDIR /usr/src/app/services/${ws}
+RUN echo "yarn workspace ${WS} node --no-warnings app.js" >> run.sh
+WORKDIR /usr/src/app/${RUTA}/${WS}
 RUN ln -s ../../files ./
 WORKDIR /usr/src/app
 
