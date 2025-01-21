@@ -4,22 +4,24 @@ PROYECTO=${PROJECT_ID:?"PROJECT_ID no definido"}
 ENTORNO=${1}
 
 getPackageConfigValue() {
-  local WORKSPACE=${1}
-  local CONFIG=${2}
+  local DIRECTORIO=${1}
+  local WORKSPACE=${2}
+  local CONFIG=${3}
 
-  ./jq -r ".config.${CONFIG}" "services/${WORKSPACE}/package.json"
+  ./jq -r ".config.${CONFIG}" "${DIRECTORIO}/${WORKSPACE}/package.json"
 }
 export -f getPackageConfigValue
 
 parseWorkspace() {
-  local PROYECTO=${1}
-  local ENTORNO=${2}
-  local WORKSPACE=${3}
+  local DIRECTORIO=${1}
+  local PROYECTO=${2}
+  local ENTORNO=${3}
+  local WORKSPACE=${4}
 
-  GENERAR=$(getPackageConfigValue "${WORKSPACE}" "generar")
-  DEPLOY=$(getPackageConfigValue "${WORKSPACE}" "deploy")
-  RUNTIME=$(getPackageConfigValue "${WORKSPACE}" "runtime")
-  KUSTOMIZER=$(getPackageConfigValue "${WORKSPACE}" "kustomize")
+  GENERAR=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" "generar")
+  DEPLOY=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" "deploy")
+  RUNTIME=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" "runtime")
+  KUSTOMIZER=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" "kustomize")
 
   if [[ ${GENERAR} == "true" ]]; then
     if [[ ${DEPLOY} == "true" ]]; then
@@ -27,11 +29,16 @@ parseWorkspace() {
         echo "Tags: ${WORKSPACE} => NO"
       else
         echo "Obteniendo tags para \"${WORKSPACE}\""
-        gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^${ENTORNO}" --format=json > "services/${WORKSPACE}/tags.json"
+        gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROYECTO}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^${ENTORNO}" --format=json > "${DIRECTORIO}/${WORKSPACE}/tags.json"
       fi
     fi
   fi
 }
 export -f parseWorkspace
 
-ls services | xargs -I '{}' -P 1 bash -c "parseWorkspace $PROYECTO $ENTORNO {}"
+if [ -d "cronjobs" ]; then
+  ls cronjobs | xargs -I '{}' -P 1 bash -c "parseWorkspace cronjobs $PROYECTO $ENTORNO {}"
+fi
+if [ -d "services" ]; then
+  ls services | xargs -I '{}' -P 1 bash -c "parseWorkspace services $PROYECTO $ENTORNO {}"
+fi

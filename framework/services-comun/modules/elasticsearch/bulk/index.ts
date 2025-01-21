@@ -1,9 +1,11 @@
 import {BulkBase, type BulkConfig} from "./base";
 import {BulkError} from "./error";
-import type {BulkOperation,} from "./operation";
-import {Elasticsearch} from "..";
-import {arrayChop} from "../../utiles/array";
+import {Elasticsearch} from "../index";
 import {error} from "../../utiles/log";
+import {
+    type BulkOperation,
+} from "./operation";
+import {arrayChop} from "../../utiles/array";
 
 export class Bulk extends BulkBase {
     /* STATIC */

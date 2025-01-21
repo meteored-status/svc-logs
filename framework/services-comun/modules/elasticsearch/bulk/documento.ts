@@ -132,12 +132,21 @@ export class BulkDelete extends BulkBase {
     }
 }
 
-export class BulkScript extends BulkBase<Script> {
-    public constructor(doc: IBulkBase<Script>, resolver: Function, rejecter: Function) {
-        super(doc, resolver, rejecter, "update", {});
+export class BulkScript<T> extends BulkBase<T|undefined> {
+    protected readonly script: Script;
+
+    public constructor(script: IBulkBase<Script>, resolver: Function, rejecter: Function, doc?: T) {
+        const documento: IBulkBase<T|undefined> = {
+            index: script.index,
+            id: script.id,
+            doc,
+        };
+        super(documento, resolver, rejecter, "update", {});
+
+        this.script = script.doc;
     }
 
-    protected toBulk(obj: IBulkBase<Script>): BulkType<Script>[] {
+    protected toBulk(obj: IBulkBase<T>): BulkType<T|undefined>[] {
         return [
             {
                 update: {
@@ -147,7 +156,8 @@ export class BulkScript extends BulkBase<Script> {
                 },
             },
             {
-                script: obj.doc,
+                script: this.script,
+                upsert: obj.doc,
             },
         ];
     }

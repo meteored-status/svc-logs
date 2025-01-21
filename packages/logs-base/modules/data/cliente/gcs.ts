@@ -1,23 +1,24 @@
 import type {IInsert} from "services-comun/modules/database/mysql";
+import type {Google, IPodInfo} from "services-comun/modules/utiles/config";
+import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {Storage} from "services-comun/modules/fs/storage";
-import {Google, IPodInfo} from "services-comun/modules/utiles/config";
 import {error} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
+
 import {Cloudflare} from "../source/cloudflare";
 import {Telemetry} from "../telemetry";
 import {ClienteError} from "./error";
 import {Grupo} from "./grupo";
 
-import {type Cliente} from "./index";
+import {type Cliente} from ".";
 
 export type BucketClienteGCS = Record<string, ClienteGCS>;
 
-type TCSTipo = "cloudflare";
+type GCSTipo = "cloudflare";
 
 interface IClienteGCS {
     bucket: string;
-    tipo: TCSTipo;
+    tipo: GCSTipo;
 }
 
 interface IClienteGCSMySQL extends IClienteGCS {
@@ -64,7 +65,7 @@ export class ClienteGCS implements IClienteGCS {
 
     /* INSTANCE */
     public readonly bucket: string;
-    public readonly tipo: TCSTipo;
+    public readonly tipo: GCSTipo;
 
     private constructor(public readonly cliente: Cliente, data: IClienteGCS) {
         this.bucket = data.bucket;

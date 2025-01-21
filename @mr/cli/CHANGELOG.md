@@ -1,6 +1,31 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.1.20+1
+
+### Changed
+- [Jose] Se ha separado los workspaces de `servicios` de los workspaces de `cronjobs`, ahora cada uno puede estar en su respectivo directorio
+  - Por el momento pueden convivir mezclados tanto en el directorio `services` como en el directorio `cronjobs`
+
+### Breaking Changes
+- [Jose] El argumento pasado al Dockerfile `ws` se ha cambiado a `WS` (en mayúsculas). Si se ha creado un custom Dockerfile entonces hay que modificarlo en consecuencia
+
+---
+## 2025.1.16+5
+
+### Updated
+- [Juan Carlos] Update de librerías:
+  - [chokidar](https://www.npmjs.com/package/chokidar) 4.0.3
+
+---
+## 2025.1.9+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@google-cloud/storag](https://www.npmjs.com/package/@google-cloud/storag) 7.15.0
+    - [@inquirer/prompts](https://www.npmjs.com/package/@inquirer/prompts) 7.2.1
+    - [webpack-cli](https://www.npmjs.com/package/webpack-cli) 6.0.1
+---
 ## 2024.12.16+1
 
 ### Updated

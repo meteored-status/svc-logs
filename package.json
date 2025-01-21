@@ -22,6 +22,7 @@
     "@mr/cli",
     "@mr/core/*",
     "@mr/client/*",
+    "cronjobs/*",
     "framework/*",
     "i18n",
     "packages/*",
@@ -29,7 +30,7 @@
     "services/*",
     "statics/*"
   ],
-  "packageManager": "yarn@4.5.3",
+  "packageManager": "yarn@4.6.0",
   "bin": {
     "mrlang": "@mr/cli/bin/mrlang.js",
     "mrpack": "@mr/cli/bin/mrpack.js"
