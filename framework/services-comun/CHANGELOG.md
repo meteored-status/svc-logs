@@ -1,6 +1,24 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.1.16+2
+
+### Updated
+- [Juan Carlos] Update de librerías:
+  - [chokidar](https://www.npmjs.com/package/chokidar) 4.0.3
+---
+## 2025.1.15+1
+
+### Added
+- [Jose] Se ha añadido un método nuevo para añadir una caché de 1 año en los handlers de respuesta
+
+---
+## 2024.12.12+1
+
+### Added
+- [Jose] En los Scripts en Bulk de Elastic ahora se puede indicar el documento a indexar en caso de no existir el documento indicado
+
+---
 ## 2024.12.16+1
 
 ### Updated

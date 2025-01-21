@@ -5,6 +5,7 @@ import {exists, readFile, readJSON} from "../utiles/fs";
 import {PromiseDelayed} from "../utiles/promise";
 
 export type AggregateName = elastic.estypes.AggregateName;
+export type AggregationsMultiBucketAggregateBase<T> = elastic.estypes.AggregationsMultiBucketAggregateBase;
 export type AggregationsAggregate = elastic.estypes.AggregationsAggregate;
 export type AggregationsStringTermsBucket = elastic.estypes.AggregationsStringTermsBucket;
 export type AggregationsStringTermsAggregate = elastic.estypes.AggregationsStringTermsAggregate;
@@ -66,6 +67,8 @@ export type SearchTotalHits = elastic.estypes.SearchTotalHits;
 export type SortResults = elastic.estypes.SortResults;
 export type SearchResponse<T, K> = elastic.estypes.SearchResponse<T, K>;
 export type SearchSuggest<T> = elastic.estypes.SearchSuggest<T>;
+export type SearchFieldSuggester = elastic.estypes.SearchFieldSuggester;
+export type SearchSuggester = elastic.estypes.SearchSuggester;
 export type SearchTermSuggestOption = elastic.estypes.SearchTermSuggestOption;
 export type Sort = elastic.estypes.Sort;
 export type SuggestionName = elastic.estypes.SuggestionName;

@@ -27,8 +27,9 @@ export interface IBulkParamsDoc<T> extends IBulkParams {
     doc: T;
 }
 
-export interface IBulkParamsScript extends IBulkParamsID {
+export interface IBulkParamsScript<T> extends IBulkParamsID {
     script: Script;
+    doc?: T;
 }
 
 export interface IBulkParamsUpdate<T> extends IBulkParamsID {
@@ -76,8 +77,8 @@ export abstract class BulkBase {
         return this.push(BulkOperationCreate.build(this.checkOperacion(index), doc, id));
     }
 
-    public script({index, id, script}: IBulkParamsScript): BulkOperation {
-        return this.push(BulkOperationScript.build(this.checkOperacion(index), id, script));
+    public script<T extends object|undefined>({index, id, script, doc}: IBulkParamsScript<T>): BulkOperation {
+        return this.push(BulkOperationScript.build(this.checkOperacion(index), id, script, doc));
     }
 
     public update<T extends object>({index, id, doc, crear, upsert}: IBulkParamsUpdate<T>): BulkOperation {

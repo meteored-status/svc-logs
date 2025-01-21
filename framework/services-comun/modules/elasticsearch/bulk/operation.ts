@@ -15,7 +15,7 @@ abstract class BulkOperation extends Deferred {
 }
 export {type BulkOperation};
 
-abstract class BulkOperationDoc<T extends object> extends BulkOperation {
+abstract class BulkOperationDoc<T> extends BulkOperation {
     /* INSTANCE */
     protected constructor(op: BulkOperationContainer, protected doc: T) {
         super(op);
@@ -80,28 +80,29 @@ export class BulkOperationIndex<T extends object> extends BulkOperationDoc<T> {
     }
 }
 
-export class BulkOperationScript extends BulkOperation {
+export class BulkOperationScript<T extends object|undefined> extends BulkOperationDoc<T|undefined> {
     /* STATIC */
-    public static build(index: string, id: string, script: Script): BulkOperationScript {
-        return new this(index, id, script);
+    public static build<T extends object|undefined>(index: string, id: string, script: Script, doc?: T): BulkOperationScript<T> {
+        return new this(index, id, script, doc);
     }
 
     /* INSTANCE */
-    private constructor(index: string, id: string, protected script: Script) {
+    private constructor(index: string, id: string, protected script: Script, doc?: T) {
         super({
             update: {
                 _index: index,
                 _id: id,
                 retry_on_conflict: 100,
             },
-        });
+        }, doc);
     }
 
-    public override get operations(): ESBulkOperation[] {
+    public override get operations(): ESBulkOperation<T|undefined>[] {
         return [
             this.op,
             {
                 script: this.script,
+                upsert: this.doc,
             },
         ];
     }

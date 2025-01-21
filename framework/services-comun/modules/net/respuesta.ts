@@ -69,22 +69,27 @@ export abstract class Respuesta {
     }
 
     public setCache10Min(): Respuesta {
-        this.cache = new Date(Date.now()+600000);
+        this.cache = new Date(Date.now()+600_000);
         return this;
     }
 
     public setCache1Hora(): Respuesta {
-        this.cache = new Date(Date.now()+3600000);
+        this.cache = new Date(Date.now()+3_600_000);
         return this;
     }
 
     public setCache1Dia(): Respuesta {
-        this.cache = new Date(Date.now()+86400000);
+        this.cache = new Date(Date.now()+86_400_000);
         return this;
     }
 
     public setCache1Mes(): Respuesta {
-        this.cache = new Date(Date.now()+2592000000);
+        this.cache = new Date(Date.now()+2_592_000_000);
+        return this;
+    }
+
+    public setCache1Anno(): Respuesta {
+        this.cache = new Date(Date.now()+31_536_000_000);
         return this;
     }
 
@@ -233,6 +238,11 @@ export abstract class Respuesta {
 
     public setContentTypeXML(): Respuesta {
         this.contentType = "application/xml";
+        return this;
+    }
+
+    public setContentTypeTextPlain(): Respuesta {
+        this.contentType = `text/plain`;
         return this;
     }
 
