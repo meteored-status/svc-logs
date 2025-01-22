@@ -119,10 +119,7 @@ class Error extends RouteGroup<Configuracion> {
         try {
             const post: IDeleteIN = conexion.post as IDeleteIN;
 
-            if (!post || !post.project?.length
-                || (post.ts && (!post.service && !post.file && !post.line && !post.url))
-                || (!post.ts && !post.service && !post.file && !post.line && !post.url)
-            ) {
+            if (!post || !post.project?.length) {
                 return conexion.error(400, 'Bad Request');
             }
 
