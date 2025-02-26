@@ -1,27 +1,27 @@
 import webpack from "webpack";
-import {
-    EFramework,
-    ERuntime,
-    IConfigServiceBundle, IConfigServiceComponentes,
-} from "../src/mrpack/clases/workspace/service";
+
+import {BuildFW} from "../manifest/workspace/build";
+import {Devtool} from "./devtool";
 import {Entry} from "./entry";
 import {Externals} from "./externals";
+import type {ManifestBuildBundleBase} from "../manifest/workspace/build/bundle/base";
+import {ManifestBuildComponentesCSS} from "../manifest/workspace/build/bundle/componentes";
 import {Module} from "./module";
 import {Optimization} from "./optimization";
 import {Output} from "./output";
 import {Plugins} from "./plugins";
+import {Runtime} from "../manifest/workspace/deployment";
 import {Target} from "./target";
-import {Devtool} from "./devtool";
 
 type IConfiguracion = webpack.Configuration;
 
 interface IConfiguracionConfig {
     basedir: string;
-    bundle: IConfigServiceBundle;
+    bundle: ManifestBuildBundleBase;
     dependencies: Record<string, string>;
     entorno: string;
-    framework: EFramework;
-    runtime: ERuntime;
+    framework: BuildFW;
+    runtime: Runtime;
     database?: string;
     rules?: string;
 }
@@ -32,13 +32,6 @@ export class Configuracion {
         const desarrollo = !["produccion", "test"].includes(entorno);
         const test = ["desarrollo","test"].includes(entorno);
         const mode = desarrollo ? "development" : "production";
-        const componentes: IConfigServiceComponentes = {
-            optimizar: true,
-            pug: false,
-            css: false,
-            css_type: 0, // 0=inyectado por JS | 1=archivo independiente | 2=critical
-            ...bundle.componentes??{},
-        };
 
         const salida: webpack.Configuration = {
             cache: {
@@ -51,10 +44,10 @@ export class Configuracion {
             output: Output.build(runtime, {
                 basedir,
                 desarrollo,
-                css_critico: componentes.css_type==2,
+                css_critico: bundle.componentes.css==ManifestBuildComponentesCSS.CRITICAL,
             }),
             mode,
-            optimization: componentes.optimizar ? Optimization.build(runtime, desarrollo) : {},
+            optimization: bundle.componentes.optimizar ? Optimization.build(runtime, desarrollo) : {},
             resolve: {
                 extensions: ['.ts', '.js', '.tsx', '.jsx'],
                 extensionAlias: {
@@ -65,7 +58,7 @@ export class Configuracion {
             },
             devtool: bundle.source_map ? Devtool.build(runtime, bundle.source_map, entorno) : "source-map",
             module: Module.build({
-                ...componentes,
+                componentes: bundle.componentes,
                 desarrollo,
                 test,
                 rules,
@@ -75,7 +68,7 @@ export class Configuracion {
                 desarrollo,
                 database,
                 prefix: bundle.prefix,
-                css: componentes.css,
+                css: bundle.componentes.css!=ManifestBuildComponentesCSS.DESACTIVADO,
             }),
             stats: "minimal",
             externals: Externals.build(runtime, dependencies),

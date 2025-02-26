@@ -1,15 +1,15 @@
 import webpack from "webpack";
 
-import {ERuntime} from "../src/mrpack/clases/workspace/service";
+import {Runtime} from "../manifest/workspace/deployment";
 
 type TSourceMap = webpack.Configuration['devtool'];
 
 export class Devtool {
     /* STATIC */
-    public static build(runtime: ERuntime, entornos: string[], entorno: string): TSourceMap {
+    public static build(runtime: Runtime, entornos: string[], entorno: string): TSourceMap {
         switch (runtime) {
-            case ERuntime.node:
-            case ERuntime.browser:
+            case Runtime.node:
+            case Runtime.browser:
                 return entornos.includes(entorno) ? "source-map" : false;
             default:
                 return "source-map";

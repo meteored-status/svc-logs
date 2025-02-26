@@ -1,6 +1,7 @@
 import webpack from "webpack";
 
-import {EFramework, ERuntime} from "../src/mrpack/clases/workspace/service";
+import {BuildFW} from "../manifest/workspace/build";
+import {Runtime} from "../manifest/workspace/deployment";
 
 type TEntry = webpack.Configuration["entry"];
 
@@ -36,18 +37,18 @@ export class Entry {
         return salida;
     }
 
-    public static build(runtime: ERuntime, framework: EFramework, config: IEntryConfig): TEntry {
+    public static build(runtime: Runtime, framework: BuildFW, config: IEntryConfig): TEntry {
         switch (runtime) {
-            case ERuntime.node:
+            case Runtime.node:
                 switch (framework) {
-                    case EFramework.meteored:
+                    case BuildFW.meteored:
                         return this.buildNodeMeteored(config);
-                    case EFramework.nextjs:
+                    case BuildFW.nextjs:
                         return {};
                     default:
                         throw new Error(`Framework no soportado: ${framework}`);
                 }
-            case ERuntime.browser:
+            case Runtime.browser:
                 return this.buildBrowser(config);
             default:
                 throw new Error(`Runtime no soportado: ${runtime}`);

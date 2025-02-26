@@ -25,6 +25,7 @@ export interface IUrl {
     headers?: IHeaders;
     body?: any;
     tries?: number;
+    expected_headers?: IHeaders;
 }
 
 export type TAlternateResponse = "JSON"|"Buffer"|"HTML";
@@ -32,6 +33,7 @@ export type TAlternateResponse = "JSON"|"Buffer"|"HTML";
 export interface IAlternateResponse {
     code: number;
     type: TAlternateResponse;
+    expected_headers?: IHeaders;
     resolution_guides?: IResolutionGuide[];
 }
 

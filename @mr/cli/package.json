@@ -17,11 +17,22 @@
     "tipo": "root"
   },
   "main": "bin/mrpack.js",
-  "exports": null,
+  "exports": {
+    "./manifest": "./manifest/workspace/index.ts",
+    "./manifest/build": "./manifest/workspace/build/index.ts",
+    "./manifest/build/bundle": "./manifest/workspace/build/bundle/index.ts",
+    "./manifest/build/bundle/base": "./manifest/workspace/build/bundle/base.ts",
+    "./manifest/build/bundle/componentes": "./manifest/workspace/build/bundle/componentes.ts",
+    "./manifest/deployment": "./manifest/workspace/deployment/index.ts",
+    "./manifest/deployment/credenciales": "./manifest/workspace/deployment/credenciales.ts",
+    "./manifest/deployment/storage": "./manifest/workspace/deployment/storage.ts",
+    "./manifest/development": "./manifest/workspace/development.ts"
+  },
   "dependencies": {
-    "@google-cloud/storage": "^7.15.0",
-    "@inquirer/prompts": "^7.2.3",
+    "@google-cloud/storage": "^7.15.2",
+    "@inquirer/prompts": "^7.3.2",
     "chokidar": "^4.0.3",
+    "dotenv": "^16.4.7",
     "jszip": "^3.10.1",
     "mysql2": "3.11.0",
     "source-map-support": "^0.5.21",
@@ -30,7 +41,7 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
     "@types/diff3": "^0.0.2",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.13.5",
     "@types/source-map-support": "^0.5.10",
     "clean-webpack-plugin": "^4.0.0",
     "css-loader": "^7.1.2",
@@ -38,8 +49,8 @@
     "mini-css-extract-plugin": "^2.9.2",
     "pug": "^3.0.3",
     "pug3-loader": "^2.4.3",
-    "sass": "^1.83.4",
-    "sass-loader": "^16.0.4",
+    "sass": "^1.85.1",
+    "sass-loader": "^16.0.5",
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
     "style-loader": "^4.0.0",
@@ -48,9 +59,9 @@
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
     "typescript": "^5.7.3",
-    "webpack": "^5.97.1",
+    "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1",
     "webpack-manifest-plugin": "^5.0.0"
   },
-  "version": "2025.1.21+4-juanmeteored"
+  "version": "2025.2.26+1-bixus"
 }

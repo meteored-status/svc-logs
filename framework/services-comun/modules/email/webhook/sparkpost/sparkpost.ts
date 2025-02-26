@@ -1,5 +1,5 @@
 export type TEvent = "message_event" | "track_event" | "gen_event" | "unsubscribe_event" | "relay_event" | "ab_test_event" | "ingest_event";
-export type TMessageEvent = "bounce" | "delivery" | "injection" | "sms_status" | "spam_compliant" | "out_of_band" | "policy_rejection" | "delay";
+export type TMessageEvent = "bounce" | "delivery" | "injection" | "sms_status" | "spam_complaint" | "out_of_band" | "policy_rejection" | "delay";
 export type TTrackEvent = "click" | "open" | "initial_open" | "amp_click" | "amp_open" | "amp_initial_open";
 export type TGenEvent = "generation_failure" | "generation_rejection";
 export type TUnsubscribeEvent = "list_unsubscribe" | "link_unsubscribe" ;
@@ -38,7 +38,7 @@ interface IMessageSMSStatusEvent extends IMessageEvent {
 }
 
 interface IMessageSpamCompliantEvent extends IMessageIDEvent {
-    type: "spam_compliant";
+    type: "spam_complaint";
 }
 
 interface IMessageOutOfBandEvent extends IMessageIDEvent {
@@ -57,7 +57,7 @@ interface IMessageDelayEvent extends IMessageIDEvent {
 
 /** TRACK EVENTS */
 
-interface ITrackEvent extends IEvent {
+export interface ITrackEvent extends IEvent {
     transmission_id: string;
     type: TTrackEvent;
     rcpt_to: string;
@@ -77,7 +77,7 @@ interface IGenEvent extends IEvent {
 
 /** UNSUBSCRIBE EVENTS */
 
-interface IUnsubscribeEvent extends IEvent {
+export interface IUnsubscribeEvent extends IEvent {
     transmission_id: string;
     type: TUnsubscribeEvent;
     rcpt_to: string;

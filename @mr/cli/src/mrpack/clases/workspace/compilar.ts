@@ -1,3 +1,6 @@
+import {BuildFW} from "@mr/cli/manifest/build";
+import {Manifest} from "@mr/cli/manifest";
+import {Runtime} from "@mr/cli/manifest/deployment";
 import {
     isDir,
     isFile,
@@ -10,8 +13,8 @@ import {
 import {md5} from "services-comun/modules/utiles/hash";
 
 import {Comando} from "../comando";
-import {EFramework, ERuntime, IConfigService} from "./service";
-import {IPackageJson} from "../service";
+import {IPackageJson} from "../packagejson";
+import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
 interface ITag {
     tags: string[];
@@ -26,8 +29,9 @@ export class Compilar {
             return null;
         }
         const json = await readJSON<IPackageJson>(`${dir}/package.json`);
+        const {manifest} = await new ManifestWorkspaceLoader(dir).load();
 
-        return new this(basedir, name, path, json);
+        return new this(basedir, name, path, json, manifest);
     }
 
     public static async md5Deps(basedir: string): Promise<void> {
@@ -45,20 +49,18 @@ export class Compilar {
 
     /* INSTANCE */
     public readonly dependiente: boolean;
-    protected readonly config: IConfigService
     private readonly dependencias: Compilar[];
     private readonly pendientes: NodeJS.Dict<null>;
     protected readonly dir: string;
 
-    protected constructor(protected basedir: string, public name: string, public path: string, protected readonly packagejson: IPackageJson) {
-        this.config = packagejson.config;
+    protected constructor(protected basedir: string, public name: string, public path: string, protected readonly packagejson: IPackageJson, protected readonly config: Manifest) {
         this.dependencias = [];
         this.pendientes = {};
         this.dir = `${basedir}/${path}/${name}`;
-        for (const dep of this.config.deps) {
+        for (const dep of this.config.build.deps) {
             this.pendientes[dep] = null;
         }
-        this.dependiente = this.config.deps.length>0;
+        this.dependiente = this.config.build.deps.length>0;
     }
 
     protected async guardar(): Promise<void> {
@@ -67,7 +69,7 @@ export class Compilar {
 
     public checkDependencias(dependencias: Compilar[]): void {
         for (const actual of dependencias) {
-            if (actual.config.deps.includes(this.name)) {
+            if (actual.config.build.deps.includes(this.name)) {
                 this.dependencias.push(actual);
             }
         }
@@ -83,7 +85,7 @@ export class Compilar {
             }
         }
 
-        if (!this.config.generar || !this.config.deploy) {
+        if (!this.config.enabled || !this.config.deploy.enabled) {
             if (this.dependencias.length==0) {
                 console.log(this.name, "[OK   ]", "Servicio desactivado para despliegue");
                 return;
@@ -95,11 +97,11 @@ export class Compilar {
 
         await this.prepararCredenciales();
 
-        switch (this.config.framework) {
-            case EFramework.meteored:
+        switch (this.config.build.framework) {
+            case BuildFW.meteored:
                 await this.packMeteored(env);
                 break;
-            case EFramework.nextjs:
+            case BuildFW.nextjs:
                 await this.packNextJS(env);
                 break;
         }
@@ -113,13 +115,13 @@ export class Compilar {
     }
 
     private async packMeteored(env: string): Promise<void> {
-        switch(this.config.runtime) {
-            case ERuntime.browser: {
+        switch(this.config.deploy.runtime) {
+            case Runtime.browser: {
                     await this.webpack(env);
                     await this.checkVersionBrowser();
                 }
                 break;
-            case ERuntime.node: {
+            case Runtime.node: {
                     const customDockerfile = await isFile(`${this.dir}/Dockerfile`);
                     await this.webpack(env);
                     const checks: string[] = [
@@ -128,15 +130,15 @@ export class Compilar {
                     if (customDockerfile) {
                         checks.push(`${this.dir}/Dockerfile`);
                     }
-                    switch(this.config.framework) {
-                        case EFramework.nextjs:
+                    switch(this.config.build.framework) {
+                        case BuildFW.nextjs:
                             checks.push(`${this.dir}/.next/BUILD_ID`);
                             if (!customDockerfile) {
                                 checks.push(`${this.basedir}/framework/services-comun/despliegue/Dockerfile-next`);
                             }
                             break;
 
-                        case EFramework.meteored:
+                        case BuildFW.meteored:
                         default:
                             checks.push(`${this.dir}/output`);
                             if (!customDockerfile) {
@@ -151,7 +153,7 @@ export class Compilar {
                     await this.checkVersionService(env, checks);
                 }
                 break;
-            case ERuntime.php: {
+            case Runtime.php: {
                     await this.checkVersionService(env, [
                         `${this.dir}/assets`,
                         `${this.dir}/base/nginx/local.conf`,
@@ -203,7 +205,7 @@ export class Compilar {
         }
         await this.checkVersionService(env, [
             `${this.basedir}/.yarnrc.yml`,
-            this.config.framework==EFramework.nextjs?
+            this.config.build.framework==BuildFW.nextjs?
                 `${this.dir}/.next/BUILD_ID`:
                 `${this.dir}/output`,
             await isFile(`${this.dir}/Dockerfile`) ?
@@ -242,21 +244,16 @@ export class Compilar {
             }
         }
 
-        for (const actual of this.config.deps) {
+        for (const actual of this.config.build.deps) {
             checks.push(`${this.basedir}/services/${actual}/hash.txt`);
         }
 
         const hashes = [
             JSON.stringify(this.packagejson.dependencies??{}),
         ];
-        if (this.config.imagen!=undefined) {
-            hashes.push(this.config.imagen);
+        if (this.config.deploy.imagen!=undefined) {
+            hashes.push(this.config.deploy.imagen);
         }
-        // if (this.config.deps.length>0) {
-        //     hashes.push(JSON.stringify(this.config.deps));
-        // }
-        //     "runtime": "node",
-        //     "framework": "meteored",
         for (const actual of checks) {
             hashes.push(await md5Dir(actual));
         }
@@ -308,31 +305,33 @@ export class Compilar {
             mysql = `/root/${await readFileString(`${this.basedir}/mysql.txt`)}`;
         }
 
-        for (const {source, target} of this.config.credenciales) {
-            if (await isFile(`${this.basedir}/kustomizar/tmp/credenciales/${source}`)) {
-                const data = await readFileString(`${this.basedir}/kustomizar/tmp/credenciales/${source}`);
-                await safeWrite(`${this.dir}/files/credenciales/${target}`, data);
+        if (this.config.deploy.credenciales!=undefined) {
+            for (const {source, target} of this.config.deploy.credenciales) {
+                if (await isFile(`${this.basedir}/kustomizar/tmp/credenciales/${source}`)) {
+                    const data = await readFileString(`${this.basedir}/kustomizar/tmp/credenciales/${source}`);
+                    await safeWrite(`${this.dir}/files/credenciales/${target}`, data);
 
-                if (mysql!=undefined && target=="mysql.json") {
-                    const json = JSON.parse(data);
-                    if (json.master != undefined) {
-                        json.master.socketPath = mysql;
-                        if (json.slaves==undefined || !Array.isArray(json.slaves)) {
-                            json.slaves = [json.master];
-                        } else {
+                    if (mysql != undefined && target == "mysql.json") {
+                        const json = JSON.parse(data);
+                        if (json.master != undefined) {
+                            json.master.socketPath = mysql;
+                            if (json.slaves == undefined || !Array.isArray(json.slaves)) {
+                                json.slaves = [json.master];
+                            } else {
+                                for (const actual of json.slaves) {
+                                    actual.socketPath = mysql;
+                                }
+                            }
+                        } else if (json.slaves != undefined && Array.isArray(json.slaves)) {
                             for (const actual of json.slaves) {
                                 actual.socketPath = mysql;
                             }
                         }
-                    } else if (json.slaves!=undefined && Array.isArray(json.slaves)) {
-                        for (const actual of json.slaves) {
-                            actual.socketPath = mysql;
+                        if (json.socketPath != undefined) {
+                            json.socketPath = mysql;
                         }
+                        await safeWrite(`${this.dir}/files/credenciales/${target}`, JSON.stringify(json));
                     }
-                    if (json.socketPath != undefined) {
-                        json.socketPath = mysql;
-                    }
-                    await safeWrite(`${this.dir}/files/credenciales/${target}`, JSON.stringify(json));
                 }
             }
         }

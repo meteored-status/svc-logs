@@ -20,7 +20,7 @@ export type * from "../../elasticsearch";
  * @param sort Ordenación.
  * @private
  */
-export const searchAll = async <I>(client: Elasticsearch, config: {index: string; keep_alive: string; size: number;}, query: QueryDslQueryContainer, sort?: Sort): Promise<SearchResponse<I, ESAggregate>> => {
+export const searchAll = async <I>(client: Elasticsearch, config: {index: string; keep_alive: string; size: number; source?: string[]}, query: QueryDslQueryContainer, sort?: Sort): Promise<SearchResponse<I, ESAggregate>> => {
     // Creamos el Point In Time (pit)
     const pit = await client.openPointInTime({
         index: config.index,
@@ -40,6 +40,7 @@ export const searchAll = async <I>(client: Elasticsearch, config: {index: string
                     _shard_doc: "asc",
                 },
             ],
+            _source: config.source,
             search_after: after
         };
 

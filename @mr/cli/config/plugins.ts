@@ -2,7 +2,8 @@ import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import {WebpackManifestPlugin} from "webpack-manifest-plugin";
 import webpack from "webpack";
 
-import {EFramework, ERuntime} from "../src/mrpack/clases/workspace/service";
+import {BuildFW} from "../manifest/workspace/build";
+import {Runtime} from "../manifest/workspace/deployment";
 
 interface IPluginsConfig {
     entorno: string;
@@ -39,16 +40,16 @@ export class Plugins {
         ];
     }
 
-    public static build(runtime: ERuntime, framework: EFramework, {entorno, desarrollo, database, prefix = "", css}: IPluginsConfig): webpack.WebpackPluginInstance[] {
+    public static build(runtime: Runtime, framework: BuildFW, {entorno, desarrollo, database, prefix = "", css}: IPluginsConfig): webpack.WebpackPluginInstance[] {
         const salida: webpack.WebpackPluginInstance[] = [];
         let nextjs: boolean;
 
         switch (runtime) {
-            case ERuntime.node:
+            case Runtime.node:
                 salida.push(...this.buildNode());
-                nextjs = framework==EFramework.nextjs;
+                nextjs = framework==BuildFW.nextjs;
                 break;
-            case ERuntime.browser:
+            case Runtime.browser:
                 salida.push(...this.buildBrowser(prefix));
                 nextjs = false;
                 break;

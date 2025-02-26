@@ -1,11 +1,41 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.2.10+2
+
+### Added
+- [Juan Carlos] Se crea la clase abstracta `Transaction` para manejar transacciones de base de datos.
+- [Juan Carlos] Se crea una clase para la gestión de transacciones `TransactionManager` que permite realizar transacciones de forma sencilla sin tener en cuenta la implementación de la transacción.
+- [Juan Carlos] Se crea la función `transactional` que permite crear una transacción a través de un `TransactionManager`. Esta función recibe como parámetro una función que devuelve un objeto `TransactionManager` y un nombre (opcional).
+- [Juan Carlos] Se crea una clase `MySQLTransactionManager` para manejar transacciones de MySQL.
+- [Juan Carlos] Se hace que la clase `Transaction` de MySQL extienda de la clase `Transaction` abstracta.
+
+```typescript
+@transactional(() => new MySQLTransactionManager(), 'Mi Transacción')
+const myMethod(transaction?: Transaction): void => {
+    // Código a ejecutar
+}
+```
+
+### Deprecated
+- [Juan Carlos] Se deprecia la función `transactional` de la clase `Transaction` de MySQL.
+
+
+
+
+---
+## 2025.1.30+1
+
+### Updated
+- [Jose] Eliminado directorio `despliegue` ya que ya no se gestiona desde este workspace
+
+---
 ## 2025.1.16+2
 
 ### Updated
 - [Juan Carlos] Update de librerías:
   - [chokidar](https://www.npmjs.com/package/chokidar) 4.0.3
+
 ---
 ## 2025.1.15+1
 

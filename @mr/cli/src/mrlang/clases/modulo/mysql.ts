@@ -26,7 +26,7 @@ interface IModuloConfig extends IModuloConfigBase {
 export class ModuloMySQL extends Modulo<IModuloConfig> {
     /* STATIC */
     public static async getIDS(): Promise<string[]> {
-        const rows = await db.query<{ id: string }>("SELECT `id` FROM `modulos` WHERE `padre` IS NULL AND borrado=0 ORDER BY id");
+        const rows = await db.select<{ id: string }>("SELECT `id` FROM `modulos` WHERE `padre` IS NULL AND borrado=0 ORDER BY id");
 
         return rows.map(row => row.id);
     }
@@ -36,7 +36,7 @@ export class ModuloMySQL extends Modulo<IModuloConfig> {
             [row],
             langs,
         ] = await Promise.all([
-            db.query<IModuloMySQL>("SELECT * FROM `modulos` WHERE id=? AND borrado=0", [id]),
+            db.select<IModuloMySQL>("SELECT * FROM `modulos` WHERE id=? AND borrado=0", [id]),
             idiomas!=undefined ? Promise.resolve(idiomas) : IdiomasLoader.fromMySQL(),
         ]);
 
@@ -48,7 +48,7 @@ export class ModuloMySQL extends Modulo<IModuloConfig> {
     }
 
     protected static async loadPadre(padre: string, idiomas: Idiomas, paquete: IPackageConfig): Promise<ModuloMySQL[]> {
-        const rows = await db.query<IModuloMySQL>("SELECT * FROM `modulos` WHERE padre=? AND borrado=0 ORDER BY id", [padre]);
+        const rows = await db.select<IModuloMySQL>("SELECT * FROM `modulos` WHERE padre=? AND borrado=0 ORDER BY id", [padre]);
 
         return await Promise.all(rows.map(row => this.build(row, idiomas, paquete)));
     }

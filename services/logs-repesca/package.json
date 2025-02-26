@@ -15,37 +15,23 @@
     "devel": "yarn node --no-warnings devel.js"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "8.17.0",
-    "@google-cloud/storage": "^7.15.0",
-    "crawler-user-agents": "^1.0.158",
+    "@elastic/elasticsearch": "8.17.1",
+    "@google-cloud/storage": "^7.15.2",
+    "crawler-user-agents": "^1.0.164",
     "geoip-lite": "^1.4.10",
     "mysql2": "3.11.0",
     "source-map-support": "^0.5.21",
     "stream-shift": "1.0.3",
     "superjson": "^2.2.2",
     "tslib": "^2.8.1",
-    "ua-parser-js": "^2.0.0"
+    "ua-parser-js": "^2.0.2"
   },
   "devDependencies": {
     "@types/geoip-lite": "^1.4.4",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.13.5",
     "logs-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"
   },
-  "main": "app.js",
-  "config": {
-    "cronjob": true,
-    "devel": false,
-    "deploy": true,
-    "generar": true,
-    "unico": true,
-    "deps": [],
-    "runtime": "node",
-    "framework": "meteored",
-    "kustomize": "services",
-    "credenciales": [],
-    "database": "logs",
-    "bundle": {}
-  }
+  "main": "app.js"
 }

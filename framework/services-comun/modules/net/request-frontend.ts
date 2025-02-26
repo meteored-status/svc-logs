@@ -252,8 +252,7 @@ export class FrontendRequest {
     }
 
     protected static async postFormData<T>(url: string, formData: FormData, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
-        const headers = new Headers();
-        return this.fetchPOST<T, FormData>(url, { }, headers, {
+        return this.fetchPOST<T, FormData>(url, { }, new Headers(), {
             ...cfg,
             contentType: "multipart/form-data",
         }, formData);

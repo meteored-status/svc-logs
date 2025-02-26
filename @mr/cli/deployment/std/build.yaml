@@ -17,9 +17,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/labels.sh"
-      - ${_ENTORNO}
-    env:
-      - 'PROJECT_ID=${PROJECT_ID}'
     id: 'Labels'
     waitFor:
       - '-'
@@ -31,9 +28,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/tags.sh"
-      - ${_ENTORNO}
-    env:
-      - 'PROJECT_ID=${PROJECT_ID}'
     id: 'Obtener Tags'
     waitFor:
       - 'Descargas'
@@ -45,7 +39,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/autorizar.sh"
-      - ${_ENTORNO}
     id: 'Autorizar'
     waitFor:
       - 'Descargas'
@@ -58,7 +51,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/clone.sh"
-      - ${_ENTORNO}
     secretEnv:
       - GITTOKEN
     id: 'Clonar Repositorios'
@@ -84,7 +76,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/cache_get.sh"
-      - ${TRIGGER_NAME}
     id: 'Descargar Cache Dependencias'
     waitFor:
       - 'Labels'
@@ -108,10 +99,7 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/compilar.sh"
-      - ${_ENTORNO}
     id: 'Compilar'
-    env:
-      - 'MYSQL=${_MYSQL}'
     waitFor:
       - 'Descargas'
       - 'Iniciar Kustomize'
@@ -125,7 +113,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/cache_set.sh"
-      - ${TRIGGER_NAME}
     id: 'Subir Cache Dependencias'
     waitFor:
       - 'Compilar'
@@ -137,7 +124,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/storage.sh"
-      - ${_ENTORNO}
     id: 'Subir Storage'
     waitFor:
       - 'Compilar'
@@ -149,9 +135,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/contenedor.sh"
-      - ${_ENTORNO}
-    env:
-      - 'PROJECT_ID=${PROJECT_ID}'
     id: 'Generar Contenedor'
     waitFor:
       - 'Compilar'
@@ -163,9 +146,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/kustomizar.sh"
-      - ${_ENTORNO}
-    env:
-      - 'PROJECT_ID=${PROJECT_ID}'
     id: 'Kustomizar'
     waitFor:
       - 'Descargas'
@@ -180,7 +160,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/desplegar.sh"
-      - ${_ENTORNO}
     id: 'Desplegar'
     waitFor:
       - 'Autorizar'
@@ -194,7 +173,6 @@ steps:
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/desautorizar.sh"
-      - ${_ENTORNO}
     id: 'Desautorizar'
     waitFor:
       - 'Desplegar'
@@ -214,7 +192,21 @@ availableSecrets:
   secretManager:
     - versionName: "projects/${PROJECT_ID}/secrets/alpred-lectura/versions/1"
       env: 'GITTOKEN'
+#substitutions:
+#  _ENTORNO: 'test'
 options:
+  automapSubstitutions: true
+  env:
+    - '_AUTORIZAR=${_AUTORIZAR}'
+    - '_DESPLEGAR=${_DESPLEGAR}'
+    - '_DESPLEGAR_LATEST=${_DESPLEGAR_LATEST}'
+    - '_ENTORNO=${_ENTORNO}'
+    - '_GENERAR=${_GENERAR}'
+    - '_GENERAR_FORZAR=${_GENERAR_FORZAR}'
+    - '_MYSQL=${_MYSQL}'
+    - 'PROJECT_ID=${PROJECT_ID}'
+    - 'TRIGGER_NAME=${TRIGGER_NAME}'
+#  substitution_option: 'ALLOW_LOOSE'
   pool:
     name: 'projects/${PROJECT_ID}/locations/europe-west1/workerPools/${_BUILD}'
 timeout: 1800s

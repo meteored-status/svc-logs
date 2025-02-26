@@ -2,8 +2,7 @@ import {type PoolConnection, type ResultSetHeader, type Pool, type PoolNamespace
 
 import {type MySQL, type TipoRegistro} from "./";
 import {error, info, warning} from "../../utiles/log";
-import {md5} from "../../utiles/hash";
-import {random} from "../../utiles/random";
+import {Transaction as TransactionBase} from "../transaction/transaction";
 
 export enum TIsolationLevel {
     REPEATABLE_READ     = 1,
@@ -12,7 +11,7 @@ export enum TIsolationLevel {
     SERIALIZABLE        = 4,
 }
 
-export class Transaction {
+export class Transaction extends TransactionBase {
     /* STATIC */
     private static readonly ISOLATION_LEVEL_MAP: Map<TIsolationLevel, string> = new Map([
         [TIsolationLevel.REPEATABLE_READ, "REPEATABLE READ"],
@@ -31,16 +30,17 @@ export class Transaction {
         return this._connection ??= this.pool.getConnection();
     }
 
-    public readonly hash: string;
-
     public constructor(private readonly pool: Pool | PoolNamespace) {
-        const hash = md5(`${random(32)}-${Date.now()}-${random(32)}`);
-        this.hash = `${hash.substring(0, 3)}${hash.substring(29)}`;
+        super();
     }
 
     // public get hash(): string {
     //     return this._hash;
     // }
+
+    public override async begin(): Promise<void> {
+        await this.start();
+    }
 
     /**
      * Inicia una nueva transacción.
@@ -51,7 +51,6 @@ export class Transaction {
         const connection = await this.connection;
         await connection.execute(`set transaction isolation level ${Transaction.isolationLevel(level)}`);
         await connection.beginTransaction();
-        if (!PRODUCCION) info(`Transaction ${this.hash} => BEGIN${name ? `: ${name}` : ``}`);
 
         return this;
     }
@@ -99,7 +98,6 @@ export class Transaction {
     public async commit(): Promise<void> {
         const connection = await this.connection;
         await connection.commit();
-        if (!PRODUCCION) info(`Transaction ${this.hash} => COMMIT`);
         await this.release();
     }
 
@@ -109,7 +107,6 @@ export class Transaction {
     public async rollback(): Promise<void> {
         const connection = await this.connection;
         await connection.rollback();
-        if (!PRODUCCION) warning(`Transaction ${this.hash} => ROLLBACK`);
         await this.release();
     }
 
@@ -127,6 +124,9 @@ export class Transaction {
     }
 }
 
+/**
+ * @deprecated Usar el decorador `transactional` de la clase padre junto con un transaction manager.
+ */
 export function transactional(db: MySQL, name: string = '', level: TIsolationLevel = TIsolationLevel.READ_COMMITTED): Function {
     return (originalMethod: any) => {
 
@@ -137,6 +137,7 @@ export function transactional(db: MySQL, name: string = '', level: TIsolationLev
                 if (!t) {
                     t = await db.transaction();
                     await t.start(level, name);
+                    if (!PRODUCCION) info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);
                 } else {
                     if (!PRODUCCION) info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);
                 }
@@ -145,11 +146,13 @@ export function transactional(db: MySQL, name: string = '', level: TIsolationLev
                     salida = await originalMethod.apply(this, [...args, t]);
                     if (initial) {
                         await t.commit();
+                        if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT`);
                     }
                 } catch (e) {
                     if (initial) {
                         error(`Transaction ${t.hash} failed: `, e);
                         await t.rollback();
+                        if (!PRODUCCION) warning(`Transaction ${t.hash} => ROLLBACK`);
                         salida = Promise.reject(e);
                     } else {
                         throw e;
@@ -160,30 +163,3 @@ export function transactional(db: MySQL, name: string = '', level: TIsolationLev
         };
     };
 }
-
-// type TDecoratorBuilder = (target: any, propertyKey: string, descriptor: PropertyDescriptor)=>void;
-// export function transactional(name: string = '', level: TIsolationLevel = TIsolationLevel.READ_COMMITTED): TDecoratorBuilder {
-//     return (target: any, propertyKey: string, descriptor: PropertyDescriptor): void => {
-//
-//         const original = Symbol(propertyKey);
-//         target[original] = descriptor.value;
-//
-//         descriptor.value = async function (...args: any[]) {
-//             const t: Transaction = await db.transaction();
-//             if (!PRODUCCION) info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);
-//             await t.start(level);
-//             let salida;
-//             try {
-//                 salida = await target[original].apply(this, [...args, t]);
-//                 await t.commit();
-//                 if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT`);
-//             } catch (e) {
-//                 error(`Transaction ${t.hash} failed: `, e);
-//                 await t.rollback();
-//                 if (!PRODUCCION) warning(`Transaction ${t.hash} => ROLLBACK`);
-//                 salida = Promise.reject(e);
-//             }
-//             return salida;
-//         }
-//     };
-// }

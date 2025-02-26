@@ -3,6 +3,7 @@ import os from "node:os";
 import {exists, readJSON} from "./fs";
 import {md5} from "./hash";
 import {random} from "./random";
+import {type IManifest, Manifest} from "@mr/cli/manifest";
 
 export interface IConfigGenerico {}
 export class ConfigGenerico<T extends IConfigGenerico=IConfigGenerico> implements IConfigGenerico {
@@ -77,8 +78,10 @@ export interface IConfiguracion {}
 export class Configuracion<T extends IConfiguracion=IConfiguracion> implements IConfiguracion {
     /* STATIC */
     protected static async cargar<S extends IConfiguracion>(defecto: S): Promise<Configuracion<S>> {
-        const [data, cfg] = await Promise.all([
+        const [data, manifest, cfg] = await Promise.all([
             readJSON("package.json"),
+            readJSON<IManifest>("mrpack.json")
+                .then((data)=>new Manifest(data)),
             exists("files/config.json").then(async (existe)=>{
                 if (existe) {
                     return readJSON<Partial<S>>("files/config.json");
@@ -86,7 +89,7 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
                 return {};
             }),
         ]);
-        return new this<S>(defecto, cfg, data.servicio??"unknown", data.version??`0000.00.00-000`, data.config.cronjob??false);
+        return new this<S>(defecto, cfg, data.servicio??"unknown", data.version??`0000.00.00-000`, manifest.deploy.cronjob??false);
     }
 
     /* INSTANCE */

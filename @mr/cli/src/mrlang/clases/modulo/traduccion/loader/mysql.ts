@@ -81,12 +81,12 @@ export class TraduccionLoaderMySQL extends TraduccionLoader {
     }
 
     public static async existe(modulo: Modulo, id: string): Promise<boolean> {
-        const [data] = await db.query<{id: string}>("SELECT `id` FROM `traducciones` WHERE `modulo`=? AND `id`=? AND `borrado`=0", [modulo.id, id]);
+        const [data] = await db.select<{id: string}>("SELECT `id` FROM `traducciones` WHERE `modulo`=? AND `id`=? AND `borrado`=0", [modulo.id, id]);
         return data!=undefined;
     }
 
     // public static async load(modulo: Modulo, id: string): Promise<Traduccion> {
-    //     const [data] = await db.query<ITraduccionMySQL>("SELECT `tipo`, `params`, `data`, `descripcion`, `idiomas`, `assets`, `version`, `hash` FROM `traducciones` WHERE `modulo`=? AND `id`=?", [modulo.id, id]);
+    //     const [data] = await db.select<ITraduccionMySQL>("SELECT `tipo`, `params`, `data`, `descripcion`, `idiomas`, `assets`, `version`, `hash` FROM `traducciones` WHERE `modulo`=? AND `id`=?", [modulo.id, id]);
     //     if (data==undefined) {
     //         return Promise.reject(`No existe la traduccion ${id} del modulo ${modulo.id}`);
     //     }
@@ -95,7 +95,7 @@ export class TraduccionLoaderMySQL extends TraduccionLoader {
     // }
 
     public static async loadAll(modulo: Modulo): Promise<NodeJS.Dict<Traduccion>> {
-        const data = await db.query<ITraduccionAllMySQL>("SELECT `id`, `origen`, `tipo`, `params`, `data`, `descripcion`, `idiomas`, `version`, `hash` FROM `traducciones` WHERE `modulo`=? AND `borrado`=0", [modulo.id]);
+        const data = await db.select<ITraduccionAllMySQL>("SELECT `id`, `origen`, `tipo`, `params`, `data`, `descripcion`, `idiomas`, `version`, `hash` FROM `traducciones` WHERE `modulo`=? AND `borrado`=0", [modulo.id]);
         const result: Promise<Traduccion>[] = [];
         for (const traduccion of data) {
             result.push(this.build(modulo, traduccion.id, traduccion));
