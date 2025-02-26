@@ -1,4 +1,46 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
+---
+## 2025.2.24+1
+
+### Updated
+- [Juan Carlos] Update de librerías:
+    - [@google-cloud/storage](https://www.npmjs.com/package/@google-cloud/storage) 7.15.2
+    - [sass](https://www.npmjs.com/package/sass) 1.85.0
+    - [sass-loader](https://www.npmjs.com/package/sass-loader) 16.0.5
+    - [webpack](https://www.npmjs.com/package/webpack) 5.98.0
+
+
+---
+## 2025.2.4+1
+
+### Added
+- [Jose] Se ha añadido manifiesto raiz de proyecto, orientado a configurar la construcción y despliegue del proyecto para producción/test de cara a la herramienta ci/cd
+
+### Changed
+- [Jose] Se ha limpiado las variables del proceso de despliegue
+- [Jose] Se ha eliminado la necesidad de (des)autorizar antes de desplegar
+
+---
+## 2025.1.31+1
+
+### Changed
+- [Jose] Refactorizado el directorio `@mr/cli/manifest` a `@mr/cli/manifest/workspace` para dejar espacio a otros tipos de manifest
+  - Se mantiene el la importación desde `@mr/cli/manifest` ya que solo será interesante exportar el manifiesto de workspaces
+
+---
+## 2025.1.30+1
+
+### Changed
+- [Jose] Se ha cambiado la estructura de la configuración de los workspaces, ahora en lugar de definirse dentro del archivo package.json se definen dentro del archivo mrpack.json ubicado en la raiz de cada workspace
+  - Se puede obtener la referencia de la estructura de los archivos `mrpack.json` en [manifest/workspace/index.md](manifest/workspace/index.md)
+
+---
+## 2025.1.24+1
+
+### Changed
+- [Jose] Añadida estructura de nuevo archivo de manifiesto para los workspaces
+- [Jose] Se ha cambiado las dependencias de mrpack para hacer la antigua interfaz Legacy
+- [Jose] Se exporta la interfaz y clases para el nuevo manifiesto para poder leer el manifiesto desde los workspaces
 
 ---
 ## 2025.1.20+1

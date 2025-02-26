@@ -17,7 +17,7 @@ export class IdiomasLoader extends Idiomas {
     public static async fromMySQL(): Promise<Idiomas> {
         const fallbacks: TIdiomas = {};
         let fecha = new Date(0);
-        for (const idioma of await db.query<IIdiomaMySQL>("SELECT * FROM `idiomas` ORDER BY `idioma`")) {
+        for (const idioma of await db.select<IIdiomaMySQL>("SELECT * FROM `idiomas` ORDER BY `idioma`")) {
             fallbacks[idioma.idioma] = idioma.fallbacks;
             fecha = fecha<idioma.version ? idioma.version : fecha;
         }

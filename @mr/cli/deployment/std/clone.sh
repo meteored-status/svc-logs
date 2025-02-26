@@ -4,15 +4,12 @@
 ##############################
 set -euo pipefail
 
-ENTORNO="${1}"
-
 parseRepository() {
-  local ENTORNO="${1}"
-  local COMPANY="${2}"
+  local COMPANY="${1}"
 
   echo "Clonando repositorio ${COMPANY}/kustomize.git"
   git clone "https://${GITTOKEN}@github.com/${COMPANY}/kustomize.git" kustomizar
-  if [[ ${ENTORNO} != "produccion" ]]; then
+  if [[ ${_ENTORNO} != "produccion" ]]; then
     echo "Cambiando a la rama \"DEVELOP\""
     cd kustomizar
     git fetch origin
@@ -22,4 +19,4 @@ parseRepository() {
 }
 export -f parseRepository
 
-./jq -r ".labels[\"k8s-github\"]" "labels.json" | xargs -I '{}' -P10 -n1 bash -c "parseRepository ${ENTORNO} {}"
+./jq -r ".labels[\"k8s-github\"]" "labels.json" | xargs -I '{}' -P10 -n1 bash -c "parseRepository {}"

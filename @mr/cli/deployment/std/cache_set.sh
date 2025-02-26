@@ -4,11 +4,8 @@
 ######################################
 set -e
 
-TRIGGER_NAME="${1}"
-
 parseBucket() {
-  TRIGGER_NAME="${1}"
-  BUCKET="${2}"
+  BUCKET="${1}"
 
   [ -d ".yarn/cache" ] && gsutil -m -q rm -r "gs://${BUCKET}/cache/${TRIGGER_NAME}/cache/" || echo "No hay caché"
   [ -d ".yarn/cache" ] && gsutil -m -q cp -r .yarn/cache "gs://${BUCKET}/cache/${TRIGGER_NAME}/"
@@ -22,7 +19,7 @@ if [[ -f .yarn/cache/.md5 ]]; then
     if diff .yarn/cache/.md5 yarn.md5; then
       echo "No hay cambios en la caché de dependencias"
     else
-      ./jq -r ".labels[\"k8s-cache\"]" "labels.json" | xargs -I '{}' -P 10 bash -c "parseBucket ${TRIGGER_NAME} {}"
+      ./jq -r ".labels[\"k8s-cache\"]" "labels.json" | xargs -I '{}' -P 10 bash -c "parseBucket {}"
     fi
   fi
 fi

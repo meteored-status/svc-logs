@@ -1,9 +1,7 @@
 import path from "node:path";
-import webpack from "webpack";
 
-import {ERuntime} from "../src/mrpack/clases/workspace/service";
+import {Runtime} from "../manifest/workspace/deployment";
 
-type IOutput = webpack.Configuration["output"];
 type ChunkFunction = string|((pathData: any, assetInfo?: any) => string);
 
 interface IOutputConfig {
@@ -42,11 +40,11 @@ export class Output {
         });
     }
 
-    public static build(runtime: ERuntime, config: IOutputConfig): Output {
+    public static build(runtime: Runtime, config: IOutputConfig): Output {
         switch (runtime) {
-            case ERuntime.node:
+            case Runtime.node:
                 return this.buildNode(config);
-            case ERuntime.browser:
+            case Runtime.browser:
                 return this.buildBrowser(config);
             default:
                 throw new Error(`Runtime no soportado: ${runtime}`);
@@ -57,7 +55,10 @@ export class Output {
     public readonly uniqueName: string;
     public readonly path: string;
 
-    public constructor(public readonly filename: string, basedir: string, output: string, public readonly chunkFilename?: ChunkFunction) {
+    public readonly chunkFilename?: ChunkFunction;
+
+    public constructor(public readonly filename: string, basedir: string, output: string, chunkFilename?: ChunkFunction) {
+        this.chunkFilename = chunkFilename;
         this.path = path.resolve(basedir, output);
         this.uniqueName = path.basename(basedir);
     }

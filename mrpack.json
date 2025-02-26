@@ -1,0 +1,11 @@
+{
+    "deploy": {
+        "build": {
+            "enabled": true,
+            "force": false
+        },
+        "run": {
+            "enabled": true
+        }
+    }
+}

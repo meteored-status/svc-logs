@@ -24,7 +24,7 @@ yarn mrpack devel -c -f
 
 ### Compilar y ejecutar servicios
 ```bash
-yarn mrpack devel -c -e
+n
 ```
 
 ### Compilar y ejecutar TODOS los servicios
