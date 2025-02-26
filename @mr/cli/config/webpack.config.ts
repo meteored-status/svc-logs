@@ -1,7 +1,9 @@
 import {isFileSync, readJSONSync} from "services-comun/modules/utiles/fs";
 
 import {Configuracion} from "./configuracion";
-import {ERuntime, IConfigService} from "../src/mrpack/clases/workspace/service";
+import type {Manifest} from "../manifest/workspace";
+import {ManifestWorkspaceLoader} from "../src/mrpack/clases/manifest/workspace";
+import {Runtime} from "../manifest/workspace/deployment";
 
 interface IEnv {
     entorno: string;
@@ -9,47 +11,35 @@ interface IEnv {
 }
 
 interface IConfiguracion {
-    config: IConfigService;
+    config: Manifest;
     dependencies: Record<string, string>;
 }
 
 export default (env: IEnv)=>{
     const {entorno, dir: basedir} = env;
-    const {
-        config: {
-            runtime,
-            framework,
-            database,
-            bundle: {
-                web = [],
-                ...bundle
-            },
-        },
-        dependencies,
-    } = readJSONSync<IConfiguracion>(`${basedir}/package.json`) as IConfiguracion;
+    const {dependencies} = readJSONSync<IConfiguracion>(`${basedir}/package.json`) as IConfiguracion;
+    const {manifest} = new ManifestWorkspaceLoader(basedir).loadSync();
 
     const rules = isFileSync(`${basedir}/rules.js`) ? `${basedir}/rules.js` : undefined;
-
-    const webFinal = Array.isArray(web) ? web : [web];
 
     return [
         Configuracion.build({
             basedir,
-            bundle,
+            bundle: manifest.build.bundle,
             dependencies,
             entorno,
-            framework,
-            runtime,
-            database,
+            framework: manifest.build.framework,
+            runtime: manifest.deploy.runtime,
+            database: manifest.build.database,
             rules,
         }),
-        ...webFinal.map(bundle=>Configuracion.build({
+        ...manifest.build.bundle.web.map(bundle=>Configuracion.build({
             basedir,
             bundle,
             dependencies,
             entorno,
-            framework,
-            runtime: ERuntime.browser,
+            framework: manifest.build.framework,
+            runtime: Runtime.browser,
             rules,
         })),
     ];

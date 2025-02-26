@@ -2,11 +2,13 @@ import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
 import chokidar from "chokidar";
 import treeKill from "tree-kill";
 
-import {readJSON} from "services-comun/modules/utiles/fs";
+import {BuildFW} from "@mr/cli/manifest/build";
+import {Runtime} from "@mr/cli/manifest/deployment";
 
 import {Colors} from "../colors";
-import {IWorkspace, Workspace} from "../workspace";
+import {type IWorkspace, Workspace} from "../workspace";
 import {Log} from "../log";
+import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
 export interface IConfigServices {
     devel: {
@@ -18,62 +20,7 @@ export interface IConfigServices {
         disabled: string[];
     };
     i18n: boolean;
-    services: NodeJS.Dict<string>;
-}
-
-export enum ERuntime {
-    node = "node",
-    browser = "browser",
-    cfworker = "cfworker",
-    php = "php",
-}
-
-export enum EFramework {
-    meteored = "meteored",
-    nextjs = "nextjs",
-    // astro = "astro",
-}
-
-export interface IConfigServiceComponentes {
-    optimizar: boolean;
-    pug: boolean;
-    css: boolean;
-    css_type: 0|1|2; // 0=inyectado por JS | 1=archivo independiente | 2=critical
-}
-export interface IConfigServiceBundle {
-    componentes?: IConfigServiceComponentes;
-    entries?: NodeJS.Dict<string>;
-    prefix?: string;
-    source_map?: string[];
-}
-export interface IConfigService {
-    cronjob: boolean;
-    devel: boolean;
-    deploy: boolean;
-    generar: boolean;
-    imagen?: string;
-    unico: boolean;
-    deps: string[];
-    storage?: {
-        buckets: string[];
-        package?: string;
-        subdir?: string;
-        subdir2?: string;
-    };
-    runtime: ERuntime;
-    framework: EFramework;
-    kustomize: string;
-    credenciales: {
-        source: string;
-        target: string;
-    }[];
-    database?: string;
-    bundle: {
-        componentes?: IConfigServiceComponentes;
-        entries?: NodeJS.Dict<string>;
-        prefix?: string;
-        web?: IConfigServiceBundle|IConfigServiceBundle[];
-    };
+    services: Record<string, string>;
 }
 
 export interface IService extends IWorkspace {
@@ -87,8 +34,8 @@ export interface IService extends IWorkspace {
 export class Service extends Workspace {
     /* STATIC */
     private static TIMEOUT = 300000;
-    private static COMPILABLES: (ERuntime|undefined)[] = [ERuntime.node, ERuntime.browser, ERuntime.cfworker];
-    private static PAUSABLES: (EFramework|undefined)[] = [EFramework.meteored];
+    private static COMPILABLES: (Runtime|undefined)[] = [Runtime.node, Runtime.browser, Runtime.cfworker];
+    private static PAUSABLES: (BuildFW|undefined)[] = [BuildFW.meteored];
 
     /* INSTANCE */
     private readonly compilar: boolean;
@@ -97,7 +44,7 @@ export class Service extends Workspace {
     private readonly label: string;
     private global_compilar: boolean;
     private global_ejecutar: boolean;
-    private config: Promise<IConfigService>;
+    private config: Promise<ManifestWorkspaceLoader>;
 
     private compilador?: ChildProcessWithoutNullStreams;
     private ejecucion?: ChildProcessWithoutNullStreams;
@@ -115,37 +62,22 @@ export class Service extends Workspace {
         this.label = Colors.colorize(color, nombre);
         this.global_compilar = !data.global.packd.disabled.includes(this.nombre);
         this.global_ejecutar = !data.global.devel.disabled.includes(this.nombre);
-        this.config = readJSON(`${this.dir}/package.json`).then(paquete=>paquete.config??{} as IConfigService);
+        this.config = new ManifestWorkspaceLoader(this.dir).load();
     }
 
     protected override initWatcher(): void {
         this.watcher?.close();
-        // if (os.platform()!="linux") {
         this.watcher = chokidar.watch(this.dir, {
             persistent: true,
             ignored: (path)=>path.endsWith("~"),
         }).on("change", (path) => {
-            if (path.endsWith("package.json")) {
+            if (path.endsWith("mrpack.json")) {
                 this.updatePackageFile();
             } else {
                 this.cambio();
             }
         });
-        // } else {
-        //     this.watcher = chokidar.watch(`${this.dir}/package.json`, {
-        //         persistent: true,
-        //     }).on("change", () => {
-        //         this.updatePackageFile();
-        //     });
-        // }
     }
-
-    // private stopWatcher(): void {
-    //     this.watcher?.close();
-    //     this.watcher = watch(`${this.dir}/package.json`, ()=>{
-    //         this.updatePackageFile();
-    //     });
-    // }
 
     public override cambio(): void {
         this.runCompilar().then(() => {
@@ -179,7 +111,7 @@ export class Service extends Workspace {
     }
 
     private updatePackageFile(): void {
-        this.config = readJSON(`${this.dir}/package.json`).then(paquete => paquete.config ?? {} as IConfigService);
+        this.config = new ManifestWorkspaceLoader(this.dir).load();
 
         this.run().then(() => {
         }).catch((err) => {
@@ -243,9 +175,9 @@ export class Service extends Workspace {
             return false;
         }
 
-        const config = await this.config;
+        const {manifest: config} = await this.config;
 
-        if (!config.generar) {
+        if (!config.enabled) {
             if (this.compilador==undefined) {
                 Log.info({
                     type: Log.label_compilar,
@@ -259,13 +191,13 @@ export class Service extends Workspace {
     }
 
     private async initCompilar(): Promise<void> {
-        const config = await this.config;
+        const {manifest: config} = await this.config;
 
-        if (!Service.COMPILABLES.includes(config.runtime)) {
+        if (!Service.COMPILABLES.includes(config.deploy.runtime)) {
             return;
         }
 
-        if (Service.PAUSABLES.includes(config.framework)) {
+        if (Service.PAUSABLES.includes(config.build.framework)) {
             this.setTimeoutCompilador();
         }
 
@@ -274,12 +206,12 @@ export class Service extends Workspace {
         }
 
         let comando: string;
-        switch(config.framework) {
+        switch(config.build.framework) {
             // case EFramework.astro:
-            case EFramework.nextjs:
+            case BuildFW.nextjs:
                 comando = "dev";
                 break;
-            case EFramework.meteored:
+            case BuildFW.meteored:
             default:
                 comando = "packd";
         }
@@ -362,9 +294,9 @@ export class Service extends Workspace {
     }
 
     private async checkEjecucion(): Promise<boolean> {
-        const config = await this.config;
+        const {manifest: config} = await this.config;
 
-        if (!this.ejecutar || [ERuntime.browser, ERuntime.cfworker].includes(config.runtime) || [/*EFramework.astro,*/ EFramework.nextjs].includes(config.framework)) {
+        if (!this.ejecutar || [Runtime.browser, Runtime.cfworker].includes(config.deploy.runtime) || [/*EFramework.astro,*/ BuildFW.nextjs].includes(config.build.framework)) {
             return false;
         }
 
@@ -402,7 +334,7 @@ export class Service extends Workspace {
             label: this.label,
         }, `Iniciando ejecución`);
 
-        const config = await this.config;
+        const {manifest: config} = await this.config;
 
         this.ejecucion = spawn("yarn", ["run", this.nombre, "run", "devel"], {
             cwd: this.root,
@@ -454,7 +386,7 @@ export class Service extends Workspace {
                     });
                 }, 30000);
             } else {
-                if (config.cronjob) {
+                if (config.deploy.cronjob) {
                     Log.info({
                         type: Log.label_ejecutar,
                         label: this.label,

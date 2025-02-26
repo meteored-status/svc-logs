@@ -1,12 +1,12 @@
-import {ERuntime} from "../src/mrpack/clases/workspace/service";
+import {Runtime} from "../manifest/workspace/deployment";
 
 export class Target {
     /* STATIC */
-    public static build(runtime: ERuntime): string|string[] {
+    public static build(runtime: Runtime): string|string[] {
         switch (runtime) {
-            case ERuntime.node:
+            case Runtime.node:
                 return 'node';
-            case ERuntime.browser:
+            case Runtime.browser:
                 return ["web", "es5"];
             default:
                 throw new Error(`Runtime no soportado: ${runtime}`);

@@ -28,6 +28,7 @@ COPY ./framework/services-comun/next.config.js ./${RUTA}/${WS}/next.config.base.
 COPY ./framework/services-comun/next.config.deps.js ./${RUTA}/${WS}
 COPY ./framework/services-comun/package.json ./framework/services-comun
 COPY ./${RUTA}/${WS}/next.config.js ./${RUTA}/${WS}
+COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/.next ./${RUTA}/${WS}/.next
 COPY ./${RUTA}/${WS}/public ./${RUTA}/${WS}/public

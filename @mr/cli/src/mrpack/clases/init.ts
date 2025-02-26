@@ -1,3 +1,6 @@
+import {BuildFW} from "@mr/cli/manifest/build";
+import {Manifest} from "@mr/cli/manifest";
+import {Runtime} from "@mr/cli/manifest/deployment";
 import {
     isDir,
     isFile,
@@ -11,30 +14,33 @@ import {md5 } from "services-comun/modules/utiles/hash";
 
 import {Colors} from "./colors";
 import {Comando} from "./comando";
-import {IPackageFW, PaqueteTipo} from "./paquete";
-import {EFramework, ERuntime, type IConfigService, type IConfigServices} from "./workspace/service";
+import type {IManifestLegacy} from "./manifest/workspace/legacy";
+import {type IPackageFW, PaqueteTipo} from "./paquete";
+import type {IPackageJson as IPackageJsonBase} from "./packagejson";
+import type {IConfigServices} from "./workspace/service";
 import {Framework} from "./framework";
-import type {IPackageJson} from "./service";
+import {ManifestWorkspaceLoader} from "./manifest/workspace";
 import {Yarn} from "./yarn";
 
-// import APP_DEPLOYMENT from "./init/app-deployment";
 import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
 import IGNORE from "./init/ignore";
-import SONARLINT from "./init/sonarlint";
+import {ManifestRootLoader} from "./manifest/root";
 
 interface IConfiguracion {
     openTelemetry: boolean;
     cambio: boolean;
 }
 
-// interface IModuloTraduccion {
-//     [modulo: string]: {
-//         include?: string[];
-//         exclude?: string[];
-//     };
-// }
+export interface IPackageJson extends IPackageJsonBase {
+    config?: IManifestLegacy;
+}
+
+interface IWorkspaces {
+    dir: string;
+    workspaces: string[];
+}
 
 export class Init {
     /* STATIC */
@@ -43,17 +49,14 @@ export class Init {
         console.group();
 
         await this.checkCliente(basedir);
-        const [cronjobs, services, scripts] = await this.initBase(basedir);
+        const workspaces = await this.initBase(basedir);
         await this.deleteFiles(basedir);
         await this.limpiarLegacy(basedir);
         await this.corregirGITs(basedir);
-        const config = this.reduceConfig([
-            await this.initCronjobs(basedir, cronjobs),
-            await this.initServices(basedir, services),
-            await this.initScripts(basedir, scripts),
-        ]);
 
-        await this.initConfig(basedir, cronjobs, services);
+        const config = await this.initWorkspaces(basedir, workspaces);
+        await this.initConfig(basedir, workspaces);
+
         const cambio = await this.initYarnRC(basedir, config);
 
         if (await isDir(`${basedir}/i18n`)) {
@@ -107,14 +110,14 @@ export class Init {
         console.groupEnd();
     }
 
-    private static async initBase(basedir: string): Promise<[string[], string[], string[]]> {
+    private static async initBase(basedir: string): Promise<IWorkspaces[]> {
         console.log(Colors.colorize([Colors.FgWhite], "Inicializando proyecto"));
         console.group();
         const cronjobs: string[] = [];
         const services: string[] = [];
         const scripts: string[] = [];
 
-        const paquete = await readJSON<IPackageJson>(`${basedir}/package.json`);
+        const paquete = await readJSON<IPackageJsonBase>(`${basedir}/package.json`);
         paquete.scripts = {
             // "mrlang": "yarn workspace @mr/cli mrlang",
             // "mrpack": "yarn workspace @mr/cli mrpack",
@@ -216,87 +219,38 @@ export class Init {
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
         await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
         await safeWrite(`${basedir}/.node-version`, "lts-latest\n", true);
-        await safeWrite(`${basedir}/.sonarcloud.properties`, SONARLINT, true);
+        if (await isFile(`${basedir}/.sonarcloud.properties`)) {
+            await unlink(`${basedir}/.sonarcloud.properties`);
+        }
         await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
 
-        // if (await isDir(`${basedir}/statics/translation`)) {
-        //     await this.migrarTraducciones(basedir);
-        //     paquete.scripts["i18n"] = "yarn workspace i18n";
-        //     await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-        // }
+        await this.checkRootManifest(basedir);
 
         if (!bin) {
             await Yarn.install(basedir, {verbose:false});
         }
 
+        // todo inicializar el manifest de Root
+
         console.groupEnd();
-        return [cronjobs, services, scripts];
+
+        return [
+            {
+                dir: "cronjobs",
+                workspaces: cronjobs,
+            }, {
+                dir: "services",
+                workspaces: services,
+            }, {
+                dir: "scripts",
+                workspaces: scripts,
+            },
+        ];
     }
 
-    // private static async migrarTraducciones(basedir: string): Promise<void> {
-    //     console.log(Colors.colorize([Colors.FgYellow], "Migrando traducciones"));
-    //     const {status, stdout, stderr} = await Comando.spawn("yarn", ["workspace", "services-comun", "mrlang", "init"], {cwd: basedir});
-    //     console.log(stdout);
-    //     console.error(stderr);
-    //     if (status!=0) {
-    //         return Promise.reject("Error al migrar traducciones");
-    //     }
-    //
-    //     if (await isDir(`${basedir}/statics`)) {
-    //         for (const workspace of await readDir(`${basedir}/statics`)) {
-    //             const json = `${basedir}/statics/${workspace}/json`;
-    //             if (await isDir(json)) {
-    //                 for (const modulo of await readDir(json)) {
-    //                     if (await isDir(`${json}/${modulo}`)) {
-    //                         await rename(`${json}/${modulo}`, `${basedir}/i18n/.json/${modulo}`);
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //
-    //     console.log(Colors.colorize([Colors.FgGreen], "Actualizando /i18n/package.json"));
-    //     const paquete = await readJSON<{ config: IPackageConfig }>(`${basedir}/i18n/package.json`).catch(()=>({config: {langs: soportados, modulos: {}}}));
-    //     await this.parseModulosTraduccion(paquete.config.modulos, `${basedir}/i18n/.json`);
-    //     await safeWrite(`${basedir}/i18n/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-    //
-    //     console.log(Colors.colorize([Colors.FgGreen], "Borrando directorios antiguos"));
-    //     await rmdir(`${basedir}/statics`);
-    //     if (await isDir(`${basedir}/framework/services-translation`)) {
-    //         await rmdir(`${basedir}/framework/services-translation`);
-    //     }
-    //
-    //     await Yarn.install(basedir, {optimize: false});
-    // }
-
-    // private static async parseModulosTraduccion(modulos: IModuloTraduccion, basedir: string, padre?: string): Promise<void> {
-    //     const files = await readDir(basedir);
-    //     for (const file of files) {
-    //         if (!await isDir(`${basedir}/${file}`)) {
-    //             continue;
-    //         }
-    //
-    //         const id = padre?`${padre}.${file}`:file;
-    //         let include: string[]|undefined;
-    //         let exclude: string[];
-    //         if (await isFile(`${basedir}/${file}/include.json`)) {
-    //             include = await readJSON<string[]>(`${basedir}/${file}/include.json`);
-    //             await rmdir(`${basedir}/${file}/include.json`);
-    //         }
-    //         if (await isFile(`${basedir}/${file}/exclude.json`)) {
-    //             exclude = await readJSON<string[]>(`${basedir}/${file}/exclude.json`);
-    //             await rmdir(`${basedir}/${file}/exclude.json`);
-    //         } else {
-    //             exclude = [];
-    //         }
-    //         modulos[id] = {
-    //             include,
-    //             exclude,
-    //         };
-    //
-    //         await this.parseModulosTraduccion(modulos, `${basedir}/${file}`, id);
-    //     }
-    // }
+    private static async checkRootManifest(basedir: string): Promise<void> {
+        await new ManifestRootLoader(basedir).load();
+    }
 
     private static async deleteFiles(basedir: string): Promise<void> {
         console.log(Colors.colorize([Colors.FgWhite], "Revisando archivos innecesarios"));
@@ -420,437 +374,208 @@ export class Init {
         }
     }
 
-    private static async initServices(basedir: string, workspaces: string[]): Promise<IConfiguracion> {
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando servicios"));
-        console.group();
+    private static async loadConfig(basedir: string): Promise<{paquete: IPackageJson, config: Manifest}> {
+        const paquete = await readJSON<IPackageJson>(`${basedir}/package.json`);
+        let config: ManifestWorkspaceLoader;
+        if (paquete.config!=undefined) {
+            config = new ManifestWorkspaceLoader(basedir).fromLegacy(paquete.config);
+            await config.save();
+            delete paquete.config;
+            await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+        } else {
+            config = await new ManifestWorkspaceLoader(basedir).load();
+        }
 
-        const config = this.reduceConfig(await Promise.all(workspaces.map(workspace=>this.initService(basedir, workspace))));
-
-        console.groupEnd();
-        return config;
+        return {paquete, config: config.manifest};
     }
 
-    private static async initService(basedir: string, workspace: string): Promise<IConfiguracion> {
+    private static checkScripts(config: Manifest, scripts: Record<string, string>): void {
+        switch(config.build.framework) {
+            case BuildFW.meteored:
+                switch(config.deploy.runtime) {
+                    case Runtime.cfworker:
+                        scripts["packd"] = `yarn tsc --noemit --watch`;
+                        scripts["devel"] = "wrangler dev --remote --env test";
+                        break;
+                    case Runtime.node:
+                        scripts["packd"] = `yarn g:packd`;
+                        if (!config.deploy.cronjob) {
+                            scripts["devel"] = "yarn g:devel";
+                        } else {
+                            scripts["devel"] = "yarn node --no-warnings devel.js";
+                        }
+                        break;
+                    default:
+                        scripts["packd"] = `yarn g:packd`;
+                        break;
+                }
+                break;
+
+            case BuildFW.nextjs:
+                scripts["dev"] ??= "yarn run next dev -- -p 8080";
+                break;
+        }
+    }
+
+    private static checkDependencies(config: Manifest, dependencies: Record<string, string>, devDependencies: Record<string, string>, defecto: Record<string, string>): boolean {
+        let openTelemetry = false;
+        if (devDependencies["tslib"]!=undefined) {
+            dependencies["tslib"] = devDependencies["tslib"];
+            delete devDependencies["tslib"];
+        } else if (dependencies["tslib"]==undefined) {
+            dependencies["tslib"] = "*";
+        }
+
+        if (config.build.framework!=BuildFW.nextjs) {
+            dependencies["source-map-support"] ??= defecto["source-map-support"]??"*";
+
+            for (const [lib, version] of Object.entries(defecto)) {
+                if (dependencies[lib] != undefined) {
+                    dependencies[lib] = version;
+                }
+                if (devDependencies[lib] != undefined) {
+                    devDependencies[lib] = version;
+                }
+            }
+            if (!config.deploy.cronjob) {
+                dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= defecto["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
+                dependencies["@opentelemetry/api"] ??= defecto["@opentelemetry/api"]??"*";
+                dependencies["@opentelemetry/core"] ??= defecto["@opentelemetry/core"]??"*";
+                dependencies["@opentelemetry/instrumentation"] ??= defecto["@opentelemetry/instrumentation"]??"*";
+                dependencies["@opentelemetry/instrumentation-http"] ??= defecto["@opentelemetry/instrumentation-http"]??"*";
+                dependencies["@opentelemetry/resources"] ??= defecto["@opentelemetry/resources"]??"*";
+                dependencies["@opentelemetry/sdk-trace-base"] ??= defecto["@opentelemetry/sdk-trace-base"]??"*";
+                dependencies["@opentelemetry/sdk-trace-node"] ??= defecto["@opentelemetry/sdk-trace-node"]??"*";
+                dependencies["@opentelemetry/semantic-conventions"] ??= defecto["@opentelemetry/semantic-conventions"]??"*";
+                dependencies["chokidar"] ??= defecto["chokidar"]??"*";
+                dependencies["hexoid"] ??= defecto["hexoid"]??"*";
+                devDependencies["formidable"] ??= defecto["formidable"]??"*";
+
+                if (dependencies["@google-cloud/trace-agent"] != undefined) {
+                    delete dependencies["@google-cloud/trace-agent"];
+                }
+                if (dependencies["@opentelemetry/context-async-hooks"] != undefined) {
+                    delete dependencies["@opentelemetry/context-async-hooks"];
+                }
+                if (dependencies["formidable"] != undefined) {
+                    delete dependencies["formidable"];
+                }
+
+                openTelemetry = true;
+            }
+
+            if (devDependencies["source-map-support"] != undefined) {
+                delete devDependencies["source-map-support"];
+            }
+        }
+
+        return openTelemetry;
+    }
+
+    public static async checkFiles(config: Manifest, basedir: string): Promise<void> {
+        if (config.deploy.runtime==Runtime.node && config.build.framework!=BuildFW.nextjs) {
+            await Promise.all([
+                safeWrite(`${basedir}/app.js`, APP, true),
+                safeWrite(`${basedir}/devel.js`, DEVEL, true),
+                safeWrite(`${basedir}/init.js`, ``, false),
+            ]);
+        }
+
+        if (await isFile(`${basedir}/output/.foreverignore`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/.foreverignore`));
+            await unlink(`${basedir}/output/.foreverignore`);
+        }
+        if (await isFile(`${basedir}/output/devel.js`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/devel.js`));
+            await unlink(`${basedir}/output/devel.js`);
+        }
+        if (await isFile(`${basedir}/output/devel.js.map`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/devel.js.map`));
+            await unlink(`${basedir}/output/devel.js.map`);
+        }
+        if (await isFile(`${basedir}/pack.js`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/pack.js`));
+            await unlink(`${basedir}/pack.js`);
+        }
+
+        if (await isFile(`${basedir}/Dockerfile`)) {
+            let contenido = await readFileString(`${basedir}/Dockerfile`);
+            let cambio = false;
+            if (contenido.includes("ARG ws") && !contenido.includes("ARG RUTA")) {
+                contenido = contenido.replace("ARG ws", "ARG RUTA\nARG WS");
+                contenido = contenido.replaceAll("/services/", "/${RUTA}/")
+                contenido = contenido.replaceAll("${ws}", "${WS}")
+                cambio = true;
+            }
+            if (!contenido.includes("COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}")) {
+                contenido = contenido.replace("COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}", "COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}\nCOPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}");
+                cambio = true;
+            }
+            if (cambio) {
+                console.log(Colors.colorize([Colors.FgYellow], `Corrigiendo ${basedir}/Dockerfile`));
+                await safeWrite(`${basedir}/Dockerfile`, contenido, true);
+            }
+        }
+    }
+
+    private static async initWorkspace(basedir: string, dependenciesDefecto: Record<string, string>): Promise<IConfiguracion> {
         const salida: IConfiguracion = {
             openTelemetry: false,
             cambio: false,
         };
 
-        const {devDependencies: paquetePropio={}} = await readJSON<IPackageJson>(`${basedir}/framework/services-comun/package.json`);
-        const paquete = await readJSON(`${basedir}/services/${workspace}/package.json`);
+        const {paquete, config} = await this.loadConfig(basedir);
         const hash = md5(JSON.stringify(paquete));
-        paquete.config ??= {};
-        if (paquete.config.nextjs!==undefined && typeof paquete.config.nextjs!=="object") {
-            paquete.config.nextjs = {};
-        }
-        const nextjs = paquete.config.nextjs ?? {};
-        const resources = paquete.config.resources??paquete.resources??false;
+        if (config.enabled) {
+            paquete.version = "0000.00.00-000";
+            this.checkScripts(config, paquete.scripts ??= {});
 
-        const config: Partial<IConfigService> = {};
-        config.cronjob = paquete.config.cronjob??paquete.cronjob??false;
-        config.devel = paquete.config.devel??paquete.devel??true;
-        config.deploy = paquete.config.deploy??true;
-        config.generar = paquete.config.generar??paquete.generar??false;
-        config.imagen = paquete.config.imagen;//??"node:lts-alpine";
-        config.unico = paquete.config.unico??paquete.unico??false;
-
-        config.deps = paquete.config.deps??[];
-        const storage = paquete.config.storage??paquete.storage;
-        if (Array.isArray(storage)) {
-            if (storage.length>0) {
-                config.storage = {
-                    buckets: storage,
-                };
-            }
-        } else {
-            config.storage = paquete.config.storage;
-        }
-
-        config.runtime = paquete.config.runtime??(!resources?ERuntime.node:ERuntime.browser);
-        if (paquete.config.framework!==undefined) {
-            config.framework = paquete.config.framework;
-        } else if (!nextjs.enabled) {
-            config.framework = EFramework.meteored;
-        } else {
-            config.framework = EFramework.nextjs;
-        }
-        config.kustomize = paquete.config.kustomize??"services";
-        if (paquete.config.credenciales!==undefined) {
-            config.credenciales = paquete.config.credenciales;
-        } else {
-            config.credenciales = nextjs.credenciales??[];
-        }
-        config.database = paquete.config.database;
-        config.bundle = paquete.config.bundle??{};
-
-        paquete.config = config;
-
-        if (paquete.nodemonConfig!=undefined) {
-            delete paquete.nodemonConfig;
-        }
-
-        if (paquete.config.generar) {
-            paquete.scripts ??= {};
-            switch(paquete.config.framework) {
-                case EFramework.meteored:
-                    switch(config.runtime) {
-                        case ERuntime.cfworker:
-                            paquete.scripts.packd = `yarn tsc --noemit --watch`;
-                            paquete.scripts.devel = "wrangler dev --remote --env test";
-                            break;
-                        case ERuntime.node:
-                            paquete.scripts.packd = `yarn g:packd`;
-                            if (!paquete.config.cronjob) {
-                                paquete.scripts.devel = "yarn g:devel";
-                            } else {
-                                paquete.scripts.devel = "yarn node --no-warnings devel.js";
-                            }
-                            paquete.version = "0000.00.00-000";
-                            break;
-                        default:
-                            paquete.scripts.packd = `yarn g:packd`;
-                            break;
-                    }
-                    break;
-
-                // case EFramework.astro:
-                //     paquete.scripts.build ??= "astro build";
-                //     paquete.scripts.dev ??= "astro dev";
-                //     paquete.scripts.preview ??= "astro preview";
-                //     paquete.scripts.start ??= "astro start";
-                //     break;
-
-                case EFramework.nextjs:
-                    paquete.scripts.dev ??= "yarn run next dev -- -p 8080";
-                    break;
-            }
-
-            if (config.runtime==ERuntime.node) {
-                paquete.dependencies??={};
-                paquete.devDependencies??={};
-
-                if (paquete.devDependencies["tslib"]!=undefined) {
-                    paquete.dependencies["tslib"] = paquete.devDependencies["tslib"];
-                    delete paquete.devDependencies["tslib"];
-                } else if (paquete.dependencies["tslib"]==undefined) {
-                    paquete.dependencies["tslib"] = "*";
+            if (config.deploy.runtime==Runtime.node) {
+                salida.openTelemetry = this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
+                if (Object.keys(paquete.dependencies).length==0) {
+                    delete paquete.dependencies;
                 }
-
-                if (config.framework!=EFramework.nextjs) {
-                    // const hash=`${md5(JSON.stringify(paquete.dependencies))}${md5(JSON.stringify(paquete.devDependencies))}`;
-
-                    paquete.dependencies["source-map-support"] ??= paquetePropio["source-map-support"]??"*";
-
-                    for (const [lib, version] of Object.entries(paquetePropio)) {
-                        if (paquete.dependencies[lib]!=undefined) {
-                            paquete.dependencies[lib] = version;
-                        }
-                        if (paquete.devDependencies[lib]!=undefined) {
-                            paquete.devDependencies[lib] = version;
-                        }
-                    }
-                    if (!config.cronjob) {
-                        paquete.dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= paquetePropio["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
-                        paquete.dependencies["@opentelemetry/api"] ??= paquetePropio["@opentelemetry/api"]??"*";
-                        paquete.dependencies["@opentelemetry/core"] ??= paquetePropio["@opentelemetry/core"]??"*";
-                        paquete.dependencies["@opentelemetry/instrumentation"] ??= paquetePropio["@opentelemetry/instrumentation"]??"*";
-                        paquete.dependencies["@opentelemetry/instrumentation-http"] ??= paquetePropio["@opentelemetry/instrumentation-http"]??"*";
-                        paquete.dependencies["@opentelemetry/resources"] ??= paquetePropio["@opentelemetry/resources"]??"*";
-                        paquete.dependencies["@opentelemetry/sdk-trace-base"] ??= paquetePropio["@opentelemetry/sdk-trace-base"]??"*";
-                        paquete.dependencies["@opentelemetry/sdk-trace-node"] ??= paquetePropio["@opentelemetry/sdk-trace-node"]??"*";
-                        paquete.dependencies["@opentelemetry/semantic-conventions"] ??= paquetePropio["@opentelemetry/semantic-conventions"]??"*";
-                        paquete.dependencies["chokidar"] ??= paquetePropio["chokidar"]??"*";
-                        paquete.dependencies["hexoid"] ??= paquetePropio["hexoid"]??"*";
-                        paquete.devDependencies["formidable"] ??= paquetePropio["formidable"]??"*";
-
-                        if (paquete.dependencies["@google-cloud/trace-agent"] !== undefined) {
-                            delete paquete.dependencies["@google-cloud/trace-agent"];
-                        }
-                        if (paquete.dependencies["@opentelemetry/context-async-hooks"] !== undefined) {
-                            delete paquete.dependencies["@opentelemetry/context-async-hooks"];
-                        }
-                        if (paquete.dependencies["formidable"] !== undefined) {
-                            delete paquete.dependencies["formidable"];
-                        }
-
-                        salida.openTelemetry = true;
-                    }
-
-                    if (paquete.devDependencies["source-map-support"]!==undefined) {
-                        delete paquete.devDependencies["source-map-support"];
-                    }
-
-                    if (Object.keys(paquete.dependencies).length==0) {
-                        delete paquete.dependencies;
-                    }
-                    if (Object.keys(paquete.devDependencies).length==0) {
-                        delete paquete.devDependencies;
-                    }
+                if (Object.keys(paquete.devDependencies).length==0) {
+                    delete paquete.devDependencies;
                 }
             }
 
-            await safeWrite(`${basedir}/services/${workspace}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+            await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
         }
 
-        if (config.runtime==ERuntime.node && config.framework!=EFramework.nextjs) {
-            await Promise.all([
-                safeWrite(`${basedir}/services/${workspace}/app.js`, APP, true),
-                safeWrite(`${basedir}/services/${workspace}/devel.js`, DEVEL, true),
-                safeWrite(`${basedir}/services/${workspace}/init.js`, ``, false),
-            ]);
-        }
-
-        if (await isFile(`${basedir}/services/${workspace}/output/.foreverignore`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/services/${workspace}/output/.foreverignore`));
-            await unlink(`${basedir}/services/${workspace}/output/.foreverignore`);
-        }
-        if (await isFile(`${basedir}/services/${workspace}/output/devel.js`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/services/${workspace}/output/devel.js`));
-            await unlink(`${basedir}/services/${workspace}/output/devel.js`);
-        }
-        if (await isFile(`${basedir}/services/${workspace}/output/devel.js.map`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/services/${workspace}/output/devel.js.map`));
-            await unlink(`${basedir}/services/${workspace}/output/devel.js.map`);
-        }
-        if (await isFile(`${basedir}/services/${workspace}/pack.js`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/services/${workspace}/pack.js`));
-            await unlink(`${basedir}/services/${workspace}/pack.js`);
-        }
+        await this.checkFiles(config, `${basedir}`);
 
         salida.cambio = hash!=md5(JSON.stringify(paquete));
 
         return salida;
     }
 
-    private static async initCronjobs(basedir: string, workspaces: string[]): Promise<IConfiguracion> {
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando cronjobs"));
+    private static async initWorkspaces(basedir: string, workspaces: IWorkspaces[]): Promise<IConfiguracion> {
+        console.log(Colors.colorize([Colors.FgWhite], "Inicializando workspaces"));
         console.group();
 
-        const config = this.reduceConfig(await Promise.all(workspaces.map(workspace=>this.initCronjob(basedir, workspace))));
+        const {devDependencies: paquetePropio={}} = await readJSON<IPackageJsonBase>(`${basedir}/framework/services-comun/package.json`);
+
+        const promesas: Promise<IConfiguracion>[] = [];
+        for (const carpeta of workspaces) {
+            for (const workspace of carpeta.workspaces) {
+                promesas.push(this.initWorkspace(`${basedir}/${carpeta.dir}/${workspace}`, paquetePropio));
+            }
+        }
+
+        const config = this.reduceConfig(await Promise.all(promesas));
 
         console.groupEnd();
         return config;
     }
 
-    private static async initCronjob(basedir: string, workspace: string): Promise<IConfiguracion> {
-        const salida: IConfiguracion = {
-            openTelemetry: false,
-            cambio: false,
-        };
-
-        const {devDependencies: paquetePropio={}} = await readJSON<IPackageJson>(`${basedir}/framework/services-comun/package.json`);
-        const paquete = await readJSON(`${basedir}/cronjobs/${workspace}/package.json`);
-        const hash = md5(JSON.stringify(paquete));
-        paquete.config ??= {};
-        if (paquete.config.nextjs!==undefined && typeof paquete.config.nextjs!=="object") {
-            paquete.config.nextjs = {};
-        }
-        const nextjs = paquete.config.nextjs ?? {};
-        const resources = paquete.config.resources??paquete.resources??false;
-
-        const config: Partial<IConfigService> = {};
-        config.cronjob = paquete.config.cronjob??paquete.cronjob??true;
-        config.devel = paquete.config.devel??paquete.devel??true;
-        config.deploy = paquete.config.deploy??true;
-        config.generar = paquete.config.generar??paquete.generar??false;
-        config.imagen = paquete.config.imagen;//??"node:lts-alpine";
-        config.unico = paquete.config.unico??paquete.unico??false;
-
-        config.deps = paquete.config.deps??[];
-        const storage = paquete.config.storage??paquete.storage;
-        if (Array.isArray(storage)) {
-            if (storage.length>0) {
-                config.storage = {
-                    buckets: storage,
-                };
-            }
-        } else {
-            config.storage = paquete.config.storage;
-        }
-
-        config.runtime = paquete.config.runtime??(!resources?ERuntime.node:ERuntime.browser);
-        if (paquete.config.framework!==undefined) {
-            config.framework = paquete.config.framework;
-        } else if (!nextjs.enabled) {
-            config.framework = EFramework.meteored;
-        } else {
-            config.framework = EFramework.nextjs;
-        }
-        config.kustomize = paquete.config.kustomize??"services";
-        if (paquete.config.credenciales!==undefined) {
-            config.credenciales = paquete.config.credenciales;
-        } else {
-            config.credenciales = nextjs.credenciales??[];
-        }
-        config.database = paquete.config.database;
-        config.bundle = paquete.config.bundle??{};
-
-        paquete.config = config;
-
-        if (paquete.nodemonConfig!=undefined) {
-            delete paquete.nodemonConfig;
-        }
-
-        if (paquete.config.generar) {
-            paquete.scripts ??= {};
-            switch(paquete.config.framework) {
-                case EFramework.meteored:
-                    switch(config.runtime) {
-                        case ERuntime.cfworker:
-                            paquete.scripts.packd = `yarn tsc --noemit --watch`;
-                            paquete.scripts.devel = "wrangler dev --remote --env test";
-                            break;
-                        case ERuntime.node:
-                            paquete.scripts.packd = `yarn g:packd`;
-                            if (!paquete.config.cronjob) {
-                                paquete.scripts.devel = "yarn g:devel";
-                            } else {
-                                paquete.scripts.devel = "yarn node --no-warnings devel.js";
-                            }
-                            paquete.version = "0000.00.00-000";
-                            break;
-                        default:
-                            paquete.scripts.packd = `yarn g:packd`;
-                            break;
-                    }
-                    break;
-
-                // case EFramework.astro:
-                //     paquete.scripts.build ??= "astro build";
-                //     paquete.scripts.dev ??= "astro dev";
-                //     paquete.scripts.preview ??= "astro preview";
-                //     paquete.scripts.start ??= "astro start";
-                //     break;
-
-                case EFramework.nextjs:
-                    paquete.scripts.dev ??= "yarn run next dev -- -p 8080";
-                    break;
-            }
-
-            if (config.runtime==ERuntime.node) {
-                paquete.dependencies??={};
-                paquete.devDependencies??={};
-
-                if (paquete.devDependencies["tslib"]!=undefined) {
-                    paquete.dependencies["tslib"] = paquete.devDependencies["tslib"];
-                    delete paquete.devDependencies["tslib"];
-                } else if (paquete.dependencies["tslib"]==undefined) {
-                    paquete.dependencies["tslib"] = "*";
-                }
-
-                if (config.framework!=EFramework.nextjs) {
-                    // const hash=`${md5(JSON.stringify(paquete.dependencies))}${md5(JSON.stringify(paquete.devDependencies))}`;
-
-                    paquete.dependencies["source-map-support"] ??= paquetePropio["source-map-support"]??"*";
-
-                    for (const [lib, version] of Object.entries(paquetePropio)) {
-                        if (paquete.dependencies[lib]!=undefined) {
-                            paquete.dependencies[lib] = version;
-                        }
-                        if (paquete.devDependencies[lib]!=undefined) {
-                            paquete.devDependencies[lib] = version;
-                        }
-                    }
-                    if (!config.cronjob) {
-                        paquete.dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= paquetePropio["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
-                        paquete.dependencies["@opentelemetry/api"] ??= paquetePropio["@opentelemetry/api"]??"*";
-                        paquete.dependencies["@opentelemetry/core"] ??= paquetePropio["@opentelemetry/core"]??"*";
-                        paquete.dependencies["@opentelemetry/instrumentation"] ??= paquetePropio["@opentelemetry/instrumentation"]??"*";
-                        paquete.dependencies["@opentelemetry/instrumentation-http"] ??= paquetePropio["@opentelemetry/instrumentation-http"]??"*";
-                        paquete.dependencies["@opentelemetry/resources"] ??= paquetePropio["@opentelemetry/resources"]??"*";
-                        paquete.dependencies["@opentelemetry/sdk-trace-base"] ??= paquetePropio["@opentelemetry/sdk-trace-base"]??"*";
-                        paquete.dependencies["@opentelemetry/sdk-trace-node"] ??= paquetePropio["@opentelemetry/sdk-trace-node"]??"*";
-                        paquete.dependencies["@opentelemetry/semantic-conventions"] ??= paquetePropio["@opentelemetry/semantic-conventions"]??"*";
-                        paquete.dependencies["chokidar"] ??= paquetePropio["chokidar"]??"*";
-                        paquete.dependencies["hexoid"] ??= paquetePropio["hexoid"]??"*";
-                        paquete.devDependencies["formidable"] ??= paquetePropio["formidable"]??"*";
-
-                        if (paquete.dependencies["@google-cloud/trace-agent"] !== undefined) {
-                            delete paquete.dependencies["@google-cloud/trace-agent"];
-                        }
-                        if (paquete.dependencies["@opentelemetry/context-async-hooks"] !== undefined) {
-                            delete paquete.dependencies["@opentelemetry/context-async-hooks"];
-                        }
-                        if (paquete.dependencies["formidable"] !== undefined) {
-                            delete paquete.dependencies["formidable"];
-                        }
-
-                        salida.openTelemetry = true;
-                    }
-
-                    if (paquete.devDependencies["source-map-support"]!==undefined) {
-                        delete paquete.devDependencies["source-map-support"];
-                    }
-
-                    if (Object.keys(paquete.dependencies).length==0) {
-                        delete paquete.dependencies;
-                    }
-                    if (Object.keys(paquete.devDependencies).length==0) {
-                        delete paquete.devDependencies;
-                    }
-                }
-            }
-
-            await safeWrite(`${basedir}/cronjobs/${workspace}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-        }
-
-        if (config.runtime==ERuntime.node && config.framework!=EFramework.nextjs) {
-            await Promise.all([
-                safeWrite(`${basedir}/cronjobs/${workspace}/app.js`, APP, true),
-                safeWrite(`${basedir}/cronjobs/${workspace}/devel.js`, DEVEL, true),
-                safeWrite(`${basedir}/cronjobs/${workspace}/init.js`, ``, false),
-            ]);
-        }
-
-        if (await isFile(`${basedir}/cronjobs/${workspace}/output/.foreverignore`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/output/.foreverignore`));
-            await unlink(`${basedir}/cronjobs/${workspace}/output/.foreverignore`);
-        }
-        if (await isFile(`${basedir}/cronjobs/${workspace}/output/devel.js`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/output/devel.js`));
-            await unlink(`${basedir}/cronjobs/${workspace}/output/devel.js`);
-        }
-        if (await isFile(`${basedir}/cronjobs/${workspace}/output/devel.js.map`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/output/devel.js.map`));
-            await unlink(`${basedir}/cronjobs/${workspace}/output/devel.js.map`);
-        }
-        if (await isFile(`${basedir}/cronjobs/${workspace}/pack.js`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/cronjobs/${workspace}/pack.js`));
-            await unlink(`${basedir}/cronjobs/${workspace}/pack.js`);
-        }
-
-        salida.cambio = hash!=md5(JSON.stringify(paquete));
-
-        return salida;
-    }
-
-    private static async initScripts(basedir: string, scripts: string[]): Promise<IConfiguracion> {
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando scripts"));
+    private static async initConfig(basedir: string, workspaces: IWorkspaces[]): Promise<void> {
+        console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración personal de workspaces"));
         console.group();
 
-        const config = this.reduceConfig(await Promise.all(scripts.map(script=>this.initScript(basedir, script))));
-
-        console.groupEnd();
-        return config;
-    }
-
-    private static async initScript(basedir: string, workspace: string): Promise<IConfiguracion> {
-        const paquete = await readJSON(`${basedir}/scripts/${workspace}/package.json`);
-        const hash = md5(JSON.stringify(paquete));
-        paquete.scripts ??= {};
-        paquete.scripts.packd = `yarn g:packd`;
-
-        await safeWrite(`${basedir}/scripts/${workspace}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-
-        return {
-            openTelemetry: false,
-            cambio: hash!=md5(JSON.stringify(paquete)),
-        };
-    }
-
-    private static async initConfig(basedir: string, cronjobs: string[], services: string[]): Promise<void> {
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración de workspaces"));
-        console.group();
+        function sort(a: string, b: string): number {
+            return a.localeCompare(b);
+        }
 
         const file = `${basedir}/config.workspaces.json`;
         const salida: IConfigServices = {
@@ -865,18 +590,24 @@ export class Init {
             i18n: true,
             services: {},
         };
+
+        const proyectos: string[] = [];
+        for (const carpeta of workspaces) {
+            proyectos.push(...carpeta.workspaces);
+        }
+
         if (await isFile(file)) {
             try {
                 const config = await readJSON<IConfigServices>(file);
-                salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual=>cronjobs.includes(actual) || services.includes(actual))??[]);
-                salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual=>cronjobs.includes(actual) || services.includes(actual))??[]);
+                salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
+                salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
                 salida.i18n = config.i18n??true;
                 salida.services = config.services??{};
             } catch (e) {
 
             }
         }
-        for (const actual of [...cronjobs, ...services]) {
+        for (const actual of proyectos) {
             if (!salida.devel.disabled.includes(actual)) {
                 salida.devel.available.push(actual);
             }
@@ -884,17 +615,14 @@ export class Init {
                 salida.packd.available.push(actual);
             }
         }
-        function sort(a: string, b: string): number {
-            return a.localeCompare(b);
-        }
 
-        salida.devel.available = salida.devel.available.toSorted(sort);
+        salida.devel.available.sort(sort);
         salida.devel.available.push("");
-        salida.devel.disabled = salida.devel.disabled.toSorted(sort);
+        salida.devel.disabled.sort(sort);
         salida.devel.disabled.push("");
-        salida.packd.available = salida.packd.available.toSorted(sort);
+        salida.packd.available.sort(sort);
         salida.packd.available.push("");
-        salida.packd.disabled = salida.packd.disabled.toSorted(sort);
+        salida.packd.disabled.sort(sort);
         salida.packd.disabled.push("");
 
         await safeWrite(file, JSON.stringify(salida, null, 2), true);

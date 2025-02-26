@@ -608,8 +608,8 @@ export const strip_tags = (text: string, allowed: string = '') => {
     });
 }
 
-export const fromEntities = (text: string) => {
-    return text.replace(new RegExp(`(${DECODED_ENTITIES.join('|')})`, 'g'), (entity:string) => {
+export const fromEntities = (text: string, exclude: string[] = []) => {
+    return text.replace(new RegExp(`(${DECODED_ENTITIES.filter(e => !exclude.includes(e)).join('|')})`, 'g'), (entity:string) => {
         const pos: number = DECODED_ENTITIES.indexOf(entity);
         if (pos >= 0) return ENCODED_ENTITIES[pos];
         return '';

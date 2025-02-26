@@ -1,11 +1,12 @@
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import webpack from "webpack";
 
-import {IConfigServiceComponentes} from "../src/mrpack/clases/workspace/service";
+import {type ManifestBuildComponentes, ManifestBuildComponentesCSS} from "../manifest/workspace/build/bundle/componentes";
 
 type TModule = webpack.Configuration['module'];
 
-interface IModuleConfig extends IConfigServiceComponentes {
+interface IModuleConfig {
+    componentes: ManifestBuildComponentes;
     desarrollo: boolean;
     test: boolean;
     rules?: string;
@@ -13,12 +14,12 @@ interface IModuleConfig extends IConfigServiceComponentes {
 
 export class Module {
     /* STATIC */
-    public static build({css, css_type, desarrollo, pug, test, rules}: IModuleConfig): TModule {
+    public static build({componentes, desarrollo, test, rules}: IModuleConfig): TModule {
         const salida: TModule = {
             rules: [],
         }
 
-        if (pug) {
+        if (componentes.pug) {
             salida.rules!.push({
                 test: /\.pug$/,
                 use: [
@@ -31,16 +32,16 @@ export class Module {
                 ],
             });
         }
-        if (css) {
+        if (componentes.css!=ManifestBuildComponentesCSS.DESACTIVADO) {
             salida.rules!.push({
                 test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
-                type: css_type==2?"asset/inline":"asset/resource",
+                type: componentes.css==ManifestBuildComponentesCSS.CRITICAL?"asset/inline":"asset/resource",
             });
             salida.rules!.push({
                 test: /\.css$/,
                 use: [
                     {
-                        loader: css_type==0?"style-loader":MiniCssExtractPlugin.loader,
+                        loader: componentes.css==ManifestBuildComponentesCSS.INYECTADO?"style-loader":MiniCssExtractPlugin.loader,
                     },
                     {
                         loader: "css-loader",
@@ -54,7 +55,7 @@ export class Module {
                 test: /\.s[ac]ss$/i,
                 use: [
                     {
-                        loader: css_type===0?"style-loader":MiniCssExtractPlugin.loader,
+                        loader: componentes.css==ManifestBuildComponentesCSS.INYECTADO?"style-loader":MiniCssExtractPlugin.loader,
                     },
                     {
                         loader: "css-loader",
@@ -68,7 +69,7 @@ export class Module {
                             // Prefer `dart-sass`
                             implementation: require.resolve("sass"),
                             sassOptions: {
-                                outputStyle: css_type===2||!desarrollo?"compressed":"expanded",
+                                outputStyle: componentes.css==ManifestBuildComponentesCSS.CRITICAL||!desarrollo?"compressed":"expanded",
                             },
                             sourceMap: test,
                         },

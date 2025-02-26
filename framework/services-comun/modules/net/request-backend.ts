@@ -8,8 +8,8 @@ import {RequestCache} from "./cache";
 import {PromiseDelayed} from "../utiles/promise";
 import {error} from "../utiles/log";
 import {RequestError} from "./request/error";
-
-export interface IncomingMessage extends IncomingMessageBase {}
+export interface IncomingMessage extends IncomingMessageBase {
+}
 
 export interface IRequest {
     auth?: string;
@@ -23,9 +23,10 @@ export interface IRequest {
     dominioAlternativo?: string;
 }
 
-export interface IRequestConfig extends Partial<IRequest> {}
+export interface IRequestConfig extends Partial<IRequest> {
+}
 
-export interface RequestResponse<T=any> {
+export interface RequestResponse<T = any> {
     data: T;
     headers: Headers;
     expires?: Date;
@@ -34,6 +35,7 @@ export interface RequestResponse<T=any> {
 export class BackendRequest {
     /* STATIC */
     public static CACHE: RequestCache = new RequestCacheDisk();
+
     protected static parseConfig(cfg?: IRequestConfig): IRequest {
         return {
             timeout: 1000,
@@ -49,7 +51,7 @@ export class BackendRequest {
         return {
             data: Buffer.from(await respuesta.arrayBuffer()),
             headers: respuesta.headers,
-            expires: expires!=null?new Date(expires):undefined,
+            expires: expires != null ? new Date(expires) : undefined,
         };
     }
 
@@ -94,11 +96,11 @@ export class BackendRequest {
         }));
     }
 
-    protected static async fetch<T, K=undefined>(url: string, init: RequestInit, headers: Headers, cfg: IRequestConfig, post?: K, retry: number = 0): Promise<RequestResponse<T>> {
+    protected static async fetch<T, K = undefined>(url: string, init: RequestInit, headers: Headers, cfg: IRequestConfig, post?: K, retry: number = 0): Promise<RequestResponse<T>> {
         const config = this.parseConfig(cfg);
-        let timeoutID: NodeJS.Timeout|undefined;
+        let timeoutID: NodeJS.Timeout | undefined;
         let abortado = false;
-        if (cfg.timeout!=undefined) {
+        if (cfg.timeout != undefined) {
             const timeout = new AbortController();
             timeoutID = setTimeout(() => {
                 timeout.abort();
@@ -109,26 +111,26 @@ export class BackendRequest {
             // init.signal = AbortSignal.timeout(cfg.timeout);
         }
 
-        if (config.auth!=undefined && !headers.has("Authorization")) {
+        if (config.auth != undefined && !headers.has("Authorization")) {
             headers.set("Authorization", config.auth);
         }
-        if (config.x_u_email!=undefined && !headers.has("x-u-email")) {
+        if (config.x_u_email != undefined && !headers.has("x-u-email")) {
             headers.set("x-u-email", config.x_u_email);
         }
         if (config.traceparent && !headers.has("traceparent")) {
             headers.set("traceparent", config.traceparent);
         }
-        if (post!=undefined) {
+        if (post != undefined) {
             init.method = "POST";
             init.cache = "no-cache";
             if (!headers.has("Content-Type")) {
-                if (cfg.contentType!=undefined) {
+                if (cfg.contentType != undefined) {
                     headers.set("Content-Type", cfg.contentType);
                 } else {
                     headers.set("Content-Type", "application/json");
                 }
             }
-            switch(headers.get("Content-Type")) {
+            switch (headers.get("Content-Type")) {
                 case "application/json":
                     init.body = JSON.stringify(post);
                     break;
@@ -143,7 +145,7 @@ export class BackendRequest {
                 ...init,
                 headers,
             });
-            if (timeoutID!=undefined) {
+            if (timeoutID != undefined) {
                 clearTimeout(timeoutID);
             }
             return await this.parseRespuesta(respuesta, config, url);
@@ -159,9 +161,9 @@ export class BackendRequest {
                 }));
             }
 
-            if (PRODUCCION && cfg.retryOnTimeout && retry<10) {
+            if (PRODUCCION && cfg.retryOnTimeout && retry < 10) {
                 retry++;
-                await PromiseDelayed(retry*1000);
+                await PromiseDelayed(retry * 1000);
                 return this.fetch<T, K>(url, init, headers, cfg, post, retry);
             }
 
@@ -194,7 +196,7 @@ export class BackendRequest {
         return cfg;
     }
 
-    protected static async get<T=undefined>(url: string, cfg: IRequestConfig={}): Promise<RequestResponse<T>> {
+    protected static async get<T = undefined>(url: string, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
         if (PRODUCCION) {
             return this.fetch<T>(url, {}, new Headers(), this.propagarContexto(cfg));
         }
@@ -202,7 +204,7 @@ export class BackendRequest {
         try {
             return await this.fetch<T>(url, {}, new Headers(), this.propagarContexto(cfg));
         } catch (err) {
-            if (!url.startsWith("http://localhost:") || cfg.dominioAlternativo==undefined) {
+            if (!url.startsWith("http://localhost:") || cfg.dominioAlternativo == undefined) {
                 return Promise.reject(err);
             }
 
@@ -214,14 +216,16 @@ export class BackendRequest {
     }
 
     private static TMP: NodeJS.Dict<Promise<RequestResponse>> = {};
-    protected static async getCache<T>(url: string, cfg: IRequestConfig={}): Promise<RequestResponse<T>> {
+
+    protected static async getCache<T>(url: string, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
         return this.TMP[url] ??= this.getCacheEjecutar<T>(url, cfg);
     }
-    protected static async getCacheEjecutar<T>(url: string, cfg: IRequestConfig={}): Promise<RequestResponse<T>> {
-        setTimeout(()=>{
+
+    protected static async getCacheEjecutar<T>(url: string, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
+        setTimeout(() => {
             delete this.TMP[url];
         }, 10000);
-        if (cfg.auth!=undefined) {
+        if (cfg.auth != undefined) {
             return this.get<T>(url, cfg);
         }
 
@@ -231,12 +235,13 @@ export class BackendRequest {
         } catch (err) {
             const salida = await this.get<T>(url, cfg);
             PromiseDelayed()
-                .then(async ()=>{
+                .then(async () => {
                     const data = Buffer.from(JSON.stringify(salida.data));
                     await this.CACHE.save(url, {
                         ...salida,
                         data,
-                    }).catch(()=>{});
+                    }).catch(() => {
+                    });
                 });
 
             return salida;
@@ -244,10 +249,10 @@ export class BackendRequest {
     }
 
     public static async getForward(url: string): Promise<IncomingMessage> {
-        return new Promise<IncomingMessage>((resolve)=> {
-            const requester = url.startsWith("https://")?https:http;
+        return new Promise<IncomingMessage>((resolve) => {
+            const requester = url.startsWith("https://") ? https : http;
             const traceparent = this.propagarContexto().traceparent;
-            const headers = traceparent!=undefined ? { traceparent } : {};
+            const headers = traceparent != undefined ? {traceparent} : {};
             requester.get(url, {
                 headers,
             }, (res) => {
@@ -270,7 +275,7 @@ export class BackendRequest {
                 buffer: true,
             });
         } catch (err) {
-            if (!url.startsWith("http://localhost:") || cfg?.dominioAlternativo==undefined) {
+            if (!url.startsWith("http://localhost:") || cfg?.dominioAlternativo == undefined) {
                 return Promise.reject(err);
             }
 
@@ -296,7 +301,7 @@ export class BackendRequest {
                 method: "POST",
             }, new Headers(), this.propagarContexto(cfg), post);
         } catch (err) {
-            if (!url.startsWith("http://localhost:") || cfg?.dominioAlternativo==undefined) {
+            if (!url.startsWith("http://localhost:") || cfg?.dominioAlternativo == undefined) {
                 return Promise.reject(err);
             }
 

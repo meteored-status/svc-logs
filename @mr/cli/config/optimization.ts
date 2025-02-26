@@ -1,7 +1,7 @@
 import TerserPlugin from "terser-webpack-plugin";
 import webpack from "webpack";
 
-import {ERuntime} from "../src/mrpack/clases/workspace/service";
+import {Runtime} from "../manifest/workspace/deployment";
 
 type TOptimization = webpack.Configuration['optimization'];
 
@@ -76,11 +76,11 @@ export class Optimization {
         };
     }
 
-    public static build(runtime: ERuntime, desarrollo: boolean): TOptimization {
+    public static build(runtime: Runtime, desarrollo: boolean): TOptimization {
         switch (runtime) {
-            case ERuntime.node:
+            case Runtime.node:
                 return this.buildNode(desarrollo);
-            case ERuntime.browser:
+            case Runtime.browser:
                 return this.buildBrowser(desarrollo);
             default:
                 throw new Error(`Runtime no soportado: ${runtime}`);

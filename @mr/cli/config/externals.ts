@@ -1,6 +1,6 @@
 import webpack from "webpack";
 
-import {ERuntime} from "../src/mrpack/clases/workspace/service";
+import {Runtime} from "../manifest/workspace/deployment";
 
 type TExternals = webpack.Configuration["externals"];
 
@@ -34,11 +34,11 @@ export class Externals {
         return {};
     }
 
-    public static build(runtime: ERuntime, dependencies: NodeJS.Dict<string>={}): TExternals {
+    public static build(runtime: Runtime, dependencies: NodeJS.Dict<string>={}): TExternals {
         switch (runtime) {
-            case ERuntime.node:
+            case Runtime.node:
                 return this.buildNode(dependencies);
-            case ERuntime.browser:
+            case Runtime.browser:
                 return this.buildBrowser();
             default:
                 throw new Error(`Runtime no soportado: ${runtime}`);
