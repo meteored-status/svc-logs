@@ -1,6 +1,5 @@
 import {Storage} from "@google-cloud/storage";
 import {spawn} from "node:child_process";
-import os from "node:os";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
 import {
@@ -187,12 +186,6 @@ export class Framework {
     }
 
     public static async pull(basedir: string, forzar: boolean): Promise<boolean> {
-        // if (os.platform()=="win32") {
-        //     console.log(Colors.colorize([Colors.FgRed], "Update de frameworks NO disponible actualmente en Windows"));
-        //     return false;
-        // }
-
-        // autoupdate
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Comprobando cliente"));
         console.group();
         const paquete = await Paquete.build(`${basedir}/@mr/cli`);
@@ -256,10 +249,6 @@ export class Framework {
     }
 
     public static async reset(basedir: string): Promise<void> {
-        if (os.platform()=="win32") {
-            console.log(Colors.colorize([Colors.FgRed], "Reset de frameworks NO disponible actualmente en Windows"));
-            return;
-        }
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Reseteando frameworks"));
         console.group();
 

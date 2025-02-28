@@ -162,7 +162,7 @@ export class Server {
                         conexion.iniciado();
                         Router.route(request_handlers, conexion).then(()=>{}).catch(()=>{});
                     } else {
-                        error("Error de request (parseando datos [formidable])", err);
+                        error("Error de request (parseando datos [formidable])", JSON.stringify(err), err);
                         conexion.error(500, err.message, err).then(()=>{}).catch(()=>{});
                     }
                 });

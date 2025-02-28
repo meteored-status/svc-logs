@@ -19,7 +19,7 @@ steps:
       - "@mr/cli/deployment/std/labels.sh"
     id: 'Labels'
     waitFor:
-      - '-'
+      - 'Descargas'
 
     #####
     # OBTENER TAGS

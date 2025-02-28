@@ -1,5 +1,6 @@
 import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage";
 import {type IManifestDeploymentCredenciales, ManifestDeploymentCredenciales} from "./credenciales";
+import {type IManifestDeploymentKustomize, ManifestDeploymentKustomize} from "./kustomize";
 
 export const enum Runtime {
     node = "node",
@@ -23,7 +24,7 @@ export interface IManifestDeployment {
     alone?: boolean; // si solo se ha de desplegar en una zona, solo aplicable a SERVICE/CRONJOB/JOB
     credenciales?: IManifestDeploymentCredenciales[]; // solo aplicable a SERVICE/CRONJOB/JOB
     imagen?: string; // solo aplicable a SERVICE/CRONJOB/JOB
-    kustomize?: string; // solo aplicable a SERVICE/CRONJOB/JOB
+    kustomize?: IManifestDeploymentKustomize; // solo aplicable a SERVICE/CRONJOB/JOB
     storage?: IManifestDeploymentStorage; // solo aplicable a BROWSER
 }
 
@@ -40,7 +41,7 @@ export class ManifestDeployment implements IManifestDeployment {
     public alone?: boolean;
     public credenciales?: ManifestDeploymentCredenciales[];
     public imagen?: string;
-    public kustomize?: string;
+    public kustomize?: ManifestDeploymentKustomize;
     public storage?: ManifestDeploymentStorage;
 
     public get cronjob(): boolean {
@@ -54,7 +55,7 @@ export class ManifestDeployment implements IManifestDeployment {
         this.alone = deploy.alone;
         this.credenciales = deploy.credenciales?.map(actual => ManifestDeploymentCredenciales.build(actual));
         this.imagen = deploy.imagen;
-        this.kustomize = deploy.kustomize;
+        this.kustomize = deploy.kustomize!=undefined ? ManifestDeploymentKustomize.build(deploy.kustomize) : undefined;
         this.storage = ManifestDeploymentStorage.build(deploy.storage);
     }
 
@@ -70,7 +71,7 @@ export class ManifestDeployment implements IManifestDeployment {
                 credenciales:
                 undefined,
             imagen: this.imagen,
-            kustomize: this.kustomize,
+            kustomize: this.kustomize?.toJSON(),
             storage: this.storage?.toJSON(),
         };
     }

@@ -4,44 +4,50 @@
 ##############################
 set -e
 
-if [[ -z "${_AUTORIZAR}" || "${_AUTORIZAR}" == "true" ]]; then
+source @mr/cli/deployment/std/aliases.sh
 
-  echo "Obteniendo IP"
-  IP=$(cat ip.txt)
+if [[ -f "DESPLEGAR.txt" ]]; then
+  if [[ -z "${_AUTORIZAR}" || "${_AUTORIZAR}" == "true" ]]; then
 
-  parseWorkspace() {
-    local IP="${1}"
-    local INDICE="${2}"
-    CLUSTER=$(./jq -r ".[${INDICE}].name" "entornos.json")
-    REGION=$(./jq -r ".[${INDICE}].zone" "entornos.json")
+    echo "Obteniendo IP"
+    IP=$(cat ip.txt)
 
-    echo "${CLUSTER}: Limpiando"
-    # LIMPIAMOS EL CLUSTER
-    OK=false
-    while [[ ${OK} != "true" ]]; do
-    #  IP=$(cat ip.txt)
-      IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | ./jq ".masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock | select(.!=\"${IP}/32\")" | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//' || "")
+    parseWorkspace() {
+      local IP="${1}"
+      local INDICE="${2}"
+      CLUSTER=$(confige ".[${INDICE}].name")
+      REGION=$(confige ".[${INDICE}].zone")
 
-      if [[ "${IPS}" == "" ]]; then
-        sleep $(( ( RANDOM % 5 )  + 1 ))
-        continue
-      fi
+      echo "${CLUSTER}: Limpiando"
+      # LIMPIAMOS EL CLUSTER
+      OK=false
+      while [[ ${OK} != "true" ]]; do
+      #  IP=$(cat ip.txt)
+        IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | jq ".masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock | select(.!=\"${IP}/32\")" | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//' || "")
 
-      echo "${CLUSTER}: Desautorizando IP"
-      gcloud container clusters update "${CLUSTER}" --region "${REGION}" --enable-master-authorized-networks --master-authorized-networks "${IPS}" || sleep $(( ( RANDOM % 5 )  + 1 ))
+        if [[ "${IPS}" == "" ]]; then
+          sleep $(( ( RANDOM % 5 )  + 1 ))
+          continue
+        fi
 
-      IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | ./jq '.masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock' | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//')
-      if [[ ! ${IPS} =~ ${IP} ]]; then
-        OK=true
-      else
-        sleep $(( ( RANDOM % 5 )  + 1 ))
-      fi
-    done
-  }
-  export -f parseWorkspace
+        echo "${CLUSTER}: Desautorizando IP"
+        gcloud container clusters update "${CLUSTER}" --region "${REGION}" --enable-master-authorized-networks --master-authorized-networks "${IPS}" || sleep $(( ( RANDOM % 5 )  + 1 ))
 
-  ./jq -r ". | keys | .[]" "entornos.json" | xargs -I '{}' -P 10 bash -c "parseWorkspace ${IP} {}"
+        IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | jq '.masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock' | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//')
+        if [[ ! ${IPS} =~ ${IP} ]]; then
+          OK=true
+        else
+          sleep $(( ( RANDOM % 5 )  + 1 ))
+        fi
+      done
+    }
+    export -f parseWorkspace
 
+    confige ". | keys | .[]" | xargs -I '{}' -P 10 bash -c "parseWorkspace ${IP} {}"
+
+  else
+    echo "No se necesita desautorizar la IP"
+  fi
 else
-  echo "No se necesita desautorizar la IP"
+    echo "Omitiendo desautorización"
 fi

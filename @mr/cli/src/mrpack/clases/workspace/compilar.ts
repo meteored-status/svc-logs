@@ -14,6 +14,7 @@ import {md5} from "services-comun/modules/utiles/hash";
 
 import {Comando} from "../comando";
 import {IPackageJson} from "../packagejson";
+import type {Manifest as ManifestRoot} from "../../../../manifest/root";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
 interface ITag {
@@ -75,7 +76,7 @@ export class Compilar {
         }
     }
 
-    public async pack(env: string, compilar?: Compilar): Promise<void> {
+    public async pack(env: string, manifest: ManifestRoot, compilar?: Compilar): Promise<void> {
         if (compilar!=undefined) {
             delete this.pendientes[compilar.name];
             const keys = Object.keys(this.pendientes);
@@ -86,35 +87,42 @@ export class Compilar {
         }
 
         if (!this.config.enabled || !this.config.deploy.enabled) {
+            await this.mantenerVersion(env, manifest);
+
             if (this.dependencias.length==0) {
                 console.log(this.name, "[OK   ]", "Servicio desactivado para despliegue");
                 return;
             }
 
             console.warn(this.name, "[WARN ]", "Servicio desactivado para despliegue. Hay servicios dependientes que podrían no generarse correctamente:", this.dependencias.map((dependencia)=>dependencia.name).join(", "));
-            return Promise.all(this.dependencias.map((dependencia)=>dependencia.pack(env, this))).then(()=>{});
+            return Promise.all(this.dependencias.map((dependencia)=>dependencia.pack(env, manifest, this))).then(()=>{});
         }
 
-        await this.prepararCredenciales();
+        if (manifest.deploy.build.enabled) {
+            await this.prepararCredenciales();
 
-        switch (this.config.build.framework) {
-            case BuildFW.meteored:
-                await this.packMeteored(env);
-                break;
-            case BuildFW.nextjs:
-                await this.packNextJS(env);
-                break;
+            switch (this.config.build.framework) {
+                case BuildFW.meteored:
+                    await this.packMeteored(env, manifest);
+                    break;
+                case BuildFW.nextjs:
+                    await this.packNextJS(env, manifest);
+                    break;
+            }
+            console.log(this.name, "[OK   ]", "Servicio compilado");
+        } else {
+            await this.mantenerVersion(env, manifest);
+            console.log(this.name, "[OK   ]", "Versión mantenida");
         }
-        console.log(this.name, "[OK   ]", "Servicio compilado");
 
         if (this.dependencias.length==0) {
             return;
         }
 
-        return Promise.all(this.dependencias.map((dependencia)=>dependencia.pack(env, this))).then(()=>{});
+        return Promise.all(this.dependencias.map((dependencia)=>dependencia.pack(env, manifest, this))).then(()=>{});
     }
 
-    private async packMeteored(env: string): Promise<void> {
+    private async packMeteored(env: string, manifest: ManifestRoot): Promise<void> {
         switch(this.config.deploy.runtime) {
             case Runtime.browser: {
                     await this.webpack(env);
@@ -150,11 +158,11 @@ export class Compilar {
                         `${this.dir}/app.js`,
                         `${this.dir}/assets`,
                     );
-                    await this.checkVersionService(env, checks);
+                    await this.checkVersionService(env, manifest, checks);
                 }
                 break;
             case Runtime.php: {
-                    await this.checkVersionService(env, [
+                    await this.checkVersionService(env, manifest, [
                         `${this.dir}/assets`,
                         `${this.dir}/base/nginx/local.conf`,
                         `${this.dir}/autoload.php`,
@@ -186,7 +194,7 @@ export class Compilar {
         }
     }
 
-    private async packNextJS(env: string): Promise<void> {
+    private async packNextJS(env: string, manifest: ManifestRoot): Promise<void> {
         const nodeEnv = env=="test" ? "test" : "production";
         if (await isFile(`${this.dir}/.env.${nodeEnv}.local`)) {
             await safeWrite(`${this.dir}/.env.local`, await readFileString(`${this.dir}/.env.${nodeEnv}.local`), true, true);
@@ -203,7 +211,7 @@ export class Compilar {
                 return Promise.reject();
             }
         }
-        await this.checkVersionService(env, [
+        await this.checkVersionService(env, manifest, [
             `${this.basedir}/.yarnrc.yml`,
             this.config.build.framework==BuildFW.nextjs?
                 `${this.dir}/.next/BUILD_ID`:
@@ -218,30 +226,47 @@ export class Compilar {
         ]);
     }
 
-    private async checkVersionService(env: string, checks: string[]): Promise<void> {
+    private async getVersion(latest: boolean): Promise<[string|undefined, string|undefined]> {
         const tags: string[] = [];
 
         if (await isFile(`${this.dir}/tags.json`)) {
-            let datos = await readJSON<ITag | ITag[]>(`${this.dir}/tags.json`).catch(() => undefined);
+            let datos = await readJSON<ITag | ITag[]>(`${this.dir}/${latest?"tags.json":"deployed.json"}`).catch(() => undefined);
             if (Array.isArray(datos)) {
                 datos = datos[0];
             }
             if (datos?.tags != undefined && Array.isArray(datos.tags)) {
-                tags.push(...datos.tags.filter((actual) => !["latest", "produccion", "test"].includes(actual)));
+                tags.push(...datos.tags.filter((actual) => !["latest", "produccion", "test", "deployed_produccion", "deployed_test"].includes(actual)));
             }
         }
 
-        let fecha: string|undefined;
-        let index: string|undefined;
-        let anterior: string|undefined;
+        let version: string|undefined;
+        let hash: string|undefined;
         for (const actual of tags) {
             const partes = /^(\d{4}\.\d{2}\.\d{2})-(\d{3,}).*$/.exec(actual);
             if (partes==null) {
-                anterior = actual;
+                hash = actual;
             } else {
-                fecha = partes[1];
-                index = partes[2];
+                version = `${partes[1]}-${partes[2]}`;
             }
+        }
+
+        return [version, hash];
+    }
+
+    private async mantenerVersion(env: string, manifest: ManifestRoot): Promise<void> {
+        const [version="0000.00.00-000", anterior=""] = await this.getVersion(manifest.deploy.run.latest);
+        await safeWrite(`${this.dir}/version.txt`, `${version}-${env}`, true, true);
+        await safeWrite(`${this.dir}/hash.txt`, anterior, true, true);
+    }
+
+    private async checkVersionService(env: string, manifest: ManifestRoot, checks: string[]): Promise<void> {
+        const [version, anterior] = await this.getVersion(true);
+        let fecha: string|undefined;
+        let index: string|undefined;
+        if (version!=undefined) {
+            const partes = version.split("-");
+            fecha = partes[0];
+            index = partes[1];
         }
 
         for (const actual of this.config.build.deps) {
@@ -264,7 +289,7 @@ export class Compilar {
         ).substring(0, 8);
         const md5Hash = `${hash}-${env}`;
 
-        if (fecha==undefined || index==undefined || anterior!=md5Hash) {
+        if (fecha==undefined || index==undefined || anterior!=md5Hash || manifest.deploy.build.force) {
             const date = new Date();
             const fechaActual = [
                 date.getUTCFullYear(),
