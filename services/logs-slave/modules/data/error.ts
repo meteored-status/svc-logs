@@ -37,6 +37,8 @@ export class LogError extends LogErrorBase {
         this.BULK.create({
             index: this.getIndex(documento.proyecto),
             doc: documento.toJSON(),
+        }).promise.catch((err) => {
+            console.error("Error al insertar log de error", err);  //TODO pintar en el status
         });
     }
 
