@@ -1,4 +1,18 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
+---
+## 2025.3.6+1
+
+### Changed
+- [Juan Carlos] Update de librerías:
+    - [mysql2](https://www.npmjs.com/package/mysql2) 3.13.0
+
+---
+## 2025.3.5+1
+
+### Changed
+- [Jose] Se ha añadido la opción `defaultLogsBucketBehavior` a la configuración de despliegue
+- [Jose] Se ha simplificado la configuración de despliegue
+- [Jose] Si no se encuentra información de kustomización, se ignora el workspace en lugar de generar un error
 
 ---
 ## 2025.2.28+1

@@ -15,6 +15,26 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
         if (kustomize.legacy!=undefined) {
             data.legacy = kustomize.legacy;
         }
+        if (kustomize.credenciales!=undefined) {
+            data.credenciales = {};
+            for (const key of Object.keys(kustomize.credenciales).sort()) {
+                const value = kustomize.credenciales[key];
+                if (typeof value!=="string") {
+                    continue;
+                }
+                data.credenciales[key] = value;
+            }
+        }
+        if (kustomize.ssl!=undefined) {
+            data.ssl = {};
+            for (const key of Object.keys(kustomize.ssl).sort()) {
+                const value = kustomize.ssl[key];
+                if (typeof value!=="string") {
+                    continue;
+                }
+                data.ssl[key] = value;
+            }
+        }
 
         return data;
     }

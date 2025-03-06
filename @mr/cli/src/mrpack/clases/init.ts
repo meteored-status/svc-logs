@@ -25,6 +25,7 @@ import {Yarn} from "./yarn";
 import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
+import EDITORCONFIG from "./init/editorconfig";
 import IGNORE from "./init/ignore";
 import {ManifestRootLoader} from "./manifest/root";
 
@@ -214,8 +215,10 @@ export class Init {
         paquete.resolutions??={};
         delete paquete.resolutions["@elastic/elasticsearch"];
         delete paquete.resolutions["@types/node"];
-        paquete.resolutions["mysql2"] = "3.11.0";
+        delete paquete.resolutions["mysql2"];
+        // paquete.resolutions["mysql2"] = "3.11.0";
 
+        await safeWrite(`${basedir}/.editorconfig`, EDITORCONFIG, true);
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
         await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
         await safeWrite(`${basedir}/.node-version`, "lts-latest\n", true);

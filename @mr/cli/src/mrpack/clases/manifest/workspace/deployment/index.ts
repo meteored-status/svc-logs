@@ -42,7 +42,7 @@ export class ManifestWorkspaceDeploymentLoader {
                 data.alone = deploy.alone ?? false;
                 data.credenciales = ManifestWorkspaceDeploymentCredencialesLoader.check(deploy.credenciales);
                 data.imagen = deploy.imagen;
-                data.kustomize = typeof deploy.kustomize == "string" ? {legacy: deploy.kustomize} : ManifestWorkspaceDeploymentKustomizeLoader.check(deploy.kustomize);
+                data.kustomize = ManifestWorkspaceDeploymentKustomizeLoader.check(typeof deploy.kustomize == "string" ? {legacy: deploy.kustomize} : deploy.kustomize);
                 break;
             case ManifestDeploymentKind.BROWSER:
                 if (deploy.storage==undefined) {

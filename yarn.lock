@@ -573,7 +573,7 @@ __metadata:
     dotenv: "npm:^16.4.7"
     jszip: "npm:^3.10.1"
     mini-css-extract-plugin: "npm:^2.9.2"
-    mysql2: "npm:3.11.0"
+    mysql2: "npm:3.13.0"
     pug: "npm:^3.0.3"
     pug3-loader: "npm:^2.4.3"
     sass: "npm:^1.85.1"
@@ -582,7 +582,7 @@ __metadata:
     source-map-loader: "npm:^5.0.0"
     source-map-support: "npm:^0.5.21"
     style-loader: "npm:^4.0.0"
-    terser-webpack-plugin: "npm:^5.3.12"
+    terser-webpack-plugin: "npm:^5.3.13"
     tree-kill: "npm:^1.2.2"
     ts-loader: "npm:^9.5.2"
     ts-node: "npm:^10.9.2"
@@ -603,7 +603,7 @@ __metadata:
   dependencies:
     "@tsconfig/node22": "npm:^22.0.0"
     "@tsconfig/recommended": "npm:^1.0.8"
-    "@types/node": "npm:^22.13.5"
+    "@types/node": "npm:^22.13.9"
     services-comun: "workspace:*"
   languageName: unknown
   linkType: soft
@@ -4124,7 +4124,7 @@ __metadata:
     "@elastic/elasticsearch": "npm:8.17.1"
     "@google-cloud/storage": "npm:^7.15.2"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.13.5"
+    "@types/node": "npm:^22.13.9"
     crawler-user-agents: "npm:^1.0.164"
     geoip-lite: "npm:^1.4.10"
     logs-base: "workspace:*"
@@ -4155,7 +4155,7 @@ __metadata:
     "@opentelemetry/sdk-trace-node": "npm:^1.30.1"
     "@opentelemetry/semantic-conventions": "npm:^1.30.0"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.13.5"
+    "@types/node": "npm:^22.13.9"
     "@types/ua-parser-js": "npm:^0.7.39"
     chokidar: "npm:^4.0.3"
     crawler-user-agents: "npm:^1.0.164"
@@ -4187,7 +4187,7 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.30.1"
     "@opentelemetry/sdk-trace-node": "npm:^1.30.1"
     "@opentelemetry/semantic-conventions": "npm:^1.30.0"
-    "@types/node": "npm:^22.13.5"
+    "@types/node": "npm:^22.13.9"
     chokidar: "npm:^4.0.3"
     formidable: "npm:^3.5.2"
     hexoid: "npm:^2.0.0"
@@ -5639,7 +5639,7 @@ __metadata:
     fork-ts-checker-webpack-plugin: "npm:^9.0.2"
     formidable: "npm:^3.5.2"
     isbot: "npm:^5.1.23"
-    mysql2: "npm:3.11.0"
+    mysql2: "npm:3.13.0"
     node-ical: "npm:^0.20.1"
     pidusage: "npm:^4.0.0"
     qs: "npm:^6.14.0"
@@ -6087,9 +6087,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"terser-webpack-plugin@npm:^5.3.11, terser-webpack-plugin@npm:^5.3.12":
-  version: 5.3.12
-  resolution: "terser-webpack-plugin@npm:5.3.12"
+"terser-webpack-plugin@npm:^5.3.11, terser-webpack-plugin@npm:^5.3.13":
+  version: 5.3.13
+  resolution: "terser-webpack-plugin@npm:5.3.13"
   dependencies:
     "@jridgewell/trace-mapping": "npm:^0.3.25"
     jest-worker: "npm:^27.4.5"
@@ -6105,7 +6105,7 @@ __metadata:
       optional: true
     uglify-js:
       optional: true
-  checksum: 10/3717232881a0fe23d914219bbf97fda371aa2a5f884968697e8df3414d33b36168120c41dcbdf3fe6ceb233e87c370ad091a032aebca79d8b64762f46cf5daa7
+  checksum: 10/6313764800616248759eb3714f918d454892d487f152a7a87105821c2af4032061d886f3e5f834613818d8b65507e6f7f71d1bf85a74536bfe04f7d612838472
   languageName: node
   linkType: hard
 
@@ -6697,7 +6697,7 @@ __metadata:
     "@opentelemetry/sdk-trace-base": "npm:^1.30.1"
     "@opentelemetry/sdk-trace-node": "npm:^1.30.1"
     "@opentelemetry/semantic-conventions": "npm:^1.30.0"
-    "@types/node": "npm:^22.13.5"
+    "@types/node": "npm:^22.13.9"
     chokidar: "npm:^4.0.3"
     formidable: "npm:^3.5.2"
     hexoid: "npm:^2.0.0"
