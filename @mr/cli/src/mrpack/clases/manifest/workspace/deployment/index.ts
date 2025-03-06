@@ -1,10 +1,16 @@
 import {type IManifestDeployment, ManifestDeploymentKind, Runtime} from "@mr/cli/manifest/deployment";
 import type {IManifestDeploymentCredenciales} from "@mr/cli/manifest/deployment/credenciales";
+import type {IManifestDeploymentKustomize} from "@mr/cli/manifest/deployment/kustomize";
 import type {IManifestDeploymentStorage} from "@mr/cli/manifest/deployment/storage";
 
+import {ManifestWorkspaceDeploymentCredencialesLoader} from "./credenciales";
+import {ManifestWorkspaceDeploymentKustomizeLoader} from "./kustomize";
 import {ManifestWorkspaceDeploymentStorageLoader} from "./storage";
 import {type IManifestLegacy, RuntimeLegacy} from "../legacy";
-import {ManifestWorkspaceDeploymentCredencialesLoader} from "./credenciales";
+
+type IManifestDeploymentUpdate = IManifestDeployment | Exclude<IManifestDeployment, "kustomize"> & {
+    kustomize?: string;
+}
 
 export class ManifestWorkspaceDeploymentLoader {
     /* STATIC */
@@ -13,10 +19,11 @@ export class ManifestWorkspaceDeploymentLoader {
             enabled: true,
             type: ManifestDeploymentKind.SERVICE,
             runtime: Runtime.node,
+            kustomize: ManifestWorkspaceDeploymentKustomizeLoader.DEFAULT,
         };
     }
 
-    public static check(deploy: Partial<IManifestDeployment>={}): IManifestDeployment {
+    public static check(deploy: Partial<IManifestDeploymentUpdate>={}): IManifestDeployment {
         const data = this.DEFAULT;
         if (deploy.enabled!=undefined) {
             data.enabled = deploy.enabled;
@@ -35,7 +42,7 @@ export class ManifestWorkspaceDeploymentLoader {
                 data.alone = deploy.alone ?? false;
                 data.credenciales = ManifestWorkspaceDeploymentCredencialesLoader.check(deploy.credenciales);
                 data.imagen = deploy.imagen;
-                data.kustomize = deploy.kustomize ?? "services";
+                data.kustomize = typeof deploy.kustomize == "string" ? {legacy: deploy.kustomize} : ManifestWorkspaceDeploymentKustomizeLoader.check(deploy.kustomize);
                 break;
             case ManifestDeploymentKind.BROWSER:
                 if (deploy.storage==undefined) {
@@ -55,7 +62,7 @@ export class ManifestWorkspaceDeploymentLoader {
         let alone: boolean|undefined;
         let credenciales: IManifestDeploymentCredenciales[]|undefined;
         let imagen: string|undefined;
-        let kustomize: string|undefined;
+        let kustomize: IManifestDeploymentKustomize|undefined;
         let storage: IManifestDeploymentStorage|undefined;
 
         const cronjob = config.cronjob ?? false;
@@ -64,7 +71,7 @@ export class ManifestWorkspaceDeploymentLoader {
             alone = config.unico ?? false;
             credenciales = ManifestWorkspaceDeploymentCredencialesLoader.fromLegacy(config);
             imagen = config.imagen;
-            kustomize = config.kustomize;
+            kustomize = ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config);
         } else {
             switch(config.runtime) {
                 case RuntimeLegacy.node:
@@ -73,7 +80,7 @@ export class ManifestWorkspaceDeploymentLoader {
                     alone = config.unico ?? false;
                     imagen = config.imagen;
                     credenciales = ManifestWorkspaceDeploymentCredencialesLoader.fromLegacy(config);
-                    kustomize = config.kustomize;
+                    kustomize = ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config);
                     break;
                 case RuntimeLegacy.browser:
                     type = ManifestDeploymentKind.BROWSER;

@@ -1,76 +1,112 @@
 #!/bin/bash
 set -e
 
-mkdir -p .yarn/plugins
+source @mr/cli/deployment/std/aliases.sh
 
-parseWorkspace() {
-  DIRECTORIO="${1}"
-  WORKSPACE="${2}"
+if [[ -f "GENERAR.txt" ]]; then
+  mkdir -p .yarn/plugins
 
-  if [[ $(./jq -r '.enabled' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "true" ]]; then
-    if [[ $(./jq -r '.deploy.enabled' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "true" ]]; then
-      if [[ $(./jq -r '.deploy.runtime' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") != "browser" && $(./jq -r '.deploy.runtime' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") != "cfworker" ]]; then
-        VERSION=$(cat "${DIRECTORIO}/${WORKSPACE}/version.txt")
-        KUSTOMIZER=$(./jq -r '.deploy.kustomize' "${DIRECTORIO}/${WORKSPACE}/mrpack.json")
+  parseWorkspace() {
+    RUTA="${1}"
+    DIRECTORIO=$(path1 "${RUTA}")
+    WORKSPACE=$(path2 "${RUTA}")
 
-        echo "${WORKSPACE}: Versión ${VERSION}"
+    VERSION=$(cat "${RUTA}/version.txt")
+    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
 
-        # GENERAMOS EL CONTENEDOR
-        if [[ -f ${DIRECTORIO}/${WORKSPACE}/nuevo.txt ]]; then
-          HASH=$(cat "${DIRECTORIO}/${WORKSPACE}/hash.txt")
+    echo "${RUTA}: Versión ${VERSION}"
 
-          echo "${WORKSPACE}: Generando contenedor"
-          if [[ $(./jq -r '.build.framework' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") != "nextjs" ]]; then
-            mkdir -p "${DIRECTORIO}/${WORKSPACE}/assets"
-          else
-            mkdir -p "${DIRECTORIO}/${WORKSPACE}/public"
-          fi
+    # GENERAMOS EL CONTENEDOR
+    if [[ -f ${RUTA}/nuevo.txt ]]; then
+      HASH=$(cat "${RUTA}/hash.txt")
 
-          BASE_IMAGE=$(./jq -r '.deploy.imagen' "${DIRECTORIO}/${WORKSPACE}/mrpack.json")
-          if [[ "${BASE_IMAGE}" == "null" ]]; then
-            BASE_IMAGE="node:lts-alpine"
-          fi
-          echo "${WORKSPACE}: ${BASE_IMAGE}"
+      echo "${RUTA}: Generando contenedor"
+      if [[ $(configw "${RUTA}" .build.framework) != "nextjs" ]]; then
+        mkdir -p "${RUTA}/assets"
+      else
+        mkdir -p "${RUTA}/public"
+      fi
 
-          if [[ -f ${DIRECTORIO}/${WORKSPACE}/Dockerfile ]]; then
-            echo "${WORKSPACE}: Custom Dockerfile"
-            docker build --no-cache -f "${DIRECTORIO}/${WORKSPACE}/Dockerfile" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
-          else
-            if [[ $(./jq -r '.build.framework' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") != "nextjs" ]]; then
-              echo "${WORKSPACE}: Generic Meteored Dockerfile"
-              docker build --no-cache -f "@mr/cli/deployment/std/Dockerfile" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
-            else
-              echo "${WORKSPACE}: Generic Next Dockerfile"
-              docker build --no-cache -f "@mr/cli/deployment/std/Dockerfile-next" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
-            fi
-          fi
+      BASE_IMAGE=$(configw "${RUTA}" .deploy.imagen)
+      if [[ "${BASE_IMAGE}" == "null" ]]; then
+        BASE_IMAGE="node:lts-alpine"
+      fi
+      echo "${RUTA}: ${BASE_IMAGE}"
 
-          echo "${WORKSPACE}: Añadiendo etiquetas"
-          docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}"
-          docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-          docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
-          docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
-          docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
-
-          echo "${WORKSPACE}: Subiendo contenedor"
-          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:latest"
-          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
-          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
-          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
-
+      if [[ -f ${RUTA}/Dockerfile ]]; then
+        echo "${RUTA}: Custom Dockerfile"
+        docker build --no-cache -f "${RUTA}/Dockerfile" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
+      else
+        if [[ $(configw "${RUTA}" .build.framework) != "nextjs" ]]; then
+          echo "${RUTA}: Generic Meteored Dockerfile"
+          docker build --no-cache -f "@mr/cli/deployment/std/Dockerfile" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
         else
-          echo "${WORKSPACE}: Sin cambios en el contenedor"
+          echo "${RUTA}: Generic Next Dockerfile"
+          docker build --no-cache -f "@mr/cli/deployment/std/Dockerfile-next" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
         fi
       fi
-    fi
-  fi
-}
-export -f parseWorkspace
 
-if [ -d "cronjobs" ]; then
-  ls cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace cronjobs {}"
-fi
-if [ -d "services" ]; then
-  ls services | xargs -I '{}' -P 10 bash -c "parseWorkspace services {}"
+      echo "${RUTA}: Añadiendo etiquetas"
+      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}"
+      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
+      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
+      if [[ -f "DESPLEGAR.txt" ]]; then
+        docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
+      fi
+
+      echo "${RUTA}: Subiendo contenedor"
+      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:latest"
+      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
+      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
+      if [[ -f "DESPLEGAR.txt" ]]; then
+        docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
+      fi
+
+    else
+      echo "${RUTA}: Sin cambios en el contenedor"
+    fi
+  }
+  export -f parseWorkspace
+
+  lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  wait
+
+else
+
+  if [[ -f "DESPLEGAR.txt" ]]; then
+    if [[ ! -f "DESPLEGAR_LATEST.txt" ]]; then
+      echo "Revisando los tags del contenedor"
+      parseWorkspace() {
+        RUTA="${1}"
+        DIRECTORIO=$(path1 "${RUTA}")
+        WORKSPACE=$(path2 "${RUTA}")
+
+        VERSION=$(cat "${RUTA}/version.txt")
+        KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
+
+        docker pull "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+#       echo "Versiones actuales"
+#       TAGS=$(gcloud artifacts docker images list "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --format="get(tags)" | tr ',' '\n' | grep "${VERSION}")
+#       echo "${TAGS}"
+#       if ! echo "${TAGS}" | grep -q "deployed_${_ENTORNO}"; then
+          echo "Actualizando las etiquetas del contenedor"
+          docker tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
+          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
+#       fi
+      }
+
+      export -f parseWorkspace
+
+      lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+      lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+      wait
+    else
+      echo "Omitiendo la generación de contenedores"
+    fi
+  else
+    echo "Omitiendo la generación de contenedores"
+  fi
 fi

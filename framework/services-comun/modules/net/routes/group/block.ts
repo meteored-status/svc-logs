@@ -187,7 +187,7 @@ export class RouteGroupBlock {
             const host = this.redireccion.getRedireccion(this.redireccion.searchHost(conexion.dominio));
             if (host!=undefined) {
                 const dominio = this.redireccion.host(host);
-                conexion.send301(conexion.url.replace(conexion.dominio, dominio));
+                await conexion.send301(conexion.url.replace(conexion.dominio, dominio));
                 return;
             }
         }

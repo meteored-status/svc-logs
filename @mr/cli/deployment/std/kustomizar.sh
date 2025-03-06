@@ -4,58 +4,56 @@
 ###############################
 set -e
 
-parseWorkspace() {
-  local DIRECTORIO="${1}"
-  local WORKSPACE="${2}"
+source @mr/cli/deployment/std/aliases.sh
 
-  echo "Kustomizando ${WORKSPACE}"
-  ./jq -r ".[].resourceLabels.zona" "entornos.json" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > ${DIRECTORIO}/${WORKSPACE}/despliegue_{}.yaml"
+if [[ -f "DESPLEGAR.txt" ]]; then
+  parseWorkspaceEjecutar() {
+    DIRECTORIO="${1}"
+    WORKSPACE="${2}"
+    SERVICIO="${3}"
+    VERSION="${4}"
+    BASETOP="${5}"
+    KUSTOMIZER="${6}"
+    CLUSTER="${7}"
+    RUTA="${DIRECTORIO}/${WORKSPACE}"
 
-  if [[ $(./jq -r '.enabled' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "true" ]]; then
-    if [[ $(./jq -r '.deploy.enabled' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "true" ]]; then
-      if [[ $(./jq -r '.deploy.runtime' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") != "browser" && $(./jq -r '.deploy.runtime' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") != "cfworker" ]]; then
-        SERVICIOS=$(./jq -r '.servicio | if type == "array" then .[] else . end' "${DIRECTORIO}/${WORKSPACE}/package.json")
-        VERSION=$(cat "${DIRECTORIO}/${WORKSPACE}/version.txt" || echo "0000.00.00")
-        BASETOP=$(pwd)
-        KUSTOMIZER=$(./jq -r '.deploy.kustomize' "${DIRECTORIO}/${WORKSPACE}/mrpack.json")
+    ####################
+    #### KUSTOMIZAR ####
+    ####################
+    cp kustomize "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}"
+    cd "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}"
+    ./kustomize edit set image "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
 
+    cd "${BASETOP}"
+    ./kustomize build "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}" >> "${RUTA}/despliegue_${CLUSTER}.yaml"
+    echo "---" >> "${RUTA}/despliegue_${CLUSTER}.yaml"
+  }
+  export -f parseWorkspaceEjecutar
 
-        parseWorkspaceEjecutar() {
-          local DIRECTORIO="${1}"
-          local WORKSPACE="${2}"
-          local SERVICIO="${3}"
-          local VERSION="${4}"
-          local BASETOP="${5}"
-          local KUSTOMIZER="${6}"
-          local CLUSTER="${7}"
+  parseWorkspace() {
+    RUTA="${1}"
+    DIRECTORIO=$(path1 "${RUTA}")
+    WORKSPACE=$(path2 "${RUTA}")
 
-          ####################
-          #### KUSTOMIZAR ####
-          ####################
-          cp kustomize "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}"
-          cd "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}"
-          ./kustomize edit set image "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+    echo "Kustomizando ${WORKSPACE}"
+    confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > ${RUTA}/despliegue_{}.yaml"
 
-          cd "${BASETOP}"
-          ./kustomize build "kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}" >> "${DIRECTORIO}/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
-          echo "---" >> "${DIRECTORIO}/${WORKSPACE}/despliegue_${CLUSTER}.yaml"
-        }
-        export -f parseWorkspaceEjecutar
+    SERVICIOS=$(config "${RUTA}/package.json" '.servicio | if type == "array" then .[] else . end')
+    VERSION=$(cat "${RUTA}/version.txt" || echo "0000.00.00")
+    BASETOP=$(pwd)
+    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
 
-        echo "${SERVICIOS}" | while read SERVICIO; do
-          echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
+    echo "${SERVICIOS}" | while read SERVICIO; do
+      echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
 
-          ./jq -r ".[].resourceLabels.zona" "entornos.json" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${DIRECTORIO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${BASETOP} ${KUSTOMIZER} {}"
-        done
-      fi
-    fi
-  fi
-}
-export -f parseWorkspace
+      confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${DIRECTORIO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${BASETOP} ${KUSTOMIZER} {}"
+    done
+  }
+  export -f parseWorkspace
 
-if [ -d "cronjobs" ]; then
-  ls cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace cronjobs {}"
-fi
-if [ -d "services" ]; then
-  ls services | xargs -I '{}' -P 10 bash -c "parseWorkspace services {}"
+  lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  wait
+else
+    echo "Omitiendo kustomización"
 fi

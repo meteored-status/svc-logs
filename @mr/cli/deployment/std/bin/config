@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+RUTA=${1}
+CONFIG=${2}
+
+jq -r "${CONFIG}" "${RUTA}"

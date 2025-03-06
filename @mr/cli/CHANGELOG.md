@@ -1,4 +1,29 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
+
+---
+## 2025.2.28+1
+
+### Changed
+- [Jose] Update de librerías:
+    - [terser-webpack-plugin](https://www.npmjs.com/package/terser-webpack-plugin) 5.3.12
+
+---
+## 2025.2.27+1
+
+### Changed
+- [Jose] Refactorizada la propiedad deploy.kustomize de mrpack.json para soportar próximos cambios
+
+---
+## 2025.2.26+1
+
+### Updated
+- [Jose] Añadidas dependencias:
+    - [dotenv](https://www.npmjs.com/package/dotenv) 16.4.7
+
+### Changed
+- [Jose] Se ha refactorizado los scripts de despliegue
+  - Ahora se puede compilar y no desplegar, desplegar sin compilar, forzar una nueva versión de despliegue y actualizar el despliegue a la versión más reciente
+
 ---
 ## 2025.2.24+1
 
@@ -8,7 +33,6 @@
     - [sass](https://www.npmjs.com/package/sass) 1.85.0
     - [sass-loader](https://www.npmjs.com/package/sass-loader) 16.0.5
     - [webpack](https://www.npmjs.com/package/webpack) 5.98.0
-
 
 ---
 ## 2025.2.4+1

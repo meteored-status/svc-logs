@@ -4,6 +4,8 @@
 ##########################################
 set -e
 
+source @mr/cli/deployment/std/aliases.sh
+
 parseBucket() {
   BUCKET="${1}"
 
@@ -13,7 +15,7 @@ parseBucket() {
 export -f parseBucket
 
 echo "Descargando caché de dependencias"
-./jq -r ".labels[\"k8s-cache\"]" "labels.json" | xargs -I '{}' -P 10 bash -c "parseBucket {}"
+configl ".labels[\"k8s-cache\"]" | xargs -I '{}' -P 10 bash -c "parseBucket {}"
 if [[ -f .yarn/cache/.md5 ]]; then
   cp .yarn/cache/.md5 yarn.md5
 else
