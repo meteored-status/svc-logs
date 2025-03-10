@@ -1,4 +1,5 @@
 bin/*
+!bin/.mr-bin
 !bin/.mr-ignore
 !bin/hash.md5
 !bin/lib.js

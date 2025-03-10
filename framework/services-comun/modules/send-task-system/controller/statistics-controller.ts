@@ -160,6 +160,10 @@ export class StatisticsController {
                 spam: false,
                 unsubscribe: false,
                 received: false,
+                first_open_count: 0,
+                bounce_count: 0,
+                unsubscribe_count: 0,
+                spam_count: 0
             };
         }
 

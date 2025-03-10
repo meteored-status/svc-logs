@@ -18,6 +18,10 @@ export interface IStatistics {
     bounce: boolean;
     spam: boolean;
     unsubscribe: boolean;
+    first_open_count: number;
+    bounce_count: number;
+    unsubscribe_count: number;
+    spam_count: number;
 }
 
 export interface IMetadata {

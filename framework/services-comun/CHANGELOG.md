@@ -1,6 +1,10 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## UNRELEASED
+- [Jose] Awaited algunas funciones async en algunas clases core del engine
+
+---
 ## 2025.2.10+2
 
 ### Added
@@ -19,9 +23,6 @@ const myMethod(transaction?: Transaction): void => {
 
 ### Deprecated
 - [Juan Carlos] Se deprecia la función `transactional` de la clase `Transaction` de MySQL.
-
-
-
 
 ---
 ## 2025.1.30+1

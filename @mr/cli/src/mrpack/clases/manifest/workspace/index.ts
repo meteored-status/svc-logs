@@ -45,11 +45,15 @@ export class ManifestWorkspaceLoader extends ManifestLoader<IManifest, Manifest>
         return data;
     }
 
-    public override async load(): Promise<ManifestWorkspaceLoader> {
-        return await super.load() as ManifestWorkspaceLoader;
+    public override async load(env?: boolean): Promise<ManifestWorkspaceLoader> {
+        return await super.load(env) as ManifestWorkspaceLoader;
     }
 
     public override loadSync(): ManifestWorkspaceLoader {
         return super.loadSync() as ManifestWorkspaceLoader;
+    }
+
+    public applyENV(): void {
+
     }
 }

@@ -1,0 +1,3 @@
+{
+  "extends": "services-comun-meteored/tsconfig.json",
+}
