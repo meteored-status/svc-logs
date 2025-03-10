@@ -17,8 +17,9 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     WORKSPACE="${3}"
     VERSION="${4}"
 
-    cd "kustomizar/${DIR}"
+    cd "${DIR}"
     kustomize edit set image "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+    kustomize edit set image "europe-west1-docker.pkg.dev/\\\${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
     cd "${BASETOP}"
   }
   export -f updateImagen
@@ -31,14 +32,9 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     KUSTOMIZER="${5}"
     CLUSTER="${6}"
 
-    ####################
-    #### KUSTOMIZAR ####
-    ####################
-    if [[ -d "kustomizar/${DIR}" ]]; then
-      updateImagen "${KUSTOMIZER}" "${DIR}" "${WORKSPACE}" "${VERSION}"
-      kustomize build "kustomizar/${DIR}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
-      echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
-    fi
+    updateImagen "${KUSTOMIZER}" "${DIR}" "${WORKSPACE}" "${VERSION}"
+    kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
+    echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
   }
   export -f parseWorkspaceEjecutar
 
@@ -50,7 +46,22 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     KUSTOMIZER="${5}"
     CLUSTER="${6}"
 
-    parseWorkspaceEjecutar "${KUSTOMIZER}/${SERVICIO}/entornos/${CLUSTER}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}"
+    ENTORNOS="kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos"
+    CLIENTES="kustomizar/${KUSTOMIZER}/${SERVICIO}/clientes"
+
+    if [[ -d "${ENTORNOS}" ]]; then
+      if [[ -d "${ENTORNOS}/${CLUSTER}" ]]; then
+        parseWorkspaceEjecutar "${ENTORNOS}/${CLUSTER}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}"
+      fi
+    elif [[ -d "${CLIENTES}" ]]; then
+      IFS=',' read -r -a NAMESPACES <<< "$(cat "namespaces_${CLUSTER}.txt")"
+      for NAMESPACE in "${NAMESPACES[@]}"; do
+        DIR="${CLIENTES}/${NAMESPACE}/${CLUSTER}"
+        if [[ -d "${DIR}" ]]; then
+          parseWorkspaceEjecutar "${DIR}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}"
+        fi
+      done
+    fi
   }
   export -f parseWorkspaceCluster
 
@@ -69,7 +80,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     echo "${SERVICIOS}" | while read SERVICIO; do
       echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
 
-      confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "parseWorkspaceCluster ${DIRECTORIO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${KUSTOMIZER} {}"
+      confige '.[] | .resourceLabels.zona' | xargs -I '{}' -P 1 bash -c "parseWorkspaceCluster ${DIRECTORIO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${KUSTOMIZER} {}"
     done
   }
   export -f parseWorkspace

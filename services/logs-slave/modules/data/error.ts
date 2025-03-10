@@ -1,6 +1,12 @@
 import {BulkAuto} from "services-comun/modules/elasticsearch/bulk/auto";
 import {ILogError, type ILogErrorCTX, LogError as LogErrorBase} from "logs-base/modules/data/log/error";
 import elastic from "services-comun/modules/utiles/elastic";
+import {LogsSpec} from "logs-status-base/modules/status/status";
+import client from "services-comun/modules/status/client/client";
+import { TGroup } from "logs-status-base/modules/status/status";
+import {Configuracion} from "../utiles/config";
+import {SlaveSpec} from "./status";
+
 
 export interface ILogErrorPOST {
     proyecto: string;
@@ -20,7 +26,7 @@ export class LogError extends LogErrorBase {
         this.BULK.start();
     }
 
-    public static ingest(data: ILogErrorPOST): void {
+    public static ingest(data: ILogErrorPOST, config: Configuracion): void {
         const documento = new this({
             timestamp: new Date(),
             checked: false,
@@ -37,8 +43,16 @@ export class LogError extends LogErrorBase {
         this.BULK.create({
             index: this.getIndex(documento.proyecto),
             doc: documento.toJSON(),
-        }).promise.catch((err) => {
-            console.error("Error al insertar log de error", err);  //TODO pintar en el status
+        }).promise.catch(async (err) => {
+            const logsSpec = await SlaveSpec.get(config);
+            logsSpec.cluster.elastic.current_publish.errors.push({
+                error: err.message ?? "Error desconocido"
+            });
+            logsSpec.cluster.elastic.current_publish.count++;
+            logsSpec.cluster.elastic.current_publish.date = Date.now();
+
+            await logsSpec.buildMonitors();
+
         });
     }
 

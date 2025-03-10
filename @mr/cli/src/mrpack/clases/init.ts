@@ -217,6 +217,9 @@ export class Init {
         delete paquete.resolutions["@types/node"];
         delete paquete.resolutions["mysql2"];
         // paquete.resolutions["mysql2"] = "3.11.0";
+        if (Object.keys(paquete.resolutions).length==0) {
+            delete paquete.resolutions;
+        }
 
         await safeWrite(`${basedir}/.editorconfig`, EDITORCONFIG, true);
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);

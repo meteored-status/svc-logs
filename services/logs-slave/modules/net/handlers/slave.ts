@@ -105,7 +105,7 @@ class Slave extends RouteGroup<Configuracion>{
 
                     const salida = await this.sendRespuesta(conexion);
 
-                    LogError.ingest(post);
+                    LogError.ingest(post, this.configuracion);
 
                     return salida;
                 },

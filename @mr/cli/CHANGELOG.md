@@ -1,10 +1,26 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
+
+---
+## 2025.3.10+1
+
+### Changed
+- [Jose] Update de librerías:
+    - [@inquirer/prompts](https://www.npmjs.com/package/@inquirer/prompts) 7.3.3
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.13.10
+
+---
+## 2025.3.7+1
+
+### Changed
+  [Jose] Limpieza de propiedades vacías en el `package.json` raiz
+
 ---
 ## 2025.3.6+1
 
 ### Changed
 - [Juan Carlos] Update de librerías:
     - [mysql2](https://www.npmjs.com/package/mysql2) 3.13.0
+  [Jose] Añadido soporte a cluster multicliente durante el despliegue (para mrpress)
 
 ---
 ## 2025.3.5+1
