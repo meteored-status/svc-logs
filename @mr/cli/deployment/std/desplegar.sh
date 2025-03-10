@@ -1,70 +1,63 @@
 #!/bin/bash
 set -e
 
-BASETOP=$(pwd);
+source @mr/cli/deployment/std/aliases.sh
 
-parseWorkspace() {
-  BASETOP="${1}"
-  INDICE="${2}"
-
-  NOMBRE=$(./jq -r ".[${INDICE}].resourceLabels.zona" "entornos.json")
-  CLUSTER=$(./jq -r ".[${INDICE}].name" "entornos.json")
-  REGION=$(./jq -r ".[${INDICE}].zone" "entornos.json")
-  if [[ "${INDICE}" == "0" ]]; then
-    PRIMERO="true"
-  else
-    PRIMERO="false"
-  fi
+if [[ -f "DESPLEGAR.txt" ]]; then
+  BASETOP=$(pwd);
 
   parseWorkspaceEjecutar() {
-    DIRECTORIO="${1}"
-    BASETOP="${2}"
-    NOMBRE="${3}"
-    CLUSTER="${4}"
-    PRIMERO="${5}"
-    WORKSPACE="${6}"
+    BASETOP="${1}"
+    NOMBRE="${2}"
+    CLUSTER="${3}"
+    PRIMERO="${4}"
+    RUTA="${5}"
+    WORKSPACE=$(path2 "${RUTA}")
 
-    if [[ $(./jq -r '.enabled' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "true" ]]; then
-      if [[ $(./jq -r '.deploy.enabled' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "true" ]]; then
+    if [[ $(configw "${RUTA}" '.deploy.alone') == "true" && ${PRIMERO} != "true" ]]; then
+      return
+    fi
 
-        if [[ $(./jq -r '.deploy.runtime' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "browser" && $(./jq -r '.deploy.runtime' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") != "cfworker" ]]; then
-          return
-        fi
-
-        if [[ $(./jq -r '.deploy.alone' "${DIRECTORIO}/${WORKSPACE}/mrpack.json") == "true" ]]; then
-          if [[ ! ${PRIMERO} == "true" ]]; then
-            return
-          fi
-        fi
-
-        echo "${CLUSTER} ${WORKSPACE}: Preparando"
-        if [[ -f "${DIRECTORIO}/${WORKSPACE}/despliegue_${NOMBRE}.yaml" ]]; then
-          cat "${DIRECTORIO}/${WORKSPACE}/despliegue_${NOMBRE}.yaml" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
-          echo "---" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
-        fi
-      fi
+    echo "${CLUSTER} ${WORKSPACE}: Preparando"
+    if [[ -f "despliegue_${WORKSPACE}_${NOMBRE}.yaml" ]]; then
+      cat "despliegue_${WORKSPACE}_${NOMBRE}.yaml" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
+      echo "---" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
     fi
   }
 
   export -f parseWorkspaceEjecutar
 
-  if [[ -f "${BASETOP}/despliegue_${NOMBRE}.yaml" ]]; then
-    rm "${BASETOP}/despliegue_${NOMBRE}.yaml"
-  fi
+  parseWorkspace() {
+    BASETOP="${1}"
+    INDICE="${2}"
 
-  if [ -d "cronjobs" ]; then
-    ls "${BASETOP}/cronjobs" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar cronjobs ${BASETOP} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}"
-  fi
-  if [ -d "services" ]; then
-    ls "${BASETOP}/services" | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar services ${BASETOP} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}"
-  fi
+    NOMBRE=$(confige ".[${INDICE}].resourceLabels.zona")
+    CLUSTER=$(confige ".[${INDICE}].name")
+    REGION=$(confige ".[${INDICE}].zone")
+    if [[ "${INDICE}" == "0" ]]; then
+      PRIMERO="true"
+    else
+      PRIMERO="false"
+    fi
 
-  if [[ -f "${BASETOP}/despliegue_${NOMBRE}.yaml" ]]; then
-    echo "${CLUSTER}: Desplegando"
-    gke-deploy run --filename="${BASETOP}/despliegue_${NOMBRE}.yaml" --cluster="${CLUSTER}" --location="${REGION}" --output="${BASETOP}/output/suggested/${NOMBRE}"
-  fi
-}
+    if [[ -f "${BASETOP}/despliegue_${NOMBRE}.yaml" ]]; then
+      rm "${BASETOP}/despliegue_${NOMBRE}.yaml"
+    fi
 
-export -f parseWorkspace
+    lw cronjobs | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
+    lw services | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
+    wait
 
-./jq -r ". | keys | .[]" "entornos.json" | xargs -I '{}' -P 1 bash -c "parseWorkspace ${BASETOP} {}"
+    if [[ -f "${BASETOP}/despliegue_${NOMBRE}.yaml" ]]; then
+      echo "${CLUSTER}: Desplegando"
+      gke-deploy run --filename="${BASETOP}/despliegue_${NOMBRE}.yaml" --cluster="${CLUSTER}" --location="${REGION}" --output="${BASETOP}/output/suggested/${NOMBRE}"
+    fi
+  }
+
+  export -f parseWorkspace
+
+  confige ". | keys | .[]" | xargs -I '{}' -P 1 bash -c "parseWorkspace ${BASETOP} {}"
+
+else
+    echo "Omitiendo despliegue"
+fi

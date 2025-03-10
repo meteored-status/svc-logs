@@ -4,53 +4,59 @@
 ##############################
 set -e
 
-if [[ -z "${_AUTORIZAR}" || "${_AUTORIZAR}" == "true" ]]; then
+source @mr/cli/deployment/std/aliases.sh
 
-  echo "Obteniendo IP"
-  IP=$(curl -sfL http://ifconfig.me)
-  echo "${IP}" > ip.txt
-  echo "Obteniendo IP => ${IP}"
+if [[ -f "DESPLEGAR.txt" ]]; then
+  if [[ -z "${_AUTORIZAR}" || "${_AUTORIZAR}" == "true" ]]; then
 
-  parseWorkspace() {
-    local IP="${1}"
-    local INDICE="${2}"
+    echo "Obteniendo IP"
+    IP=$(curl -sfL http://ifconfig.me)
+    echo "${IP}" > ip.txt
+    echo "Obteniendo IP => ${IP}"
 
-    CLUSTER=$(./jq -r ".[${INDICE}].name" "entornos.json")
-    REGION=$(./jq -r ".[${INDICE}].zone" "entornos.json")
+    parseWorkspace() {
+      local IP="${1}"
+      local INDICE="${2}"
 
-    for i in {1..3}; do
-      echo "${CLUSTER}: Iteración ${i}"
+      CLUSTER=$(confige ".[${INDICE}].name")
+      REGION=$(confige ".[${INDICE}].zone")
 
-      local OK=false
-      while [[ ${OK} != "true" ]]; do
+      for i in {1..3}; do
+        echo "${CLUSTER}: Iteración ${i}"
 
-        sleep $(( ( RANDOM % 5 )  + 1 ))
+        local OK=false
+        while [[ ${OK} != "true" ]]; do
 
-        # OBTENEMOS LA LISTA DE IPS AUTORIZADAS
-        IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | ./jq '.masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock' | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//' || echo "")
+          sleep $(( ( RANDOM % 5 )  + 1 ))
 
-        if [[ "${IPS}" == "" ]]; then
-          continue
-        fi
+          # OBTENEMOS LA LISTA DE IPS AUTORIZADAS
+          IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | jq '.masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock' | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//' || echo "")
 
-        if [[ ! ${IPS} =~ ${IP} ]]; then # SI LA IP NO ESTÁ EN LA LISTA DE IPS AUTORIZADAS => HACEMOS COSAS
-          # AÑADIMOS LA IP DE LA MÁQUINA A LA LISTA DE AUTORIZACIÓN
-          echo "${CLUSTER}: Preautorizando IPs"
-          gcloud container clusters update "${CLUSTER}" --region "${REGION}" --enable-master-authorized-networks --master-authorized-networks "${IPS},${IP}/32"
+          if [[ "${IPS}" == "" ]]; then
+            continue
+          fi
 
-        else # SI LA IP ESTÁ EN LA LISTA DE IPS AUTORIZADAS => DESPLEGAMOS Y SALIMOS DEL BUCLE
-          echo "${CLUSTER}: IP autorizada"
-          OK=true
-        fi
+          if [[ ! ${IPS} =~ ${IP} ]]; then # SI LA IP NO ESTÁ EN LA LISTA DE IPS AUTORIZADAS => HACEMOS COSAS
+            # AÑADIMOS LA IP DE LA MÁQUINA A LA LISTA DE AUTORIZACIÓN
+            echo "${CLUSTER}: Preautorizando IPs"
+            gcloud container clusters update "${CLUSTER}" --region "${REGION}" --enable-master-authorized-networks --master-authorized-networks "${IPS},${IP}/32"
+
+          else # SI LA IP ESTÁ EN LA LISTA DE IPS AUTORIZADAS => DESPLEGAMOS Y SALIMOS DEL BUCLE
+            echo "${CLUSTER}: IP autorizada"
+            OK=true
+          fi
+
+        done
 
       done
+    }
 
-    done
-  }
+    export -f parseWorkspace
+    confige ". | keys | .[]" | xargs -I '{}' -P 10 bash -c "parseWorkspace ${IP} {}"
 
-  export -f parseWorkspace
-  ./jq -r ". | keys | .[]" "entornos.json" | xargs -I '{}' -P 10 bash -c "parseWorkspace ${IP} {}"
-
+  else
+    echo "No se necesita autorizar la IP"
+  fi
 else
-  echo "No se necesita autorizar la IP"
+    echo "Omitiendo autorización"
 fi

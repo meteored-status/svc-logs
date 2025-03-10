@@ -27,7 +27,7 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
 
     public abstract check(manifest?: Partial<T>): T;
 
-    public async load(): Promise<ManifestLoader<T, K>> {
+    public async load(env: boolean = false): Promise<ManifestLoader<T, K>> {
         const guardar = await readJSON<Partial<T>>(this.file)
             .then((manifest) => {
                 const hash_inicial = md5(JSON.stringify(manifest));
@@ -44,6 +44,10 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
             });
         if (guardar) {
             await this.save();
+        }
+
+        if (env) {
+            this.applyENV();
         }
 
         return this;
@@ -73,6 +77,8 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
             this.guardando = false;
         }
     }
+
+    public abstract applyENV(): void;
 
     public toJSON(): T {
         return this.manifest.toJSON();

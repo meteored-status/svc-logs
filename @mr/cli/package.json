@@ -25,23 +25,24 @@
     "./manifest/build/bundle/componentes": "./manifest/workspace/build/bundle/componentes.ts",
     "./manifest/deployment": "./manifest/workspace/deployment/index.ts",
     "./manifest/deployment/credenciales": "./manifest/workspace/deployment/credenciales.ts",
+    "./manifest/deployment/kustomize": "./manifest/workspace/deployment/kustomize/index.ts",
     "./manifest/deployment/storage": "./manifest/workspace/deployment/storage.ts",
     "./manifest/development": "./manifest/workspace/development.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.15.2",
-    "@inquirer/prompts": "^7.3.2",
+    "@inquirer/prompts": "^7.3.3",
     "chokidar": "^4.0.3",
     "dotenv": "^16.4.7",
     "jszip": "^3.10.1",
-    "mysql2": "3.11.0",
+    "mysql2": "3.13.0",
     "source-map-support": "^0.5.21",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
     "@types/diff3": "^0.0.2",
-    "@types/node": "^22.13.5",
+    "@types/node": "^22.13.10",
     "@types/source-map-support": "^0.5.10",
     "clean-webpack-plugin": "^4.0.0",
     "css-loader": "^7.1.2",
@@ -54,14 +55,14 @@
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
     "style-loader": "^4.0.0",
-    "terser-webpack-plugin": "^5.3.11",
+    "terser-webpack-plugin": "^5.3.14",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.2",
     "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1",
     "webpack-manifest-plugin": "^5.0.0"
   },
-  "version": "2025.2.26+1-bixus"
+  "version": "2025.3.10+1-bixus"
 }

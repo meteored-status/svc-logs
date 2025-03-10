@@ -1,41 +1,20 @@
 #!/bin/bash
 set -e
 
-getPackageConfigValue() {
-  local DIRECTORIO=${1}
-  local WORKSPACE=${2}
-  local CONFIG=${3}
-
-  ./jq -r "${CONFIG}" "${DIRECTORIO}/${WORKSPACE}/mrpack.json"
-}
-export -f getPackageConfigValue
+source @mr/cli/deployment/std/aliases.sh
 
 parseWorkspace() {
-  local DIRECTORIO=${1}
-  local WORKSPACE=${2}
+  RUTA="${1}"
+  WORKSPACE=$(path2 "${RUTA}")
 
-  GENERAR=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" ".enabled")
-  DEPLOY=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" ".deploy.enabled")
-  RUNTIME=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" ".deploy.runtime")
-  KUSTOMIZER=$(getPackageConfigValue "${DIRECTORIO}" "${WORKSPACE}" ".deploy.kustomize")
+  KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
 
-  if [[ ${GENERAR} == "true" ]]; then
-    if [[ ${DEPLOY} == "true" ]]; then
-      if [[ ${RUNTIME} == "browser" ]]; then
-        echo "Tags: ${WORKSPACE} => NO"
-      else
-        echo "Obteniendo tags para \"${WORKSPACE}\""
-        gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^${_ENTORNO}" --format=json > "${DIRECTORIO}/${WORKSPACE}/tags.json"
-        gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^deployed_${_ENTORNO}" --format=json > "${DIRECTORIO}/${WORKSPACE}/deployed.json"
-      fi
-    fi
-  fi
+  echo "Obteniendo tags para \"${WORKSPACE}\""
+  gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^${_ENTORNO}" --format=json > "${RUTA}/tags.json"
+  gcloud container images list-tags "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --filter="tags~^deployed_${_ENTORNO}" --format=json > "${RUTA}/deployed.json"
 }
 export -f parseWorkspace
 
-if [ -d "cronjobs" ]; then
-  ls cronjobs | xargs -I '{}' -P 1 bash -c "parseWorkspace cronjobs {}"
-fi
-if [ -d "services" ]; then
-  ls services | xargs -I '{}' -P 1 bash -c "parseWorkspace services {}"
-fi
+lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+wait

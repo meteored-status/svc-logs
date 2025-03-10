@@ -18,11 +18,14 @@ export class Service {
     private readonly prefix: string;
 
     public constructor(private readonly map: Map<number, INetServiceBase>, {prefix="", builder}: IServiceConfig) {
+        map.forEach((service) => {
+            service.namespace ??= process.env["CLIENTE"];
+        });
         this.ports = {};
         this.services = new Map<string, number>();
         this.prefix = prefix;
         if (builder!=undefined) {
-            for (const [id, data] of map.entries()) {
+            for (const id of map.keys()) {
                 this.services.set(builder(id), id);
             }
         }

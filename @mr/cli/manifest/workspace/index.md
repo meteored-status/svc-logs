@@ -30,7 +30,7 @@ interface IManifestDeployment {
     alone?: boolean;
     credenciales?: IManifestDeploymentCredenciales[];
     imagen?: string;
-    kustomize?: string;
+    kustomize?: IManifestDeploymentKustomize;
     storage?: IManifestDeploymentStorage;
 }
 ```
@@ -49,9 +49,9 @@ interface IManifestDeployment {
 - `imagen`: Nombre de la imagen. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo**: string
     - **opcional**: Por defecto se utiliza la imagen base del entorno de ejecución.
-- `kustomize`: Nombre del directorio dentro del proyecto kustomize. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
-    - **tipo**: string
-    - **opcional**: Por defecto se utiliza `services`.
+- `kustomize`: Detalles de kustomización. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
+    - **tipo**: [IManifestDeploymentKustomize[]](#imanifestdeploymentkustomize).
+    - **opcional**: Ver detalles para más información.
 - `storage`: Información sobre el almacenamiento. *Solo es válido para despliegues de tipo `BROWSER`.*
     - **tipo** [IManifestDeploymentStorage](#imanifestdeploymentstorage).
     - **opcional**: No se establece ningún valor por defecto, por lo que es imperativo indicarlo en despliegues de tipo `BROWSER`.
@@ -98,6 +98,16 @@ interface IManifestDeploymentCredenciales {
 ```
 - `source`: Archivo de credenciales a importar.
 - `target`: Archivo de destino junto con su ruta relativa al workspace.
+
+## IManifestDeploymentKutomize
+```typescript
+interface IManifestDeploymentKutomize {
+    legacy?: string;
+}
+```
+- `kustomize`: Nombre del directorio dentro del proyecto kustomize.
+    - **tipo**: string
+    - **opcional**: Por defecto se utiliza `services`.
 
 ---
 ## IManifestDeploymentStorage

@@ -29,7 +29,7 @@ export interface IConfig {
 export abstract class EngineServer<T extends ConfiguracionNet=ConfiguracionNet> extends EngineBase<T> {
     /* STATIC */
     protected static override async prebuild(configuracion: Configuracion): Promise<void> {
-        super.prebuild(configuracion);
+        await super.prebuild(configuracion);
 
         if (!PRODUCCION) {
             Respuesta.SERVICE = configuracion.pod.servicio;
