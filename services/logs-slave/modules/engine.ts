@@ -1,15 +1,15 @@
+import {ClienteGCS} from "logs-base/modules/data/cliente/gcs";
 import {EngineServer} from "services-comun/modules/engine_server";
-import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import type {Configuracion} from "./utiles/config";
 
 import Slave from "./net/handlers/slave";
 
 export class Engine extends EngineServer<Configuracion> {
-    /* STATIC */
-
     /* INSTANCE */
     public override async ejecutar(): Promise<void> {
+        await ClienteGCS.check();
+
         this.initWebServer([
             Slave(this.configuracion),
         ], this.configuracion.net);
@@ -17,7 +17,7 @@ export class Engine extends EngineServer<Configuracion> {
         await super.ejecutar();
     }
 
-    protected override async ok(): Promise<void> {
-        await elasticsearch.info();
-    }
+    // protected override async ok(): Promise<void> {
+    //     await elasticsearch.info();
+    // }
 }
