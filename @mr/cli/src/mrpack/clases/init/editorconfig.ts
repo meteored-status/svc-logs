@@ -1,3 +1,4 @@
+export default `
 root = true
 
 [*]
@@ -21,3 +22,4 @@ trim_trailing_whitespace = false
 
 [*.{php,ts,js}]
 indent_size = 4
+`.trimStart();

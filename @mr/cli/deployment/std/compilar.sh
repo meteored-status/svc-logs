@@ -8,7 +8,7 @@ source @mr/cli/deployment/std/aliases.sh
 
 if [[ -n "$_MYSQL" ]]; then
   echo "Iniciando MySQL"
-  ./cloud_sql_proxy -dir=/workspace -instances="${_MYSQL}" &
+  cloud_sql_proxy -dir=/workspace -instances="${_MYSQL}" &
   PID=$!
   sleep 2
   echo "${_MYSQL}" > /workspace/mysql.txt

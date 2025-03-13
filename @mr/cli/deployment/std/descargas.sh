@@ -4,7 +4,8 @@
 ################################
 set -e
 
-mkdir -p bin
+ROOT="$(pwd)"
+mkdir -p "${ROOT}/bin"
 
 chmod +x @mr/cli/deployment/std/bin/*
 source @mr/cli/deployment/std/aliases.sh
@@ -14,21 +15,13 @@ download_tool() {
   local URL=$2
   local SALIDA=$3
 
-  if ! command -v "${TOOL}" &> /dev/null; then
-    echo "Descargando \"${TOOL}\""
-    if [ -z "${SALIDA}" ]; then
-      curl -sfL "${URL}" | tar xzf - -C bin
-      curl -sfL "${URL}" | tar xzf -
-    else
-      curl -sfL "${URL}" > "bin/${SALIDA}"
-      cp "bin/${SALIDA}" "${SALIDA}"
-    fi
+  echo "Descargando \"${TOOL}\""
+  if [ -z "${SALIDA}" ]; then
+    curl -sfL "${URL}" | tar xzf - -C "${ROOT}/bin"
   else
-    cp "$(command -v "${TOOL}")" ./bin/
-    cp "$(command -v "${TOOL}")" ./
+    curl -sfL "${URL}" > "${ROOT}/bin/${SALIDA}"
   fi
   chmod +x "bin/${TOOL}"
-  chmod +x "${TOOL}"
 }
 
 #############################
@@ -97,4 +90,6 @@ download_tool kustomize https://github.com/kubernetes-sigs/kustomize/releases/do
 #############################
 #### DESCARGAR SQLPROXY ####
 #############################
-download_tool cloud_sql_proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.4/cloud-sql-proxy.linux.amd64 cloud_sql_proxy
+if [[ -n "$_MYSQL" ]]; then
+  download_tool cloud_sql_proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.4/cloud-sql-proxy.linux.amd64 cloud_sql_proxy
+fi

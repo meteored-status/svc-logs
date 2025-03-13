@@ -1,4 +1,6 @@
 export default `
+process.env.CLIENTE ??= "";
+process.env.ENTORNO ??= "desarrollo";
 process.env.ZONA ??= "desarrollo";
 
 Symbol.dispose ??= Symbol("Symbol.dispose");

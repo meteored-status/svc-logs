@@ -25,6 +25,7 @@ import {Yarn} from "./yarn";
 import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
+import EDITORCONFIG from "./init/editorconfig";
 import IGNORE from "./init/ignore";
 import {ManifestRootLoader} from "./manifest/root";
 
@@ -65,7 +66,7 @@ export class Init {
             if (status!=0) {
                 console.error(stderr);
                 console.groupEnd();
-                return Promise.reject("Error al inicializar i18n");
+                return Promise.reject(new Error("Error al inicializar i18n"));
             }
         }
 
@@ -214,8 +215,13 @@ export class Init {
         paquete.resolutions??={};
         delete paquete.resolutions["@elastic/elasticsearch"];
         delete paquete.resolutions["@types/node"];
-        paquete.resolutions["mysql2"] = "3.11.0";
+        delete paquete.resolutions["mysql2"];
+        // paquete.resolutions["mysql2"] = "3.11.0";
+        if (Object.keys(paquete.resolutions).length==0) {
+            delete paquete.resolutions;
+        }
 
+        await safeWrite(`${basedir}/.editorconfig`, EDITORCONFIG, true);
         await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
         await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
         await safeWrite(`${basedir}/.node-version`, "lts-latest\n", true);

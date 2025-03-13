@@ -15,6 +15,7 @@
     "logs-slave": "yarn workspace logs-slave",
     "workers-slave": "yarn workspace workers-slave",
     "logs-base": "yarn workspace logs-base",
+    "status-base": "yarn workspace status-base",
     "workers-base": "yarn workspace workers-base"
   },
   "private": true,
@@ -30,12 +31,9 @@
     "services/*",
     "statics/*"
   ],
-  "packageManager": "yarn@4.6.0",
+  "packageManager": "yarn@4.7.0",
   "bin": {
     "mrlang": "@mr/cli/bin/mrlang.js",
     "mrpack": "@mr/cli/bin/mrpack.js"
-  },
-  "resolutions": {
-    "mysql2": "3.11.0"
   }
 }

@@ -1,6 +1,48 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.3.12+1
+
+### Changed
+- [Jose] Update de librerías:
+    - [webpack-manifest-plugin](https://www.npmjs.com/package/webpack-manifest-plugin) 5.0.1
+- [Jose] Se ha revisado el archivo `.mr-ignore` dentro de `@mr/cli/bin`
+- [Jose] Se ha desactivado la subida descomprimida a los repositorios antiguos
+
+### Fixed
+- [Jose] Cuando se añaden credenciales durante la compilación, se crea la ruta del destino por si se encontrara fuera del directorio por defecto
+
+---
+## 2025.3.10+1
+
+### Changed
+- [Jose] Update de librerías:
+    - [@inquirer/prompts](https://www.npmjs.com/package/@inquirer/prompts) 7.3.3
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.13.10
+
+---
+## 2025.3.7+1
+
+### Changed
+  [Jose] Limpieza de propiedades vacías en el `package.json` raiz
+
+---
+## 2025.3.6+1
+
+### Changed
+- [Juan Carlos] Update de librerías:
+    - [mysql2](https://www.npmjs.com/package/mysql2) 3.13.0
+  [Jose] Añadido soporte a cluster multicliente durante el despliegue (para mrpress)
+
+---
+## 2025.3.5+1
+
+### Changed
+- [Jose] Se ha añadido la opción `defaultLogsBucketBehavior` a la configuración de despliegue
+- [Jose] Se ha simplificado la configuración de despliegue
+- [Jose] Si no se encuentra información de kustomización, se ignora el workspace en lugar de generar un error
+
+---
 ## 2025.2.28+1
 
 ### Changed

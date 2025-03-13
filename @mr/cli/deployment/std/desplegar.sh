@@ -19,8 +19,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     fi
 
     echo "${CLUSTER} ${WORKSPACE}: Preparando"
-    if [[ -f "${RUTA}/despliegue_${NOMBRE}.yaml" ]]; then
-      cat "${RUTA}/despliegue_${NOMBRE}.yaml" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
+    if [[ -f "despliegue_${WORKSPACE}_${NOMBRE}.yaml" ]]; then
+      cat "despliegue_${WORKSPACE}_${NOMBRE}.yaml" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
       echo "---" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
     fi
   }

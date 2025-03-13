@@ -196,6 +196,7 @@ availableSecrets:
 #  _ENTORNO: 'test'
 options:
   automapSubstitutions: true
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
   env:
     - '_AUTORIZAR=${_AUTORIZAR}'
     - '_DESPLEGAR=${_DESPLEGAR}'

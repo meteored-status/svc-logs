@@ -1,6 +1,6 @@
 {
   "name": "@mr/utils",
-  "version": "2025.2.26+1-bixus",
+  "version": "2025.3.6+1-juancmartinez",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {
@@ -17,7 +17,7 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
     "@tsconfig/recommended": "^1.0.8",
-    "@types/node": "^22.13.5",
+    "@types/node": "^22.13.10",
     "services-comun": "workspace:*"
   }
 }

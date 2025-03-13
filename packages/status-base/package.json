@@ -1,0 +1,21 @@
+{
+  "name": "logs-status-base",
+  "version": "1.0.0",
+  "description": "Manejo de status",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteored-status/svc-logs.git"
+  },
+  "author": "Meteored",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/meteored-status/svc-logs/issues"
+  },
+  "homepage": "https://github.com/meteored-status/svc-logs#readme",
+  "main": "app.js",
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "services-comun": "*",
+    "tslib": "^2.8.1"
+  }
+}
