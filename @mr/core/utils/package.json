@@ -17,7 +17,7 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
     "@tsconfig/recommended": "^1.0.8",
-    "@types/node": "^22.13.9",
+    "@types/node": "^22.13.10",
     "services-comun": "workspace:*"
   }
 }

@@ -14,7 +14,7 @@
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "main": "app.js",
   "devDependencies": {
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.13.10",
     "services-comun": "*",
     "tslib": "^2.8.1"
   }

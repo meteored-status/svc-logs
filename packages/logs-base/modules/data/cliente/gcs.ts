@@ -11,6 +11,7 @@ import {ClienteError} from "./error";
 import {Grupo} from "./grupo";
 
 import {type Cliente} from ".";
+import elasticsearch from "services-comun/modules/utiles/elastic";
 
 export type BucketClienteGCS = Record<string, ClienteGCS>;
 
@@ -28,6 +29,25 @@ interface IClienteGCSMySQL extends IClienteGCS {
 
 export class ClienteGCS implements IClienteGCS {
     /* STATIC */
+    private static OK: boolean = false;
+
+    public static async check(unico: boolean = false): Promise<void> {
+        try {
+            this.OK = await elasticsearch.info()
+                .then(()=>true)
+                .catch(()=>false);
+        } catch {
+            this.OK = false;
+        }
+        if (unico) {
+            return;
+        }
+        // esta parte solo la ejecutamos cuando no es una ejecución única
+        setTimeout(()=>{
+            this.check(false).then(()=>{}).catch(()=>{});
+        }, 1000);
+    }
+
     public static async searchBucket(bucket: string): Promise<ClienteGCS> {
         const [cliente] = await db.select<IClienteGCSMySQL, ClienteGCS>(`SELECT * FROM gcs WHERE bucket=?`, [bucket], {
             fn: async (raw)=>new this(await Grupo.searchID(raw.cliente, raw.grupo), raw),
@@ -162,6 +182,10 @@ export class ClienteGCS implements IClienteGCS {
     }
 
     public async ingest(pod: IPodInfo, storage: Google, source: string, idx?: number): Promise<void> {
+        if (!ClienteGCS.OK) {
+            return;
+        }
+
         // await this.addStatusUpdate(source);
         await this.addStatusProcesando(source);
 

@@ -232,7 +232,6 @@ export class Framework {
 
         const promesas: Promise<boolean>[] = [];
         promesas.push(cli.push(autor));
-        // promesas.push(cli.push(autor, true)); // el true es para subir también al repositorio legacy sin comprimir
         for (const paquete of paquetes) {
             promesas.push(paquete.push(autor));
         }

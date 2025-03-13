@@ -1,3 +1,5 @@
+import path from "path";
+
 import {BuildFW} from "@mr/cli/manifest/build";
 import {Manifest} from "@mr/cli/manifest";
 import {Runtime} from "@mr/cli/manifest/deployment";
@@ -334,6 +336,7 @@ export class Compilar {
             for (const {source, target} of this.config.deploy.credenciales) {
                 if (await isFile(`${this.basedir}/kustomizar/tmp/credenciales/${source}`)) {
                     const data = await readFileString(`${this.basedir}/kustomizar/tmp/credenciales/${source}`);
+                    await mkdir(path.basename(`${this.dir}/files/credenciales/${target}`), true);
                     await safeWrite(`${this.dir}/files/credenciales/${target}`, data);
 
                     if (mysql != undefined && target == "mysql.json") {

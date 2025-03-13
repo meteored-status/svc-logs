@@ -5,7 +5,9 @@
         "type": "cronjob",
         "runtime": "node",
         "alone": true,
-        "kustomize": "services"
+        "kustomize": {
+            "legacy": "services"
+        }
     },
     "devel": {
         "enabled": false

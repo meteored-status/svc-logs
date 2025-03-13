@@ -1,6 +1,18 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.3.12+1
+
+### Changed
+- [Jose] Update de librerías:
+    - [webpack-manifest-plugin](https://www.npmjs.com/package/webpack-manifest-plugin) 5.0.1
+- [Jose] Se ha revisado el archivo `.mr-ignore` dentro de `@mr/cli/bin`
+- [Jose] Se ha desactivado la subida descomprimida a los repositorios antiguos
+
+### Fixed
+- [Jose] Cuando se añaden credenciales durante la compilación, se crea la ruta del destino por si se encontrara fuera del directorio por defecto
+
+---
 ## 2025.3.10+1
 
 ### Changed

@@ -66,7 +66,7 @@ export class Init {
             if (status!=0) {
                 console.error(stderr);
                 console.groupEnd();
-                return Promise.reject("Error al inicializar i18n");
+                return Promise.reject(new Error("Error al inicializar i18n"));
             }
         }
 
