@@ -1,8 +1,12 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
-## UNRELEASED
+## 2025.3.12+1
+
+### Changed
 - [Jose] Awaited algunas funciones async en algunas clases core del engine
+- [Jose] Cuando el nombre de la base de datos se carga desde la constante de proyecto, se permiten sustituciones de parámetros. Actualmente se implementan:
+  - `{CLIENTE}`: Se sustituye por la variable de entorno `CLIENTE` o la cadena vacía en caso de no existir
 
 ---
 ## 2025.2.10+2
@@ -16,7 +20,7 @@
 
 ```typescript
 @transactional(() => new MySQLTransactionManager(), 'Mi Transacción')
-const myMethod(transaction?: Transaction): void => {
+function myMethod(transaction?: Transaction): void {
     // Código a ejecutar
 }
 ```

@@ -30,6 +30,7 @@ export class Repesca {
         await this.liberarBloqueados();
         const buckets = await this.liberarHuerfanos(config);
 
+        await ClienteGCS.check(true);
         await Promise.all(Array.from({ length: this.PARALELOS }, (_, i) => this.repescarPendientes(buckets, config, i)));
 
         this.endTimer();
@@ -88,6 +89,10 @@ export class Repesca {
     public static FECHA: string = "";
 
     protected static async repescarPendientes(buckets: BucketClienteGCS, config: Configuracion, i: number): Promise<void> {
+        if (i==0) {
+            // solo recheckeamos en el proceso 0
+            await ClienteGCS.check(true);
+        }
         if (this.PARAR) {
             return;
         }

@@ -268,7 +268,7 @@ export class Paquete {
         return true;
     }
 
-    public async push(autor: string, legacy=false): Promise<boolean> {
+    public async push(autor: string): Promise<boolean> {
         this.consola({
             estado: ConsolaEstado.PENDING,
             actual: this.config.subible,
@@ -339,7 +339,7 @@ export class Paquete {
         await this.savePaquete();
 
         if (!Paquete.SIMULAR) {
-            await this.subirPaquete(status, legacy);
+            await this.subirPaquete(status);
             await this.subirLatest();
         }
 
@@ -444,7 +444,7 @@ export class Paquete {
                 return Promise.reject(new Error(err.message));
             }
 
-            return Promise.reject("Ha ocurrido un error comprobando la versión actual");
+            return Promise.reject(new Error("Ha ocurrido un error comprobando la versión actual"));
         }
     }
 
@@ -483,7 +483,7 @@ export class Paquete {
                 return Promise.reject(new Error(err.message));
             }
 
-            return Promise.reject("Ha ocurrido un error descargando el paquete antiguo");
+            return Promise.reject(new Error("Ha ocurrido un error descargando el paquete antiguo"));
         }
     }
 
@@ -495,7 +495,7 @@ export class Paquete {
         return this.getZIP(`stable-${version}`);
     }
 
-    private async subirPaquete(status: PaqueteDirectoryRoot, legacy: boolean): Promise<void> {
+    private async subirPaquete(status: PaqueteDirectoryRoot): Promise<void> {
         const data = await status.empaquetar();
 
         const file = this.storage
@@ -505,31 +505,5 @@ export class Paquete {
             contentType: "application/zip",
         });
         await pipeline(buffer2stream(data), stream);
-
-        if (legacy) {
-            const nombre = this.nombre.split("/").pop()!; // siempre hay al menos 1 elemento
-            await pipeline(buffer2stream(data), this.storage
-                .bucket(this.config.bucket)
-                .file(`@mr/legacy/${nombre}/stable-${this.version}.zip`)
-                .createWriteStream({
-                    contentType: "application/zip",
-                }));
-            await pipeline(buffer2stream(Buffer.from(this.version)), this.storage
-                .bucket(this.config.bucket)
-                .file(`@mr/legacy/${nombre}/stable.txt`)
-                .createWriteStream({
-                    contentType: "text/plain",
-                }));
-
-            await status.subirLegacy();
-
-            const file = this.storage
-                .bucket("meteored-yarn-workspaces")
-                .file(`${this.nombre}/status.json`);
-            const stream = file.createWriteStream({
-                contentType: "application/json",
-            });
-            await pipeline(buffer2stream(Buffer.from(JSON.stringify(status.toJSON(), null, 2))), stream);
-        }
     }
 }

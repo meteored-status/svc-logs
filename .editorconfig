@@ -13,8 +13,11 @@ indent_size = 2
 [*.json]
 insert_final_newline = false
 
+[mrpack.json]
+indent_size = 4
+
 [*.pug]
 trim_trailing_whitespace = false
 
-[*.{php,ts,js,proto}]
+[*.{php,ts,js}]
 indent_size = 4

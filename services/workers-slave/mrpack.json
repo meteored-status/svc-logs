@@ -5,7 +5,9 @@
         "type": "service",
         "runtime": "node",
         "alone": true,
-        "kustomize": "services"
+        "kustomize": {
+            "legacy": "services"
+        }
     },
     "devel": {
         "enabled": true

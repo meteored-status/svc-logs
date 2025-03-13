@@ -5,7 +5,8 @@
             "force": false
         },
         "run": {
-            "enabled": true
+            "enabled": true,
+            "latest": false
         }
     }
 }
