@@ -3,8 +3,8 @@ import os from "node:os";
 
 import {Configuracion, type IConfiguracionLoader} from "./modules/utiles/config";
 import {error, info, warning} from "./modules/utiles/log";
-import {type IEngine} from "./modules/engine_base";
-import {IMain, type IMainConfig, Main as MainBase} from "./main";
+import type {IEngine} from "./modules/engine_base";
+import {type IMain, type IMainConfig, Main as MainBase} from "./main";
 import telemetry, {type ITelemetryConfig} from "./modules/telemetry";
 
 enum ClusterStatus {

@@ -16,12 +16,12 @@
     "@elastic/elasticsearch": "^8.17.1",
     "@types/geoip-lite": "^1.4.4",
     "@types/node": "^22.13.10",
-    "crawler-user-agents": "^1.0.165",
+    "crawler-user-agents": "^1.2.0",
     "geoip-lite": "^1.4.10",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
     "tslib": "^2.8.1",
-    "ua-parser-js": "^2.0.2",
+    "ua-parser-js": "^2.0.3",
     "zod": "^3.24.2"
   }
 }

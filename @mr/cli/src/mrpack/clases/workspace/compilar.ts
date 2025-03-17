@@ -336,8 +336,9 @@ export class Compilar {
             for (const {source, target} of this.config.deploy.credenciales) {
                 if (await isFile(`${this.basedir}/kustomizar/tmp/credenciales/${source}`)) {
                     const data = await readFileString(`${this.basedir}/kustomizar/tmp/credenciales/${source}`);
-                    await mkdir(path.basename(`${this.dir}/files/credenciales/${target}`), true);
-                    await safeWrite(`${this.dir}/files/credenciales/${target}`, data);
+                    const destino = path.resolve(`${this.dir}/files/credenciales/${target}`);
+                    await mkdir(path.dirname(destino), true);
+                    await safeWrite(destino, data);
 
                     if (mysql != undefined && target == "mysql.json") {
                         const json = JSON.parse(data);

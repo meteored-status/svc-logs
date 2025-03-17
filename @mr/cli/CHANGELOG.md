@@ -1,6 +1,26 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.3.17+1
+
+### Added
+- [Jose] Update de librerías:
+    - [@inquirer/prompts](https://www.npmjs.com/package/@inquirer/prompts) 7.4.0
+
+---
+## 2025.3.14+1
+
+### Added
+- [Juan Carlos] Se añade soporte a workspaces tipo `scripts` para compilar y ejecutar en desarrollo.
+
+---
+## 2025.3.13+1
+
+### Fixed
+- [Jose] Se ha corregido una reescritura innecesaria del mrpack.json en cada inicio de compilación
+- [Jose] Se ha ignorado los directorios de output, files, assets y .next del filewatcher
+
+---
 ## 2025.3.12+1
 
 ### Changed

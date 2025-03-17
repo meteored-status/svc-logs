@@ -69,7 +69,7 @@ export class Service extends Workspace {
         this.watcher?.close();
         this.watcher = chokidar.watch(this.dir, {
             persistent: true,
-            ignored: (path)=>path.endsWith("~"),
+            ignored: (path) => path.endsWith("~") || path.startsWith(`${this.dir}/output/`) || path.startsWith(`${this.dir}/assets/`) || path.startsWith(`${this.dir}/files/`) || path.startsWith(`${this.dir}/.next/`),
         }).on("change", (path) => {
             if (path.endsWith("mrpack.json")) {
                 this.updatePackageFile();

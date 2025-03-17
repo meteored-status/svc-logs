@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.15.2",
-    "@inquirer/prompts": "^7.3.3",
+    "@inquirer/prompts": "^7.4.0",
     "chokidar": "^4.0.3",
     "dotenv": "^16.4.7",
     "jszip": "^3.10.1",
@@ -64,5 +64,5 @@
     "webpack-cli": "^6.0.1",
     "webpack-manifest-plugin": "^5.0.1"
   },
-  "version": "2025.3.12+7-bixus"
+  "version": "2025.3.17+1-bixus"
 }
