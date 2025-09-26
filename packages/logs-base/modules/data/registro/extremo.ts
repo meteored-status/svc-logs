@@ -3,14 +3,14 @@ import {type IRegistroLocalizacion, RegistroLocalizacion} from "./localizacion";
 
 interface IRegistroExtremoBytes {
     headers: number;
-    body: number;
+    body?: number;
     total: number;
     compression?: number;
 }
 
 export interface IRegistroExtremo {
     status: number;
-    contentType: string;
+    contentType?: string;
     ip?: string;
     location?: IRegistroLocalizacion;
     bytes: IRegistroExtremoBytes;
@@ -33,18 +33,18 @@ export class RegistroExtremo implements IRegistroExtremo {
             ip,
             location,
             bytes: {
-                headers: edge.response.bytes-edge.response.body.bytes,
-                body: edge.response.body.bytes,
+                headers: edge.response.bytes-(edge.response.body?.bytes??0),
+                body: edge.response.body?.bytes,
                 total: edge.response.bytes,
-                compression: edge.response.compression.ratio!=0 ?
-                    edge.response.compression.ratio : undefined,
+                compression: edge.response.compression?.ratio!=0 ?
+                    edge.response.compression?.ratio : undefined,
             },
         }, location);
     }
 
     /* INSTANCE */
     public get status(): number { return this.data.status; }
-    public get contentType(): string { return this.data.contentType; }
+    public get contentType(): string|undefined { return this.data.contentType; }
     public get ip(): string|undefined { return this.data.ip; }
     public get bytes(): IRegistroExtremoBytes { return this.data.bytes; };
 

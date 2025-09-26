@@ -8,40 +8,40 @@ import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} f
 import type {Telemetry} from "../telemetry";
 
 export interface IRAWDataClient {
-    asn: number;
-    country: string;
-    device: {
-        type: string;
+    asn?: number;
+    country?: string;
+    device?: {
+        type?: string;
     };
     ip: {
         value: string;
         class: string;
     };
     mtls?: {
-        auth: {
-            cert: {
-                fingerprint: string;
+        auth?: {
+            cert?: {
+                fingerprint?: string;
             };
-            status: string;
+            status?: string;
         };
     };
     region?: string;
     request: {
-        bytes: number;
+        bytes?: number;
         host: string;
         method: string;
         path: string;
         protocol: string;
         referer?: string;
         scheme: string;
-        source: string;
+        source?: string;
         ua?: string;
         uri: string;
     },
     ssl?: {
-        cipher: string;
-        protocol: string;
-        version: string;
+        cipher?: string;
+        protocol?: string;
+        version?: string;
     };
     src?: {
         port: number;
@@ -55,17 +55,17 @@ export interface IRAWDataClient {
 }
 
 export interface IRAWDataEdge {
-    cf: {
-        connectingO2O: boolean;
+    cf?: {
+        connectingO2O?: boolean;
     };
-    colo: {
-        code: string;
-        id: number;
+    colo?: {
+        code?: string;
+        id?: number;
     };
-    pathing: {
-        op: string;
-        src: string;
-        status: string;
+    pathing?: {
+        op?: string;
+        src?: string;
+        status?: string;
     };
     rateLimit?: {
         action: string;
@@ -75,21 +75,21 @@ export interface IRAWDataEdge {
         host: string;
     };
     response: {
-        body: {
-            bytes: number;
+        body?: {
+            bytes?: number;
         };
         bytes: number;
-        compression: {
-            ratio: number;
+        compression?: {
+            ratio?: number;
         };
-        contentType: string;
+        contentType?: string;
         status: number;
     };
     ray: string;
     server?: {
         ip: string;
     },
-    time2FirstByte: number;
+    time2FirstByte?: number;
     timestamp: {
         start: Date;
         end: Date;
@@ -97,45 +97,45 @@ export interface IRAWDataEdge {
 }
 
 export interface IRAWDataOrigin {
-    dns: {
-        response: {
-            time: number;
+    dns?: {
+        response?: {
+            time?: number;
         };
     };
     ip: string;
-    request: {
-        header: {
-            send: {
-                duration: number;
+    request?: {
+        header?: {
+            send?: {
+                duration?: number;
             };
         };
     };
     response: {
-        bytes: number;
-        duration: number;
-        header: {
-            receive: {
-                duration: number;
+        bytes?: number;
+        duration?: number;
+        header?: {
+            receive?: {
+                duration?: number;
             };
         };
         http: {
             expires: string;
-            lastModified: string;
+            lastModified?: string;
         };
-        status: number;
-        time: number;
+        status?: number;
+        time?: number;
     };
-    ssl: {
-        protocol: string;
+    ssl?: {
+        protocol?: string;
     };
-    tcp: {
-        handshake: {
-            duration: number;
+    tcp?: {
+        handshake?: {
+            duration?: number;
         };
     };
-    tls: {
-        handshake: {
-            duration: number;
+    tls?: {
+        handshake?: {
+            duration?: number;
         };
     };
 }
@@ -144,9 +144,9 @@ export interface IRAWDataCache {
     reserve: {
         used: boolean;
     };
-    response: {
-        bytes: number;
-        status: number;
+    response?: {
+        bytes?: number;
+        status?: number;
     };
     status: string;
     tiered: {
@@ -197,8 +197,8 @@ export interface IRAWData {
         };
     };
     origin?: IRAWDataOrigin;
-    parent: {
-        ray: string;
+    parent?: {
+        ray?: string;
     };
     request: IRAWDataRequest;
     response: IRAWDataResponse;
@@ -214,18 +214,18 @@ export interface IRAWData {
         sources?: string[];
     };
     smart?: {
-        route: {
-            colo: number;
+        route?: {
+            colo?: number;
         };
     };
     upper?: {
-        tier: {
-            colo: number;
+        tier?: {
+            colo?: number;
         };
     };
     waf?: {
         action: string;
-        flags: string;
+        flags?: string;
         matched: {
             var?: string;
         };
@@ -246,20 +246,20 @@ export interface IRAWData {
         };
     };
     worker?: {
-        cpu: {
-            time: number;
+        cpu?: {
+            time?: number;
         };
         status: string;
         subrequest: {
             count: number;
         };
-        wall: {
-            time: number;
+        wall?: {
+            time?: number;
         };
     };
-    zone: {
+    zone?: {
         id?: number;
-        name: string;
+        name?: string;
     };
 }
 
@@ -316,7 +316,7 @@ export class Registro implements IRegistro {
             source: telemetry.source,
             idx: telemetry.idx,
         });
-        const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
+        const peticion = RegistroPeticion.build(data.client, data.request);
         const cache = RegistroCache.build(data.cache);
         const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
         const cliente = RegistroCliente.build(data.client);

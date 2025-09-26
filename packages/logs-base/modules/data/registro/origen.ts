@@ -2,11 +2,11 @@ import type {IRAWDataOrigin} from ".";
 import {type IRegistroLocalizacion, RegistroLocalizacion} from "./localizacion";
 
 export interface IRegistroOrigen {
-    status: number;
+    status?: number;
     ip: string;
     nombre?: string;
     location?: IRegistroLocalizacion;
-    bytes: number;
+    bytes?: number;
 }
 
 export class RegistroOrigen implements IRegistroOrigen {
@@ -28,10 +28,10 @@ export class RegistroOrigen implements IRegistroOrigen {
     }
 
     /* INSTANCE */
-    public get status(): number { return this.data.status; }
+    public get status(): number|undefined { return this.data.status; }
     public get ip(): string { return this.data.ip; }
     public get nombre(): string|undefined { return this.data.nombre; }
-    public get bytes(): number { return this.data.bytes; }
+    public get bytes(): number|undefined { return this.data.bytes; }
 
     protected constructor(private data: IRegistroOrigen, public readonly location?: RegistroLocalizacion) {
     }
