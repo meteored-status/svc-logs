@@ -145,7 +145,7 @@ export class Cloudflare {
         WAFAction: z.string(),
         WAFAttackScore: z.number().optional(),
         WAFFlags: z.string(),
-        WAFMatchedVar: z.string(),
+        WAFMatchedVar: z.string().optional(),
         WAFProfile: z.string(),
         WAFRCEAttackScore: z.number().optional(),
         WAFRuleID: z.string(),

@@ -6,7 +6,7 @@ import {parse} from "qs";
 
 import type {Net} from "./config/net";
 import {TDevice} from "./device";
-import type {Tracer} from "./tracer";
+// import type {Tracer} from "./tracer";
 import {ErrorCode, IErrorInfo, IOK, IRespuestaKO, IRespuestaOK} from "./interface";
 import {Idioma} from "./i18n/net";
 import {IErrorHandler} from "./router";
@@ -132,8 +132,8 @@ export class Conexion extends Respuesta {
     public readonly query: URLSearchParams;
     public readonly queryRAW: string;
 
-    public constructor(private readonly peticion: IncomingMessage, respuesta: ServerResponse, errorHandler: IErrorHandler, tracer: Tracer, config: Net, public readonly https: boolean) {
-        super(respuesta, errorHandler, tracer, config);
+    public constructor(private readonly peticion: IncomingMessage, respuesta: ServerResponse, errorHandler: IErrorHandler, /*tracer: Tracer,*/ config: Net, public readonly https: boolean) {
+        super(respuesta, errorHandler, /*tracer,*/ config);
 
         this.start = new Date();
         const url = new URL(`http://localhost${peticion.url??"/"}`);

@@ -19,10 +19,6 @@ export abstract class SendTaskController {
         return this._sendTask;
     }
 
-    protected abstract buildSends(): Promise<Send[]>;
-
-    protected abstract onSend(): Promise<void>;
-
     public async run(): Promise<void> {
         // Creamos la instancia de la tarea
         const sendTaskInstance = SendTaskInstance.create(this.sendTask);
@@ -36,6 +32,10 @@ export abstract class SendTaskController {
 
         await this.onSend();
     }
+
+    protected abstract buildSends(): Promise<Send[]>;
+
+    protected abstract onSend(): Promise<void>;
 
     private async runSend(send: Send): Promise<void> {
         const sender = SenderBuilder.getInstance().build(send);

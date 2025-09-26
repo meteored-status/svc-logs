@@ -1,6 +1,84 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.9.24+1
+
+### Changed
+- [Jose] Soporte multiarquitectura amd64/arm64 para Docker.
+
+---
+## 2025.7.28+1
+
+### Updated
+- [Juan Carlos] Se añade el patrón `**/coverage/**` al archivo `.gitignore` para evitar que se suba el directorio de cobertura de tests.
+
+---
+## 2025.7.23+1
+
+### Updated
+- [Jose] En el manifiesto de workspace, cuando se definen los buckets de storage en los que desplegar el código ahora se distingue entre producción y test (por defecto el mismo bucket)
+
+---
+## 2025.7.21+1
+
+### Updated
+- [Jose] MRPack y MRLang ahora se compilan utilizando RSPack en lugar de Webpack lo que reduce el tiempo de compilación
+
+---
+## 2025.5.21+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.15.21
+    - [webpack](https://www.npmjs.com/package/webpack) 5.99.9
+
+---
+## 2025.5.13+1
+
+### Updated
+- [Juan Carlos] Update de librerías:
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.15.17
+    - [sass](https://www.npmjs.com/package/sass) 1.88.0
+    - [webpack](https://www.npmjs.com/package/webpack) 5.99.8
+
+---
+## 2025.5.8+1
+
+### Updated
+- [Juan Carlos] Update de librerías:
+  - [mysql2](https://www.npmjs.com/package/mysql2) 3.14.1
+  - [@types/node](https://www.npmjs.com/package/@types/node) 22.15.16
+
+
+---
+## 2025.3.24+1
+
+### Fixed
+- [Jose] Se ha eliminado el contenido de `assets`, `output` y `.next` de los archivos supervisados por watch
+- [Jose] Se ha silenciado los warnings cuando se ejecuta en producción/test
+
+### Updated
+- [Jose] Update de librerías:
+    - [@inquirer/prompts](https://www.npmjs.com/package/@inquirer/prompts) 7.4.0
+    - [@tsconfig/node22](https://www.npmjs.com/package/@tsconfig/node22) 22.0.1
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.13.13
+    - [mysql2](https://www.npmjs.com/package/mysql2) 3.14.0
+    - [sass](https://www.npmjs.com/package/sass) 1.86.0
+
+---
+## 2025.3.14+1
+
+### Added
+- [Juan Carlos] Se añade soporte a workspaces tipo `scripts` para compilar y ejecutar en desarrollo.
+
+---
+## 2025.3.13+1
+
+### Fixed
+- [Jose] Se ha corregido una reescritura innecesaria del mrpack.json en cada inicio de compilación
+- [Jose] Se ha ignorado los directorios de output, files, assets y .next del filewatcher
+
+---
 ## 2025.3.12+1
 
 ### Changed
@@ -10,7 +88,8 @@
 - [Jose] Se ha desactivado la subida descomprimida a los repositorios antiguos
 
 ### Fixed
-- [Jose] Cuando se añaden credenciales durante la compilación, se crea la ruta del destino por si se encontrara fuera del directorio por defecto
+- [Jose] Cuando se añaden credenciales durante la compilación, se crea la ruta del destino por si se encontrara fuera
+  del directorio por defecto
 
 ---
 ## 2025.3.10+1
@@ -24,7 +103,7 @@
 ## 2025.3.7+1
 
 ### Changed
-  [Jose] Limpieza de propiedades vacías en el `package.json` raiz
+[Jose] Limpieza de propiedades vacías en el `package.json` raiz
 
 ---
 ## 2025.3.6+1
@@ -32,7 +111,7 @@
 ### Changed
 - [Juan Carlos] Update de librerías:
     - [mysql2](https://www.npmjs.com/package/mysql2) 3.13.0
-  [Jose] Añadido soporte a cluster multicliente durante el despliegue (para mrpress)
+      [Jose] Añadido soporte a cluster multicliente durante el despliegue (para mrpress)
 
 ---
 ## 2025.3.5+1
@@ -64,7 +143,49 @@
 
 ### Changed
 - [Jose] Se ha refactorizado los scripts de despliegue
-  - Ahora se puede compilar y no desplegar, desplegar sin compilar, forzar una nueva versión de despliegue y actualizar el despliegue a la versión más reciente
+    - Ahora se puede compilar y no desplegar, desplegar sin compilar, forzar una nueva versión de despliegue y
+      actualizar el despliegue a la versión más reciente
+
+---
+## 2025.2.24+1
+
+### Updated
+- [Juan Carlos] Update de librerías:
+    - [@google-cloud/storage](https://www.npmjs.com/package/@google-cloud/storage) 7.15.2
+    - [sass](https://www.npmjs.com/package/sass) 1.85.0
+    - [sass-loader](https://www.npmjs.com/package/sass-loader) 16.0.5
+    - [webpack](https://www.npmjs.com/package/webpack) 5.98.0
+
+---
+## 2025.3.5+1
+
+### Changed
+- [Jose] Se ha añadido la opción `defaultLogsBucketBehavior` a la configuración de despliegue
+
+---
+## 2025.2.28+1
+
+### Changed
+- [Jose] Update de librerías:
+    - [terser-webpack-plugin](https://www.npmjs.com/package/terser-webpack-plugin) 5.3.12
+
+---
+## 2025.2.27+1
+
+### Changed
+- [Jose] Refactorizada la propiedad deploy.kustomize de mrpack.json para soportar próximos cambios
+
+---
+## 2025.2.26+1
+
+### Updated
+- [Jose] Añadidas dependencias:
+    - [dotenv](https://www.npmjs.com/package/dotenv) 16.4.7
+
+### Changed
+- [Jose] Se ha refactorizado los scripts de despliegue
+    - Ahora se puede compilar y no desplegar, desplegar sin compilar, forzar una nueva versión de despliegue y
+      actualizar el despliegue a la versión más reciente
 
 ---
 ## 2025.2.24+1

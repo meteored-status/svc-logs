@@ -8,15 +8,11 @@ import {ReceiverDAO} from "./receiver/receiver-d-a-o";
 import {ElasticReceiverDAO} from "./receiver/impl/elastic-receiver-d-a-o";
 
 export class DAOFactory {
-    /* STATIC */
-    public static create(config: Configuracion): DAOFactory {
-        return new DAOFactory(config);
-    }
-
     /* INSTANCE */
     private readonly _sendDAO: SendDAO;
     private readonly _eventDAO: EventDAO;
     private readonly _receiverDAO: ReceiverDAO;
+
     private constructor(config: Configuracion) {
         this._sendDAO = new ElasticSendDAO(config.elasticSearch, elastic);
         this._eventDAO = new ElasticEventDAO(config.elasticSearch, elastic);
@@ -33,5 +29,10 @@ export class DAOFactory {
 
     public get receiver(): ReceiverDAO {
         return this._receiverDAO;
+    }
+
+    /* STATIC */
+    public static create(config: Configuracion): DAOFactory {
+        return new DAOFactory(config);
     }
 }

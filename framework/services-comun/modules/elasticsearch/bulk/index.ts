@@ -84,54 +84,66 @@ export class Bulk extends BulkBase {
     }
 
     private async ejecutarBloque(operaciones: BulkOperation[]): Promise<boolean> {
-        const data = await this.elastic.bulk({
-            index: this.config.index,
-            operations: operaciones.flatMap(op=>op.operations),
-            refresh: this.config.refresh ?? false,
-        }).catch((err)=>{
-            if (err instanceof Error) {
-                error("Error enpetición Bulk", err.name, err.message);
-            }
-            return Promise.reject(err);
-        });
+        let reintentos = 8;
 
-        if (!data.errors) {
-            this.correctos += operaciones.length;
-            for (const op of operaciones) {
-                op.resolve();
-            }
-            return true;
-        }
+        const size = operaciones.reduce((acc, op) => acc + op.size, 0);
 
-        let ok = true;
-        const reportados: string[] = [];
-        for (let i=0, len=operaciones.length; i<len; i++) {
-            const op = operaciones[i];
-            const obj = data.items[i];
-            if (obj==null) {
-                console.log("Tenemos un item a NULL", i, len, operaciones.length, data.items.length);
-                continue;
-            }
-            const item = obj.index ?? obj.create ?? obj.update ?? obj.delete!;
+        let lastError: Error | undefined;
+        while(reintentos > 0) {
+            try {
+                const data = await this.elastic.bulk({
+                    index: this.config.index,
+                    operations: operaciones.flatMap(op => op.operations),
+                    refresh: this.config.refresh ?? false,
+                })
 
-            if (item.error!=undefined) {
-                if (item.status==429) {
-                    this.operaciones.push(op);
-                } else {
-                    if (!reportados.includes(item.error.type)) {
-                        reportados.push(item.error.type);
-                        error("Error irrecuperable de Bulk", JSON.stringify(item.error), JSON.stringify(op.operations));
+                if (!data.errors) {
+                    this.correctos += operaciones.length;
+                    for (const op of operaciones) {
+                        op.resolve();
                     }
-                    this.erroneos++;
-                    ok = false;
-                    op.reject(item.error);
+                    return true;
                 }
-            } else {
-                this.correctos++;
-                op.resolve();
+
+                let ok = true;
+                const reportados: string[] = [];
+                for (let i = 0, len = operaciones.length; i < len; i++) {
+                    const op = operaciones[i];
+                    const obj = data.items[i];
+                    if (obj == null) {
+                        console.log("Tenemos un item a NULL", i, len, operaciones.length, data.items.length);
+                        continue;
+                    }
+                    const item = obj.index ?? obj.create ?? obj.update ?? obj.delete!;
+
+                    if (item.error != undefined) {
+                        if (item.status == 429) {
+                            this.operaciones.push(op);
+                        } else {
+                            if (!reportados.includes(item.error.type)) {
+                                reportados.push(item.error.type);
+                                error("Error irrecuperable de Bulk", JSON.stringify(item.error), JSON.stringify(op.operations));
+                            }
+                            this.erroneos++;
+                            ok = false;
+                            op.reject(item.error);
+                        }
+                    } else {
+                        this.correctos++;
+                        op.resolve();
+                    }
+                }
+
+                return ok;
+            } catch (err) {
+                if (err instanceof Error) {
+                    lastError = err;
+                    console.log(`Ha fallado bulk de ${operaciones.length} operaciones (${size} bytes): ${err.message}`);
+                }
+                reintentos--;
             }
         }
-
-        return ok;
+        error("Error en petición Bulk", lastError?.message);
+        return Promise.reject(lastError);
     }
 }

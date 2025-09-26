@@ -1,6 +1,8 @@
 ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE} AS build
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
 ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
@@ -14,10 +16,13 @@ COPY ./yarn.lock ./
 RUN yarn workspaces focus --production ${WS}
 
 FROM ${BASE_IMAGE} AS app
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
 ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
-RUN echo "RUTA: ${RUTA}" && echo "WS: ${WS}"
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
 ENV NODE_ENV=production
 RUN mkdir ./.yarn && mkdir ./files
 COPY --from=build /usr/src/app/.yarn ./.yarn
@@ -32,6 +37,7 @@ COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/output ./${RUTA}/${WS}/output
 RUN echo "#!/usr/bin/env bash" > run.sh
+RUN echo "[ -n \"\${DD_SERVICE}\" ] && export DD_SERVICE=\"\$(echo \"\${K8S_NAMESPACE:-default}\" | sed 's/meteored/mr/g')/\${DD_SERVICE}\"" >> run.sh
 RUN echo "yarn workspace ${WS} node --no-warnings app.js" >> run.sh
 WORKDIR /usr/src/app/${RUTA}/${WS}
 RUN ln -s ../../files ./

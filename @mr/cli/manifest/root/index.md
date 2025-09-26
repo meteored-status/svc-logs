@@ -52,6 +52,8 @@ interface IManifestDeploymentRun {
 - `enabled`: Indica si se ha de ejecutar el despliegue o no.
     - **tipo**: boolean
     - **opcional**: Por defecto `true`.
-- `latest`: Indica si se ha de desplegar la última versión o la actual. Esto es útil cuando se ha generado previamente una versión nueva pero no se ha desplegado, por lo que se seguiría desplegando la versión anterior en caso de solo desplegar (sin generar)
+- `latest`: Indica si se ha de desplegar la última versión o la actual. Esto es útil cuando se ha generado previamente
+  una versión nueva pero no se ha desplegado, por lo que se seguiría desplegando la versión anterior en caso de solo
+  desplegar (sin generar)
     - **tipo**: boolean
     - **opcional**: Por defecto `false`.

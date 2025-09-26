@@ -16,11 +16,11 @@ export class ElasticSearch extends ConfigGenerico<IElasticSearch> implements IEl
     public readonly receiverIndex: string;
 
     public constructor(defecto: IElasticSearch, user: Partial<IElasticSearch>) {
-        super(defecto, user??{});
+        super(defecto, user ?? {});
 
-        this.sendIndex = user.sendIndex??defecto.sendIndex;
-        this.eventIndex = user.eventIndex??defecto.eventIndex;
-        this.receiverIndex = user.receiverIndex??defecto.receiverIndex;
+        this.sendIndex = user.sendIndex ?? defecto.sendIndex;
+        this.eventIndex = user.eventIndex ?? defecto.eventIndex;
+        this.receiverIndex = user.receiverIndex ?? defecto.receiverIndex;
     }
 
 }
@@ -39,9 +39,9 @@ export class Configuracion extends ConfigGenerico<IConfiguracion> implements ICo
     public readonly statisticsControlFile: string;
 
     public constructor(defecto: IConfiguracion, user: Partial<IConfiguracion>) {
-        super(defecto, user??{});
+        super(defecto, user ?? {});
 
-        this.elasticSearch = new ElasticSearch(defecto.elasticSearch, user.elasticSearch??{});
-        this.statisticsControlFile = user.statisticsControlFile??defecto.statisticsControlFile;
+        this.elasticSearch = new ElasticSearch(defecto.elasticSearch, user.elasticSearch ?? {});
+        this.statisticsControlFile = user.statisticsControlFile ?? defecto.statisticsControlFile;
     }
 }

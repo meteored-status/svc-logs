@@ -81,7 +81,9 @@ export class TraduccionLoaderMySQL extends TraduccionLoader {
     }
 
     public static async existe(modulo: Modulo, id: string): Promise<boolean> {
-        const [data] = await db.select<{id: string}>("SELECT `id` FROM `traducciones` WHERE `modulo`=? AND `id`=? AND `borrado`=0", [modulo.id, id]);
+        const [data] = await db.select<{
+            id: string
+        }>("SELECT `id` FROM `traducciones` WHERE `modulo`=? AND `id`=? AND `borrado`=0", [modulo.id, id]);
         return data!=undefined;
     }
 

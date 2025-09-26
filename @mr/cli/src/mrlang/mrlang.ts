@@ -9,6 +9,7 @@ import {ModuloPush} from "./modulos/push";
 
 export interface IMRLangConfig extends IModuloConfig {
     options: IModuloConfig["options"] & {
+        version: { type: "string", short: "v", default: "1", },
     };
 }
 
@@ -22,6 +23,7 @@ export class MRLang<T extends IMRLangConfig> extends Modulo<T> {
         ...Modulo.OPTIONS,
         options: {
             ...Modulo.OPTIONS.options,
+            version: { type: "string", short: "v", default: "1", },
         },
         strict: false,
     };

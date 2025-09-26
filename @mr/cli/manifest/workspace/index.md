@@ -28,6 +28,7 @@ interface IManifestDeployment {
     type: ManifestDeploymentKind;
     runtime: Runtime;
     alone?: boolean;
+    arch?: string[];
     credenciales?: IManifestDeploymentCredenciales[];
     imagen?: string;
     kustomize?: IManifestDeploymentKustomize;
@@ -43,6 +44,9 @@ interface IManifestDeployment {
 - `alone`: Indica si el despliegue se realiza en una sola zona. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo**: boolean
     - **opcional**: Por defecto `false`.
+- `arch`: Indica las arquitecturas para las que generar el contenedor. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
+    - **tipo**: string
+    - **opcional**: Por defecto ["linux/amd64", "linux/arm64"].
 - `credenciales`: Credenciales necesarias durante el proceso de despliegue. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo** [IManifestDeploymentCredenciales[]](#imanifestdeploymentcredenciales).
     - **opcional**: Por defecto `[]`.
@@ -100,11 +104,13 @@ interface IManifestDeploymentCredenciales {
 - `target`: Archivo de destino junto con su ruta relativa al workspace.
 
 ## IManifestDeploymentKutomize
+
 ```typescript
 interface IManifestDeploymentKutomize {
     legacy?: string;
 }
 ```
+
 - `kustomize`: Nombre del directorio dentro del proyecto kustomize.
     - **tipo**: string
     - **opcional**: Por defecto se utiliza `services`.
@@ -113,7 +119,7 @@ interface IManifestDeploymentKutomize {
 ## IManifestDeploymentStorage
 ```typescript
 interface IManifestDeploymentStorage {
-    buckets: string[];
+    buckets: IManifestDeploymentStorageBuckets;
     bundle: string;
     subdirPrefix: string;
     subdir?: string;
@@ -121,8 +127,8 @@ interface IManifestDeploymentStorage {
     previo?: string[];
 }
 ```
-- `buckets`: Lista de buckets en los que desplegar el código.
-    - **tipo**: string[]
+- `buckets`: Buckets en los que desplegar el código.
+    - **tipo**: [IManifestDeploymentStorageBuckets](#imanifestdeploymentstoragebuckets).
 - `bundle`: Directorio dentro de `output` que se debe subir a los buckets.
     - **tipo**: string
 - `subdirPrefix`: Prefijo del subdirectorio.
@@ -135,6 +141,19 @@ interface IManifestDeploymentStorage {
 - `previo`: Directorios utilizados anteriormente.
     - **tipo**: string[]
     - **opcional**: Por defecto `[]`.
+
+---
+## IManifestDeploymentStorageBuckets
+```typescript
+interface IManifestDeploymentStorageBuckets {
+    produccion: string[];
+    test: string[];
+}
+```
+- `produccion`: Lista de buckets en los que desplegar el código en producción.
+    - **tipo**: string[]
+- `test`: Lista de buckets en los que desplegar el código en test.
+    - **tipo**: string[]
 
 ---
 ## IManifestDevelopment
@@ -152,7 +171,7 @@ interface IManifestDevelopment {
 interface IManifestBuild {
     deps?: string[]; // workspaces de los que depende el workspace actual
     framework: BuildFW;
-    database?: string;
+    database?: IManifestBuildDatabase;
     bundle?: IManifestBuildBundle;
 }
 ```
@@ -162,7 +181,7 @@ interface IManifestBuild {
 - `framework`: Framework de desarrollo.
     - **tipo** [BuildFW](#buildfw).
 - `database`: Nombre de la Base de Datos MySQL por defecto que se va a utilizar.
-    - **tipo**: string
+    - **tipo**: [IManifestBuildDatabase](#imanifestbuilddatabase).
     - **opcional**: Por defecto no se establece ninguna base de datos.
 - `bundle`: Información sobre el empaquetado.
     - **tipo** [IManifestBuildBundle](#imanifestbuildbundle).
@@ -189,6 +208,21 @@ interface IManifestBuildBundle extends IManifestBuildBundleBase {
 - `web`: Información sobre empaquetados adicionales para la web.
     - **tipo** [IManifestBuildBundleBase](#imanifestbuildbundlebase)|[IManifestBuildBundleBase[]](#imanifestbuildbundlebase)
     - **opcional**: Por defecto se establece `[]`.
+
+---
+## IManifestBuildDatabase
+```typescript
+interface IManifestBuildDatabase {
+    produccion?: string;
+    test?: string;
+}
+```
+- `produccion`: Nombre de la base de datos para producción.
+    - **tipo** string
+    - **opcional**
+- `test`: Nombre de la base de datos para test.
+    - **tipo** string
+    - **opcional**
 
 ---
 ## IManifestBuildBundleBase

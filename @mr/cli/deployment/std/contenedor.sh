@@ -6,6 +6,10 @@ source @mr/cli/deployment/std/aliases.sh
 if [[ -f "GENERAR.txt" ]]; then
   mkdir -p .yarn/plugins
 
+#  docker run --privileged --rm tonistiigi/binfmt --install all
+  docker buildx create --name mrpack --driver docker-container --use
+  docker buildx inspect --bootstrap
+
   parseWorkspace() {
     RUTA="${1}"
     DIRECTORIO=$(path1 "${RUTA}")
@@ -27,42 +31,72 @@ if [[ -f "GENERAR.txt" ]]; then
         mkdir -p "${RUTA}/public"
       fi
 
-      BASE_IMAGE=$(configw "${RUTA}" .deploy.imagen)
+      BASE_IMAGE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}")
       if [[ "${BASE_IMAGE}" == "null" ]]; then
         BASE_IMAGE="node:lts-alpine"
+      else
+        BASE_IMAGE=$(echo "${BASE_IMAGE}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g")
       fi
       echo "${RUTA}: ${BASE_IMAGE}"
+      ARCH=$(configw "${RUTA}" '.deploy.arch // empty | select(type == "array") | join(",")')
+      if [[ -z "$ARCH" || "$ARCH" == "" ]]; then
+        ARCH="linux/amd64,linux/arm64"
+      fi
 
       if [[ -f ${RUTA}/Dockerfile ]]; then
-        echo "${RUTA}: Custom Dockerfile"
-        docker build --no-cache -f "${RUTA}/Dockerfile" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
+        echo "${RUTA}: Custom Dockerfile (${ARCH})"
+        DOCKERFILE="${RUTA}/Dockerfile"
+#        docker build --no-cache -f "${DOCKERFILE}" --build-arg  PROYECTO="${PROJECT_ID}" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" --build-arg DD_GIT_REPOSITORY_URL="${REPO_FULL_NAME}" --build-arg DD_GIT_COMMIT_SHA="${COMMIT_SHA}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
       else
         if [[ $(configw "${RUTA}" .build.framework) != "nextjs" ]]; then
-          echo "${RUTA}: Generic Meteored Dockerfile"
-          docker build --no-cache -f "@mr/cli/deployment/std/Dockerfile" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
+          echo "${RUTA}: Generic Meteored Dockerfile (${ARCH})"
+          DOCKERFILE="@mr/cli/deployment/std/Dockerfile"
+#          docker build --no-cache -f "${DOCKERFILE}" --build-arg  PROYECTO="${PROJECT_ID}" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" --build-arg DD_GIT_REPOSITORY_URL="${REPO_FULL_NAME}" --build-arg DD_GIT_COMMIT_SHA="${COMMIT_SHA}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
         else
-          echo "${RUTA}: Generic Next Dockerfile"
-          docker build --no-cache -f "@mr/cli/deployment/std/Dockerfile-next" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
+          echo "${RUTA}: Generic Next Dockerfile (${ARCH})"
+          DOCKERFILE="@mr/cli/deployment/std/Dockerfile-next"
+#          docker build --no-cache -f "${DOCKERFILE}" --build-arg  PROYECTO="${PROJECT_ID}" --build-arg  RUTA="${DIRECTORIO}" --build-arg  WS="${WORKSPACE}" --build-arg  BASE_IMAGE="${BASE_IMAGE}" --build-arg DD_GIT_REPOSITORY_URL="${REPO_FULL_NAME}" --build-arg DD_GIT_COMMIT_SHA="${COMMIT_SHA}" -t "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" .
         fi
       fi
-
-      echo "${RUTA}: Añadiendo etiquetas"
-      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}"
-      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
-      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
       if [[ -f "DESPLEGAR.txt" ]]; then
-        docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
+        DEPLOYED="deployed"
+      else
+        DEPLOYED="ratained"
       fi
 
-      echo "${RUTA}: Subiendo contenedor"
-      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:latest"
-      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
-      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
-      if [[ -f "DESPLEGAR.txt" ]]; then
-        docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
-      fi
+      docker buildx build \
+        --platform "${ARCH}" \
+        --file "${DOCKERFILE}" \
+        --build-arg PROYECTO="${PROJECT_ID}" \
+        --build-arg RUTA="${DIRECTORIO}" \
+        --build-arg WS="${WORKSPACE}" \
+        --build-arg BASE_IMAGE="${BASE_IMAGE}" \
+        --build-arg DD_GIT_REPOSITORY_URL="${REPO_FULL_NAME}" \
+        --build-arg DD_GIT_COMMIT_SHA="${COMMIT_SHA}" \
+        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:latest" \
+        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}" \
+        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}" \
+        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}" \
+        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${DEPLOYED}_${_ENTORNO}" \
+        --push .
+
+#      echo "${RUTA}: Añadiendo etiquetas"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
+#      if [[ -f "DESPLEGAR.txt" ]]; then
+#        docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
+#      fi
+#
+#      echo "${RUTA}: Subiendo contenedor"
+#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:latest"
+#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
+#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
+#      if [[ -f "DESPLEGAR.txt" ]]; then
+#        docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}"
+#      fi
 
     else
       echo "${RUTA}: Sin cambios en el contenedor"
@@ -79,6 +113,10 @@ else
   if [[ -f "DESPLEGAR.txt" ]]; then
     if [[ ! -f "DESPLEGAR_LATEST.txt" ]]; then
       echo "Revisando los tags del contenedor"
+
+      docker buildx create --name mrpack --driver docker-container --use
+      docker buildx inspect --bootstrap
+
       parseWorkspace() {
         RUTA="${1}"
         DIRECTORIO=$(path1 "${RUTA}")
@@ -87,15 +125,19 @@ else
         VERSION=$(cat "${RUTA}/version.txt")
         KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
 
-        docker pull "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-#       echo "Versiones actuales"
-#       TAGS=$(gcloud artifacts docker images list "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --format="get(tags)" | tr ',' '\n' | grep "${VERSION}")
-#       echo "${TAGS}"
-#       if ! echo "${TAGS}" | grep -q "deployed_${_ENTORNO}"; then
-          echo "Actualizando las etiquetas del contenedor"
-          docker tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
-          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
-#       fi
+        docker buildx imagetools create \
+          --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}" \
+          "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+
+#        docker pull "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+##       echo "Versiones actuales"
+##       TAGS=$(gcloud artifacts docker images list "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --format="get(tags)" | tr ',' '\n' | grep "${VERSION}")
+##       echo "${TAGS}"
+##       if ! echo "${TAGS}" | grep -q "deployed_${_ENTORNO}"; then
+#          echo "Actualizando las etiquetas del contenedor"
+#          docker tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}"
+#          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}"
+##       fi
       }
 
       export -f parseWorkspace

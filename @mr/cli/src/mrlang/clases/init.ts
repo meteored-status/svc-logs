@@ -79,6 +79,7 @@ export class Init {
                 "push": "yarn workspace @mr/cli mrlang push",
             },
             devDependencies: {
+                "make-plural": devDependencies["make-plural"]??"^7.4.0",
                 "services-comun": "workspace:*",
                 "tslib": devDependencies["tslib"]??"^2.7.0",
             },

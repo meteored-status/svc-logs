@@ -1,20 +1,76 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2025.9.2+1
+
+## Added
+
+- [Juan Carlos] Añadida implementación de `NetCache` para `Redis`.
+---
+## 2025.7.22+1
+
+### Fixed
+- [Jose] Refactor de la conexión a MySQL
+
+---
+## 2025.5.15+1
+
+### Fixed
+- [Jose] Corregido el tamaño límite de archivos enviados por POST
+
+---
+## 2025.5.13+1
+
+### Updated
+- [Juan Carlos] Update de librerías:
+    - [isbot](https://www.npmjs.com/package/isbot) 5.1.28
+
+---
+## 2025.5.8+1
+
+### Updated
+- [Juan Carlos] Update de librerías:
+    - [mysql2](https://www.npmjs.com/package/mysql2) 3.14.1
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.15.16
+    - [isbot](https://www.npmjs.com/package/isbot) 5.1.27
+
+---
+## 2025.4.21+1
+
+### Fixed
+- [Juan Carlos] Corregido error en el parser de calendarios de Google Calendar para identificar eventos de recurrencia, dentro de un evento.
+
+---
+## 2025.3.24+1
+
+### Updated
+- [Jose] Update de librerías:
+    - [@sequelize/core](https://www.npmjs.com/package/@sequelize/core) 7.0.0-alpha.46
+    - [@tsconfig/node22](https://www.npmjs.com/package/@tsconfig/node22) 22.0.1
+    - [@types/node](https://www.npmjs.com/package/@types/node) 22.13.13
+    - [isbot](https://www.npmjs.com/package/isbot) 5.1.25
+    - [mysql2](https://www.npmjs.com/package/mysql2) 3.14.0
+
+---
 ## 2025.3.12+1
 
 ### Changed
 - [Jose] Awaited algunas funciones async en algunas clases core del engine
-- [Jose] Cuando el nombre de la base de datos se carga desde la constante de proyecto, se permiten sustituciones de parámetros. Actualmente se implementan:
-  - `{CLIENTE}`: Se sustituye por la variable de entorno `CLIENTE` o la cadena vacía en caso de no existir
+- [Jose] Cuando el nombre de la base de datos se carga desde la constante de proyecto, se permiten sustituciones de
+  parámetros. Actualmente se implementan:
+    - `{CLIENTE}`: Se sustituye por la variable de entorno `CLIENTE` o la cadena vacía en caso de no existir
 
 ---
+
 ## 2025.2.10+2
 
 ### Added
 - [Juan Carlos] Se crea la clase abstracta `Transaction` para manejar transacciones de base de datos.
-- [Juan Carlos] Se crea una clase para la gestión de transacciones `TransactionManager` que permite realizar transacciones de forma sencilla sin tener en cuenta la implementación de la transacción.
-- [Juan Carlos] Se crea la función `transactional` que permite crear una transacción a través de un `TransactionManager`. Esta función recibe como parámetro una función que devuelve un objeto `TransactionManager` y un nombre (opcional).
+- [Juan Carlos] Se crea una clase para la gestión de transacciones `TransactionManager` que permite realizar
+  transacciones de forma sencilla sin tener en cuenta la implementación de la transacción.
+- [Juan Carlos] Se crea la función `transactional` que permite crear una transacción a través de un
+  `TransactionManager`. Esta función recibe como parámetro una función que devuelve un objeto `TransactionManager` y un
+  nombre (opcional).
 - [Juan Carlos] Se crea una clase `MySQLTransactionManager` para manejar transacciones de MySQL.
 - [Juan Carlos] Se hace que la clase `Transaction` de MySQL extienda de la clase `Transaction` abstracta.
 

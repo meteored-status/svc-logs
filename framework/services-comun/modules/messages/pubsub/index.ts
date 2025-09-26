@@ -76,7 +76,7 @@ export class PubSub<T> {
         const deadline = Duration.from({seconds: this.DEADLINE});
 
         const subscription: Subscription = topic.subscription(this.subscriptionName, {
-            enableOpenTelemetryTracing: true,
+            // enableOpenTelemetryTracing: true,
             batching: {
                 maxMessages: 2500,
             },

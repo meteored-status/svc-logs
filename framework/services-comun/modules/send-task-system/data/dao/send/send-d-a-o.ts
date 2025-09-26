@@ -2,7 +2,9 @@ import {Send} from "../../model/send";
 
 export interface ISendDAO {
     save(send: Send): Promise<Send>;
+
     getPending(): Promise<Send[]>;
+
     findByTransmissionId(transmissionId: string): Promise<Send>;
 }
 

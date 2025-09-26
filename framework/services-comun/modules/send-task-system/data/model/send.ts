@@ -1,13 +1,13 @@
 import {v7 as uuid} from "uuid";
 
 export enum TStatus {
-    SEND    = 1,
+    SEND = 1,
     PENDING = 2,
-    ERROR   = 3,
+    ERROR = 3,
 }
 
 export enum TSend {
-    SPARKPOST   = 1
+    SPARKPOST = 1
 }
 
 export interface ISend {
@@ -29,26 +29,8 @@ export interface IMetadata {
 }
 
 export abstract class Send {
-    /* STATIC */
-    protected static buildData(type: TSend, sendTaskId: number, expires: Date, scheduled: Date): ISend {
-        return {
-            id: uuid(),
-            type,
-            status: TStatus.PENDING,
-            created: new Date(),
-            expiration: expires,
-            programmed_send: scheduled,
-            tries: 0,
-            send_task_id: sendTaskId
-        }
-    }
-
     /* INSTANCE */
     protected constructor(private readonly _data: ISend, public metadata: IMetadata) {
-    }
-
-    protected get data(): ISend {
-        return this._data;
     }
 
     public get id(): string {
@@ -91,15 +73,33 @@ export abstract class Send {
         return this.data.send_task_id;
     }
 
-    public get sendTaskInstanceId(): string|undefined {
+    public get sendTaskInstanceId(): string | undefined {
         return this.data.send_task_instance_id;
     }
 
-    public set sendTaskInstanceId(value: string|undefined) {
+    public set sendTaskInstanceId(value: string | undefined) {
         this.data.send_task_instance_id = value;
     }
 
-    public get content(): string|undefined {
+    public get content(): string | undefined {
         return this.data.content;
+    }
+
+    protected get data(): ISend {
+        return this._data;
+    }
+
+    /* STATIC */
+    protected static buildData(type: TSend, sendTaskId: number, expires: Date, scheduled: Date): ISend {
+        return {
+            id: uuid(),
+            type,
+            status: TStatus.PENDING,
+            created: new Date(),
+            expiration: expires,
+            programmed_send: scheduled,
+            tries: 0,
+            send_task_id: sendTaskId
+        }
     }
 }

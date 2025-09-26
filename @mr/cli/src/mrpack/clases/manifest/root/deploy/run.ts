@@ -14,7 +14,7 @@ export class ManifestRootDeploymentRunLoader {
         if (devel.enabled!=undefined) {
             data.enabled = devel.enabled;
         }
-        if (devel.enabled!=undefined) {
+        if (devel.enabled != undefined) {
             data.enabled = devel.enabled;
         }
 

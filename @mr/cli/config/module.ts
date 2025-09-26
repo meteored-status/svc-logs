@@ -34,7 +34,7 @@ export class Module {
         }
         if (componentes.css!=ManifestBuildComponentesCSS.DESACTIVADO) {
             salida.rules!.push({
-                test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
+                test: /\.(png|jpe?g|gif|svg|eot|ttf|woff)$/i,
                 type: componentes.css==ManifestBuildComponentesCSS.CRITICAL?"asset/inline":"asset/resource",
             });
             salida.rules!.push({

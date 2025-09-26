@@ -1,6 +1,6 @@
 import http, {IncomingMessage as IncomingMessageBase} from "node:http";
 import https from "node:https";
-import opentelemetry from "@opentelemetry/api";
+// import opentelemetry from "@opentelemetry/api";
 import {RequestCacheDisk} from "./cache/disk";
 import {ErrorCode, IRespuesta} from "./interface";
 
@@ -18,7 +18,7 @@ export interface IRequest {
     retry: number;
     retryOnTimeout: boolean; // si es true, se reintentará la petición si se produce un timeout del servidor (no del campo tiemout).
     buffer: boolean;
-    traceparent?: string;
+    // traceparent?: string; // para OpenTelemetry, se inyecta en los headers de la petición.
     contentType?: string;
     dominioAlternativo?: string;
 }
@@ -40,7 +40,7 @@ export class BackendRequest {
         return {
             timeout: 1000,
             retry: 0,
-            retryOnTimeout: true,
+            retryOnTimeout: false,
             buffer: false,
             ...cfg,
         };
@@ -48,9 +48,15 @@ export class BackendRequest {
 
     protected static async parseRespuestaBuffer(respuesta: Response): Promise<RequestResponse<Buffer>> {
         const expires = respuesta.headers.get("expires");
+        const resultHeaders = new Headers(respuesta.headers);
+
+        if (DESARROLLO) {
+            resultHeaders.delete('Content-Encoding');
+        }
+
         return {
             data: Buffer.from(await respuesta.arrayBuffer()),
-            headers: respuesta.headers,
+            headers: resultHeaders,
             expires: expires != null ? new Date(expires) : undefined,
         };
     }
@@ -117,9 +123,9 @@ export class BackendRequest {
         if (config.x_u_email != undefined && !headers.has("x-u-email")) {
             headers.set("x-u-email", config.x_u_email);
         }
-        if (config.traceparent && !headers.has("traceparent")) {
-            headers.set("traceparent", config.traceparent);
-        }
+        // if (config.traceparent && !headers.has("traceparent")) {
+        //     headers.set("traceparent", config.traceparent);
+        // }
         if (post != undefined) {
             init.method = "POST";
             init.cache = "no-cache";
@@ -191,7 +197,7 @@ export class BackendRequest {
 
     protected static propagarContexto(cfg?: IRequestConfig): IRequestConfig {
         cfg ??= {};
-        opentelemetry.propagation.inject(opentelemetry.context.active(), cfg);
+        // opentelemetry.propagation.inject(opentelemetry.context.active(), cfg);
 
         return cfg;
     }
@@ -251,10 +257,10 @@ export class BackendRequest {
     public static async getForward(url: string): Promise<IncomingMessage> {
         return new Promise<IncomingMessage>((resolve) => {
             const requester = url.startsWith("https://") ? https : http;
-            const traceparent = this.propagarContexto().traceparent;
-            const headers = traceparent != undefined ? {traceparent} : {};
+            // const traceparent = this.propagarContexto().traceparent;
+            // const headers = traceparent != undefined ? {traceparent} : {};
             requester.get(url, {
-                headers,
+                headers: {},
             }, (res) => {
                 resolve(res);
             });

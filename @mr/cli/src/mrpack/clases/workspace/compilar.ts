@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 import {BuildFW} from "@mr/cli/manifest/build";
 import {Manifest} from "@mr/cli/manifest";
@@ -10,7 +10,8 @@ import {
     mkdir,
     readFileString,
     readJSON,
-    safeWrite, unlink,
+    safeWrite,
+    unlink,
 } from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
@@ -97,7 +98,7 @@ export class Compilar {
             }
 
             console.warn(this.name, "[WARN ]", "Servicio desactivado para despliegue. Hay servicios dependientes que podrían no generarse correctamente:", this.dependencias.map((dependencia)=>dependencia.name).join(", "));
-            return Promise.all(this.dependencias.map((dependencia)=>dependencia.pack(env, manifest, this))).then(()=>{});
+            return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, this))).then(() => undefined);
         }
 
         if (manifest.deploy.build.enabled) {
@@ -121,7 +122,7 @@ export class Compilar {
             return;
         }
 
-        return Promise.all(this.dependencias.map((dependencia)=>dependencia.pack(env, manifest, this))).then(()=>{});
+        return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, this))).then(() => undefined);
     }
 
     private async packMeteored(env: string, manifest: ManifestRoot): Promise<void> {
@@ -160,11 +161,11 @@ export class Compilar {
                         `${this.dir}/app.js`,
                         `${this.dir}/assets`,
                     );
-                    await this.checkVersionService(env, manifest, checks);
+                await this.checkVersionService(env, manifest, checks);
                 }
                 break;
             case Runtime.php: {
-                    await this.checkVersionService(env, manifest, [
+                await this.checkVersionService(env, manifest, [
                         `${this.dir}/assets`,
                         `${this.dir}/base/nginx/local.conf`,
                         `${this.dir}/autoload.php`,
@@ -228,11 +229,11 @@ export class Compilar {
         ]);
     }
 
-    private async getVersion(latest: boolean): Promise<[string|undefined, string|undefined]> {
+    private async getVersion(latest: boolean): Promise<[string | undefined, string | undefined]> {
         const tags: string[] = [];
 
         if (await isFile(`${this.dir}/tags.json`)) {
-            let datos = await readJSON<ITag | ITag[]>(`${this.dir}/${latest?"tags.json":"deployed.json"}`).catch(() => undefined);
+            let datos = await readJSON<ITag | ITag[]>(`${this.dir}/${latest ? "tags.json" : "deployed.json"}`).catch(() => undefined);
             if (Array.isArray(datos)) {
                 datos = datos[0];
             }
@@ -241,8 +242,8 @@ export class Compilar {
             }
         }
 
-        let version: string|undefined;
-        let hash: string|undefined;
+        let version: string | undefined;
+        let hash: string | undefined;
         for (const actual of tags) {
             const partes = /^(\d{4}\.\d{2}\.\d{2})-(\d{3,}).*$/.exec(actual);
             if (partes==null) {
@@ -256,16 +257,16 @@ export class Compilar {
     }
 
     private async mantenerVersion(env: string, manifest: ManifestRoot): Promise<void> {
-        const [version="0000.00.00-000", anterior=""] = await this.getVersion(manifest.deploy.run.latest);
+        const [version = "0000.00.00-000", anterior = ""] = await this.getVersion(manifest.deploy.run.latest);
         await safeWrite(`${this.dir}/version.txt`, `${version}-${env}`, true, true);
         await safeWrite(`${this.dir}/hash.txt`, anterior, true, true);
     }
 
     private async checkVersionService(env: string, manifest: ManifestRoot, checks: string[]): Promise<void> {
         const [version, anterior] = await this.getVersion(true);
-        let fecha: string|undefined;
-        let index: string|undefined;
-        if (version!=undefined) {
+        let fecha: string | undefined;
+        let index: string | undefined;
+        if (version != undefined) {
             const partes = version.split("-");
             fecha = partes[0];
             index = partes[1];
@@ -279,7 +280,15 @@ export class Compilar {
             JSON.stringify(this.packagejson.dependencies??{}),
         ];
         if (this.config.deploy.imagen!=undefined) {
-            hashes.push(this.config.deploy.imagen);
+            if (env=="test") {
+                if (this.config.deploy.imagen.test!=undefined) {
+                    hashes.push(this.config.deploy.imagen.test);
+                }
+            } else {
+                if (this.config.deploy.imagen.produccion!=undefined) {
+                    hashes.push(this.config.deploy.imagen.produccion);
+                }
+            }
         }
         for (const actual of checks) {
             hashes.push(await md5Dir(actual));
@@ -291,7 +300,7 @@ export class Compilar {
         ).substring(0, 8);
         const md5Hash = `${hash}-${env}`;
 
-        if (fecha==undefined || index==undefined || anterior!=md5Hash || manifest.deploy.build.force) {
+        if (fecha == undefined || index == undefined || anterior != md5Hash || manifest.deploy.build.force) {
             const date = new Date();
             const fechaActual = [
                 date.getUTCFullYear(),
@@ -336,8 +345,9 @@ export class Compilar {
             for (const {source, target} of this.config.deploy.credenciales) {
                 if (await isFile(`${this.basedir}/kustomizar/tmp/credenciales/${source}`)) {
                     const data = await readFileString(`${this.basedir}/kustomizar/tmp/credenciales/${source}`);
-                    await mkdir(path.basename(`${this.dir}/files/credenciales/${target}`), true);
-                    await safeWrite(`${this.dir}/files/credenciales/${target}`, data);
+                    const destino = path.resolve(`${this.dir}/files/credenciales/${target}`);
+                    await mkdir(path.dirname(destino), true);
+                    await safeWrite(destino, data);
 
                     if (mysql != undefined && target == "mysql.json") {
                         const json = JSON.parse(data);

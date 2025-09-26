@@ -36,6 +36,7 @@ export interface IBulkParamsUpdate<T> extends IBulkParamsID {
     doc: Partial<T>;
     crear?: boolean;
     upsert?: T;
+    retry_on_conflict?: number;
 }
 
 export abstract class BulkBase {
@@ -81,7 +82,7 @@ export abstract class BulkBase {
         return this.push(BulkOperationScript.build(this.checkOperacion(index), id, script, doc));
     }
 
-    public update<T extends object>({index, id, doc, crear, upsert}: IBulkParamsUpdate<T>): BulkOperation {
-        return this.push(BulkOperationUpdate.build(this.checkOperacion(index), id, doc, crear, upsert));
+    public update<T extends object>({index, id, doc, crear, upsert, retry_on_conflict}: IBulkParamsUpdate<T>): BulkOperation {
+        return this.push(BulkOperationUpdate.build(this.checkOperacion(index), id, doc, crear, upsert, retry_on_conflict));
     }
 }

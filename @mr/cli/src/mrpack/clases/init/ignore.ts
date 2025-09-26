@@ -30,4 +30,5 @@ tmp/
 tsconfig.tsbuildinfo
 vendor/
 **/.env*.local
+**/coverage/**
 `.trimStart();

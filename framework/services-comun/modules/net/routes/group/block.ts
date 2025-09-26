@@ -192,11 +192,11 @@ export class RouteGroupBlock {
             }
         }
 
-        const span = conexion.tracer.span("Handler");
+        // const span = conexion.tracer.span("Handler");
         await this.prehandler(conexion, coincidencias)
             .catch(async (err)=>{
                 error("Error en Handler.check", conexion.url, err);
-                span.error(err.message);
+                // span.error(err.message);
 
                 if (!conexion.isTerminado()) {
                     await conexion.error(500, err)
@@ -205,15 +205,15 @@ export class RouteGroupBlock {
                         });
                 }
             });
-        span.end();
-        conexion.tracer.end();
+        // span.end();
+        // conexion.tracer.end();
     }
 
     private async parseCors(conexion: Conexion, expresion: Checker): Promise<void> {
         conexion.enableCors();
         conexion.addCustomHeader("Access-Control-Allow-Credentials", "true");
         conexion.addCustomHeader("Access-Control-Allow-Methods", expresion.metodos.join(", "));
-        conexion.addCustomHeader("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,Referrer-Policy,x-api-key");
+        conexion.addCustomHeader("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,Referrer-Policy,x-api-key,x-datadog-origin");
         conexion.addCustomHeader("Access-Control-Max-Age", 1728000);
         conexion.setContentType("text/plain charset=UTF-8");
         await conexion
@@ -237,9 +237,9 @@ export class RouteGroupBlock {
                 }
                 conexion.preparando();
 
-                conexion.tracer
-                    .setPlantilla(expresion.resumen)
-                    .setInterna(expresion.internal);
+                // conexion.tracer
+                //     .setPlantilla(expresion.resumen)
+                //     .setInterna(expresion.internal);
 
                 if (conexion.metodo!="OPTIONS") {
                     await this.parseHandler(conexion, coincidencias);

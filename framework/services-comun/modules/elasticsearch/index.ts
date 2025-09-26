@@ -1,4 +1,4 @@
-import elastic, {Client} from "@elastic/elasticsearch";
+import elastic, {Client, type ClientOptions} from "@elastic/elasticsearch";
 import {ConnectionOptions as TlsConnectionOptions} from "node:tls";
 
 import {exists, readFile, readJSON} from "../utiles/fs";
@@ -7,6 +7,7 @@ import {PromiseDelayed} from "../utiles/promise";
 export type AggregateName = elastic.estypes.AggregateName;
 export type AggregationsMultiBucketAggregateBase<T> = elastic.estypes.AggregationsMultiBucketAggregateBase;
 export type AggregationsAggregate = elastic.estypes.AggregationsAggregate;
+export type AggregationsTermsAggregateBase<T=unknown> = elastic.estypes.AggregationsTermsAggregateBase<T>;
 export type AggregationsStringTermsBucket = elastic.estypes.AggregationsStringTermsBucket;
 export type AggregationsStringTermsAggregate = elastic.estypes.AggregationsStringTermsAggregate;
 export type BulkOperationContainer = elastic.estypes.BulkOperationContainer;
@@ -15,6 +16,12 @@ export type BulkRequest = elastic.estypes.BulkRequest;
 export type BulkResponse = elastic.estypes.BulkResponse;
 export type BulkResponseItem = elastic.estypes.BulkResponseItem;
 export type BulkUpdateAction<T, K> = elastic.estypes.BulkUpdateAction<T, K>;
+export type CcrPauseFollowRequest = elastic.estypes.CcrPauseFollowRequest;
+export type CcrPauseFollowResponse = elastic.estypes.CcrPauseFollowResponse;
+export type CcrStatsFollowStats = elastic.estypes.CcrStatsFollowStats;
+export type CcrStatsResponse = elastic.estypes.CcrStatsResponse;
+export type CcrUnfollowRequest = elastic.estypes.CcrUnfollowRequest;
+export type CcrUnfollowResponse = elastic.estypes.CcrUnfollowResponse;
 export type ClearScrollRequest = elastic.estypes.ClearScrollRequest;
 export type ClearScrollResponse = elastic.estypes.ClearScrollResponse;
 export type ClosePointInTimeRequest = elastic.estypes.ClosePointInTimeRequest;
@@ -50,6 +57,11 @@ export type IndicesUpdateAliasesRequest = elastic.estypes.IndicesUpdateAliasesRe
 export type IndicesUpdateAliasesResponse = elastic.estypes.IndicesUpdateAliasesResponse;
 export type InfoRequest = elastic.estypes.InfoRequest;
 export type InfoResponse = elastic.estypes.InfoResponse;
+export type NodesStatsResponse = elastic.estypes.NodesStatsResponse;
+export type NodesStats = elastic.estypes.NodesStats;
+export type NodesOperatingSystem = elastic.estypes.NodesOperatingSystem;
+export type NodesCpu = elastic.estypes.NodesCpu;
+export type NodesExtendedMemoryStats = elastic.estypes.NodesExtendedMemoryStats;
 export type OpenPointInTimeRequest = elastic.estypes.OpenPointInTimeRequest;
 export type OpenPointInTimeResponse = elastic.estypes.OpenPointInTimeResponse;
 export type QueryDslQueryContainer = elastic.estypes.QueryDslQueryContainer;
@@ -83,12 +95,21 @@ export type ESSuggestOption<T> = SearchPhraseSuggestOption|SearchTermSuggestOpti
 export type ESBulkOperation<TDocument=void> = (BulkOperationContainer | BulkUpdateAction<TDocument, Partial<TDocument>> | TDocument);
 export type ESBulkResponse = Partial<Record<BulkOperationType, BulkResponseItem>>;
 
-export interface IElasticSearch {
+interface IElasticSearchBase {
     hosts: string[];
-    caFingerprint: string;
+    ca?: string;
+}
+
+interface IElasticSearchApiKey extends IElasticSearchBase {
+    apiKey: string;
+}
+interface IElasticSearchBasic extends IElasticSearchBase {
     user: string;
     password: string;
 }
+export type IElasticSearch = (IElasticSearchApiKey | IElasticSearchBasic) & {
+    // master?: (IElasticSearchApiKey | IElasticSearchBasic); // todo: punto de partida para master/slave
+};
 
 export interface IMetadata {
     index: string;
@@ -108,7 +129,7 @@ export class Elasticsearch {
         this.cliente = this.load();
 
         // esto se hace por seguridad
-        this.cliente.then(()=>{}).catch(()=>{});
+        this.cliente.then(()=>undefined).catch(()=>undefined);
     }
 
     private async load(): Promise<Client> {
@@ -254,6 +275,21 @@ export class Elasticsearch {
         }
     }
 
+    public async ccrStats(): Promise<CcrStatsResponse> {
+        const cliente = await this.cliente;
+        return cliente.ccr.stats();
+    }
+
+    public async ccrPauseFollow(params: CcrPauseFollowRequest): Promise<CcrPauseFollowResponse> {
+        const cliente = await this.cliente;
+        return cliente.ccr.pauseFollow(params);
+    }
+
+    public async ccrUnfollow(params: CcrUnfollowRequest): Promise<CcrUnfollowResponse> {
+        const cliente = await this.cliente;
+        return cliente.ccr.unfollow(params);
+    }
+
     public async disponible(): Promise<boolean> {
         return this.info()
             .then(()=>true)
@@ -272,18 +308,33 @@ export class Elasticsearch {
         return this.searchLibre(base, i+1);
     }
 
-    protected async loadConfig(): Promise<Client> {
-        if (!await exists(this.config.credenciales)) {
-            return Promise.reject("Elastic disabled");
-        }
-        const config: IElasticSearch = await readJSON<IElasticSearch>(this.config.credenciales);
+    public async nodes(): Promise<NodesStatsResponse> {
+        const cliente = await this.cliente;
+        return cliente.nodes.stats();
+    }
 
+    protected async loadConfig(): Promise<Client> {
+        if (await exists(this.config.credenciales)) {
+            const config: IElasticSearch = await readJSON<IElasticSearch>(this.config.credenciales);
+
+            if ("apiKey" in config) {
+                return this.crearClienteApiKey(config, config.ca ?? this.config.ca);
+            }
+            if ("user" in config) {
+                return this.crearClienteBasic(config, config.ca ?? this.config.ca);
+            }
+        }
+
+        return Promise.reject(new Error("Elastic disabled"));
+    }
+
+    private async getCommonConfig(config: IElasticSearch, ca?: string): Promise<ClientOptions> {
         let tls: TlsConnectionOptions|undefined;
-        if (this.config.ca!=undefined) {
+        if (ca) {
             if (!PRODUCCION) {
-                if (await exists(this.config.ca)) {
+                if (await exists(ca)) {
                     tls = {
-                        ca: await readFile(this.config.ca),
+                        ca: await readFile(ca),
                         rejectUnauthorized: true,
                     };
                 } else {
@@ -291,25 +342,38 @@ export class Elasticsearch {
                         rejectUnauthorized: false,
                     };
                 }
-            } else {
-                if (await exists(this.config.ca)) {
-                    tls = {
-                        ca: await readFile(this.config.ca),
-                        rejectUnauthorized: true,
-                    };
-                }
+            } else if (await exists(ca)) {
+                tls = {
+                    ca: await readFile(ca),
+                    rejectUnauthorized: true,
+                };
             }
         }
 
-        return new Client({
+        return {
             nodes: config.hosts,
+            compression: true,//!config.hosts.map(actual=>actual.startsWith("https://")).reduce((actual, acumulado)=>actual||acumulado),
+            tls,
+            requestTimeout: 60000,
+        };
+    }
+
+    private async crearClienteApiKey(config: IElasticSearchApiKey, ca?: string): Promise<Client> {
+        return new Client({
+            ...await this.getCommonConfig(config, ca),
+            auth: {
+                apiKey: config.apiKey,
+            },
+        });
+    }
+
+    private async crearClienteBasic(config: IElasticSearchBasic, ca?: string): Promise<Client> {
+        return new Client({
+            ...await this.getCommonConfig(config, ca),
             auth: {
                 username: config.user,
                 password: config.password,
             },
-            compression: !config.hosts.map(actual=>actual.startsWith("https://")).reduce((actual, acumulado)=>actual||acumulado),
-            tls,
-            requestTimeout: 60000,
         });
     }
 }

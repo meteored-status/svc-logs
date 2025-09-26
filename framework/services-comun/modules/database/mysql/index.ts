@@ -1,11 +1,12 @@
 import {
     createPoolCluster,
     escape,
-    type ResultSetHeader,
-    type PoolNamespace,
     type PoolCluster,
+    type PoolNamespace,
+    type PoolOptions,
     type PreparedStatementInfo,
     type QueryOptions,
+    type ResultSetHeader,
     type SslOptions,
 } from "mysql2/promise";
 import {FSWatcher, watch} from "node:fs";
@@ -33,9 +34,10 @@ interface IMySQLCommon {
     waitForConnections?: boolean;
     connectionLimit?: number;
     queueLimit?: number;
+    ssl?: IMySQLSSL;
 }
 
-interface IMySQL extends IMySQLHost, IMySQLSocket, IMySQLCommon {
+export interface IMySQL extends IMySQLHost, IMySQLSocket, IMySQLCommon {
 }
 
 interface IMySQLSSL {
@@ -94,7 +96,7 @@ interface IMySQLBuild {
 export class MySQL implements Disposable {
     /* STATIC */
     public static build({credenciales=`files/credenciales/mysql.json`, database=DATABASE}: IMySQLBuild={}): MySQL {
-        if (database!=undefined) {
+        if (database != undefined) {
             database = database
                 .replaceAll("{CLIENTE}", process.env["CLIENTE"] ?? "")
             ;
@@ -130,7 +132,7 @@ export class MySQL implements Disposable {
 
     public [Symbol.dispose](): void {
         this.stopWatcher();
-        this.reset().then(()=>{}).catch((err)=>error(err));
+        this.reset().then(()=>undefined).catch((err)=>error(err));
     }
 
     public async close(): Promise<void> {
@@ -159,54 +161,17 @@ export class MySQL implements Disposable {
             restoreNodeTimeout: 1000, // probar a reconectar tras 1 segundo
         });
         if ("slaves" in data) {
-            let ssl: SslOptions|undefined;
-            if (data.ssl!=undefined) {
-                const [ca, cert, key] = await Promise.all([
-                    readFileString(data.ssl.ca),
-                    readFileString(data.ssl.cert),
-                    readFileString(data.ssl.key),
-                ]);
-                ssl = {
-                    ca,
-                    cert,
-                    key,
-                    rejectUnauthorized: true,
-                };
-            } else {
-                ssl = undefined;
-            }
+            const common = data.common ?? {};
 
-            data.common??={};
-
-            if (data.master!=undefined) {
-                cluster.add("MASTER", {
-                    charset: "utf8mb4",
-                    database: this.database,
-                    ssl,
-                    ...data.common,
-                    ...data.master,
-                });
+            if (data.master!==undefined) {
+                cluster.add("MASTER", await this.loadHost(data.master, common, data.ssl));
             }
             for (let i = 0; i < data.slaves.length; i++) {
-                cluster.add(`SLAVE${i}`, {
-                    charset: "utf8mb4",
-                    database: this.database,
-                    ssl,
-                    ...data.common,
-                    ...data.slaves[i],
-                });
+                cluster.add(`SLAVE${i}`, await this.loadHost(data.slaves[i], common, data.ssl));
             }
         } else {
-            cluster.add("MASTER", {
-                charset: "utf8mb4",
-                database: this.database,
-                ...data,
-            });
-            cluster.add("SLAVE1", {
-                charset: "utf8mb4",
-                database: this.database,
-                ...data,
-            });
+            cluster.add("MASTER", await this.loadHost(data, {}));
+            cluster.add("SLAVE1", await this.loadHost(data, {}));
         }
         // await this.checkConexion(pool);
 
@@ -215,17 +180,52 @@ export class MySQL implements Disposable {
         return cluster;
     }
 
+    private async loadHost(host: IMySQL, common: IMySQLCommon, tls?: IMySQLSSL): Promise<PoolOptions> {
+        const certs = host.ssl ?? common.ssl ?? tls;
+        let ssl: SslOptions|undefined;
+        if (certs!==undefined) {
+            if (host.ssl!==undefined) {
+                delete host.ssl;
+            }
+            try {
+                const [ca, cert, key] = await Promise.all([
+                    readFileString(certs.ca),
+                    readFileString(certs.cert),
+                    readFileString(certs.key),
+                ]);
+                ssl = {
+                    ca,
+                    cert,
+                    key,
+                    rejectUnauthorized: true,
+                };
+            } catch (err) {
+                warning("Error cargando certificados", err instanceof Error ? err.message : err);
+                ssl = undefined;
+            }
+        } else {
+            ssl = undefined;
+        }
+        return {
+            charset: "utf8mb4",
+            database: this.database,
+            ...common,
+            ...host,
+            ssl,
+        }
+    }
+
     private startWatcher(): void {
-        if (PRODUCCION && this.watcher==undefined && this.credenciales) {
+        if (PRODUCCION && this.watcher===undefined && this.credenciales) {
             this.watcher = watch(this.credenciales, () => {
                 info("Cambiando credenciales de MySQL");
-                this.reset().then(()=>{}).catch((err)=>error(err));
+                this.reset().then(()=>undefined).catch((err)=>error(err));
             });
         }
     }
 
     private stopWatcher(): void {
-        if (this.watcher!=undefined) {
+        if (this.watcher!==undefined) {
             this.watcher.close();
             this.watcher = undefined;
         }
@@ -312,17 +312,17 @@ export class MySQL implements Disposable {
         return rows as T[];
     }
 
-    private async masterQuery(sql: string, params: TipoRegistro[]=[], {}: IQueryOptionsBase, retry: number = 0): Promise<ResultSetHeader> {
+    private async masterQuery(sql: string, params: TipoRegistro[]=[], options: IQueryOptionsBase = {}, retry: number = 0): Promise<ResultSetHeader> {
         const db = await this.master;
         try {
             const [rows] = await db.query<ResultSetHeader>(sql, params);
 
             return rows;
         } catch(err: any) {
-            if (err.code=="ER_LOCK_DEADLOCK" && retry<10) {
+            if (err.code==="ER_LOCK_DEADLOCK" && retry<10) {
                 await PromiseDelayed(Math.floor(Math.random()*100) + retry*1000);
 
-                return this.masterQuery(sql, params, {}, retry+1);
+                return this.masterQuery(sql, params, options, retry+1);
             }
 
             warning(`DEADLOCK en consulta "${sql}" ${retry}`);
@@ -334,28 +334,28 @@ export class MySQL implements Disposable {
         if (transaction) {
             return transaction.insert(sql, params);
         }
-        return this.masterQuery(sql, params, {});
+        return this.masterQuery(sql, params);
     }
 
     public async update(sql: string, params: TipoRegistro[]=[], {transaction}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.update(sql, params);
         }
-        return this.masterQuery(sql, params, {});
+        return this.masterQuery(sql, params);
     }
 
     public async delete(sql: string, params: TipoRegistro[]=[], {transaction}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.delete(sql, params);
         }
-        return this.masterQuery(sql, params, {});
+        return this.masterQuery(sql, params);
     }
 
     public async truncate(table: string, {transaction}: IQueryOptions = {}): Promise<ResultSetHeader> {
         if (transaction) {
             return transaction.truncate(table);
         }
-        return this.masterQuery(`TRUNCATE TABLE ${table};`, [], {});
+        return this.masterQuery(`TRUNCATE TABLE ${table};`);
     }
 
     public async bulkInsert(registros: IInsert[], {transaction, size, delay}: IBulkOptions = {}): Promise<void> {
@@ -378,7 +378,7 @@ export class MySQL implements Disposable {
                         ...value.map(actual=>`(${[...actual.params.map(valor=>`${escape(valor)}`),].join(",")})`),
                     ];
                     let coletilla: string;
-                    if (value[0].duplicate==undefined  || value[0].duplicate.length==0) {
+                    if (value[0].duplicate===undefined  || value[0].duplicate.length===0) {
                         coletilla = "";
                     } else {
                         coletilla = ` as new ON DUPLICATE KEY UPDATE ${value[0].duplicate.map(actual=>`${actual}=new.${actual}`).join(", ")}`
@@ -433,7 +433,7 @@ export class MySQL implements Disposable {
 
             for (const insert of inserts) {
                 await this.insert(insert).catch(async (err) => {
-                    warning(`ERROR Actualizando registros`, err, insert as any);
+                    warning(`ERROR Actualizando registros`, err, insert);
                 });
             }
         }

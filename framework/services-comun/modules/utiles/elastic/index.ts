@@ -56,7 +56,7 @@ export const searchAll = async <I>(client: Elasticsearch, config: {index: string
 
     let resultados: SearchResponse<I, ESAggregate>|undefined = undefined;
 
-    let init: number = Date.now();
+    // let init: number = Date.now();
 
     let [bloque, after]: [SearchResponse<I, ESAggregate>|undefined, SortResults|undefined] = [undefined, undefined];
 
@@ -73,11 +73,11 @@ export const searchAll = async <I>(client: Elasticsearch, config: {index: string
         id: pit.id
     });
 
-    let end: number = Date.now();
+    // let end: number = Date.now();
 
-    if (!PRODUCCION || TEST) {
-        console.log("Tiempo de búsqueda: " + (end - init) + "ms");
-    }
+    // if (!PRODUCCION || TEST) {
+    //     console.log("Tiempo de búsqueda: " + (end - init) + "ms");
+    // }
 
     return resultados;
 }

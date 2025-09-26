@@ -1,5 +1,7 @@
+import {type IManifestDeploymentStorageBuckets, ManifestDeploymentStorageBuckets} from "./buckets";
+
 export interface IManifestDeploymentStorage {
-    buckets: string[];
+    buckets: IManifestDeploymentStorageBuckets;
     bundle: string;
     subdirPrefix: string;
     subdir?: string;
@@ -18,14 +20,14 @@ export class ManifestDeploymentStorage implements IManifestDeploymentStorage {
     }
 
     /* INSTANCE */
-    public buckets: string[];
+    public buckets: ManifestDeploymentStorageBuckets;
     public bundle: string;
     public subdirPrefix: string;
     public subdir?: string;
     public subdirPostfix: string;
 
     protected constructor(storage: IManifestDeploymentStorage) {
-        this.buckets = storage.buckets;
+        this.buckets = ManifestDeploymentStorageBuckets.build(storage.buckets);
         this.bundle = storage.bundle;
         this.subdirPrefix = storage.subdirPrefix;
         this.subdir = storage.subdir;
@@ -34,7 +36,7 @@ export class ManifestDeploymentStorage implements IManifestDeploymentStorage {
 
     public toJSON(): IManifestDeploymentStorage {
         return {
-            buckets: this.buckets,
+            buckets: this.buckets.toJSON(),
             bundle: this.bundle,
             subdirPrefix: this.subdirPrefix,
             subdir: this.subdir,

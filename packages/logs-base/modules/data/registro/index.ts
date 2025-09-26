@@ -227,7 +227,7 @@ export interface IRAWData {
         action: string;
         flags: string;
         matched: {
-            var: string;
+            var?: string;
         };
         profile: string;
         rce: {
