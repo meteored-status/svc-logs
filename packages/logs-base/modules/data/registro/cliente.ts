@@ -25,7 +25,7 @@ interface IAgent {
 
 export interface IRegistroCliente {
     crawler?: string;
-    device: string;
+    device?: string;
     ip: string;
     location?: IRegistroLocalizacion;
     agent?: IAgent;
@@ -72,7 +72,7 @@ export class RegistroCliente implements IRegistroCliente {
 
         return new this({
             crawler,
-            device: data.device.type,
+            device: data.device?.type,
             ip: data.ip.value,
             location,
             agent,
@@ -81,7 +81,7 @@ export class RegistroCliente implements IRegistroCliente {
 
     /* INSTANCE */
     public get crawler(): string|undefined { return this.data.crawler; };
-    public get device(): string { return this.data.device; };
+    public get device(): string|undefined { return this.data.device; };
     public get ip(): string { return this.data.ip; };
     public get agent(): IAgent|undefined { return this.data.agent; };
 
