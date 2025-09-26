@@ -10,6 +10,7 @@ export interface IGenerateConfig extends IModuloConfig {
 
 export interface IGenerate extends IModulo {
     watch: boolean;
+    version: string;
 }
 
 export class ModuloGenerate<T extends IGenerateConfig> extends Modulo<T> {
@@ -19,6 +20,7 @@ export class ModuloGenerate<T extends IGenerateConfig> extends Modulo<T> {
         options: {
             ...Modulo.OPTIONS.options,
             watch: { type: "boolean", default: false, },
+            version: { type: "string", short: "v", default: "1", },
         },
         strict: true,
     };
@@ -36,8 +38,13 @@ export class ModuloGenerate<T extends IGenerateConfig> extends Modulo<T> {
         if (config.help) {
             this.mostrarAyuda();
         } else {
-            const {Generate} = await import(/* webpackChunkName: "mrlang/generate" */ "../clases/generate");
-            await Generate.run(this.root, config.watch);
+            if (config.version == "2") {
+                const {Generate} = await import(/* webpackChunkName: "mrlang/generate" */ "../clases-v2/generate");
+                await Generate.run(this.root, config.watch);
+            } else {
+                const {Generate} = await import(/* webpackChunkName: "mrlang/generate" */ "../clases/generate");
+                await Generate.run(this.root, config.watch);
+            }
         }
     }
 

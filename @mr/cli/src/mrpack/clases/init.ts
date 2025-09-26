@@ -6,11 +6,12 @@ import {
     isFile,
     readDir,
     readFileString,
-    readJSON, rename,
+    readJSON,
+    rename,
     safeWrite,
     unlink,
 } from "services-comun/modules/utiles/fs";
-import {md5 } from "services-comun/modules/utiles/hash";
+import {md5} from "services-comun/modules/utiles/hash";
 
 import {Colors} from "./colors";
 import {Comando} from "./comando";
@@ -25,12 +26,13 @@ import {Yarn} from "./yarn";
 import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
+import DATADOG from "./init/datadog";
 import EDITORCONFIG from "./init/editorconfig";
 import IGNORE from "./init/ignore";
 import {ManifestRootLoader} from "./manifest/root";
 
 interface IConfiguracion {
-    openTelemetry: boolean;
+    // openTelemetry: boolean;
     cambio: boolean;
 }
 
@@ -58,7 +60,7 @@ export class Init {
         const config = await this.initWorkspaces(basedir, workspaces);
         await this.initConfig(basedir, workspaces);
 
-        const cambio = await this.initYarnRC(basedir, config);
+        const cambio = await this.initYarnRC(basedir/*, config*/);
 
         if (await isDir(`${basedir}/i18n`)) {
             console.log(Colors.colorize([Colors.FgWhite], "Inicializando i18n"));
@@ -72,7 +74,7 @@ export class Init {
 
         console.groupEnd();
 
-        if(cambio || config.cambio) {
+        if (cambio || config.cambio) {
             await Yarn.install(basedir, {verbose:false});
 
             return true;
@@ -84,11 +86,11 @@ export class Init {
     private static reduceConfig(configs: IConfiguracion[]): IConfiguracion {
         return configs.reduce((prev, actual)=>{
             return {
-                openTelemetry: prev.openTelemetry || actual.openTelemetry,
+                // openTelemetry: prev.openTelemetry || actual.openTelemetry,
                 cambio: prev.cambio || actual.cambio,
             };
         }, {
-            openTelemetry: false,
+            // openTelemetry: false,
             cambio: false,
         });
     }
@@ -217,7 +219,7 @@ export class Init {
         delete paquete.resolutions["@types/node"];
         delete paquete.resolutions["mysql2"];
         // paquete.resolutions["mysql2"] = "3.11.0";
-        if (Object.keys(paquete.resolutions).length==0) {
+        if (Object.keys(paquete.resolutions).length == 0) {
             delete paquete.resolutions;
         }
 
@@ -228,6 +230,16 @@ export class Init {
         if (await isFile(`${basedir}/.sonarcloud.properties`)) {
             await unlink(`${basedir}/.sonarcloud.properties`);
         }
+        if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Compilar.run.xml`)) {
+            await unlink(`${basedir}/@mr/cli/.run/develop =_ Compilar.run.xml`);
+        }
+        if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Compilar (Todos).run.xml`)) {
+            await unlink(`${basedir}/@mr/cli/.run/develop =_ Compilar (Todos).run.xml`);
+        }
+        if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Ejecutar.run.xml`)) {
+            await unlink(`${basedir}/@mr/cli/.run/develop =_ Ejecutar.run.xml`);
+        }
+        await safeWrite(`${basedir}/static-analysis.datadog.yml`, DATADOG, true);
         await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
 
         await this.checkRootManifest(basedir);
@@ -423,8 +435,8 @@ export class Init {
         }
     }
 
-    private static checkDependencies(config: Manifest, dependencies: Record<string, string>, devDependencies: Record<string, string>, defecto: Record<string, string>): boolean {
-        let openTelemetry = false;
+    private static checkDependencies(config: Manifest, dependencies: Record<string, string>, devDependencies: Record<string, string>, defecto: Record<string, string>): void {
+        // let openTelemetry = false;
         if (devDependencies["tslib"]!=undefined) {
             dependencies["tslib"] = devDependencies["tslib"];
             delete devDependencies["tslib"];
@@ -444,18 +456,18 @@ export class Init {
                 }
             }
             if (!config.deploy.cronjob) {
-                dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= defecto["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
-                dependencies["@opentelemetry/api"] ??= defecto["@opentelemetry/api"]??"*";
-                dependencies["@opentelemetry/core"] ??= defecto["@opentelemetry/core"]??"*";
-                dependencies["@opentelemetry/instrumentation"] ??= defecto["@opentelemetry/instrumentation"]??"*";
-                dependencies["@opentelemetry/instrumentation-http"] ??= defecto["@opentelemetry/instrumentation-http"]??"*";
-                dependencies["@opentelemetry/resources"] ??= defecto["@opentelemetry/resources"]??"*";
-                dependencies["@opentelemetry/sdk-trace-base"] ??= defecto["@opentelemetry/sdk-trace-base"]??"*";
-                dependencies["@opentelemetry/sdk-trace-node"] ??= defecto["@opentelemetry/sdk-trace-node"]??"*";
-                dependencies["@opentelemetry/semantic-conventions"] ??= defecto["@opentelemetry/semantic-conventions"]??"*";
+                // dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= defecto["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
+                // dependencies["@opentelemetry/api"] ??= defecto["@opentelemetry/api"]??"*";
+                // dependencies["@opentelemetry/core"] ??= defecto["@opentelemetry/core"]??"*";
+                // dependencies["@opentelemetry/instrumentation"] ??= defecto["@opentelemetry/instrumentation"]??"*";
+                // dependencies["@opentelemetry/instrumentation-http"] ??= defecto["@opentelemetry/instrumentation-http"]??"*";
+                // dependencies["@opentelemetry/resources"] ??= defecto["@opentelemetry/resources"]??"*";
+                // dependencies["@opentelemetry/sdk-trace-base"] ??= defecto["@opentelemetry/sdk-trace-base"]??"*";
+                // dependencies["@opentelemetry/sdk-trace-node"] ??= defecto["@opentelemetry/sdk-trace-node"]??"*";
+                // dependencies["@opentelemetry/semantic-conventions"] ??= defecto["@opentelemetry/semantic-conventions"]??"*";
                 dependencies["chokidar"] ??= defecto["chokidar"]??"*";
                 dependencies["hexoid"] ??= defecto["hexoid"]??"*";
-                devDependencies["formidable"] ??= defecto["formidable"]??"*";
+                dependencies["formidable"] ??= defecto["formidable"]??"*";
 
                 if (dependencies["@google-cloud/trace-agent"] != undefined) {
                     delete dependencies["@google-cloud/trace-agent"];
@@ -463,25 +475,53 @@ export class Init {
                 if (dependencies["@opentelemetry/context-async-hooks"] != undefined) {
                     delete dependencies["@opentelemetry/context-async-hooks"];
                 }
-                if (dependencies["formidable"] != undefined) {
-                    delete dependencies["formidable"];
+                if (devDependencies["formidable"] != undefined) {
+                    delete devDependencies["formidable"];
                 }
 
-                openTelemetry = true;
+                // openTelemetry = true;
             }
 
             if (devDependencies["source-map-support"] != undefined) {
                 delete devDependencies["source-map-support"];
             }
         }
+        if (dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"]!=undefined) {
+            delete dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"];
+        }
+        if (dependencies["@opentelemetry/api"]!=undefined) {
+            delete dependencies["@opentelemetry/api"];
+        }
+        if (dependencies["@opentelemetry/core"]!=undefined) {
+            delete dependencies["@opentelemetry/core"];
+        }
+        if (dependencies["@opentelemetry/instrumentation"]!=undefined) {
+            delete dependencies["@opentelemetry/instrumentation"];
+        }
+        if (dependencies["@opentelemetry/instrumentation-http"]!=undefined) {
+            delete dependencies["@opentelemetry/instrumentation-http"];
+        }
+        if (dependencies["@opentelemetry/resources"]!=undefined) {
+            delete dependencies["@opentelemetry/resources"];
+        }
+        if (dependencies["@opentelemetry/sdk-trace-base"]!=undefined) {
+            delete dependencies["@opentelemetry/sdk-trace-base"];
+        }
+        if (dependencies["@opentelemetry/sdk-trace-node"]!=undefined) {
+            delete dependencies["@opentelemetry/sdk-trace-node"];
+        }
+        if (dependencies["@opentelemetry/semantic-conventions"]!=undefined) {
+            delete dependencies["@opentelemetry/semantic-conventions"];
+        }
+        dependencies["dd-trace"] ??= defecto["dd-trace"]??"*";
 
-        return openTelemetry;
+        // return openTelemetry;
     }
 
     public static async checkFiles(config: Manifest, basedir: string): Promise<void> {
         if (config.deploy.runtime==Runtime.node && config.build.framework!=BuildFW.nextjs) {
             await Promise.all([
-                safeWrite(`${basedir}/app.js`, APP, true),
+                safeWrite(`${basedir}/app.js`, APP({type: config.deploy.type}), true),
                 safeWrite(`${basedir}/devel.js`, DEVEL, true),
                 safeWrite(`${basedir}/init.js`, ``, false),
             ]);
@@ -513,7 +553,7 @@ export class Init {
                 contenido = contenido.replaceAll("${ws}", "${WS}")
                 cambio = true;
             }
-            if (!contenido.includes("COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}")) {
+            if (!contenido.includes("COPY ./${RUTA}/${WS}/mrpack.json")) {
                 contenido = contenido.replace("COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}", "COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}\nCOPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}");
                 cambio = true;
             }
@@ -526,7 +566,7 @@ export class Init {
 
     private static async initWorkspace(basedir: string, dependenciesDefecto: Record<string, string>): Promise<IConfiguracion> {
         const salida: IConfiguracion = {
-            openTelemetry: false,
+            // openTelemetry: false,
             cambio: false,
         };
 
@@ -537,7 +577,8 @@ export class Init {
             this.checkScripts(config, paquete.scripts ??= {});
 
             if (config.deploy.runtime==Runtime.node) {
-                salida.openTelemetry = this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
+                this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
+                // salida.openTelemetry = this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
                 if (Object.keys(paquete.dependencies).length==0) {
                     delete paquete.dependencies;
                 }
@@ -636,7 +677,7 @@ export class Init {
         console.groupEnd();
     }
 
-    private static async initYarnRC(basedir: string, config: IConfiguracion): Promise<boolean> {
+    private static async initYarnRC(basedir: string/*, config: IConfiguracion*/): Promise<boolean> {
         // if (!config.openTelemetry) {
         //     return;
         // }
@@ -677,16 +718,18 @@ export class Init {
             // nuevo = true;
         }
 
-        const libs: NodeJS.Dict<string> = {};
+        const libs: Record<string, string> = {};
         const exlibs = [
+            "@google-cloud/opentelemetry-cloud-trace-exporter",
+            "@google-cloud/opentelemetry-resource-util",
             "@inquirer/core",
             "mysql2"
         ];
 
-        if (config.openTelemetry) {
-            libs["@google-cloud/opentelemetry-cloud-trace-exporter"] = "@opentelemetry/semantic-conventions";
-            libs["@google-cloud/opentelemetry-resource-util"] = "@opentelemetry/api";
-        }
+        // if (config.openTelemetry) {
+        //     libs["@google-cloud/opentelemetry-cloud-trace-exporter"] = "@opentelemetry/semantic-conventions";
+        //     libs["@google-cloud/opentelemetry-resource-util"] = "@opentelemetry/api";
+        // }
 
         for (const lib of Object.keys(libs).sort()) {
             if (!corrientes.includes(`  "${lib}@*":`)) {
@@ -703,6 +746,12 @@ export class Init {
             if (idx >= 0) {
                 corrientes.splice(idx, 3);
                 cambio = true;
+            } else {
+                const idx = corrientes.indexOf(`  "${cadena}@*":`);
+                if (idx >= 0) {
+                    corrientes.splice(idx, 3);
+                    cambio = true;
+                }
             }
         }
 

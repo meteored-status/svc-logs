@@ -14,6 +14,7 @@ export class ElasticSearchBulk extends BulkBase {
 
     /* INSTANCE */
     private readonly _bulk: Bulk;
+
     public constructor(client: Elasticsearch, config: ElasticSearchBulkConfig) {
         super(config);
         this._bulk = Bulk.init(client, {
@@ -32,6 +33,20 @@ export class ElasticSearchBulk extends BulkBase {
                 index: this.config.getIndex(update),
                 id: this.config.getId(update),
                 doc: this.config.getData(update)
+            });
+        })
+        const result = await this._bulk.run();
+
+        if (!result) {
+            throw new Error("Error al ejecutar el bulk");
+        }
+    }
+
+    protected override async doInserts(inserts: any[]): Promise<void> {
+        inserts.forEach(insert => {
+            this._bulk.index({
+                index: this.config.getIndex(insert),
+                doc: this.config.getData(insert)
             });
         })
         const result = await this._bulk.run();

@@ -5,11 +5,6 @@ export interface IManifestDeploymentKustomize {
 }
 
 export class ManifestDeploymentKustomize implements IManifestDeploymentKustomize {
-    /* STATIC */
-    public static build(deploy: IManifestDeploymentKustomize): ManifestDeploymentKustomize {
-        return new this(deploy);
-    }
-
     /* INSTANCE */
     public legacy?: string;
     public credenciales?: Record<string, string>;
@@ -19,6 +14,14 @@ export class ManifestDeploymentKustomize implements IManifestDeploymentKustomize
         this.legacy = deploy.legacy;
         this.credenciales = deploy.credenciales;
         this.ssl = deploy.ssl;
+    }
+
+    /* STATIC */
+    public static build(deploy?: IManifestDeploymentKustomize): ManifestDeploymentKustomize|undefined {
+        if (!deploy) {
+            return undefined;
+        }
+        return new this(deploy);
     }
 
     public toJSON(): IManifestDeploymentKustomize {

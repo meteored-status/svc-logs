@@ -22,19 +22,19 @@ interface IDocument {
 }
 
 export class ElasticEventDAO extends EventDAO {
+    /* INSTANCE */
+    public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
+        super();
+    }
+
     /* STATIC */
     public static getAlias(config: ElasticSearch): string {
-        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion'): 'desarrollo';
+        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
         return `${config.eventIndex}-${suffix}`;
     }
 
     public static getIndex(config: ElasticSearch): string {
         return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
-    }
-
-    /* INSTANCE */
-    public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
-        super();
     }
 
     public override async save(event: SendEvent): Promise<SendEvent> {

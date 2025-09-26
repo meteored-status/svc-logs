@@ -1,6 +1,7 @@
 export enum TEvent {
     SPAKPOST = 1,
 }
+
 export interface ISendEvent {
     type: TEvent;
     created: Date;
@@ -14,10 +15,6 @@ export abstract class SendEvent {
 
     /* INSTANCE */
     public constructor(private readonly _data: ISendEvent) {
-    }
-
-    protected get data(): ISendEvent {
-        return this._data;
     }
 
     public get type(): TEvent {
@@ -36,12 +33,16 @@ export abstract class SendEvent {
         return this.data.receiver;
     }
 
-    public get sendId(): string|undefined {
+    public get sendId(): string | undefined {
         return this.data.sendId;
     }
 
     public set sendId(value: string) {
         this.data.sendId = value;
+    }
+
+    protected get data(): ISendEvent {
+        return this._data;
     }
 
 }

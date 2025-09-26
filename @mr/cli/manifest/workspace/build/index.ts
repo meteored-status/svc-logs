@@ -1,4 +1,5 @@
 import {type IManifestBuildBundle, ManifestBuildBundle} from "./bundle";
+import {type IManifestBuildDatabase, ManifestBuildDatabase} from "./database";
 
 export const enum BuildFW {
     meteored = "meteored",
@@ -9,7 +10,7 @@ export const enum BuildFW {
 export interface IManifestBuild {
     deps?: string[]; // workspaces de los que depende el workspace actual
     framework: BuildFW;
-    database?: string;
+    database?: IManifestBuildDatabase;
     bundle?: IManifestBuildBundle;
 }
 
@@ -22,13 +23,13 @@ export class ManifestBuild implements IManifestBuild {
     /* INSTANCE */
     public deps: string[];
     public framework: BuildFW;
-    public database?: string;
+    public database?: ManifestBuildDatabase;
     public bundle: ManifestBuildBundle;
 
     protected constructor(build: IManifestBuild) {
         this.deps = build.deps ?? [];
         this.framework = build.framework;
-        this.database = build.database;
+        this.database = ManifestBuildDatabase.build(build.database);
         this.bundle = ManifestBuildBundle.build(build.bundle);
     }
 
@@ -36,7 +37,7 @@ export class ManifestBuild implements IManifestBuild {
         return {
             deps: this.deps.length>0 ? this.deps : undefined,
             framework: this.framework,
-            database: this.database,
+            database: this.database?.toJSON(),
             bundle: this.bundle?.toJSON(),
         };
     }

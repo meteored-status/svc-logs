@@ -22,13 +22,29 @@ if [[ -f "GENERAR.txt" ]]; then
 
     HASH_NUEVO=$(cat "${DIRECTORIO}/${WORKSPACE}/output/hash.txt")
     HASH_ANTIGUO=$(gsutil cat "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/hash.txt")
+    VERSION_ANTIGUA=$(gsutil cat "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/version.txt")
 
     if [ "${HASH_NUEVO}" = "${HASH_ANTIGUO}" ]; then
       echo "${WORKSPACE}: Sin cambios"
     else
       echo "${WORKSPACE}: Subiendo cambios"
-      gsutil -m cp -R "${DIRECTORIO}/${WORKSPACE}/output/${BUNDLE}*" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}"
-      gsutil -m cp -R "${DIRECTORIO}/${WORKSPACE}/hash.txt" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}"
+
+      FECHA=$(date "+%Y.%m.%d")
+      if [[ -n "${VERSION_ANTIGUA}" && "${VERSION_ANTIGUA}" == "${FECHA}"* ]]; then
+        BUILD=$(echo "${VERSION_ANTIGUA}" | sed -n -E "s/[0-9]{4}\.[0-9]{1,2}\.[0-9]{1,2}-([1-9][0-9]*)/\1/p")
+        if [[ "${BUILD}" =~ ^[0-9]+$ ]]; then
+          echo "${FECHA}-$((10#$BUILD+1))" > "${DIRECTORIO}/${WORKSPACE}/version.txt"
+        else
+          echo "${FECHA}-1" > "${DIRECTORIO}/${WORKSPACE}/version.txt"
+        fi
+      else
+        echo "${FECHA}-1" > "${DIRECTORIO}/${WORKSPACE}/version.txt"
+      fi
+      echo "Version (${DIRECTORIO}/${WORKSPACE}): $(cat "${DIRECTORIO}/${WORKSPACE}/version.txt")"
+
+      gsutil -m cp -R "${DIRECTORIO}/${WORKSPACE}/output/${BUNDLE}*" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}" || exit 1
+      gsutil -m cp "${DIRECTORIO}/${WORKSPACE}/hash.txt" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/" || exit 1
+      gsutil -m cp "${DIRECTORIO}/${WORKSPACE}/version.txt" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/" || exit 1
     fi;
   }
   export -f parseBucket
@@ -39,8 +55,8 @@ if [[ -f "GENERAR.txt" ]]; then
 
     echo "Storage: ${WORKSPACE} => SI"
 
-    if configw "${RUTA}" '.deploy.storage.buckets' > /dev/null; then
-      configw "${RUTA}" ".deploy.storage.buckets | .[]" | xargs -I '{}' -P 10 bash -c "parseBucket ${RUTA} {}"
+    if configw "${RUTA}" ".deploy.storage.buckets.${_ENTORNO}" > /dev/null; then
+      configw "${RUTA}" ".deploy.storage.buckets.${_ENTORNO} | .[]" | xargs -I '{}' -P 10 bash -c "parseBucket ${RUTA} {}"
     fi
   }
   export -f parseWorkspace

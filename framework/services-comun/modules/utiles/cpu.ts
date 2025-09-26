@@ -1,4 +1,4 @@
-import {cpus, loadavg} from "os";
+import {cpus, loadavg} from "node:os";
 import pidusage from "pidusage";
 
 export class Cpu implements Disposable {

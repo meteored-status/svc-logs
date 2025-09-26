@@ -2,10 +2,14 @@ import {TransactionManager} from "./transaction-manager";
 import {error, info} from "../../utiles/log";
 import {md5} from "../../utiles/hash";
 import {random} from "../../utiles/random";
+import {IsolationLevel} from "./isolation";
+
 
 export interface ITransaction {
     begin(): Promise<void>;
+
     commit(): Promise<void>;
+
     rollback(): Promise<void>;
 }
 
@@ -14,6 +18,7 @@ export abstract class Transaction implements ITransaction {
 
     /* INSTANCE */
     private readonly _hash: string;
+
     protected constructor() {
         const hash = md5(`${random(32)}-${Date.now()}-${random(32)}`);
         this._hash = `${hash.substring(0, 3)}${hash.substring(29)}`;
@@ -23,15 +28,17 @@ export abstract class Transaction implements ITransaction {
         return this._hash;
     }
 
-    public abstract begin(): Promise<void>;
+    public abstract begin(isolationLevel?: IsolationLevel): Promise<void>;
+
     public abstract commit(): Promise<void>;
+
     public abstract rollback(): Promise<void>;
 }
 
 export const transactional = (getTM: () => TransactionManager, name?: string): Function => {
     return (originalMethod: any) => {
         return function (this: any, ...args: any[]) {
-            return Promise.resolve().then(async ()=> {
+            return Promise.resolve().then(async () => {
                 let t = args.find(arg => arg instanceof Transaction);
                 const initial = t === undefined;
                 if (!t) {
@@ -47,6 +54,8 @@ export const transactional = (getTM: () => TransactionManager, name?: string): F
                     if (initial) {
                         await t.commit();
                         if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT${name ? `: ${name}` : ``}`);
+                    } else {
+                        if (!PRODUCCION) info(`Transaction ${t.hash} => LEAVE${name ? `: ${name}` : ``}`);
                     }
                 } catch (e) {
                     if (initial) {

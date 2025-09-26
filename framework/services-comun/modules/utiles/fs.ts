@@ -1,17 +1,15 @@
-import fs from "node:fs";
 import path from "node:path";
 import type {Readable} from "node:stream";
-import {readFileSync} from "node:fs";
-import {existsSync, statSync} from "node:fs";
-import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat} from "node:fs/promises";
+import fs, {existsSync, readFileSync, statSync, PathLike, PathOrFileDescriptor} from "node:fs";
+import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat, FileHandle} from "node:fs/promises";
 
 import {error, warning} from "./log";
 import {md5} from "./hash";
 import {pipeline} from "./stream";
 import {random} from "./random";
 
-export async function exists(file: string): Promise<boolean> {
-    return new Promise<boolean>((resolve:Function)=>{
+export async function exists(file: PathLike): Promise<boolean> {
+    return new Promise<boolean>((resolve)=>{
         fs.access(file, fs.constants.F_OK, (err)=>{
             resolve(!err);
         });
@@ -24,21 +22,21 @@ export {
     stat as stats,
 };
 
-export async function readFileBuffer(file: string): Promise<Buffer> {
+export async function readFileBuffer(file: PathLike | FileHandle): Promise<Buffer> {
     return readFile(file);
 }
 
-export async function readFileString(file: string): Promise<string> {
+export async function readFileString(file: PathLike | FileHandle): Promise<string> {
     const data = await readFile(file);
     return data.toString("utf-8");
 }
 
-export async function fileSize(file: string): Promise<number> {
+export async function fileSize(file: PathLike): Promise<number> {
     const stats = await stat(file);
     return stats.size;
 }
 
-export async function readJSON<T=any>(file: string): Promise<T> {
+export async function readJSON<T=any>(file: PathLike | FileHandle): Promise<T> {
     try {
         const buffer = await readFileString(file);
         return JSON.parse(buffer);
@@ -47,7 +45,7 @@ export async function readJSON<T=any>(file: string): Promise<T> {
     }
 }
 
-export function readJSONSync<T=any>(file: string): T|null {
+export function readJSONSync<T=any>(file: PathOrFileDescriptor): T|null {
     try {
         return JSON.parse(readFileSync(file).toString("utf-8")) as T;
     } catch (e) {
@@ -55,7 +53,7 @@ export function readJSONSync<T=any>(file: string): T|null {
     }
 }
 
-export async function isDir(dir: string, excepcion: boolean=false): Promise<boolean> {
+export async function isDir(dir: PathLike, excepcion: boolean=false): Promise<boolean> {
     try {
         const stats = await stat(dir);
         if (stats.isDirectory()) {
@@ -70,7 +68,7 @@ export async function isDir(dir: string, excepcion: boolean=false): Promise<bool
     return Promise.reject("Not a directory");
 }
 
-export async function isFile(file: string, excepcion: boolean=false): Promise<boolean> {
+export async function isFile(file: PathLike, excepcion: boolean=false): Promise<boolean> {
     try {
         const stats = await stat(file);
         if (stats.isFile()) {
@@ -85,23 +83,23 @@ export async function isFile(file: string, excepcion: boolean=false): Promise<bo
     return Promise.reject("Not a file");
 }
 
-export function isFileSync(file: string): boolean {
+export function isFileSync(file: PathLike): boolean {
     return existsSync(file) && statSync(file).isFile();
 }
 
-export async function mkdir(dir: string, recursive: boolean=false): Promise<void> {
+export async function mkdir(dir: PathLike, recursive: boolean=false): Promise<void> {
     await mkdirOriginal(dir, {
         recursive: recursive
     });
 }
 
-export async function rename(antiguo: string, nuevo: string): Promise<boolean> {
+export async function rename(antiguo: PathLike, nuevo: PathLike): Promise<boolean> {
     return renameOriginal(antiguo, nuevo)
         .then(()=>true)
         .catch(()=>false);
 }
 
-export async function rmdir(path: string): Promise<void> {
+export async function rmdir(path: PathLike): Promise<void> {
     await rm(path, {
         recursive: true,
         force: true,
@@ -113,7 +111,7 @@ export async function rmdir(path: string): Promise<void> {
     // });
 }
 
-export async function rmDirManual(path: string): Promise<void> {
+export async function rmDirManual(path: PathLike): Promise<void> {
     if (await isDir(path)) {
         for (const actual of await readdir(path)) {
             await rmDirManual(`${path}/${actual}`);
@@ -123,7 +121,7 @@ export async function rmDirManual(path: string): Promise<void> {
     await unlink(path);
 }
 
-export async function overwrite(oldPath: string, newPath: string, sobreescribir: boolean): Promise<boolean> {
+export async function overwrite(oldPath: PathLike, newPath: PathLike, sobreescribir: boolean): Promise<boolean> {
     if (!sobreescribir) {
         if (await exists(newPath)) {
             await unlink(oldPath);
@@ -136,9 +134,9 @@ export async function overwrite(oldPath: string, newPath: string, sobreescribir:
     return true;
 }
 
-export async function safeWrite(local: string, data: string|Buffer, sobreescribir: boolean=false, excepcion: boolean=false): Promise<boolean> {
+export async function safeWrite(local: PathLike, data: string|Buffer, sobreescribir: boolean=false, excepcion: boolean=false): Promise<boolean> {
     const rnd = `${local}.${random()}`;
-    return new Promise<boolean>((resolve: Function, reject: Function)=>{
+    return new Promise<boolean>((resolve, reject)=>{
         fs.writeFile(rnd, data, {
             flag: "wx",
         }, (err: NodeJS.ErrnoException | null)=>{
@@ -146,27 +144,23 @@ export async function safeWrite(local: string, data: string|Buffer, sobreescribi
                 overwrite(rnd, local, sobreescribir).then((ok: boolean)=>{
                     if (ok) {
                         resolve(true);
+                    } else if (!excepcion) {
+                        resolve(false);
                     } else {
-                        if (!excepcion) {
-                            resolve(false);
-                        } else {
-                            reject("No se pudo renombrar el archivo temporal al final");
-                        }
+                        reject(new Error("No se pudo renombrar el archivo temporal al final"));
                     }
                 });
+            } else if (!excepcion) {
+                error("Error en safeWrite", rnd, err);
+                resolve(false);
             } else {
-                if (!excepcion) {
-                    error("Error en safeWrite", rnd, err);
-                    resolve(false);
-                } else {
-                    reject("No se pudo escribir archivo temporal");
-                }
+                reject(new Error("No se pudo escribir archivo temporal"));
             }
         });
     });
 }
 
-export async function safeWriteStream(inbound: Readable, local: string, sobreescribir: boolean=false): Promise<boolean> {
+export async function safeWriteStream(inbound: Readable, local: PathLike, sobreescribir: boolean=false): Promise<boolean> {
     const rnd = `${local}.${random()}`;
     return await pipeline(inbound, fs.createWriteStream(rnd, {
         flags: "wx",
@@ -184,7 +178,7 @@ export async function safeWriteStream(inbound: Readable, local: string, sobreesc
         });
 }
 
-export async function safeWriteStreamBuffer(inbound: Readable, local: string, sobreescribir: boolean=false): Promise<boolean> {
+export async function safeWriteStreamBuffer(inbound: Readable, local: PathLike, sobreescribir: boolean=false): Promise<boolean> {
     const buffer: Buffer[] = [];
     inbound.on("data", (data: Buffer)=>{
         buffer.push(data);
@@ -207,9 +201,9 @@ export async function safeWriteStreamBuffer(inbound: Readable, local: string, so
     });
 }
 
-export async function unlink(file: string): Promise<void> {
+export async function unlink(file: PathLike): Promise<void> {
     if (await isFile(file)) {
-        await new Promise<void>((resolve: Function, reject: Function) => {
+        await new Promise<void>((resolve, reject) => {
             fs.unlink(file, (err: NodeJS.ErrnoException|null)=>{
                 if (!err) {
                     resolve();
@@ -249,7 +243,7 @@ async function md5DirExec(dir: string): Promise<string> {
         for (const actual of await readdir(dir)) {
             const name = `${dir}/${actual}`;
             if (await isDir(name)) {
-                if (name!="files") {
+                if (name!=="files") {
                     salida.push(await md5Dir(name));
                 }
             } else if (await isFile(name)) {
@@ -266,20 +260,20 @@ export async function md5Dir(dir: string): Promise<string> {
         return "";
     }
     const salida = await md5DirExec(dir);
-    if (salida.length!=32) {
+    if (salida.length!==32) {
         return md5(salida);
     }
     return salida;
 }
 
-export async function md5File(file: string): Promise<string> {
+export async function md5File(file: PathLike): Promise<string> {
     if (!await isFile(file)) {
         return "";
     }
     return md5(await readFileString(file));
 }
 
-export async function freeSpace(path: string): Promise<number> {
+export async function freeSpace(path: PathLike): Promise<number> {
     return new Promise((resolve, reject)=>{
         fs.statfs(path, (err, stats) => {
             if (err) {

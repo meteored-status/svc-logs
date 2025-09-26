@@ -11,7 +11,9 @@ export interface Search {
 
 interface IEventDAO {
     save(event: SendEvent): Promise<SendEvent>;
+
     createScroll(): Promise<Scroll<any>>;
+
     search(options: Search, scroll?: Scroll<any>): Promise<SendEvent[]>;
 }
 

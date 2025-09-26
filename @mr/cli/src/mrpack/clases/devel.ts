@@ -103,7 +103,7 @@ export class Devel {
         }
 
         const length = Math.max(
-            ...groups.map(group => workspacesList[group].reduce((a, b)=>Math.max(a, b.length), 0)),
+            ...groups.map(group => workspacesList[group].reduce((a, b) => Math.max(a, b.length), 0)),
         );
 
         // const cronjobs_list: string[] = [];
@@ -149,7 +149,7 @@ export class Devel {
                     global: config_global,
                 });
 
-                workspaces.push(devel.init().then(()=>{
+                workspaces.push(devel.init().then(() => {
                     for (const dependencia of dependencias) {
                         dependencia.addHijo(devel);
                     }

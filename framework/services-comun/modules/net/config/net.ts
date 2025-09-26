@@ -62,7 +62,7 @@ export class Net implements INet {
             cacheTags: [...cfg.tags],
             compress: false,
             uploadDir: "files/tmp",
-            maxFileSize: cfg.maxFilesize ?? 8 * 1024 + 1024, // 8MB
+            maxFileSize: cfg.maxFilesize ?? 8 * 1024 * 1024, // 8MB
         };
 
         if (global.PRODUCCION) {

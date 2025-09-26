@@ -2,13 +2,7 @@ import {Storage} from "@google-cloud/storage";
 import {spawn} from "node:child_process";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-import {
-    isDir,
-    isFile, md5Dir,
-    readDir,
-    readFileString,
-    safeWrite,
-} from "services-comun/modules/utiles/fs";
+import {isDir, isFile, md5Dir, readDir, readFileString, safeWrite,} from "services-comun/modules/utiles/fs";
 
 import {Colors} from "./colors";
 import {Comando} from "./comando";

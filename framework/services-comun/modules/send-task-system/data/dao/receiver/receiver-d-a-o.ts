@@ -4,8 +4,11 @@ import {Scroll} from "../../../../database/scroll";
 
 interface IReceiverDAO {
     save(receiver: Receiver): Promise<Receiver>;
+
     getBySendIds(sendIds: string[], scroll?: Scroll<any>): Promise<Receiver[]>;
+
     createBulk(config?: BulkConfig): Promise<Bulk>;
+
     createScroll(): Promise<Scroll<any>>;
 }
 

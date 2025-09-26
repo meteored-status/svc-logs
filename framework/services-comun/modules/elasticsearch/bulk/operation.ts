@@ -12,6 +12,10 @@ abstract class BulkOperation extends Deferred {
             this.op,
         ];
     }
+
+    public get size(): number {
+        return JSON.stringify(this.operations).length;
+    }
 }
 export {type BulkOperation};
 
@@ -110,18 +114,19 @@ export class BulkOperationScript<T extends object|undefined> extends BulkOperati
 
 export class BulkOperationUpdate<T extends object> extends BulkOperationDoc<Partial<T>> {
     /* STATIC */
-    public static build<T extends object>(index: string, id: string, doc: Partial<T>, crear=false, upsert?: T): BulkOperationUpdate<T> {
-        return new this<T>(index, id, doc, crear, upsert);
+    public static build<T extends object>(index: string, id: string, doc: Partial<T>, crear=false, upsert?: T, retry_on_conflict?: number): BulkOperationUpdate<T> {
+        return new this<T>(index, id, doc, crear, upsert, retry_on_conflict);
     }
 
     /* INSTANCE */
     protected documento: ESBulkOperation<T>;
 
-    private constructor(index: string, id: string, doc: Partial<T>, private crear=false, private upsert?: T) {
+    private constructor(index: string, id: string, doc: Partial<T>, private crear=false, private upsert?: T, retry_on_conflict?: number) {
         super({
             update: {
                 _index: index,
                 _id: id,
+                retry_on_conflict
             },
         }, doc);
         if (!this.crear) {

@@ -89,13 +89,12 @@ export abstract class Peticion {
             return e;
         }
 
-        const message = e instanceof TypeError ? e.message : "Error desconocido";
         return new RequestError({
             status: 0,
             url: this.url,
             headers: this.responseHeaders??new Headers(),
             code: ErrorCode.NETWORK,
-            message: `${this.url} => "${message}"`,
+            message: e instanceof TypeError ? e.message : "Error desconocido",
             extra: e,
         });
 

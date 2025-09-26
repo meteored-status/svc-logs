@@ -1,3 +1,11 @@
+import type {IManifestDeploymentCredenciales} from "../../../../../manifest/workspace/deployment/credenciales";
+import type {IManifestDeploymentKustomize} from "../../../../../manifest/workspace/deployment/kustomize";
+import type {IManifestDeploymentStorage} from "../../../../../manifest/workspace/deployment/storage";
+import {ManifestDeploymentKind, Runtime} from "../../../../../manifest/workspace/deployment";
+import type {IManifestBuildDatabase} from "../../../../../manifest/workspace/build/database";
+import type {IManifestBuildBundle} from "../../../../../manifest/workspace/build/bundle";
+import {BuildFW} from "../../../../../manifest/workspace/build";
+
 export interface IManifestLegacyStorage {
     buckets: string[];
     package?: string;
@@ -56,4 +64,31 @@ export interface IManifestLegacy {
     credenciales: IManifestLegacyCredenciales[];
     database?: string;
     bundle: IManifestLegacyBundle;
+}
+
+export interface IManifestBuildLegacy {
+    deps?: string[];
+    framework: BuildFW;
+    database?: string;
+    bundle?: IManifestBuildBundle;
+}
+
+export interface IManifestDeploymentLegacy {
+    enabled: boolean;
+    type: ManifestDeploymentKind;
+    runtime: Runtime;
+    alone?: boolean;
+    credenciales?: IManifestDeploymentCredenciales[];
+    imagen?: string;
+    kustomize?: IManifestDeploymentKustomize;
+    storage?: IManifestDeploymentStorage;
+}
+
+export interface IManifestDeploymentStorageLegacy {
+    buckets: string[];
+    bundle: string;
+    subdirPrefix: string;
+    subdir?: string;
+    subdirPostfix: string;
+    previo?: string[]; // si cambiamos el directorio de los archivos, mantenemos los directorios anteriores para seguir teniendo acceso a los datos
 }

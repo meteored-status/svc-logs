@@ -6,17 +6,17 @@ import {SparkpostSend} from "../data/model/sparkpost-send";
 export class SenderBuilder {
     /* STATIC */
 
-    private static instance: SenderBuilder|null = null;
+    private static instance: SenderBuilder | null = null;
+
+    /* INSTANCE */
+    private constructor() {
+    }
 
     public static getInstance(): SenderBuilder {
         if (SenderBuilder.instance === null) {
             SenderBuilder.instance = new SenderBuilder();
         }
         return SenderBuilder.instance;
-    }
-
-    /* INSTANCE */
-    private constructor() {
     }
 
     public build(send: Send): Sender {

@@ -33,7 +33,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     CLUSTER="${6}"
 
     updateImagen "${KUSTOMIZER}" "${DIR}" "${WORKSPACE}" "${VERSION}"
-    kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
+    kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
     echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
   }
   export -f parseWorkspaceEjecutar
@@ -51,14 +51,14 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
     if [[ -d "${ENTORNOS}" ]]; then
       if [[ -d "${ENTORNOS}/${CLUSTER}" ]]; then
-        parseWorkspaceEjecutar "${ENTORNOS}/${CLUSTER}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}"
+        parseWorkspaceEjecutar "${ENTORNOS}/${CLUSTER}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}" || exit 1
       fi
     elif [[ -d "${CLIENTES}" ]]; then
       IFS=',' read -r -a NAMESPACES <<< "$(cat "namespaces_${CLUSTER}.txt")"
       for NAMESPACE in "${NAMESPACES[@]}"; do
         DIR="${CLIENTES}/${NAMESPACE}/${CLUSTER}"
         if [[ -d "${DIR}" ]]; then
-          parseWorkspaceEjecutar "${DIR}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}"
+          parseWorkspaceEjecutar "${DIR}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}" || exit 1
         fi
       done
     fi
@@ -80,13 +80,13 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     echo "${SERVICIOS}" | while read SERVICIO; do
       echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
 
-      confige '.[] | .resourceLabels.zona' | xargs -I '{}' -P 1 bash -c "parseWorkspaceCluster ${DIRECTORIO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${KUSTOMIZER} {}"
+      confige '.[] | .resourceLabels.zona' | xargs -I '{}' -P 1 bash -c "parseWorkspaceCluster ${DIRECTORIO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${KUSTOMIZER} {}" || exit 1
     done
   }
   export -f parseWorkspace
 
-  lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
-  lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" || exit 1 &
+  lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" || exit 1 &
   wait
 else
     echo "Omitiendo kustomización"

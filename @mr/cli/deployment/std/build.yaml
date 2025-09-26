@@ -205,7 +205,9 @@ options:
     - '_GENERAR=${_GENERAR}'
     - '_GENERAR_FORZAR=${_GENERAR_FORZAR}'
     - '_MYSQL=${_MYSQL}'
+    - 'COMMIT_SHA=${COMMIT_SHA}'
     - 'PROJECT_ID=${PROJECT_ID}'
+    - 'REPO_FULL_NAME=https://github.com/${REPO_FULL_NAME}'
     - 'TRIGGER_NAME=${TRIGGER_NAME}'
 #  substitution_option: 'ALLOW_LOOSE'
   pool:

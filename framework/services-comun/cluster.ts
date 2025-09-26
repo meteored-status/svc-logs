@@ -5,7 +5,7 @@ import {Configuracion, type IConfiguracionLoader} from "./modules/utiles/config"
 import {error, info, warning} from "./modules/utiles/log";
 import type {IEngine} from "./modules/engine_base";
 import {type IMain, type IMainConfig, Main as MainBase} from "./main";
-import telemetry, {type ITelemetryConfig} from "./modules/telemetry";
+// import telemetry, {type ITelemetryConfig} from "./modules/telemetry";
 
 enum ClusterStatus {
     RUNNING,
@@ -14,7 +14,7 @@ enum ClusterStatus {
 
 export interface IClusterConfig extends IMainConfig {
     minimo_hilos: number;
-    telemetry: Partial<ITelemetryConfig>;
+    // telemetry: Partial<ITelemetryConfig>;
 }
 
 export interface ICluster {
@@ -102,14 +102,14 @@ export class Main extends MainBase {
     private static buildConfig(cfg: Partial<IClusterConfig>): IClusterConfig {
         return {
             minimo_hilos: 2,
-            telemetry: {},
+            // telemetry: {},
             ...cfg,
         };
     }
 
     public static override ejecutar(Engine: IEngine, configuracion: IConfiguracionLoader, cfg: Partial<IClusterConfig>={}): void {
         const config = this.buildConfig(cfg);
-        telemetry(config.telemetry);
+        // telemetry(config.telemetry);
         super.ejecutar<IClusterConfig>(Engine, configuracion, config);
     }
 }

@@ -21,6 +21,9 @@ export default (env: IEnv)=>{
     const {manifest} = new ManifestWorkspaceLoader(basedir).loadSync();
 
     const rules = isFileSync(`${basedir}/rules.js`) ? `${basedir}/rules.js` : undefined;
+    const database = env.entorno==="produccion" ?
+        manifest.build.database?.produccion :
+        manifest.build.database?.test;
 
     return [
         Configuracion.build({
@@ -30,7 +33,7 @@ export default (env: IEnv)=>{
             entorno,
             framework: manifest.build.framework,
             runtime: manifest.deploy.runtime,
-            database: manifest.build.database,
+            database,
             rules,
         }),
         ...manifest.build.bundle.web.map(bundle=>Configuracion.build({

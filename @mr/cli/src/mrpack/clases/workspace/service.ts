@@ -1,5 +1,5 @@
 import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
-import chokidar from "chokidar";
+import chokidar, {type ChokidarOptions} from "chokidar";
 import treeKill from "tree-kill";
 
 import {BuildFW} from "@mr/cli/manifest/build";
@@ -67,16 +67,25 @@ export class Service extends Workspace {
 
     protected override initWatcher(): void {
         this.watcher?.close();
-        this.watcher = chokidar.watch(this.dir, {
+        const options: ChokidarOptions = {
             persistent: true,
-            ignored: (path) => path.endsWith("~") || path.startsWith(`${this.dir}/output/`) || path.startsWith(`${this.dir}/assets/`) || path.startsWith(`${this.dir}/files/`) || path.startsWith(`${this.dir}/.next/`),
-        }).on("change", (path) => {
-            if (path.endsWith("mrpack.json")) {
+            ignored: (path) => path.endsWith("~") || path.startsWith(`output/`) || path.startsWith(`assets/`) || path.startsWith(`files/`) || path.startsWith(`.next/`),
+            ignoreInitial: true,
+            cwd: this.dir,
+        };
+
+        const watchFN = (path: string): void => {
+            if (path == "mrpack.json") {
                 this.updatePackageFile();
             } else {
                 this.cambio();
             }
-        });
+        }
+
+        this.watcher = chokidar.watch(".", options)
+            .on("add", watchFN)
+            .on("change", watchFN)
+            .on("unlink", watchFN);
     }
 
     public override cambio(): void {

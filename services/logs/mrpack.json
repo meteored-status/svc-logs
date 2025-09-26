@@ -5,6 +5,10 @@
         "type": "service",
         "runtime": "node",
         "alone": true,
+        "arch": [
+            "linux/amd64",
+            "linux/arm64"
+        ],
         "kustomize": {
             "legacy": "services"
         }
@@ -14,6 +18,9 @@
     },
     "build": {
         "framework": "meteored",
-        "database": "logs"
+        "database": {
+            "produccion": "logs",
+            "test": "logs"
+        }
     }
 }

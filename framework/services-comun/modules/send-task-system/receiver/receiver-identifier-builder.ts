@@ -5,17 +5,17 @@ import {SparkpostSend} from "../data/model/sparkpost-send";
 export class ReceiverIdentifierBuilder {
     /* STATIC */
 
-    private static instance: ReceiverIdentifierBuilder|null = null;
+    private static instance: ReceiverIdentifierBuilder | null = null;
+
+    /* INSTANCE */
+    private constructor() {
+    }
 
     public static getInstance(): ReceiverIdentifierBuilder {
         if (ReceiverIdentifierBuilder.instance === null) {
             ReceiverIdentifierBuilder.instance = new ReceiverIdentifierBuilder();
         }
         return ReceiverIdentifierBuilder.instance;
-    }
-
-    /* INSTANCE */
-    private constructor() {
     }
 
     public build(send: Send): SparkpostReceiverIdentifier {

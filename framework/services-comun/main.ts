@@ -1,7 +1,7 @@
+/// <reference path="./modules/types.d.ts" />
 import emitter from "node:events";
 import http from "node:http";
 
-import type {} from "./modules/types.d.ts";
 import type {IConfiguracionLoader} from "./modules/utiles/config";
 import type {IEngine} from "./modules/engine_base";
 import {error, info, warning} from "./modules/utiles/log";

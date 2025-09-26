@@ -1,18 +1,21 @@
 import {BuildFW, type IManifestBuild} from "@mr/cli/manifest/build";
+import {IManifestBuildDatabase} from "@mr/cli/manifest/build/database";
 
 import {ManifestWorkspaceBuildBundleLoader} from "./bundle";
-import {BuildFWLegacy, type IManifestLegacy} from "../legacy";
+import {BuildFWLegacy, type IManifestBuildLegacy, type IManifestLegacy} from "../legacy";
+import {ManifestWorkspaceBuildDatabaseLoader} from "./database";
 
 export class ManifestWorkspaceBuildLoader {
     /* STATIC */
     public static get DEFAULT(): IManifestBuild {
         return {
             deps: [],
+            database: ManifestWorkspaceBuildDatabaseLoader.DEFAULT,
             framework: BuildFW.meteored,
         };
     }
 
-    public static check(build: Partial<IManifestBuild>={}): IManifestBuild {
+    public static check(build: Partial<IManifestBuild|IManifestBuildLegacy>={}): IManifestBuild {
         const data = this.DEFAULT;
         if (build.deps) {
             if (Array.isArray(build.deps)) {
@@ -25,7 +28,14 @@ export class ManifestWorkspaceBuildLoader {
             data.framework = build.framework;
         }
         if (build.database) {
-            data.database = build.database;
+            if (typeof build.database == "string") {
+                data.database = ManifestWorkspaceBuildDatabaseLoader.check({
+                    produccion: build.database,
+                    test: build.database,
+                });
+            } else {
+                data.database = ManifestWorkspaceBuildDatabaseLoader.check(build.database);
+            }
         }
         if (build.bundle) {
             data.bundle = ManifestWorkspaceBuildBundleLoader.check(build.bundle);
@@ -49,11 +59,18 @@ export class ManifestWorkspaceBuildLoader {
                 framework = BuildFW.meteored;
                 break;
         }
+        let database: IManifestBuildDatabase|undefined;
+        if (config.database) {
+            database = {
+                produccion: config.database,
+                test: config.database,
+            };
+        }
 
         return {
             deps,
             framework,
-            database: config.database,
+            database,
             bundle: ManifestWorkspaceBuildBundleLoader.fromLegacy(config.bundle),
         };
     }

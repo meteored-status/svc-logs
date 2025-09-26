@@ -1,5 +1,6 @@
 import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage";
 import {type IManifestDeploymentCredenciales, ManifestDeploymentCredenciales} from "./credenciales";
+import {type IManifestDeploymentImagen, ManifestDeploymentImagen} from "./imagen";
 import {type IManifestDeploymentKustomize, ManifestDeploymentKustomize} from "./kustomize";
 
 export const enum Runtime {
@@ -22,8 +23,9 @@ export interface IManifestDeployment {
     type: ManifestDeploymentKind; // tipo de despliegue
     runtime: Runtime;
     alone?: boolean; // si solo se ha de desplegar en una zona, solo aplicable a SERVICE/CRONJOB/JOB
+    arch?: string[]; // solo aplicable a SERVICE/CRONJOB/JOB
     credenciales?: IManifestDeploymentCredenciales[]; // solo aplicable a SERVICE/CRONJOB/JOB
-    imagen?: string; // solo aplicable a SERVICE/CRONJOB/JOB
+    imagen?: IManifestDeploymentImagen; // solo aplicable a SERVICE/CRONJOB/JOB
     kustomize?: IManifestDeploymentKustomize; // solo aplicable a SERVICE/CRONJOB/JOB
     storage?: IManifestDeploymentStorage; // solo aplicable a BROWSER
 }
@@ -39,8 +41,9 @@ export class ManifestDeployment implements IManifestDeployment {
     public type: ManifestDeploymentKind;
     public runtime: Runtime;
     public alone?: boolean;
+    public arch?: string[];
     public credenciales?: ManifestDeploymentCredenciales[];
-    public imagen?: string;
+    public imagen?: ManifestDeploymentImagen;
     public kustomize?: ManifestDeploymentKustomize;
     public storage?: ManifestDeploymentStorage;
 
@@ -53,9 +56,10 @@ export class ManifestDeployment implements IManifestDeployment {
         this.type = deploy.type;
         this.runtime = deploy.runtime;
         this.alone = deploy.alone;
+        this.arch = deploy.arch;
         this.credenciales = deploy.credenciales?.map(actual => ManifestDeploymentCredenciales.build(actual));
-        this.imagen = deploy.imagen;
-        this.kustomize = deploy.kustomize!=undefined ? ManifestDeploymentKustomize.build(deploy.kustomize) : undefined;
+        this.imagen = ManifestDeploymentImagen.build(deploy.imagen);
+        this.kustomize = ManifestDeploymentKustomize.build(deploy.kustomize);
         this.storage = ManifestDeploymentStorage.build(deploy.storage);
     }
 
@@ -67,10 +71,11 @@ export class ManifestDeployment implements IManifestDeployment {
             type: this.type,
             runtime: this.runtime,
             alone: this.alone,
+            arch: this.arch,
             credenciales: credenciales.length>0?
                 credenciales:
                 undefined,
-            imagen: this.imagen,
+            imagen: this.imagen?.toJSON(),
             kustomize: this.kustomize?.toJSON(),
             storage: this.storage?.toJSON(),
         };

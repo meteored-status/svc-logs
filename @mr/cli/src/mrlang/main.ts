@@ -1,4 +1,4 @@
-import {} from "services-comun/modules/types";
+import "services-comun/modules/types";
 import sourceMapSupport from "source-map-support";
 sourceMapSupport.install();
 

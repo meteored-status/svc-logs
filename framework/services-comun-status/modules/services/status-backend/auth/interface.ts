@@ -12,5 +12,7 @@ export type EPermission =
     "status.subscription.list"          |
     "status.subscription.toggle"        |
     "status.component.delete"           |
-    "status.log.list"
+    "status.log.list"                   |
+    "status.elastic.list"               |
+    "status.mysql.list"
 ;

@@ -3,7 +3,7 @@ interface IUseCase<R> {
     execute(): Promise<R>;
 }
 
-export abstract class UseCase<I=any, R=void> implements IUseCase<R> {
+export abstract class UseCase<I = any, R = void> implements IUseCase<R> {
     /* STATIC */
 
     /* INSTANCE */
