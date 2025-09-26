@@ -27,20 +27,20 @@ interface IHeadersES {
 interface IRegistroRespuestaTiemposOrigin {
     // dns: number;
     // request: number;
-    lag: number;
-    total: number;
+    lag?: number;
+    total?: number;
 }
 
 export interface IRegistroRespuestaTiempos {
     inicio: Date;
-    lag: number;
+    lag?: number;
     fin: Date;
     origin?: IRegistroRespuestaTiemposOrigin;
 }
 
 export interface IRegistroRespuestaTiemposES {
     inicio: string;
-    lag: number;
+    lag?: number;
     fin: string;
     origin?: IRegistroRespuestaTiemposOrigin;
 }
@@ -105,7 +105,7 @@ export class RegistroRespuesta implements IRegistroRespuesta {
                 origin: origin ? {
                     // dns: origin.dns.response.time,
                     // request: origin.request.header.send.duration,
-                    lag: origin.response.header.receive.duration,
+                    lag: origin.response.header?.receive?.duration,
                     total: origin.response.duration,
                 }: undefined,
             },
