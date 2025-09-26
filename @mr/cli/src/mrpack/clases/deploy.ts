@@ -46,7 +46,7 @@ export class Deploy {
                 // eliminamos las compilaciones dependientes de otras compilaciones (serán iniciadas por las propias dependencias)
                 await Promise.all([
                     manifest.deploy.build.enabled ? Compilar.md5Deps(basedir) : Promise.resolve(),
-                    ...compilaciones_validas.filter(service=>!service.dependiente).map((service)=>service.pack(env, manifest)),
+                    ...compilaciones_validas.filter(service => !service.dependiente).map((service) => service.pack(env, manifest)),
                 ]);
             })
             .catch((error)=>{

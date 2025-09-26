@@ -1,8 +1,9 @@
-import {type PoolConnection, type ResultSetHeader, type Pool, type PoolNamespace} from "mysql2/promise";
+import {type Pool, type PoolConnection, type PoolNamespace, type ResultSetHeader} from "mysql2/promise";
 
 import {type MySQL, type TipoRegistro} from "./";
 import {error, info, warning} from "../../utiles/log";
 import {Transaction as TransactionBase} from "../transaction/transaction";
+import {IsolationLevel} from "../transaction/isolation";
 
 export enum TIsolationLevel {
     REPEATABLE_READ     = 1,
@@ -38,8 +39,14 @@ export class Transaction extends TransactionBase {
     //     return this._hash;
     // }
 
-    public override async begin(): Promise<void> {
-        await this.start();
+    public override async begin(isolationLevel?: IsolationLevel): Promise<void> {
+        let level: TIsolationLevel|undefined = undefined;
+        switch (isolationLevel) {
+            case IsolationLevel.SERIALIZABLE:
+                level = TIsolationLevel.SERIALIZABLE;
+                break;
+        }
+        await this.start(level);
     }
 
     /**

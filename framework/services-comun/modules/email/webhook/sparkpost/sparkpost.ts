@@ -1,5 +1,13 @@
 export type TEvent = "message_event" | "track_event" | "gen_event" | "unsubscribe_event" | "relay_event" | "ab_test_event" | "ingest_event";
-export type TMessageEvent = "bounce" | "delivery" | "injection" | "sms_status" | "spam_complaint" | "out_of_band" | "policy_rejection" | "delay";
+export type TMessageEvent =
+    "bounce"
+    | "delivery"
+    | "injection"
+    | "sms_status"
+    | "spam_complaint"
+    | "out_of_band"
+    | "policy_rejection"
+    | "delay";
 export type TTrackEvent = "click" | "open" | "initial_open" | "amp_click" | "amp_open" | "amp_initial_open";
 export type TGenEvent = "generation_failure" | "generation_rejection";
 export type TUnsubscribeEvent = "list_unsubscribe" | "link_unsubscribe" ;

@@ -7,23 +7,25 @@ export abstract class Scroll<T> {
 
     /* INSTANCE */
     private readonly _id: string;
-    private _control: T|undefined;
-    private _close: TCloseFunction|undefined;
+    private _close: TCloseFunction | undefined;
+
     protected constructor(id: string, close?: TCloseFunction) {
         this._id = id;
         this._close = close;
     }
 
-    public get id(): string {
-        return this._id;
-    }
+    private _control: T | undefined;
 
-    public get control(): T|undefined {
+    public get control(): T | undefined {
         return this._control;
     }
 
-    public set control(value: T|undefined) {
+    public set control(value: T | undefined) {
         this._control = value;
+    }
+
+    public get id(): string {
+        return this._id;
     }
 
     public async close(): Promise<void> {

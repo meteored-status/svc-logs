@@ -1,6 +1,9 @@
 import os from "node:os";
 import cluster from "node:cluster";
+import tracer from "dd-trace";
+import {formats} from "dd-trace/ext";
 
+const DATADOG = process.env["DATADOG"]=="true";
 const KUBERNETES = process.env["KUBERNETES"]=="true";
 
 function generarEstatico(): string {
@@ -23,9 +26,26 @@ function generarEstatico(): string {
 
 const ESTATICO = generarEstatico();
 
+function trace(txt: any[], level: string): any[] {
+    if (DATADOG) {
+        const span = tracer.scope().active();
+        if (span!=null) {
+            const traza = {
+                time: new Date().toISOString(),
+                level,
+                message: txt.map(msg=>`${msg}`).join(" "),
+            };
+            tracer.inject(span.context(), formats.LOG, traza);
+            return [JSON.stringify(traza)];
+        }
+    }
+
+    return [ESTATICO, ...txt];
+}
+
 export function info(...txt: any): void {
     if (txt.length>0) {
-        console.info(ESTATICO, ...txt);
+        console.info(...trace(txt, "info"));
     } else if (!KUBERNETES) {
         console.info("");
     }
@@ -33,7 +53,7 @@ export function info(...txt: any): void {
 
 export function warning(...txt: any): void {
     if (txt.length>0) {
-        console.warn(ESTATICO, ...txt);
+        console.warn(...trace(txt, "warn"));
     } else if (!KUBERNETES) {
         console.warn("");
     }
@@ -41,7 +61,7 @@ export function warning(...txt: any): void {
 
 export function error(...txt: any): void {
     if (txt.length>0) {
-        console.error(ESTATICO, ...txt);
+        console.error(...trace(txt, "warn"));
     } else if (!KUBERNETES) {
         console.error("");
     }

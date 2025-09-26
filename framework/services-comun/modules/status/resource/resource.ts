@@ -1,4 +1,4 @@
-import { IResolutionGuide } from "../common/interface";
+import {IResolutionGuide} from "../common/interface";
 
 export interface IChecker {
     service: number;

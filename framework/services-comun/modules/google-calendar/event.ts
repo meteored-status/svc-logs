@@ -7,6 +7,9 @@ export interface IEvent {
     summary: string;
     rrule?: IRRule;
     attendee?: IAttendee[]|IAttendee;
+    recurrences?: {
+        [key: string]: IEvent;
+    }
 }
 
 interface IRRule {
@@ -39,6 +42,14 @@ export class Event {
 
             ts += 86400000;
             tsEnd += 86400000;
+        }
+
+        if (data.recurrences) {
+            for (const key of Object.keys(data.recurrences)) {
+                const recurrence: IEvent = data.recurrences[key];
+                const events: Event[] = Event.build(recurrence);
+                result.push(...events);
+            }
         }
 
         return result;

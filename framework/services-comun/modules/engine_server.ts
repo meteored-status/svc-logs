@@ -98,7 +98,7 @@ export abstract class EngineServer<T extends ConfiguracionNet=ConfiguracionNet> 
         this.iniciar(handlers, config);
         this.routes ??= new Routes(handlers, config.error??Error(this.configuracion));
 
-        server.iniciarHTTP(this.routes, this.configuracion.pod, net);
+        server.iniciarHTTP(this.routes, /*this.configuracion.pod,*/ net);
     }
 
     protected initWebServerS(handlers: RouteGroup[], net: Net, config: IConfig = {}): void {
@@ -107,7 +107,7 @@ export abstract class EngineServer<T extends ConfiguracionNet=ConfiguracionNet> 
         this.iniciar(handlers, config);
         this.routes ??= new Routes(handlers, config.error??Error(this.configuracion));
 
-        server.iniciarHTTPs(this.routes, this.configuracion.pod, net)
+        server.iniciarHTTPs(this.routes, /*this.configuracion.pod,*/ net)
             .then(() => {}).catch((err) => {
                 error("Error iniciando HTTPs", err);
         });

@@ -5,6 +5,7 @@ import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 export interface IModuloConfig extends ParseArgsConfig {
     options: {
         help: { type: "boolean", short: "h", default: false, };
+        version?: { type: "string", short: "v", default: "1", };
     };
 }
 

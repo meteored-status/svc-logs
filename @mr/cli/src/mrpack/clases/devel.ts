@@ -90,18 +90,34 @@ export class Devel {
     private static async ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, dependencias: Workspace[]): Promise<boolean> {
         const config_global = await this.loadConfig(basedir);
 
-        const cronjobs_list: string[] = [];
-        const services_list: string[] = [];
-        if (await isDir(`${basedir}/cronjobs`)) {
-            cronjobs_list.push(...await readDir(`${basedir}/cronjobs`));
+        const groups: string[] = ['cronjobs', 'scripts', 'services'];
+
+        const workspacesList: Record<string, string[]> = {};
+
+        for (const group of groups) {
+            if (await isDir(`${basedir}/${group}`)) {
+                workspacesList[group] = await readDir(`${basedir}/${group}`);
+            } else {
+                workspacesList[group] = [];
+            }
         }
-        if (await isDir(`${basedir}/services`)) {
-            services_list.push(...await readDir(`${basedir}/services`));
-        }
+
         const length = Math.max(
-            cronjobs_list.reduce((a, b)=>Math.max(a, b.length), 0),
-            services_list.reduce((a, b)=>Math.max(a, b.length), 0),
+            ...groups.map(group => workspacesList[group].reduce((a, b) => Math.max(a, b.length), 0)),
         );
+
+        // const cronjobs_list: string[] = [];
+        // const services_list: string[] = [];
+        // if (await isDir(`${basedir}/cronjobs`)) {
+        //     cronjobs_list.push(...await readDir(`${basedir}/cronjobs`));
+        // }
+        // if (await isDir(`${basedir}/services`)) {
+        //     services_list.push(...await readDir(`${basedir}/services`));
+        // }
+        // const length = Math.max(
+        //     cronjobs_list.reduce((a, b)=>Math.max(a, b.length), 0),
+        //     services_list.reduce((a, b)=>Math.max(a, b.length), 0),
+        // );
         if (length==0) {
             return false;
         }
@@ -119,44 +135,67 @@ export class Devel {
         }
 
         const workspaces: Promise<Service>[] = [];
-        for (const workspace of cronjobs_list) {
-            const devel = new Service({
-                nombre: workspace,
-                path: "cronjobs",
-                root: basedir,
-                pad: length,
-                compilar: ejecucion.compilar,
-                ejecutar: ejecucion.ejecutar,
-                forzar: ejecucion.forzar,
-                global: config_global,
-            });
 
-            workspaces.push(devel.init().then(()=>{
-                for (const dependencia of dependencias) {
-                    dependencia.addHijo(devel);
-                }
-                return devel;
-            }));
-        }
-        for (const workspace of services_list) {
-            const devel = new Service({
-                nombre: workspace,
-                path: "services",
-                root: basedir,
-                pad: length,
-                compilar: ejecucion.compilar,
-                ejecutar: ejecucion.ejecutar,
-                forzar: ejecucion.forzar,
-                global: config_global,
-            });
+        for (const group of groups) {
+            for (const workspace of workspacesList[group]) {
+                const devel = new Service({
+                    nombre: workspace,
+                    path: group,
+                    root: basedir,
+                    pad: length,
+                    compilar: ejecucion.compilar,
+                    ejecutar: ejecucion.ejecutar,
+                    forzar: ejecucion.forzar,
+                    global: config_global,
+                });
 
-            workspaces.push(devel.init().then(()=>{
-                for (const dependencia of dependencias) {
-                    dependencia.addHijo(devel);
-                }
-                return devel;
-            }));
+                workspaces.push(devel.init().then(() => {
+                    for (const dependencia of dependencias) {
+                        dependencia.addHijo(devel);
+                    }
+                    return devel;
+                }));
+            }
         }
+
+        // for (const workspace of cronjobs_list) {
+        //     const devel = new Service({
+        //         nombre: workspace,
+        //         path: "cronjobs",
+        //         root: basedir,
+        //         pad: length,
+        //         compilar: ejecucion.compilar,
+        //         ejecutar: ejecucion.ejecutar,
+        //         forzar: ejecucion.forzar,
+        //         global: config_global,
+        //     });
+        //
+        //     workspaces.push(devel.init().then(()=>{
+        //         for (const dependencia of dependencias) {
+        //             dependencia.addHijo(devel);
+        //         }
+        //         return devel;
+        //     }));
+        // }
+        // for (const workspace of services_list) {
+        //     const devel = new Service({
+        //         nombre: workspace,
+        //         path: "services",
+        //         root: basedir,
+        //         pad: length,
+        //         compilar: ejecucion.compilar,
+        //         ejecutar: ejecucion.ejecutar,
+        //         forzar: ejecucion.forzar,
+        //         global: config_global,
+        //     });
+        //
+        //     workspaces.push(devel.init().then(()=>{
+        //         for (const dependencia of dependencias) {
+        //             dependencia.addHijo(devel);
+        //         }
+        //         return devel;
+        //     }));
+        // }
         const services = await Promise.all(workspaces);
 
         chokidar.watch(`${basedir}/config.workspaces.json`, {

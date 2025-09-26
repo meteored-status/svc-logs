@@ -6,17 +6,17 @@ import {SparkpostEvent} from "../data/model/sparkpost-event";
 export class CalculatorBuilder {
     /* STATIC */
 
-    private static instance: CalculatorBuilder|null = null;
+    private static instance: CalculatorBuilder | null = null;
+
+    /* INSTANCE */
+    private constructor() {
+    }
 
     public static getInstance(): CalculatorBuilder {
         if (CalculatorBuilder.instance === null) {
             CalculatorBuilder.instance = new CalculatorBuilder();
         }
         return CalculatorBuilder.instance;
-    }
-
-    /* INSTANCE */
-    private constructor() {
     }
 
     public build(event: SendEvent): Calculator {

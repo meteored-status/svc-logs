@@ -30,23 +30,8 @@ export interface IMetadata {
 }
 
 export class Receiver {
-    /* STATIC */
-    public static create(id: string, sendId: string, sendTaskId: number, sendTaskInstanceId: string): Receiver {
-        return new Receiver({
-            id,
-            sendId,
-            sendTaskId,
-            sendTaskInstanceId,
-            created: new Date()
-        }, {});
-    }
-
     /* INSTANCE */
     public constructor(private readonly _data: IReceiver, public metadata: IMetadata) {
-    }
-
-    private get data(): IReceiver {
-        return this._data;
     }
 
     public get id(): string {
@@ -75,6 +60,21 @@ export class Receiver {
 
     public set statistics(statistics: IStatistics | undefined) {
         this.data.statistics = statistics;
+    }
+
+    private get data(): IReceiver {
+        return this._data;
+    }
+
+    /* STATIC */
+    public static create(id: string, sendId: string, sendTaskId: number, sendTaskInstanceId: string): Receiver {
+        return new Receiver({
+            id,
+            sendId,
+            sendTaskId,
+            sendTaskInstanceId,
+            created: new Date()
+        }, {});
     }
 
 }

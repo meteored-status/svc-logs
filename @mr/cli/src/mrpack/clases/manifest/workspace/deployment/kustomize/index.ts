@@ -6,30 +6,30 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
     /* STATIC */
     public static get DEFAULT(): IManifestDeploymentKustomize {
         return {
-            legacy:  "services",
+            legacy: "services",
         };
     }
 
-    public static check(kustomize: Partial<IManifestDeploymentKustomize>={}): IManifestDeploymentKustomize {
+    public static check(kustomize: Partial<IManifestDeploymentKustomize> = {}): IManifestDeploymentKustomize {
         const data = this.DEFAULT;
-        if (kustomize.legacy!=undefined) {
+        if (kustomize.legacy != undefined) {
             data.legacy = kustomize.legacy;
         }
-        if (kustomize.credenciales!=undefined) {
+        if (kustomize.credenciales != undefined) {
             data.credenciales = {};
             for (const key of Object.keys(kustomize.credenciales).sort()) {
                 const value = kustomize.credenciales[key];
-                if (typeof value!=="string") {
+                if (typeof value !== "string") {
                     continue;
                 }
                 data.credenciales[key] = value;
             }
         }
-        if (kustomize.ssl!=undefined) {
+        if (kustomize.ssl != undefined) {
             data.ssl = {};
             for (const key of Object.keys(kustomize.ssl).sort()) {
                 const value = kustomize.ssl[key];
-                if (typeof value!=="string") {
+                if (typeof value !== "string") {
                     continue;
                 }
                 data.ssl[key] = value;
@@ -40,13 +40,13 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
     }
 
     public static fromLegacy(config: Partial<IManifestLegacy>): IManifestDeploymentKustomize {
-        let legacy: string|undefined;
+        let legacy: string | undefined;
 
         const cronjob = config.cronjob ?? false;
         if (cronjob) {
             legacy = config.kustomize;
         } else {
-            switch(config.runtime) {
+            switch (config.runtime) {
                 case RuntimeLegacy.node:
                 case RuntimeLegacy.php:
                     legacy = config.kustomize;

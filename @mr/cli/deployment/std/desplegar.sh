@@ -8,10 +8,11 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
   parseWorkspaceEjecutar() {
     BASETOP="${1}"
-    NOMBRE="${2}"
-    CLUSTER="${3}"
-    PRIMERO="${4}"
-    RUTA="${5}"
+    INDICE="${2}"
+    NOMBRE="${3}"
+    CLUSTER="${4}"
+    PRIMERO="${5}"
+    RUTA="${6}"
     WORKSPACE=$(path2 "${RUTA}")
 
     if [[ $(configw "${RUTA}" '.deploy.alone') == "true" && ${PRIMERO} != "true" ]]; then
@@ -20,8 +21,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
     echo "${CLUSTER} ${WORKSPACE}: Preparando"
     if [[ -f "despliegue_${WORKSPACE}_${NOMBRE}.yaml" ]]; then
-      cat "despliegue_${WORKSPACE}_${NOMBRE}.yaml" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
-      echo "---" >> "${BASETOP}/despliegue_${NOMBRE}.yaml"
+      cat "despliegue_${WORKSPACE}_${NOMBRE}.yaml" >> "${BASETOP}/despliegue_${INDICE}.yaml"
+      echo "---" >> "${BASETOP}/despliegue_${INDICE}.yaml"
     fi
   }
 
@@ -40,17 +41,17 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       PRIMERO="false"
     fi
 
-    if [[ -f "${BASETOP}/despliegue_${NOMBRE}.yaml" ]]; then
-      rm "${BASETOP}/despliegue_${NOMBRE}.yaml"
+    if [[ -f "${BASETOP}/despliegue_${INDICE}.yaml" ]]; then
+      rm "${BASETOP}/despliegue_${INDICE}.yaml"
     fi
 
-    lw cronjobs | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
-    lw services | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
+    lw cronjobs | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${INDICE} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
+    lw services | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${INDICE} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
     wait
 
-    if [[ -f "${BASETOP}/despliegue_${NOMBRE}.yaml" ]]; then
+    if [[ -f "${BASETOP}/despliegue_${INDICE}.yaml" ]]; then
       echo "${CLUSTER}: Desplegando"
-      gke-deploy run --filename="${BASETOP}/despliegue_${NOMBRE}.yaml" --cluster="${CLUSTER}" --location="${REGION}" --output="${BASETOP}/output/suggested/${NOMBRE}"
+      gke-deploy run --filename="${BASETOP}/despliegue_${INDICE}.yaml" --cluster="${CLUSTER}" --location="${REGION}" --output="${BASETOP}/output/suggested/${INDICE}"
     fi
   }
 

@@ -23,19 +23,19 @@ declare var PRODUCCION: boolean;
 declare var TEST: boolean;
 
 export class ElasticSendDAO extends SendDAO {
+    /* INSTANCE */
+    public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
+        super();
+    }
+
     /* STATIC */
     public static getAlias(config: ElasticSearch): string {
-        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion'): 'desarrollo';
+        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
         return `${config.sendIndex}-${suffix}`;
     }
 
     public static getIndex(config: ElasticSearch): string {
         return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
-    }
-
-    /* INSTANCE */
-    public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
-        super();
     }
 
     public override async save(send: Send): Promise<Send> {
@@ -133,7 +133,7 @@ export class ElasticSendDAO extends SendDAO {
         }
     }
 
-    private documentToSend(document: IDocument, metadata: {id: string, index: string}): Send {
+    private documentToSend(document: IDocument, metadata: { id: string, index: string }): Send {
         switch (document.type) {
             case TSend.SPARKPOST:
                 return new SparkpostSend({

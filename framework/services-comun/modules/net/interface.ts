@@ -6,6 +6,7 @@ export const enum ErrorCode {
     APPLICATION       = 5,
     NO_DATA_TEMPORARY = 6,
     NO_DATA_PERMANENT = 7,
+    NO_DATA           = 8
 }
 
 export interface IErrorInfo {

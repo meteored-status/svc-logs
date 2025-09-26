@@ -23,7 +23,8 @@ export enum TPresion {
     mb      = 0,
     inhg    = 1,
     hpa     = 2,
-    mmhg    = 3
+    mmhg    = 3,
+    kpa     = 4
 }
 
 export function convertirPrecipitacion(value: number, from: TPrecipitacion, to: TPrecipitacion): number {
@@ -66,6 +67,8 @@ export function convertirPresion(value: number, from: TPresion, to: TPresion): n
                     return value;
                 case TPresion.mmhg:
                     return value / 1.33322;
+                case TPresion.kpa:
+                    return value / 10;
             }
             break;
         case TPresion.inhg:
@@ -76,6 +79,8 @@ export function convertirPresion(value: number, from: TPresion, to: TPresion): n
                     return value * 33.8639;
                 case TPresion.mmhg:
                     return value * 25.4;
+                case TPresion.kpa:
+                    return value * 3.38639;
             }
             break;
         case TPresion.hpa:
@@ -86,6 +91,20 @@ export function convertirPresion(value: number, from: TPresion, to: TPresion): n
                     return value / 33.8639;
                 case TPresion.mmhg:
                     return value / 1.33322;
+                case TPresion.kpa:
+                    return value / 10;
+            }
+            break;
+        case TPresion.kpa:
+            switch (to) {
+                case TPresion.mb:
+                    return value * 10;
+                case TPresion.inhg:
+                    return value / 3.38639;
+                case TPresion.hpa:
+                    return value * 10;
+                case TPresion.mmhg:
+                    return value * 7.501;
             }
             break;
         default:
@@ -96,6 +115,8 @@ export function convertirPresion(value: number, from: TPresion, to: TPresion): n
                     return value * 25.4;
                 case TPresion.hpa:
                     return value * 1.33322;
+                case TPresion.kpa:
+                    return value / 7.501;
             }
             break;
     }

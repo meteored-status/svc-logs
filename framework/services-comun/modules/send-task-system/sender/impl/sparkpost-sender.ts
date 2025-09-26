@@ -6,7 +6,7 @@ import {PromiseDelayed} from "../../../utiles/promise";
 
 export type TransmissionID = string;
 
-export class SparkpostSender extends Sender<TransmissionID|null> {
+export class SparkpostSender extends Sender<TransmissionID | null> {
     /* STATIC */
 
     /* INSTANCE */
@@ -18,7 +18,7 @@ export class SparkpostSender extends Sender<TransmissionID|null> {
         return super.send as SparkpostSend;
     }
 
-    public override async run(): Promise<TransmissionID|null> {
+    public override async run(): Promise<TransmissionID | null> {
         let email = this.send.email;
 
         if (!email && this.send.content) {
@@ -32,7 +32,7 @@ export class SparkpostSender extends Sender<TransmissionID|null> {
 
         const sparkpost = new SparkPostManager();
 
-        let transmissionId: string|undefined = undefined;
+        let transmissionId: string | undefined = undefined;
         let contador: number = 0;
 
         while (!transmissionId && contador < 3) {
@@ -61,6 +61,6 @@ export class SparkpostSender extends Sender<TransmissionID|null> {
             this.koHandler?.()
         }
 
-        return transmissionId||null;
+        return transmissionId || null;
     }
 }

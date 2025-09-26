@@ -104,7 +104,7 @@ export class StatisticsController {
             let numReceivers = 0;
 
             do {
-                receivers = await this.factory.receiver.getBySendIds(events.map(event => event.sendId||''), receiverScroll);
+                receivers = await this.factory.receiver.getBySendIds(events.map(event => event.sendId || ''), receiverScroll);
 
                 if (receivers.length === 0) {
                     break;
@@ -125,7 +125,7 @@ export class StatisticsController {
                         receiverMap.set(key, indexedReceiver);
                     }
 
-                    this.calculateStatistics(indexedReceiver, eventsMap.get(key)||[]);
+                    this.calculateStatistics(indexedReceiver, eventsMap.get(key) || []);
                 });
 
             } while (true);

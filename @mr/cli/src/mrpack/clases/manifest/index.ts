@@ -31,10 +31,8 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         const guardar = await readJSON<Partial<T>>(this.file)
             .then((manifest) => {
                 const hash_inicial = md5(JSON.stringify(manifest));
-                const manifest_final = this.check(manifest);
-                const hash_final = md5(JSON.stringify(manifest_final));
-
-                this.manifest = new this.Manifest(manifest_final);
+                this.manifest = new this.Manifest(this.check(manifest));
+                const hash_final = md5(JSON.stringify(this.manifest));
 
                 return hash_inicial!=hash_final;
             })

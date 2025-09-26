@@ -7,10 +7,10 @@ import formidable, {type Fields, type Files} from "formidable";
 import type {Net} from "./config/net";
 import type {Routes} from "./routes";
 import {Conexion} from "./conexion";
-import {IPodInfo} from "../utiles/config";
+// import {IPodInfo} from "../utiles/config";
 import {Router} from "./router";
-import {Tracer} from "./tracer";
-import {error, info} from "../utiles/log";
+// import {Tracer} from "./tracer";
+import {error, formatTiempo, info, warning} from "../utiles/log";
 import {isDir, readDir, readFile, readJSON} from "../utiles/fs";
 
 export class Server {
@@ -23,20 +23,20 @@ export class Server {
         this.serverHTTPS = null;
     }
 
-    public iniciarHTTP(requestHandlers: Routes, pod: IPodInfo, config: Net): void {
+    public iniciarHTTP(requestHandlers: Routes, /*pod: IPodInfo,*/ config: Net): void {
         if (this.serverHTTP==null) {
             const server = http.createServer((request: http.IncomingMessage, response: http.ServerResponse) => {
                 setImmediate(()=>{
-                    this.onRequest(request, response, requestHandlers, pod, config, false);
+                    this.onRequest(request, response, requestHandlers, /*pod,*/ config, false);
                 });
             });
             server.addListener("error", (err)=>{
                 error("Error de servidor HTTP", err);
             });
-            if (config.maxConnections!=undefined) {
+            if (config.maxConnections!==undefined) {
                 server.maxConnections = config.maxConnections;
             }
-            if (config.timeout!=undefined) {
+            if (config.timeout!==undefined) {
                 server.timeout = config.timeout;
             }
             server.listen(config.puertos.http, ()=>{
@@ -49,7 +49,7 @@ export class Server {
         }
     }
 
-    public async iniciarHTTPs(requestHandlers: Routes, pod: IPodInfo, config: Net): Promise<void> {
+    public async iniciarHTTPs(requestHandlers: Routes, /*pod: IPodInfo,*/ config: Net): Promise<void> {
         if (this.serverHTTPS==null) {
             const contextos = new Map<string, SecureContext>();
             for (const dir of await readDir("files/ssl")) {
@@ -73,7 +73,7 @@ export class Server {
                 key: await readFile("files/ssl/privkey.pem"),
                 SNICallback: (servername: string, cb: (err: Error | null, ctx?: SecureContext) => void) => {
                     const ctx = contextos.get(servername);
-                    if (ctx==undefined) {
+                    if (ctx===undefined) {
                         cb(null);
                     } else {
                         cb(null, ctx);
@@ -81,16 +81,16 @@ export class Server {
                 },
             }, (request: http.IncomingMessage, response: http.ServerResponse) => {
                 setImmediate(()=>{
-                    this.onRequest(request, response, requestHandlers, pod, config, true);
+                    this.onRequest(request, response, requestHandlers, /*pod,*/ config, true);
                 });
             });
             server.addListener("error", (err)=>{
                 error("Error de servidor HTTPS", err);
             });
-            if (config.maxConnections!=undefined) {
+            if (config.maxConnections!==undefined) {
                 server.maxConnections = config.maxConnections;
             }
-            if (config.timeout!=undefined) {
+            if (config.timeout!==undefined) {
                 server.timeout = config.timeout;
             }
             server.listen(config.puertos.https, ()=>{
@@ -103,14 +103,14 @@ export class Server {
         }
     }
 
-    private onRequest(request: http.IncomingMessage, response: http.ServerResponse, request_handlers: Routes, pod: IPodInfo, config: Net, seguro: boolean): void {
-        const tracer = Tracer.build(request, pod);
+    private onRequest(request: http.IncomingMessage, response: http.ServerResponse, request_handlers: Routes, /*pod: IPodInfo,*/ config: Net, seguro: boolean): void {
+        // const tracer = Tracer.build(request, pod);
 
-        const conexion = new Conexion(request, response, request_handlers.error, tracer, config, request.headers["x-forwarded-proto"]!=undefined ? request.headers["x-forwarded-proto"]=="https" : seguro);
+        const conexion = new Conexion(request, response, request_handlers.error, /*tracer,*/ config, request.headers["x-forwarded-proto"]!==undefined ? request.headers["x-forwarded-proto"]==="https" : seguro);
 
         if (!["POST","PUT"].includes(conexion.metodo)) {
             request.setEncoding("utf8");
-            request.addListener("data", () => {});
+            request.addListener("data", () => undefined);
             request.addListener("error", (err: NodeJS.ErrnoException) => {
                 switch (err.code) {
                     case "ECONNRESET":
@@ -120,12 +120,21 @@ export class Server {
                         break;
                 }
                 request.removeAllListeners();
-                conexion.error(500, err.message, err).then(()=>{}).catch(()=>{});
+                conexion.error(500, err.message, err).finally(()=>undefined);
             });
             request.addListener("end", () => {
+                const timeout: NodeJS.Timeout = setTimeout(()=>{
+                    warning("Tiempo de respuesta excesivo (>1sg)", conexion.url);
+                }, 1000);
                 conexion.iniciado();
                 request.removeAllListeners();
-                Router.route(request_handlers, conexion).then(()=>{}).catch(()=>{});
+                Router.route(request_handlers, conexion).finally(() => {
+                    clearTimeout(timeout);
+                    const intervalo = Date.now() - conexion.start.getTime();
+                    if (intervalo > 1000) {
+                        warning(`Tiempo de respuesta excesivo (${formatTiempo(intervalo)})`, conexion.url);
+                    }
+                });
             });
         } else {
             const type = conexion.getHeaders()["content-type"]?.toLowerCase()??"";
@@ -136,6 +145,7 @@ export class Server {
                     multiples: true,
                     uploadDir: config.uploadDir,
                     maxFileSize: config.maxFileSize,
+                    maxTotalFileSize: config.maxFileSize * 10,
                 }).parse(request, (err: NodeJS.ErrnoException, fields: Fields, files: Files) => {
                     if (!err) {
                         if (type.includes("multipart")) {
@@ -160,10 +170,10 @@ export class Server {
                         }
                         conexion.files = files;
                         conexion.iniciado();
-                        Router.route(request_handlers, conexion).then(()=>{}).catch(()=>{});
+                        Router.route(request_handlers, conexion).finally(()=>undefined);
                     } else {
-                        error("Error de request (parseando datos [formidable])", conexion.get, JSON.stringify(err), err);
-                        conexion.error(500, err.message, err).then(()=>{}).catch(()=>{});
+                        error("Error de request (parseando datos [formidable])", conexion.get, JSON.stringify(err));
+                        conexion.error(500, err.message, err).finally(()=>undefined);
                     }
                 });
             } else {
@@ -181,7 +191,7 @@ export class Server {
                             break;
                     }
                     request.removeAllListeners();
-                    conexion.error(500, err.message, err).then(()=>{}).catch(()=>{});
+                    conexion.error(500, err.message, err).finally(()=>undefined);
                 });
                 request.addListener("end", () => {
                     conexion.postRAW = chunks.join("");
@@ -190,7 +200,7 @@ export class Server {
                     }
                     conexion.iniciado();
                     request.removeAllListeners();
-                    Router.route(request_handlers, conexion).then(()=>{}).catch(()=>{});
+                    Router.route(request_handlers, conexion).finally(()=>undefined);
                 });
             }
         }

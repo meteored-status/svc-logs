@@ -6,7 +6,7 @@ import {Receiver} from "../../../model/receiver";
 import {ElasticSearchBulk, ElasticSearchBulkConfig} from "../../../../../database/bulk/elastic";
 import {ElasticSearchScroll} from "../../../../../database/scroll";
 
-interface IDocument  {
+interface IDocument {
     id: string;
     send_id: string;
     send_task_id: number;
@@ -33,18 +33,18 @@ export interface IStatistics {
 }
 
 export class ElasticReceiverDAO extends ReceiverDAO {
+    /* INSTANCE */
+    public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
+        super();
+    }
+
     public static getAlias(config: ElasticSearch): string {
-        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion'): 'desarrollo';
+        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
         return `${config.receiverIndex}-${suffix}`;
     }
 
     public static getIndex(config: ElasticSearch): string {
         return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
-    }
-
-    /* INSTANCE */
-    public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
-        super();
     }
 
     public override async save(receiver: Receiver): Promise<Receiver> {
@@ -91,7 +91,7 @@ export class ElasticReceiverDAO extends ReceiverDAO {
         const salida = await this.client.search<IDocument>(request);
 
         if (scroll) {
-            scroll.control = salida.hits.hits[salida.hits.hits.length - 1]?.sort as SortResults|undefined;
+            scroll.control = salida.hits.hits[salida.hits.hits.length - 1]?.sort as SortResults | undefined;
         }
 
         return salida.hits.hits.map(hit => this.documentToReceiver(hit));
@@ -99,7 +99,7 @@ export class ElasticReceiverDAO extends ReceiverDAO {
 
     public override async createBulk(config?: ElasticSearchBulkConfig): Promise<ElasticSearchBulk> {
         return new ElasticSearchBulk(this.client, {
-            chunk: config?.chunk||1000,
+            chunk: config?.chunk || 1000,
             waitToSave: config?.waitToSave,
             getIndex: (obj: Receiver) => obj.metadata.index!,
             getId: (obj: Receiver) => obj.metadata.id!,

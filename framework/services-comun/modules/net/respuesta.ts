@@ -5,7 +5,7 @@ import {IErrorHandler} from "./router";
 import {INetCache} from "./cache";
 import {IRespuesta} from "./interface";
 import {type Net} from "./config/net";
-import {type Tracer} from "./tracer";
+// import {type Tracer} from "./tracer";
 import {pipeline} from "../utiles/stream";
 
 export abstract class Respuesta {
@@ -33,7 +33,7 @@ export abstract class Respuesta {
     public responseHeaders: OutgoingHttpHeaders;
     public data: Buffer|null;
 
-    protected constructor(private readonly respuesta: ServerResponse, public errorHandler: IErrorHandler, public readonly tracer: Tracer, private config: Net) {
+    protected constructor(private readonly respuesta: ServerResponse, public errorHandler: IErrorHandler, /*public readonly tracer: Tracer,*/ private config: Net) {
         this.time = Date.now();
         this.cacheTags = config.cacheTags.slice();
         this.responseHeaders = {
@@ -186,6 +186,11 @@ export abstract class Respuesta {
 
     public setContentType(content: string): Respuesta {
         this.contentType = content;
+        return this;
+    }
+
+    public setContentTypeText(): Respuesta {
+        this.contentType = `text/plain`;
         return this;
     }
 
@@ -475,7 +480,7 @@ export abstract class Respuesta {
         this.respuesta.end();
         this.terminado();
 
-        this.tracer.setCode(codigo);
+        // this.tracer.setCode(codigo);
 
         return codigo;
     }
@@ -527,7 +532,7 @@ export abstract class Respuesta {
         this.respuesta.end();
         this.terminado();
 
-        this.tracer.setCode(cache.code);
+        // this.tracer.setCode(cache.code);
 
         return cache.code;
     }
@@ -541,7 +546,7 @@ export abstract class Respuesta {
         await pipeline(datos, this.respuesta);
         this.terminado();
 
-        this.tracer.setCode(codigo);
+        // this.tracer.setCode(codigo);
 
         return codigo;
     }
@@ -580,7 +585,7 @@ export abstract class Respuesta {
         await pipeline(datos, this.respuesta);
         this.terminado();
 
-        this.tracer.setCode(datos.statusCode??0);
+        // this.tracer.setCode(datos.statusCode??0);
         return datos.statusCode as number;
     }
 }

@@ -15,6 +15,7 @@ class Modulo {
     }
 
     async compilar() {
+        const time = Date.now();
         console.log("Compilando herramientas...");
 
         {
@@ -32,6 +33,7 @@ class Modulo {
                 return Promise.reject(new Error("Error al compilar [ yarn @mr/cli run compile ]"));
             }
         }
+        console.log("Compilando herramientas... [OK]", Math.round((Date.now()-time)/1000),"sg");
     }
 
     async ejecutar() {

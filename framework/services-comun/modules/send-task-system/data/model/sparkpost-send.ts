@@ -7,6 +7,27 @@ export interface ISparkpostSend extends ISend {
 }
 
 export class SparkpostSend extends Send {
+    /* INSTANCE */
+    public constructor(data: ISparkpostSend, metadata: IMetadata) {
+        super(data, metadata);
+    }
+
+    public get email(): IMail | undefined {
+        return this.data.email;
+    }
+
+    public get transmissionId(): string | undefined {
+        return this.data.transmissionId;
+    }
+
+    public set transmissionId(value: string | undefined) {
+        this.data.transmissionId = value;
+    }
+
+    protected override get data(): ISparkpostSend {
+        return super.data as ISparkpostSend;
+    }
+
     /* STATIC */
     public static create(sendTask: number, expires: Date, scheduled: Date, mail: IMail): SparkpostSend {
         const data = this.buildData(TSend.SPARKPOST, sendTask, expires, scheduled);
@@ -14,27 +35,6 @@ export class SparkpostSend extends Send {
             ...data,
             email: mail
         }, {});
-    }
-
-    /* INSTANCE */
-    public constructor(data: ISparkpostSend, metadata: IMetadata) {
-        super(data, metadata);
-    }
-
-    protected override get data(): ISparkpostSend {
-        return super.data as ISparkpostSend;
-    }
-
-    public get email(): IMail|undefined {
-        return this.data.email;
-    }
-
-    public get transmissionId(): string|undefined {
-        return this.data.transmissionId;
-    }
-
-    public set transmissionId(value: string|undefined) {
-        this.data.transmissionId = value;
     }
 
 }

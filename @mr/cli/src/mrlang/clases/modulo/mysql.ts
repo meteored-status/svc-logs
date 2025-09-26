@@ -26,7 +26,9 @@ interface IModuloConfig extends IModuloConfigBase {
 export class ModuloMySQL extends Modulo<IModuloConfig> {
     /* STATIC */
     public static async getIDS(): Promise<string[]> {
-        const rows = await db.select<{ id: string }>("SELECT `id` FROM `modulos` WHERE `padre` IS NULL AND borrado=0 ORDER BY id");
+        const rows = await db.select<{
+            id: string
+        }>("SELECT `id` FROM `modulos` WHERE `padre` IS NULL AND borrado=0 ORDER BY id");
 
         return rows.map(row => row.id);
     }
