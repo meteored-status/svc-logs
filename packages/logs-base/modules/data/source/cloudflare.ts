@@ -114,7 +114,7 @@ export class Cloudflare {
         EdgeResponseContentType: z.string().optional(),
         EdgeServerIP: z.string(),
         EdgeTimeToFirstByteMs: z.number().optional(),
-        FirewallMatchesActions: z.array(z.any()),
+        FirewallMatchesActions: z.array(z.any()).optional(),
         FirewallMatchesRuleIDs: z.array(z.any()),
         FirewallMatchesSources: z.array(z.any()),
         OriginDNSResponseTimeMs: z.number().optional(),
@@ -270,7 +270,7 @@ export class Cloudflare {
                     types: o.ContentScanObjTypes.length>0?o.ContentScanObjTypes:undefined,
                 },
             }:undefined,
-            firewall: o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
+            firewall: o.FirewallMatchesActions!=undefined && o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
                 matches: {
                     actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
                     ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
