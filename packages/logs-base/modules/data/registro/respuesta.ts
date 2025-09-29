@@ -59,39 +59,39 @@ export interface IRegistroRespuestaES {
 
 export class RegistroRespuesta implements IRegistroRespuesta {
     /* STATIC */
-    public static build(edge: IRAWDataEdge, response: IRAWDataResponse, origin?: IRAWDataOrigin): RegistroRespuesta {
+    public static build(edge: IRAWDataEdge, /*response: IRAWDataResponse, */origin?: IRAWDataOrigin): RegistroRespuesta {
         const headers: IHeaders = {};
-        if (response.headers.tags!=undefined && response.headers.tags.length>0) {
-            headers.tags = response.headers.tags;
-        }
-        if (response.headers.etag!=undefined) {
-            headers.etag = response.headers.etag;
-        }
-        if (response.headers.expires!=undefined) {
-            headers.expires = response.headers.expires;
-        }
-        if (response.headers.lastModified!=undefined) {
-            headers.lastModified = response.headers.lastModified;
-        }
+        // if (response.headers.tags!=undefined && response.headers.tags.length>0) {
+        //     headers.tags = response.headers.tags;
+        // }
+        // if (response.headers.etag!=undefined) {
+        //     headers.etag = response.headers.etag;
+        // }
+        // if (response.headers.expires!=undefined) {
+        //     headers.expires = response.headers.expires;
+        // }
+        // if (response.headers.lastModified!=undefined) {
+        //     headers.lastModified = response.headers.lastModified;
+        // }
 
         const mr: IHeadersMR = {};
-        if (response.headers.mr!=undefined) {
-            if (response.headers.mr.chain!=undefined && response.headers.mr.chain.length>0) {
-                mr.chain = response.headers.mr.chain;
-            }
-            if (response.headers.mr.node!=undefined) {
-                mr.node = response.headers.mr.node;
-            }
-            if (response.headers.mr.service!=undefined) {
-                mr.service = response.headers.mr.service;
-            }
-            if (response.headers.mr.version!=undefined) {
-                mr.version = response.headers.mr.version;
-            }
-            if (response.headers.mr.zone!=undefined) {
-                mr.zone = response.headers.mr.zone;
-            }
-        }
+        // if (response.headers.mr!=undefined) {
+        //     if (response.headers.mr.chain!=undefined && response.headers.mr.chain.length>0) {
+        //         mr.chain = response.headers.mr.chain;
+        //     }
+        //     if (response.headers.mr.node!=undefined) {
+        //         mr.node = response.headers.mr.node;
+        //     }
+        //     if (response.headers.mr.service!=undefined) {
+        //         mr.service = response.headers.mr.service;
+        //     }
+        //     if (response.headers.mr.version!=undefined) {
+        //         mr.version = response.headers.mr.version;
+        //     }
+        //     if (response.headers.mr.zone!=undefined) {
+        //         mr.zone = response.headers.mr.zone;
+        //     }
+        // }
         if (Object.keys(mr).length>0) {
             headers.mr = mr;
         }
