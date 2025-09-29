@@ -201,7 +201,7 @@ export interface IRAWData {
         ray?: string;
     };
     request: IRAWDataRequest;
-    response: IRAWDataResponse;
+    // response: IRAWDataResponse;
     security?: {
         action: string;
         actions?: string[];
@@ -318,7 +318,7 @@ export class Registro implements IRegistro {
         });
         const peticion = RegistroPeticion.build(data.client, data.request);
         const cache = RegistroCache.build(data.cache);
-        const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
+        const respuesta = RegistroRespuesta.build(data.edge, /*data.response, */data.origin);
         const cliente = RegistroCliente.build(data.client);
         const extremo = RegistroExtremo.build(data.edge);
         const origen = RegistroOrigen.build(data.origin, telemetry.cliente.backends);

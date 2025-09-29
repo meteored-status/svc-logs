@@ -118,7 +118,7 @@ export class Cloudflare {
         FirewallMatchesRuleIDs: z.array(z.any()).optional(),
         FirewallMatchesSources: z.array(z.any()).optional(),
         OriginDNSResponseTimeMs: z.number().optional(),
-        OriginIP: z.string(),
+        OriginIP: z.string().optional(),
         OriginRequestHeaderSendDurationMs: z.number().optional(),
         OriginResponseBytes: z.number().optional(),
         OriginResponseDurationMs: z.number().optional(),
@@ -132,7 +132,7 @@ export class Cloudflare {
         OriginTLSHandshakeDurationMs: z.number().optional(),
         ParentRayID: z.string().optional(),
         RequestHeaders: this.SCHEMA_REQUEST_HEADERS,
-        ResponseHeaders: this.SCHEMA_RESPONSE_HEADERS,
+        // ResponseHeaders: this.SCHEMA_RESPONSE_HEADERS,
         SecurityAction: z.string().optional(),
         SecurityActions: z.array(z.string()).optional(),
         SecurityLevel: z.string().optional(),
@@ -277,7 +277,7 @@ export class Cloudflare {
                     sources: o.FirewallMatchesSources.length>0?o.FirewallMatchesSources:undefined,
                 },
             }:undefined,
-            origin: o.OriginIP.length>0?{
+            origin: o.OriginIP!=undefined && length>0?{
                 dns: o.OriginDNSResponseTimeMs!=undefined ? {
                     response: o.OriginDNSResponseTimeMs!=undefined ? {
                         time: o.OriginDNSResponseTimeMs,
@@ -326,9 +326,9 @@ export class Cloudflare {
             request: {
                 headers: o.RequestHeaders,
             },
-            response: {
-                headers: o.ResponseHeaders,
-            },
+            // response: {
+            //     headers: o.ResponseHeaders,
+            // },
             security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
                 action: o.SecurityAction,
                 actions: o.SecurityActions,
