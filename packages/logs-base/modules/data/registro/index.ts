@@ -205,7 +205,7 @@ export interface IRAWData {
     security?: {
         action: string;
         actions?: string[];
-        level: string;
+        level?: string;
         rule: {
             description?: string;
             id?: string;
@@ -224,18 +224,18 @@ export interface IRAWData {
         };
     };
     waf?: {
-        action: string;
+        action?: string;
         flags?: string;
         matched: {
             var?: string;
         };
-        profile: string;
+        profile?: string;
         rce: {
             score?: number;
         };
-        rule: {
-            id: string;
-            message: string;
+        rule?: {
+            id?: string;
+            message?: string;
         };
         score?: number;
         sqli: {

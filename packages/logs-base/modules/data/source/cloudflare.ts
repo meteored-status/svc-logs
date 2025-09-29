@@ -94,7 +94,7 @@ export class Cloudflare {
         ClientRequestUserAgent: z.string(),
         ClientSSLCipher: z.string().optional(),
         ClientSSLProtocol: z.string().optional(),
-        ClientSrcPort: z.number(),
+        ClientSrcPort: z.number().optional(),
         ClientTCPRTTMs: z.number().optional(),
         ClientXRequestedWith: z.string().optional(),
         Cookies: this.SCHEMA_COOKIES,
@@ -106,8 +106,8 @@ export class Cloudflare {
         EdgePathingOp: z.string().optional(),
         EdgePathingSrc: z.string().optional(),
         EdgePathingStatus: z.string().optional(),
-        EdgeRateLimitAction: z.string(),
-        EdgeRateLimitID: z.number(),
+        EdgeRateLimitAction: z.string().optional(),
+        EdgeRateLimitID: z.number().optional(),
         EdgeRequestHost: z.string(),
         EdgeResponseBodyBytes: z.number().optional(),
         EdgeResponseCompressionRatio: z.number().optional(),
@@ -115,8 +115,8 @@ export class Cloudflare {
         EdgeServerIP: z.string(),
         EdgeTimeToFirstByteMs: z.number().optional(),
         FirewallMatchesActions: z.array(z.any()).optional(),
-        FirewallMatchesRuleIDs: z.array(z.any()),
-        FirewallMatchesSources: z.array(z.any()),
+        FirewallMatchesRuleIDs: z.array(z.any()).optional(),
+        FirewallMatchesSources: z.array(z.any()).optional(),
         OriginDNSResponseTimeMs: z.number().optional(),
         OriginIP: z.string(),
         OriginRequestHeaderSendDurationMs: z.number().optional(),
@@ -135,21 +135,21 @@ export class Cloudflare {
         ResponseHeaders: this.SCHEMA_RESPONSE_HEADERS,
         SecurityAction: z.string().optional(),
         SecurityActions: z.array(z.string()).optional(),
-        SecurityLevel: z.string(),
+        SecurityLevel: z.string().optional(),
         SecurityRuleDescription: z.string().optional(),
         SecurityRuleID: z.string().optional(),
         SecurityRuleIDs: z.array(z.string()).optional(),
         SecuritySources: z.array(z.string()).optional(),
         SmartRouteColoID: z.number().optional(),
         UpperTierColoID: z.number().optional(),
-        WAFAction: z.string(),
+        WAFAction: z.string().optional(),
         WAFAttackScore: z.number().optional(),
         WAFFlags: z.string().optional(),
         WAFMatchedVar: z.string().optional(),
-        WAFProfile: z.string(),
+        WAFProfile: z.string().optional(),
         WAFRCEAttackScore: z.number().optional(),
-        WAFRuleID: z.string(),
-        WAFRuleMessage: z.string(),
+        WAFRuleID: z.string().optional(),
+        WAFRuleMessage: z.string().optional(),
         WAFSQLiAttackScore: z.number().optional(),
         WAFXSSAttackScore: z.number().optional(),
         WorkerCPUTime: z.number().optional(),
@@ -199,9 +199,9 @@ export class Cloudflare {
                     protocol: protocol[0],
                     version: protocol[1],
                 }:undefined,
-                src: o.ClientSrcPort>0?{
+                src: o.ClientSrcPort!=undefined && o.ClientSrcPort>0 ? {
                     port: o.ClientSrcPort,
-                }:undefined,
+                } : undefined,
                 tcp: o.ClientTCPRTTMs!=undefined && o.ClientTCPRTTMs>0?{
                     rtt: o.ClientTCPRTTMs,
                 }:undefined,
@@ -222,7 +222,7 @@ export class Cloudflare {
                     src: o.EdgePathingSrc,
                     status: o.EdgePathingStatus,
                 } : undefined,
-                rateLimit: o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=0?{
+                rateLimit: o.EdgeRateLimitAction!=undefined && o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=undefined && o.EdgeRateLimitID!=0?{
                     action: o.EdgeRateLimitAction,
                     id: o.EdgeRateLimitID,
                 }:undefined,
@@ -270,7 +270,7 @@ export class Cloudflare {
                     types: o.ContentScanObjTypes.length>0?o.ContentScanObjTypes:undefined,
                 },
             }:undefined,
-            firewall: o.FirewallMatchesActions!=undefined && o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
+            firewall: o.FirewallMatchesActions!=undefined && o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs!=undefined && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources!=undefined && o.FirewallMatchesSources.length>0?{
                 matches: {
                     actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
                     ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
@@ -350,7 +350,7 @@ export class Cloudflare {
                     colo: o.UpperTierColoID,
                 },
             }:undefined,
-            waf: o.WAFAction!="unknown"?{
+            waf: o.WAFAction!=undefined && o.WAFAction!="unknown" || o.WAFProfile!=undefined ? {
                 action: o.WAFAction,
                 flags: o.WAFFlags,
                 matched: {
@@ -360,10 +360,10 @@ export class Cloudflare {
                 rce: {
                     score: o.WAFRCEAttackScore,
                 },
-                rule: {
+                rule: o.WAFRuleID!=undefined || o.WAFRuleMessage!=undefined ? {
                     id: o.WAFRuleID,
                     message: o.WAFRuleMessage,
-                },
+                } : undefined,
                 score: o.WAFAttackScore,
                 sqli: {
                     score: o.WAFSQLiAttackScore,
