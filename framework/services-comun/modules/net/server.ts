@@ -123,16 +123,18 @@ export class Server {
                 conexion.error(500, err.message, err).finally(()=>undefined);
             });
             request.addListener("end", () => {
-                const timeout: NodeJS.Timeout = setTimeout(()=>{
+                const timeout: NodeJS.Timeout|undefined = config.slow>0 ? setTimeout(()=>{
                     warning("Tiempo de respuesta excesivo (>1sg)", conexion.url);
-                }, 1000);
+                }, config.slow) : undefined;
                 conexion.iniciado();
                 request.removeAllListeners();
                 Router.route(request_handlers, conexion).finally(() => {
-                    clearTimeout(timeout);
-                    const intervalo = Date.now() - conexion.start.getTime();
-                    if (intervalo > 1000) {
-                        warning(`Tiempo de respuesta excesivo (${formatTiempo(intervalo)})`, conexion.url);
+                    if (timeout!==undefined) {
+                        clearTimeout(timeout);
+                        const intervalo = Date.now() - conexion.start.getTime();
+                        if (intervalo > 1000) {
+                            warning(`Tiempo de respuesta excesivo (${formatTiempo(intervalo)})`, conexion.url);
+                        }
                     }
                 });
             });
