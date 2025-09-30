@@ -75,111 +75,111 @@ export class Cloudflare {
             }),
         RayID: z.string(),
         CacheCacheStatus: z.string(),
-        CacheResponseBytes: z.number().optional(),
-        CacheResponseStatus: z.number().optional(),
+        CacheResponseBytes: z.number(),
+        CacheResponseStatus: z.number(),
         CacheTieredFill: z.boolean(),
-        ClientASN: z.number().optional(),
-        ClientCountry: z.string().optional(),
-        ClientDeviceType: z.string().optional(),
+        ClientASN: z.number(),
+        ClientCountry: z.string(),
+        ClientDeviceType: z.string(),
         ClientIPClass: z.string(),
-        ClientMTLSAuthCertFingerprint: z.string().optional(),
-        ClientMTLSAuthStatus: z.string().optional(),
+        ClientMTLSAuthCertFingerprint: z.string(),
+        ClientMTLSAuthStatus: z.string(),
         ClientRegionCode: z.string().optional(),
-        ClientRequestBytes: z.number().optional(),
+        ClientRequestBytes: z.number(),
         ClientRequestPath: z.string(),
         ClientRequestProtocol: z.string(),
         ClientRequestReferer: z.string(),
         ClientRequestScheme: z.string(),
-        ClientRequestSource: z.string().optional(),
+        ClientRequestSource: z.string(),
         ClientRequestUserAgent: z.string(),
-        ClientSSLCipher: z.string().optional(),
-        ClientSSLProtocol: z.string().optional(),
-        ClientSrcPort: z.number().optional(),
-        ClientTCPRTTMs: z.number().optional(),
-        ClientXRequestedWith: z.string().optional(),
+        ClientSSLCipher: z.string(),
+        ClientSSLProtocol: z.string(),
+        ClientSrcPort: z.number(),
+        ClientTCPRTTMs: z.number(),
+        ClientXRequestedWith: z.string(),
         Cookies: this.SCHEMA_COOKIES,
         ContentScanObjResults: z.array(z.string()).optional(),
         ContentScanObjTypes: z.array(z.string()).optional(),
-        EdgeCFConnectingO2O: z.boolean().optional(),
-        EdgeColoCode: z.string().optional(),
-        EdgeColoID: z.number().optional(),
-        EdgePathingOp: z.string().optional(),
-        EdgePathingSrc: z.string().optional(),
-        EdgePathingStatus: z.string().optional(),
-        EdgeRateLimitAction: z.string().optional(),
-        EdgeRateLimitID: z.number().optional(),
+        EdgeCFConnectingO2O: z.boolean(),
+        EdgeColoCode: z.string(),
+        EdgeColoID: z.number(),
+        EdgePathingOp: z.string(),
+        EdgePathingSrc: z.string(),
+        EdgePathingStatus: z.string(),
+        EdgeRateLimitAction: z.string(),
+        EdgeRateLimitID: z.number(),
         EdgeRequestHost: z.string(),
-        EdgeResponseBodyBytes: z.number().optional(),
-        EdgeResponseCompressionRatio: z.number().optional(),
-        EdgeResponseContentType: z.string().optional(),
+        EdgeResponseBodyBytes: z.number(),
+        EdgeResponseCompressionRatio: z.number(),
+        EdgeResponseContentType: z.string(),
         EdgeServerIP: z.string(),
-        EdgeTimeToFirstByteMs: z.number().optional(),
-        FirewallMatchesActions: z.array(z.any()).optional(),
-        FirewallMatchesRuleIDs: z.array(z.any()).optional(),
-        FirewallMatchesSources: z.array(z.any()).optional(),
-        OriginDNSResponseTimeMs: z.number().optional(),
-        OriginIP: z.string().optional(),
-        OriginRequestHeaderSendDurationMs: z.number().optional(),
-        OriginResponseBytes: z.number().optional(),
-        OriginResponseDurationMs: z.number().optional(),
+        EdgeTimeToFirstByteMs: z.number(),
+        FirewallMatchesActions: z.array(z.any()),
+        FirewallMatchesRuleIDs: z.array(z.any()),
+        FirewallMatchesSources: z.array(z.any()),
+        OriginDNSResponseTimeMs: z.number(),
+        OriginIP: z.string(),
+        OriginRequestHeaderSendDurationMs: z.number(),
+        OriginResponseBytes: z.number(),
+        OriginResponseDurationMs: z.number(),
         OriginResponseHTTPExpires: z.string(),
-        OriginResponseHTTPLastModified: z.string().optional(),
-        OriginResponseHeaderReceiveDurationMs: z.number().optional(),
-        OriginResponseStatus: z.number().optional(),
-        OriginResponseTime: z.number().optional(),
-        OriginSSLProtocol: z.string().optional(),
-        OriginTCPHandshakeDurationMs: z.number().optional(),
-        OriginTLSHandshakeDurationMs: z.number().optional(),
-        ParentRayID: z.string().optional(),
+        OriginResponseHTTPLastModified: z.string(),
+        OriginResponseHeaderReceiveDurationMs: z.number(),
+        OriginResponseStatus: z.number(),
+        OriginResponseTime: z.number(),
+        OriginSSLProtocol: z.string(),
+        OriginTCPHandshakeDurationMs: z.number(),
+        OriginTLSHandshakeDurationMs: z.number(),
+        ParentRayID: z.string(),
         RequestHeaders: this.SCHEMA_REQUEST_HEADERS,
-        // ResponseHeaders: this.SCHEMA_RESPONSE_HEADERS,
+        ResponseHeaders: this.SCHEMA_RESPONSE_HEADERS,
         SecurityAction: z.string().optional(),
         SecurityActions: z.array(z.string()).optional(),
-        SecurityLevel: z.string().optional(),
+        SecurityLevel: z.string(),
         SecurityRuleDescription: z.string().optional(),
         SecurityRuleID: z.string().optional(),
         SecurityRuleIDs: z.array(z.string()).optional(),
         SecuritySources: z.array(z.string()).optional(),
-        SmartRouteColoID: z.number().optional(),
-        UpperTierColoID: z.number().optional(),
-        WAFAction: z.string().optional(),
+        SmartRouteColoID: z.number(),
+        UpperTierColoID: z.number(),
+        WAFAction: z.string(),
         WAFAttackScore: z.number().optional(),
-        WAFFlags: z.string().optional(),
-        WAFMatchedVar: z.string().optional(),
-        WAFProfile: z.string().optional(),
+        WAFFlags: z.string(),
+        WAFMatchedVar: z.string(),
+        WAFProfile: z.string(),
         WAFRCEAttackScore: z.number().optional(),
-        WAFRuleID: z.string().optional(),
-        WAFRuleMessage: z.string().optional(),
+        WAFRuleID: z.string(),
+        WAFRuleMessage: z.string(),
         WAFSQLiAttackScore: z.number().optional(),
         WAFXSSAttackScore: z.number().optional(),
-        WorkerCPUTime: z.number().optional(),
+        WorkerCPUTime: z.number(),
         WorkerStatus: z.string(),
         WorkerSubrequest: z.boolean(),
         WorkerSubrequestCount: z.number(),
         ZoneID: z.number().optional(),
-        ZoneName: z.string().optional(),
+        ZoneName: z.string(),
         CacheReserveUsed: z.boolean(),
-        WorkerWallTimeUs: z.number().optional(),
+        WorkerWallTimeUs: z.number(),
     }).transform(o=>{
-        const protocol = o.ClientSSLProtocol?.split("v") ?? [];
+        const protocol = o.ClientSSLProtocol.split("v");
         return {
             client: {
                 asn: o.ClientASN,
                 country: o.ClientCountry,
-                device: o.ClientDeviceType!=undefined ? {
+                device: {
                     type: o.ClientDeviceType,
-                } : undefined,
+                },
                 ip: {
                     value: o.ClientIP,
                     class: o.ClientIPClass,
                 },
-                mtls: o.ClientMTLSAuthCertFingerprint!=undefined || o.ClientMTLSAuthStatus!="unknown" ? {
-                    auth: o.ClientMTLSAuthCertFingerprint!=undefined || o.ClientMTLSAuthStatus!=undefined ? {
-                        cert: o.ClientMTLSAuthCertFingerprint!=undefined ? {
+                mtls: o.ClientMTLSAuthStatus!="unknown"?{
+                    auth: {
+                        cert: {
                             fingerprint: o.ClientMTLSAuthCertFingerprint,
-                        } : undefined,
+                        },
                         status: o.ClientMTLSAuthStatus,
-                    } : undefined,
+                    },
                 }:undefined,
                 region: o.ClientRegionCode,
                 request: {
@@ -194,35 +194,35 @@ export class Cloudflare {
                     ua: o.ClientRequestUserAgent,
                     uri: o.ClientRequestURI,
                 },
-                ssl: o.ClientSSLCipher!=undefined && o.ClientSSLCipher!="NONE" ? {
+                ssl: o.ClientSSLCipher!="NONE"?{
                     cipher: o.ClientSSLCipher,
                     protocol: protocol[0],
                     version: protocol[1],
                 }:undefined,
-                src: o.ClientSrcPort!=undefined && o.ClientSrcPort>0 ? {
+                src: o.ClientSrcPort>0?{
                     port: o.ClientSrcPort,
-                } : undefined,
-                tcp: o.ClientTCPRTTMs!=undefined && o.ClientTCPRTTMs>0?{
+                }:undefined,
+                tcp: o.ClientTCPRTTMs>0?{
                     rtt: o.ClientTCPRTTMs,
                 }:undefined,
-                x: o.ClientXRequestedWith!=undefined && o.ClientXRequestedWith.length>0?{
+                x: o.ClientXRequestedWith.length>0?{
                     requestedWith: o.ClientXRequestedWith,
                 }:undefined,
             },
             edge: {
-                cf: o.EdgeCFConnectingO2O!=undefined ? {
+                cf: {
                     connectingO2O: o.EdgeCFConnectingO2O,
-                }: undefined,
-                colo: o.EdgeColoCode!=undefined || o.EdgeColoID!=undefined ? {
+                },
+                colo: {
                     code: o.EdgeColoCode,
                     id: o.EdgeColoID,
-                } : undefined,
-                pathing: o.EdgePathingOp!=undefined || o.EdgePathingSrc!=undefined || o.EdgePathingStatus!=undefined ? {
+                },
+                pathing: {
                     op: o.EdgePathingOp,
                     src: o.EdgePathingSrc,
                     status: o.EdgePathingStatus,
-                } : undefined,
-                rateLimit: o.EdgeRateLimitAction!=undefined && o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=undefined && o.EdgeRateLimitID!=0?{
+                },
+                rateLimit: o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=0?{
                     action: o.EdgeRateLimitAction,
                     id: o.EdgeRateLimitID,
                 }:undefined,
@@ -230,13 +230,13 @@ export class Cloudflare {
                     host: o.EdgeRequestHost,
                 },
                 response: {
-                    body: o.EdgeResponseBodyBytes!=undefined ? {
+                    body: {
                         bytes: o.EdgeResponseBodyBytes,
-                    } : undefined,
+                    },
                     bytes: o.EdgeResponseBytes,
-                    compression: o.EdgeResponseCompressionRatio!=undefined ? {
+                    compression: {
                         ratio: o.EdgeResponseCompressionRatio,
-                    } : undefined,
+                    },
                     contentType: o.EdgeResponseContentType,
                     status: o.EdgeResponseStatus,
                 },
@@ -254,10 +254,10 @@ export class Cloudflare {
                 reserve: {
                     used: o.CacheReserveUsed,
                 },
-                response: o.CacheResponseBytes!=undefined || o.CacheResponseStatus!=undefined ? {
+                response: {
                     bytes: o.CacheResponseBytes,
                     status: o.CacheResponseStatus,
-                }: undefined,
+                },
                 status: o.CacheCacheStatus,
                 tiered: {
                     fill: o.CacheTieredFill,
@@ -270,35 +270,35 @@ export class Cloudflare {
                     types: o.ContentScanObjTypes.length>0?o.ContentScanObjTypes:undefined,
                 },
             }:undefined,
-            firewall: o.FirewallMatchesActions!=undefined && o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs!=undefined && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources!=undefined && o.FirewallMatchesSources.length>0?{
+            firewall: o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
                 matches: {
                     actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
                     ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
                     sources: o.FirewallMatchesSources.length>0?o.FirewallMatchesSources:undefined,
                 },
             }:undefined,
-            origin: o.OriginIP!=undefined && length>0?{
-                dns: o.OriginDNSResponseTimeMs!=undefined ? {
-                    response: o.OriginDNSResponseTimeMs!=undefined ? {
+            origin: o.OriginIP.length>0?{
+                dns: {
+                    response: {
                         time: o.OriginDNSResponseTimeMs,
-                    }: undefined,
-                }: undefined,
+                    },
+                },
                 ip: o.OriginIP,
-                request: o.OriginRequestHeaderSendDurationMs!=undefined ? {
-                    header: o.OriginRequestHeaderSendDurationMs!=undefined ? {
-                        send: o.OriginRequestHeaderSendDurationMs!=undefined ? {
+                request: {
+                    header: {
+                        send: {
                             duration: o.OriginRequestHeaderSendDurationMs,
-                        } : undefined,
-                    } : undefined,
-                } : undefined,
+                        },
+                    },
+                },
                 response: {
                     bytes: o.OriginResponseBytes,
                     duration: o.OriginResponseDurationMs,
-                    header: o.OriginResponseHeaderReceiveDurationMs!=undefined ? {
-                        receive: o.OriginResponseHeaderReceiveDurationMs!=undefined ? {
+                    header: {
+                        receive: {
                             duration: o.OriginResponseHeaderReceiveDurationMs,
-                        } : undefined,
-                    } : undefined,
+                        },
+                    },
                     http: {
                         expires: o.OriginResponseHTTPExpires,
                         lastModified: o.OriginResponseHTTPLastModified,
@@ -306,29 +306,29 @@ export class Cloudflare {
                     status: o.OriginResponseStatus,
                     time: o.OriginResponseTime,
                 },
-                ssl: o.OriginSSLProtocol!=undefined ? {
+                ssl: {
                     protocol: o.OriginSSLProtocol,
-                } : undefined,
-                tcp: o.OriginTCPHandshakeDurationMs!=undefined ? {
-                    handshake: o.OriginTCPHandshakeDurationMs!=undefined ? {
+                },
+                tcp: {
+                    handshake: {
                         duration: o.OriginTCPHandshakeDurationMs,
-                    } : undefined,
-                } : undefined,
-                tls: o.OriginTLSHandshakeDurationMs!=undefined ? {
-                    handshake: o.OriginTLSHandshakeDurationMs!=undefined ? {
+                    },
+                },
+                tls: {
+                    handshake: {
                         duration: o.OriginTLSHandshakeDurationMs,
-                    } : undefined,
-                } : undefined,
+                    },
+                },
             }:undefined,
-            parent: o.ParentRayID!=undefined ? {
+            parent: {
                 ray: o.ParentRayID,
-            } : undefined,
+            },
             request: {
                 headers: o.RequestHeaders,
             },
-            // response: {
-            //     headers: o.ResponseHeaders,
-            // },
+            response: {
+                headers: o.ResponseHeaders,
+            },
             security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
                 action: o.SecurityAction,
                 actions: o.SecurityActions,
@@ -340,17 +340,17 @@ export class Cloudflare {
                 },
                 sources: o.SecuritySources,
             }:undefined,
-            smart: o.SmartRouteColoID!=undefined && o.SmartRouteColoID>0 ? {
+            smart: o.SmartRouteColoID>0?{
                 route: {
                     colo: o.SmartRouteColoID,
                 },
             }:undefined,
-            upper: o.UpperTierColoID!=undefined && o.UpperTierColoID>0 ? {
+            upper: o.UpperTierColoID>0?{
                 tier: {
                     colo: o.UpperTierColoID,
                 },
             }:undefined,
-            waf: o.WAFAction!=undefined && o.WAFAction!="unknown" || o.WAFProfile!=undefined ? {
+            waf: o.WAFAction!="unknown"?{
                 action: o.WAFAction,
                 flags: o.WAFFlags,
                 matched: {
@@ -360,10 +360,10 @@ export class Cloudflare {
                 rce: {
                     score: o.WAFRCEAttackScore,
                 },
-                rule: o.WAFRuleID!=undefined || o.WAFRuleMessage!=undefined ? {
+                rule: {
                     id: o.WAFRuleID,
                     message: o.WAFRuleMessage,
-                } : undefined,
+                },
                 score: o.WAFAttackScore,
                 sqli: {
                     score: o.WAFSQLiAttackScore,
@@ -373,21 +373,21 @@ export class Cloudflare {
                 },
             }:undefined,
             worker: o.WorkerStatus!="unknown"?{
-                cpu: o.WorkerCPUTime!=undefined ? {
+                cpu: {
                     time: o.WorkerCPUTime,
-                } : undefined,
+                },
                 status: o.WorkerStatus,
                 subrequest: {
                     count: o.WorkerSubrequestCount,
                 },
-                wall: o.WorkerWallTimeUs!=undefined ? {
+                wall: {
                     time: o.WorkerWallTimeUs,
-                } : undefined,
+                },
             }:undefined,
-            zone: o.ZoneID!=undefined && o.ZoneName!=undefined ? {
+            zone: {
                 id: o.ZoneID,
                 name: o.ZoneName,
-            } : undefined,
+            },
         };
     });
 

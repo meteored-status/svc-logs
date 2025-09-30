@@ -4,8 +4,8 @@ export interface IRegistroCache {
     status: string;
     reserva: boolean;
     escalonada: boolean;
-    bytes?: number;
-    codigo?: number;
+    bytes: number;
+    codigo: number;
 }
 
 export class RegistroCache implements IRegistroCache {
@@ -15,8 +15,8 @@ export class RegistroCache implements IRegistroCache {
             status: data.status,
             reserva: data.reserve.used,
             escalonada: data.tiered.fill,
-            bytes: data.response?.bytes,
-            codigo: data.response?.status,
+            bytes: data.response.bytes,
+            codigo: data.response.status,
         });
     }
 
@@ -24,8 +24,8 @@ export class RegistroCache implements IRegistroCache {
     public get status(): string { return this.data.status; }
     public get reserva(): boolean { return this.data.reserva; }
     public get escalonada(): boolean { return this.data.escalonada; }
-    public get bytes(): number|undefined { return this.data.bytes; }
-    public get codigo(): number|undefined { return this.data.codigo; }
+    public get bytes(): number { return this.data.bytes; }
+    public get codigo(): number { return this.data.codigo; }
 
     protected constructor(private data: IRegistroCache) {
     }

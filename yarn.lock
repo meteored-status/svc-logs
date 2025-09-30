@@ -875,18 +875,18 @@ __metadata:
   dependencies:
     "@google-cloud/storage": "npm:^7.17.1"
     "@inquirer/prompts": "npm:^7.8.6"
-    "@rspack/cli": "npm:^1.5.7"
-    "@rspack/core": "npm:^1.5.7"
+    "@rspack/cli": "npm:^1.5.8"
+    "@rspack/core": "npm:^1.5.8"
     "@tsconfig/node22": "npm:^22.0.2"
     "@types/diff3": "npm:^0.0.2"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     "@types/source-map-support": "npm:^0.5.10"
     chokidar: "npm:^4.0.3"
     clean-webpack-plugin: "npm:^4.0.0"
     css-loader: "npm:^7.1.2"
     dd-trace: "npm:^5.67.0"
     diff3: "npm:^0.0.4"
-    dotenv: "npm:^17.2.2"
+    dotenv: "npm:^17.2.3"
     jszip: "npm:^3.10.1"
     mini-css-extract-plugin: "npm:^2.9.4"
     mysql2: "npm:^3.15.1"
@@ -905,7 +905,7 @@ __metadata:
     ts-node: "npm:^10.9.2"
     tslib: "npm:^2.8.1"
     typescript: "npm:^5.9.2"
-    webpack: "npm:^5.101.3"
+    webpack: "npm:^5.102.0"
     webpack-cli: "npm:^6.0.1"
     webpack-manifest-plugin: "npm:^5.0.1"
   bin:
@@ -920,7 +920,7 @@ __metadata:
   dependencies:
     "@tsconfig/node22": "npm:^22.0.2"
     "@tsconfig/recommended": "npm:^1.0.10"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     services-comun: "workspace:*"
   languageName: unknown
   linkType: soft
@@ -1334,92 +1334,92 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rspack/binding-darwin-arm64@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-darwin-arm64@npm:1.5.7"
+"@rspack/binding-darwin-arm64@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-darwin-arm64@npm:1.5.8"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rspack/binding-darwin-x64@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-darwin-x64@npm:1.5.7"
+"@rspack/binding-darwin-x64@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-darwin-x64@npm:1.5.8"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-arm64-gnu@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-linux-arm64-gnu@npm:1.5.7"
+"@rspack/binding-linux-arm64-gnu@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-linux-arm64-gnu@npm:1.5.8"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-arm64-musl@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-linux-arm64-musl@npm:1.5.7"
+"@rspack/binding-linux-arm64-musl@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-linux-arm64-musl@npm:1.5.8"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-x64-gnu@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-linux-x64-gnu@npm:1.5.7"
+"@rspack/binding-linux-x64-gnu@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-linux-x64-gnu@npm:1.5.8"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-x64-musl@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-linux-x64-musl@npm:1.5.7"
+"@rspack/binding-linux-x64-musl@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-linux-x64-musl@npm:1.5.8"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@rspack/binding-wasm32-wasi@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-wasm32-wasi@npm:1.5.7"
+"@rspack/binding-wasm32-wasi@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-wasm32-wasi@npm:1.5.8"
   dependencies:
     "@napi-rs/wasm-runtime": "npm:^1.0.5"
   conditions: cpu=wasm32
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-arm64-msvc@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-win32-arm64-msvc@npm:1.5.7"
+"@rspack/binding-win32-arm64-msvc@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-win32-arm64-msvc@npm:1.5.8"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-ia32-msvc@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-win32-ia32-msvc@npm:1.5.7"
+"@rspack/binding-win32-ia32-msvc@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-win32-ia32-msvc@npm:1.5.8"
   conditions: os=win32 & cpu=ia32
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-x64-msvc@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding-win32-x64-msvc@npm:1.5.7"
+"@rspack/binding-win32-x64-msvc@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding-win32-x64-msvc@npm:1.5.8"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@rspack/binding@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/binding@npm:1.5.7"
+"@rspack/binding@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/binding@npm:1.5.8"
   dependencies:
-    "@rspack/binding-darwin-arm64": "npm:1.5.7"
-    "@rspack/binding-darwin-x64": "npm:1.5.7"
-    "@rspack/binding-linux-arm64-gnu": "npm:1.5.7"
-    "@rspack/binding-linux-arm64-musl": "npm:1.5.7"
-    "@rspack/binding-linux-x64-gnu": "npm:1.5.7"
-    "@rspack/binding-linux-x64-musl": "npm:1.5.7"
-    "@rspack/binding-wasm32-wasi": "npm:1.5.7"
-    "@rspack/binding-win32-arm64-msvc": "npm:1.5.7"
-    "@rspack/binding-win32-ia32-msvc": "npm:1.5.7"
-    "@rspack/binding-win32-x64-msvc": "npm:1.5.7"
+    "@rspack/binding-darwin-arm64": "npm:1.5.8"
+    "@rspack/binding-darwin-x64": "npm:1.5.8"
+    "@rspack/binding-linux-arm64-gnu": "npm:1.5.8"
+    "@rspack/binding-linux-arm64-musl": "npm:1.5.8"
+    "@rspack/binding-linux-x64-gnu": "npm:1.5.8"
+    "@rspack/binding-linux-x64-musl": "npm:1.5.8"
+    "@rspack/binding-wasm32-wasi": "npm:1.5.8"
+    "@rspack/binding-win32-arm64-msvc": "npm:1.5.8"
+    "@rspack/binding-win32-ia32-msvc": "npm:1.5.8"
+    "@rspack/binding-win32-x64-msvc": "npm:1.5.8"
   dependenciesMeta:
     "@rspack/binding-darwin-arm64":
       optional: true
@@ -1441,13 +1441,13 @@ __metadata:
       optional: true
     "@rspack/binding-win32-x64-msvc":
       optional: true
-  checksum: 10/38e104f67f5c7299d1452b85728675525684685e4b13f8a9091b46b53de3decf5caabf73d0408ad5167d3b2800ab4068aa5fc83275cfa259bc1814aede1a3684
+  checksum: 10/8185f3d77f71f210f182799fd41edead264aa8819c354aa13744635869734722b056a958fd94f770c05cab2a501cb8f0c217626098f9b4ec82afed3c6c3b53f4
   languageName: node
   linkType: hard
 
-"@rspack/cli@npm:^1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/cli@npm:1.5.7"
+"@rspack/cli@npm:^1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/cli@npm:1.5.8"
   dependencies:
     "@discoveryjs/json-ext": "npm:^0.5.7"
     "@rspack/dev-server": "npm:~1.1.4"
@@ -1460,23 +1460,23 @@ __metadata:
     "@rspack/core": ^1.0.0-alpha || ^1.x
   bin:
     rspack: bin/rspack.js
-  checksum: 10/d083fbd0fbe97518a272947bc727424a9ae04a0a4aaebebca4d01ef0a0c95f1d58c4fdcea3ab44cc243434572d16d6912fe4219158b6f7093a424bd3cb55ad99
+  checksum: 10/13eb3d0c2d6f4b49777b5c1e1b07c37bcf72872f38d791e284c1fcd564ca43ab6f6aa2f481c4d11ea5e3a0ce3266df17fcecdcb4dd5bf73b5a8c12f2c0f06a15
   languageName: node
   linkType: hard
 
-"@rspack/core@npm:^1.5.7":
-  version: 1.5.7
-  resolution: "@rspack/core@npm:1.5.7"
+"@rspack/core@npm:^1.5.8":
+  version: 1.5.8
+  resolution: "@rspack/core@npm:1.5.8"
   dependencies:
     "@module-federation/runtime-tools": "npm:0.18.0"
-    "@rspack/binding": "npm:1.5.7"
+    "@rspack/binding": "npm:1.5.8"
     "@rspack/lite-tapable": "npm:1.0.1"
   peerDependencies:
     "@swc/helpers": ">=0.5.1"
   peerDependenciesMeta:
     "@swc/helpers":
       optional: true
-  checksum: 10/a8a95e18f1f0c5f40f2727b3180f06175e26252a6a31d4fe7dafd8b08f0648beca2457ec7d4c1698ce1f061dacabf734bece843e1dea0fd165acc2048eab29ac
+  checksum: 10/269e691dbb83430179b89d9f10e115c5fb97cf54eb13c49ae6f6070468f3fcbee17ebe0968d8ab82dfdb7b5474e339f3fd9c945d5d20eb89333b53d8c1ad32cc
   languageName: node
   linkType: hard
 
@@ -1858,12 +1858,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.18.6":
-  version: 22.18.6
-  resolution: "@types/node@npm:22.18.6"
+"@types/node@npm:^22.18.7":
+  version: 22.18.7
+  resolution: "@types/node@npm:22.18.7"
   dependencies:
     undici-types: "npm:~6.21.0"
-  checksum: 10/d816882476fa4f2d2db238139e9d65299414ac54bf81aa85dae850589b480cfe0c1722dc845295d446e2babd6ddfe64b79a8c56d771bf5345ddb1c48950f029e
+  checksum: 10/50a4a7a1dca664b620f1df57ebfc8ef80199a77516fb5479dbc260d19653839164f3b5db3b756ef1668cfe8e09e8a8b8e377e7a0c188e6af975d9a0c5c16b01c
   languageName: node
   linkType: hard
 
@@ -2596,6 +2596,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"baseline-browser-mapping@npm:^2.8.3":
+  version: 2.8.9
+  resolution: "baseline-browser-mapping@npm:2.8.9"
+  bin:
+    baseline-browser-mapping: dist/cli.js
+  checksum: 10/ae10470dc5c49fa085b0f52daf00124ded0a1695bb712ea9ebd87e41245764ba6a73ef035c10e624879755d45d4441f79f4ade93ccf20a146e7b01fd3a58ce51
+  languageName: node
+  linkType: hard
+
 "batch@npm:0.6.1":
   version: 0.6.1
   resolution: "batch@npm:0.6.1"
@@ -2698,17 +2707,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"browserslist@npm:^4.24.0":
-  version: 4.24.4
-  resolution: "browserslist@npm:4.24.4"
+"browserslist@npm:^4.24.5":
+  version: 4.26.2
+  resolution: "browserslist@npm:4.26.2"
   dependencies:
-    caniuse-lite: "npm:^1.0.30001688"
-    electron-to-chromium: "npm:^1.5.73"
-    node-releases: "npm:^2.0.19"
-    update-browserslist-db: "npm:^1.1.1"
+    baseline-browser-mapping: "npm:^2.8.3"
+    caniuse-lite: "npm:^1.0.30001741"
+    electron-to-chromium: "npm:^1.5.218"
+    node-releases: "npm:^2.0.21"
+    update-browserslist-db: "npm:^1.1.3"
   bin:
     browserslist: cli.js
-  checksum: 10/11fda105e803d891311a21a1f962d83599319165faf471c2d70e045dff82a12128f5b50b1fcba665a2352ad66147aaa248a9d2355a80aadc3f53375eb3de2e48
+  checksum: 10/7f732f1a9c18c510aa146270d704b7b1acab52c9922147d453eecd70c926f21d97c7ac10f5303668d444fa60bd3b8778a63a797be249b0d348af4c3a644fa530
   languageName: node
   linkType: hard
 
@@ -2796,10 +2806,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"caniuse-lite@npm:^1.0.30001688":
-  version: 1.0.30001704
-  resolution: "caniuse-lite@npm:1.0.30001704"
-  checksum: 10/76bf9a90aa49f04fd3c0224846f3c5d890b361a9931d43f5acbb8a16c622fa034cbf7951851ec7800d4b30b05cb7fd034a61dfc0b4db8b3af80eb19d041b7a21
+"caniuse-lite@npm:^1.0.30001741":
+  version: 1.0.30001746
+  resolution: "caniuse-lite@npm:1.0.30001746"
+  checksum: 10/bb9238b08a947baf318c385d43f7ae771c80b265d21821333efc894306e6da60e47656015a1a23e5998133cad9ad022942ec0c2ba04e89e936f4a8343875b84c
   languageName: node
   linkType: hard
 
@@ -3464,10 +3474,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^17.2.2":
-  version: 17.2.2
-  resolution: "dotenv@npm:17.2.2"
-  checksum: 10/258210c403a426e887f0fb63d1cddb2e7dcc028974a38a4a440411b651b9c588ee4e8605e252d87d15489b3e311d7ba56d588d6cfda1b11bfbf494dd7b3ef2a3
+"dotenv@npm:^17.2.3":
+  version: 17.2.3
+  resolution: "dotenv@npm:17.2.3"
+  checksum: 10/f8b78626ebfff6e44420f634773375c9651808b3e1a33df6d4cc19120968eea53e100f59f04ec35f2a20b2beb334b6aba4f24040b2f8ad61773f158ac042a636
   languageName: node
   linkType: hard
 
@@ -3541,10 +3551,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"electron-to-chromium@npm:^1.5.73":
-  version: 1.5.115
-  resolution: "electron-to-chromium@npm:1.5.115"
-  checksum: 10/1aa1b88ee32b79c3cbbb11e5275d5b2db474ba3405a92d2d6a3ce146c1cd5c1accac0d89a3f3a5a3869757a855cc2e3ea4dde465f083379a5c143428bf195bc2
+"electron-to-chromium@npm:^1.5.218":
+  version: 1.5.227
+  resolution: "electron-to-chromium@npm:1.5.227"
+  checksum: 10/984f27f6571aaebe236b4c0837bccc933dc9211cefd6857c68de5ecfd83c32a25512da255fabea1db0d14374e1890fc941af88dc533c3dc2cb82c0cc50527f24
   languageName: node
   linkType: hard
 
@@ -5450,7 +5460,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^8.19.1"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     crawler-user-agents: "npm:^1.21.0"
     geoip-lite: "npm:^1.4.10"
     services-comun: "workspace:*"
@@ -5468,7 +5478,7 @@ __metadata:
     "@elastic/elasticsearch": "npm:^9.1.1"
     "@google-cloud/storage": "npm:^7.17.1"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     crawler-user-agents: "npm:^1.21.0"
     dd-trace: "npm:^5.67.0"
     geoip-lite: "npm:^1.4.10"
@@ -5491,7 +5501,7 @@ __metadata:
     "@elastic/elasticsearch": "npm:^9.1.1"
     "@google-cloud/storage": "npm:^7.17.1"
     "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     "@types/ua-parser-js": "npm:^0.7.39"
     chokidar: "npm:^4.0.3"
     crawler-user-agents: "npm:^1.21.0"
@@ -5515,7 +5525,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-status-base@workspace:packages/status-base"
   dependencies:
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     services-comun: "npm:*"
     tslib: "npm:^2.8.1"
   languageName: unknown
@@ -5526,7 +5536,7 @@ __metadata:
   resolution: "logs@workspace:services/logs"
   dependencies:
     "@elastic/elasticsearch": "npm:^9.1.1"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     chokidar: "npm:^4.0.3"
     dd-trace: "npm:^5.67.0"
     formidable: "npm:^3.5.4"
@@ -6099,10 +6109,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-releases@npm:^2.0.19":
-  version: 2.0.19
-  resolution: "node-releases@npm:2.0.19"
-  checksum: 10/c2b33b4f0c40445aee56141f13ca692fa6805db88510e5bbb3baadb2da13e1293b738e638e15e4a8eb668bb9e97debb08e7a35409b477b5cc18f171d35a83045
+"node-releases@npm:^2.0.21":
+  version: 2.0.21
+  resolution: "node-releases@npm:2.0.21"
+  checksum: 10/5344d634b39d20f47c0d85a1c64567fdb9cf46f7b27ed3d141f752642faab47dae326835c2109636f823758afb16ffbed7b0c0fe6f800ef91cec9f2beb4f2b4a
   languageName: node
   linkType: hard
 
@@ -7320,7 +7330,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "services-comun-status@workspace:framework/services-comun-status"
   dependencies:
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     "@types/qs": "npm:^6.14.0"
     qs: "npm:^6.14.0"
     services-comun: "workspace:*"
@@ -7342,7 +7352,7 @@ __metadata:
     "@tsconfig/node22": "npm:^22.0.2"
     "@types/diff3": "npm:^0.0.2"
     "@types/formidable": "npm:^3.4.5"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     "@types/pidusage": "npm:^2.0.5"
     "@types/qs": "npm:^6.14.0"
     "@types/sparkpost": "npm:^2.1.8"
@@ -7818,10 +7828,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tapable@npm:^2.0.0, tapable@npm:^2.1.1, tapable@npm:^2.2.0, tapable@npm:^2.2.1":
-  version: 2.2.1
-  resolution: "tapable@npm:2.2.1"
-  checksum: 10/1769336dd21481ae6347611ca5fca47add0962fd8e80466515032125eca0084a4f0ede11e65341b9c0018ef4e1cf1ad820adbb0fba7cc99865c6005734000b0a
+"tapable@npm:^2.0.0, tapable@npm:^2.2.0, tapable@npm:^2.2.1, tapable@npm:^2.2.3":
+  version: 2.2.3
+  resolution: "tapable@npm:2.2.3"
+  checksum: 10/15e0472f662e40ea865cee2664163d4809c14369777c6b6dec27e3163dd24f8f3e4f3bf59c629e772402aec9a45e7daf40f9df9606b7304722d3c81f3b49235d
   languageName: node
   linkType: hard
 
@@ -8234,7 +8244,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"update-browserslist-db@npm:^1.1.1":
+"update-browserslist-db@npm:^1.1.3":
   version: 1.1.3
   resolution: "update-browserslist-db@npm:1.1.3"
   dependencies:
@@ -8355,13 +8365,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"watchpack@npm:^2.4.1":
-  version: 2.4.2
-  resolution: "watchpack@npm:2.4.2"
+"watchpack@npm:^2.4.4":
+  version: 2.4.4
+  resolution: "watchpack@npm:2.4.4"
   dependencies:
     glob-to-regexp: "npm:^0.4.1"
     graceful-fs: "npm:^4.1.2"
-  checksum: 10/6bd4c051d9af189a6c781c3158dcb3069f432a0c144159eeb0a44117412105c61b2b683a5c9eebc4324625e0e9b76536387d0ba354594fa6cbbdf1ef60bee4c3
+  checksum: 10/cfa3473fc12a1a1b88123056941e90c462a67aedc10b242229eeeccdd45ed0b763c3b591caaffb0f7d77295b539b5518bb1ad3bcd891ae6505dfeae4cf51fd15
   languageName: node
   linkType: hard
 
@@ -8544,9 +8554,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack@npm:^5.101.3":
-  version: 5.101.3
-  resolution: "webpack@npm:5.101.3"
+"webpack@npm:^5.102.0":
+  version: 5.102.0
+  resolution: "webpack@npm:5.102.0"
   dependencies:
     "@types/eslint-scope": "npm:^3.7.7"
     "@types/estree": "npm:^1.0.8"
@@ -8556,7 +8566,7 @@ __metadata:
     "@webassemblyjs/wasm-parser": "npm:^1.14.1"
     acorn: "npm:^8.15.0"
     acorn-import-phases: "npm:^1.0.3"
-    browserslist: "npm:^4.24.0"
+    browserslist: "npm:^4.24.5"
     chrome-trace-event: "npm:^1.0.2"
     enhanced-resolve: "npm:^5.17.3"
     es-module-lexer: "npm:^1.2.1"
@@ -8569,16 +8579,16 @@ __metadata:
     mime-types: "npm:^2.1.27"
     neo-async: "npm:^2.6.2"
     schema-utils: "npm:^4.3.2"
-    tapable: "npm:^2.1.1"
+    tapable: "npm:^2.2.3"
     terser-webpack-plugin: "npm:^5.3.11"
-    watchpack: "npm:^2.4.1"
+    watchpack: "npm:^2.4.4"
     webpack-sources: "npm:^3.3.3"
   peerDependenciesMeta:
     webpack-cli:
       optional: true
   bin:
     webpack: bin/webpack.js
-  checksum: 10/c4740e9c59d1e0562d1e5654e12559e6308acd60fc639cf3089657c85e946c8910ba06cbd9d74b08daa7f28b5ff786c0482617415a7c1fa8e4637a88b20b76a6
+  checksum: 10/a76f9136c1c470e75a870b0f52b91f819224b21edf9f1959e0501cd17d38c9689e0ccd3ee6d0f7f0b764866d5bc6a1c6c9a38b235d75e2bfbc7ac25c94796da8
   languageName: node
   linkType: hard
 
@@ -8663,7 +8673,7 @@ __metadata:
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
     "@elastic/elasticsearch": "npm:^8.19.1"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     tslib: "npm:^2.8.1"
@@ -8677,7 +8687,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^9.1.1"
     "@google-cloud/storage": "npm:^7.17.1"
-    "@types/node": "npm:^22.18.6"
+    "@types/node": "npm:^22.18.7"
     chokidar: "npm:^4.0.3"
     dd-trace: "npm:^5.67.0"
     formidable: "npm:^3.5.4"
