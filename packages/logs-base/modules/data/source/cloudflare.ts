@@ -114,9 +114,9 @@ export class Cloudflare {
         EdgeResponseContentType: z.string(),
         EdgeServerIP: z.string(),
         EdgeTimeToFirstByteMs: z.number(),
-        FirewallMatchesActions: z.array(z.any()),
-        FirewallMatchesRuleIDs: z.array(z.any()),
-        FirewallMatchesSources: z.array(z.any()),
+        // FirewallMatchesActions: z.array(z.any()),
+        // FirewallMatchesRuleIDs: z.array(z.any()),
+        // FirewallMatchesSources: z.array(z.any()),
         OriginDNSResponseTimeMs: z.number(),
         OriginIP: z.string(),
         OriginRequestHeaderSendDurationMs: z.number(),
@@ -133,13 +133,13 @@ export class Cloudflare {
         ParentRayID: z.string(),
         RequestHeaders: this.SCHEMA_REQUEST_HEADERS,
         ResponseHeaders: this.SCHEMA_RESPONSE_HEADERS,
-        SecurityAction: z.string().optional(),
-        SecurityActions: z.array(z.string()).optional(),
-        SecurityLevel: z.string(),
-        SecurityRuleDescription: z.string().optional(),
-        SecurityRuleID: z.string().optional(),
-        SecurityRuleIDs: z.array(z.string()).optional(),
-        SecuritySources: z.array(z.string()).optional(),
+        // SecurityAction: z.string().optional(),
+        // SecurityActions: z.array(z.string()).optional(),
+        // SecurityLevel: z.string(),
+        // SecurityRuleDescription: z.string().optional(),
+        // SecurityRuleID: z.string().optional(),
+        // SecurityRuleIDs: z.array(z.string()).optional(),
+        // SecuritySources: z.array(z.string()).optional(),
         SmartRouteColoID: z.number(),
         UpperTierColoID: z.number(),
         // WAFAction: z.string(),
@@ -270,13 +270,13 @@ export class Cloudflare {
                     types: o.ContentScanObjTypes.length>0?o.ContentScanObjTypes:undefined,
                 },
             }:undefined,
-            firewall: o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
-                matches: {
-                    actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
-                    ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
-                    sources: o.FirewallMatchesSources.length>0?o.FirewallMatchesSources:undefined,
-                },
-            }:undefined,
+            // firewall: o.FirewallMatchesActions.length>0 && o.FirewallMatchesRuleIDs.length>0 && o.FirewallMatchesSources.length>0?{
+            //     matches: {
+            //         actions: o.FirewallMatchesActions.length>0?o.FirewallMatchesActions:undefined,
+            //         ruleIDs: o.FirewallMatchesRuleIDs.length>0?o.FirewallMatchesRuleIDs:undefined,
+            //         sources: o.FirewallMatchesSources.length>0?o.FirewallMatchesSources:undefined,
+            //     },
+            // }:undefined,
             origin: o.OriginIP.length>0?{
                 dns: {
                     response: {
@@ -329,17 +329,17 @@ export class Cloudflare {
             response: {
                 headers: o.ResponseHeaders,
             },
-            security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
-                action: o.SecurityAction,
-                actions: o.SecurityActions,
-                level: o.SecurityLevel,
-                rule: {
-                    description: o.SecurityRuleDescription,
-                    id: o.SecurityRuleID,
-                    ids: o.SecurityRuleIDs,
-                },
-                sources: o.SecuritySources,
-            }:undefined,
+            // security: o.SecurityAction!=undefined && o.SecurityAction.length>0?{
+            //     action: o.SecurityAction,
+            //     actions: o.SecurityActions,
+            //     level: o.SecurityLevel,
+            //     rule: {
+            //         description: o.SecurityRuleDescription,
+            //         id: o.SecurityRuleID,
+            //         ids: o.SecurityRuleIDs,
+            //     },
+            //     sources: o.SecuritySources,
+            // }:undefined,
             smart: o.SmartRouteColoID>0?{
                 route: {
                     colo: o.SmartRouteColoID,
