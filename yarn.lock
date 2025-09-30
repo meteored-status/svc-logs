@@ -145,17 +145,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@elastic/elasticsearch@npm:^8.19.1":
-  version: 8.19.1
-  resolution: "@elastic/elasticsearch@npm:8.19.1"
-  dependencies:
-    "@elastic/transport": "npm:^8.9.6"
-    apache-arrow: "npm:18.x - 21.x"
-    tslib: "npm:^2.4.0"
-  checksum: 10/c3415c4a3f55c2d28b9f0bcafa7f080522c28bb329aa726356de9c82a1ad83cad371d23cc367b8e843f82f1713b1ba0c7f362599bb485b73b8d03369b9238da1
-  languageName: node
-  linkType: hard
-
 "@elastic/elasticsearch@npm:^9.1.1":
   version: 9.1.1
   resolution: "@elastic/elasticsearch@npm:9.1.1"
@@ -164,22 +153,6 @@ __metadata:
     apache-arrow: "npm:18.x - 20.x"
     tslib: "npm:^2.4.0"
   checksum: 10/448598e3b8709b27de3bb610155bdfee3831287b51fb149a299ed9cc2c1b6da9a7cf9cb370a604f304bf2b3536569e1fd6a33c143b9c0c9d3e1320b22504d06e
-  languageName: node
-  linkType: hard
-
-"@elastic/transport@npm:^8.9.6":
-  version: 8.10.0
-  resolution: "@elastic/transport@npm:8.10.0"
-  dependencies:
-    "@opentelemetry/api": "npm:1.x"
-    "@opentelemetry/core": "npm:2.x"
-    debug: "npm:^4.4.1"
-    hpagent: "npm:^1.2.0"
-    ms: "npm:^2.1.3"
-    secure-json-parse: "npm:^3.0.1"
-    tslib: "npm:^2.8.1"
-    undici: "npm:^6.21.1"
-  checksum: 10/46d55ea5f6d3f9b609d498c3be1c264296a2ece9ef575cbd070b0d88f26e7a90f6d3ffce998ec48e333f4296ae0dffbaf92ce0e75e59dbcf10f7ca899919c5dc
   languageName: node
   linkType: hard
 
@@ -1840,7 +1813,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^24.0.3":
+"@types/node@npm:*, @types/node@npm:>=13.7.0":
   version: 24.5.2
   resolution: "@types/node@npm:24.5.2"
   dependencies:
@@ -2424,25 +2397,6 @@ __metadata:
   bin:
     arrow2csv: bin/arrow2csv.js
   checksum: 10/836afa1a79439833cda7726472367a35f9c88bc15fefc4455c4dbae980cb43d7f7c3fae9beef11f07c2580ca2df47b431cb8c9534e2510801ea4b7b3acb45615
-  languageName: node
-  linkType: hard
-
-"apache-arrow@npm:18.x - 21.x":
-  version: 21.0.0
-  resolution: "apache-arrow@npm:21.0.0"
-  dependencies:
-    "@swc/helpers": "npm:^0.5.11"
-    "@types/command-line-args": "npm:^5.2.3"
-    "@types/command-line-usage": "npm:^5.0.4"
-    "@types/node": "npm:^24.0.3"
-    command-line-args: "npm:^6.0.1"
-    command-line-usage: "npm:^7.0.1"
-    flatbuffers: "npm:^25.1.24"
-    json-bignum: "npm:^0.0.3"
-    tslib: "npm:^2.6.2"
-  bin:
-    arrow2csv: bin/arrow2csv.js
-  checksum: 10/ca1a799369dd6723af6969be57b17f7224f37ed1ff002196def5c8fe5bfac732f9434b9cc53adc4b66298b27c85560011e221cb8ec0f99701a6bfd6caf62c70b
   languageName: node
   linkType: hard
 
@@ -5458,7 +5412,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.19.1"
+    "@elastic/elasticsearch": "npm:^9.1.1"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^22.18.7"
     crawler-user-agents: "npm:^1.21.0"
@@ -7208,13 +7162,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"secure-json-parse@npm:^3.0.1":
-  version: 3.0.2
-  resolution: "secure-json-parse@npm:3.0.2"
-  checksum: 10/a83e2067eef8f5c25b0614f261593721d5cb56c7b739197cb64b7f1fcc6944b632aac4cbc8817cf5976b891a7d6eee8bd07e1aabe082eabf424922f112a7a356
-  languageName: node
-  linkType: hard
-
 "secure-json-parse@npm:^4.0.0":
   version: 4.0.0
   resolution: "secure-json-parse@npm:4.0.0"
@@ -8198,13 +8145,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici@npm:^6.21.1":
-  version: 6.21.1
-  resolution: "undici@npm:6.21.1"
-  checksum: 10/eeccc07e9073ae8e755fdc0dc8cdfaa426c01ec6f815425c3ecedba2e5394cea4993962c040dd168951714a82f0d001a13018c3ae3ad4534f0fa97afe425c08d
-  languageName: node
-  linkType: hard
-
 "undici@npm:^7.12.0":
   version: 7.16.0
   resolution: "undici@npm:7.16.0"
@@ -8672,7 +8612,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^8.19.1"
+    "@elastic/elasticsearch": "npm:^9.1.1"
     "@types/node": "npm:^22.18.7"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
