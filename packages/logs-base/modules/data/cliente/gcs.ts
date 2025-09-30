@@ -195,14 +195,18 @@ export class ClienteGCS implements IClienteGCS {
         }
 
         const telemetry = Telemetry.build(this.cliente, pod, source);
-        await Cloudflare.ingest(telemetry, data, idx);
-        await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
-        await data.delete();
-        await this.addStatusTerminado(source);
-        telemetry.toElastic()
-            .then(()=>{})
-            .catch((err)=>{
-                error("Error registrando telemetría en Elastic", err);
-            });
+        try {
+            await Cloudflare.ingest(telemetry, data, idx);
+            await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
+            await data.delete();
+            await this.addStatusTerminado(source);
+            telemetry.toElastic()
+                .then(() => undefined)
+                .catch((err) => {
+                    error("Error registrando telemetría en Elastic", err);
+                });
+        } catch (err) {
+            error("Error procesando", source);
+        }
     }
 }
