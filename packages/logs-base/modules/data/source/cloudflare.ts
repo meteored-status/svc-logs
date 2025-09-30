@@ -106,8 +106,8 @@ export class Cloudflare {
         EdgePathingOp: z.string(),
         EdgePathingSrc: z.string(),
         EdgePathingStatus: z.string(),
-        EdgeRateLimitAction: z.string(),
-        EdgeRateLimitID: z.number(),
+        // EdgeRateLimitAction: z.string(),
+        // EdgeRateLimitID: z.number(),
         EdgeRequestHost: z.string(),
         EdgeResponseBodyBytes: z.number(),
         EdgeResponseCompressionRatio: z.number(),
@@ -222,10 +222,10 @@ export class Cloudflare {
                     src: o.EdgePathingSrc,
                     status: o.EdgePathingStatus,
                 },
-                rateLimit: o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=0?{
-                    action: o.EdgeRateLimitAction,
-                    id: o.EdgeRateLimitID,
-                }:undefined,
+                // rateLimit: o.EdgeRateLimitAction.length>0 && o.EdgeRateLimitID!=0?{
+                //     action: o.EdgeRateLimitAction,
+                //     id: o.EdgeRateLimitID,
+                // }:undefined,
                 request: {
                     host: o.EdgeRequestHost,
                 },
