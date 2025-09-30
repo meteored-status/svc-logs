@@ -142,16 +142,16 @@ export class Cloudflare {
         SecuritySources: z.array(z.string()).optional(),
         SmartRouteColoID: z.number(),
         UpperTierColoID: z.number(),
-        WAFAction: z.string(),
-        WAFAttackScore: z.number().optional(),
-        WAFFlags: z.string(),
-        WAFMatchedVar: z.string(),
-        WAFProfile: z.string(),
-        WAFRCEAttackScore: z.number().optional(),
-        WAFRuleID: z.string(),
-        WAFRuleMessage: z.string(),
-        WAFSQLiAttackScore: z.number().optional(),
-        WAFXSSAttackScore: z.number().optional(),
+        // WAFAction: z.string(),
+        // WAFAttackScore: z.number().optional(),
+        // WAFFlags: z.string(),
+        // WAFMatchedVar: z.string(),
+        // WAFProfile: z.string(),
+        // WAFRCEAttackScore: z.number().optional(),
+        // WAFRuleID: z.string(),
+        // WAFRuleMessage: z.string(),
+        // WAFSQLiAttackScore: z.number().optional(),
+        // WAFXSSAttackScore: z.number().optional(),
         WorkerCPUTime: z.number(),
         WorkerStatus: z.string(),
         WorkerSubrequest: z.boolean(),
@@ -350,28 +350,28 @@ export class Cloudflare {
                     colo: o.UpperTierColoID,
                 },
             }:undefined,
-            waf: o.WAFAction!="unknown"?{
-                action: o.WAFAction,
-                flags: o.WAFFlags,
-                matched: {
-                    var: o.WAFMatchedVar,
-                },
-                profile: o.WAFProfile,
-                rce: {
-                    score: o.WAFRCEAttackScore,
-                },
-                rule: {
-                    id: o.WAFRuleID,
-                    message: o.WAFRuleMessage,
-                },
-                score: o.WAFAttackScore,
-                sqli: {
-                    score: o.WAFSQLiAttackScore,
-                },
-                xss: {
-                    score: o.WAFXSSAttackScore,
-                },
-            }:undefined,
+            // waf: o.WAFAction!="unknown"?{
+            //     action: o.WAFAction,
+            //     flags: o.WAFFlags,
+            //     matched: {
+            //         var: o.WAFMatchedVar,
+            //     },
+            //     profile: o.WAFProfile,
+            //     rce: {
+            //         score: o.WAFRCEAttackScore,
+            //     },
+            //     rule: {
+            //         id: o.WAFRuleID,
+            //         message: o.WAFRuleMessage,
+            //     },
+            //     score: o.WAFAttackScore,
+            //     sqli: {
+            //         score: o.WAFSQLiAttackScore,
+            //     },
+            //     xss: {
+            //         score: o.WAFXSSAttackScore,
+            //     },
+            // }:undefined,
             worker: o.WorkerStatus!="unknown"?{
                 cpu: {
                     time: o.WorkerCPUTime,
