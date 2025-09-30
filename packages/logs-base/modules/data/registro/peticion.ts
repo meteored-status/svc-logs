@@ -1,8 +1,8 @@
 import type {IRAWDataClient, IRAWDataRequest} from ".";
 
 interface ISSL {
-    name?: string;
-    version?: string;
+    name: string;
+    version: string;
 }
 
 interface IHeaders {
@@ -18,15 +18,15 @@ export interface IRegistroPeticion {
     uri: string;
     protocol: string;
     ssl?: ISSL;
-    bytes?: number;
+    bytes: number;
     referer?: string;
-    source?: string;
+    source: string;
     headers?: IHeaders;
 }
 
 export class RegistroPeticion implements IRegistroPeticion {
     /* STATIC */
-    public static build(client: IRAWDataClient, request: IRAWDataRequest): RegistroPeticion {
+    public static build(client: IRAWDataClient, request: IRAWDataRequest, zona: string): RegistroPeticion {
         const headers: IHeaders = {};
         if (request.headers.apiKey!=undefined) {
             headers.apiKey = request.headers.apiKey;
@@ -36,7 +36,7 @@ export class RegistroPeticion implements IRegistroPeticion {
             method: client.request.method,
             scheme: client.request.scheme,
             dominio: client.request.host,
-            subdominio: client.request.host,//.substring(0, client.request.host.length - zona.length - 1),
+            subdominio: client.request.host.substring(0, client.request.host.length - zona.length - 1),
             path: client.request.path,
             uri: client.request.uri,
             protocol: client.request.protocol,
@@ -59,9 +59,9 @@ export class RegistroPeticion implements IRegistroPeticion {
     public get uri(): string { return this.data.uri; }
     public get protocol(): string { return this.data.protocol; }
     public get ssl(): ISSL|undefined { return this.data.ssl; }
-    public get bytes(): number|undefined { return this.data.bytes; }
+    public get bytes(): number { return this.data.bytes; }
     public get referer(): string|undefined { return this.data.referer; }
-    public get source(): string|undefined { return this.data.source; }
+    public get source(): string { return this.data.source; }
     public get headers(): IHeaders|undefined { return this.data.headers; }
 
     protected constructor(private data: IRegistroPeticion) {

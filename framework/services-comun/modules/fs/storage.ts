@@ -20,7 +20,7 @@ export interface IDocumento extends IFile {
 export class Storage implements IDocumento {
     /* STATIC */
     private static storage: NodeJS.Dict<StorageBase> = {};
-    private static getStorage(config: Google): StorageBase {
+    protected static getStorage(config: Google): StorageBase {
         return this.storage[config.id] ??= new StorageBase({
             projectId: config.id,
             keyFilename: config.storage.credenciales,
