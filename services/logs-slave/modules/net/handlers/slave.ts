@@ -56,13 +56,13 @@ class Slave extends RouteGroup<Configuracion>{
                     if (err.message.startsWith("Duplicate entry")) {
                         return;
                     }
-                    error("Error procesando", notify.objectId, err.message);
+                    error("Error procesando", notify.bucketId, notify.objectId, err.message);
                 } else {
-                    error("Error procesando", notify.objectId, err);
+                    error("Error procesando", notify.bucketId, notify.objectId, err);
                 }
             })
             .catch((err)=>{
-                error("Error procesando", notify.objectId, err);
+                error("Error procesando", notify.bucketId, notify.objectId, err);
             });
     }
 
