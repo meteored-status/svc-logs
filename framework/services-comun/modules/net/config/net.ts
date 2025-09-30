@@ -39,6 +39,7 @@ export interface INetServiceBase {
     desarrollo?: string;
     namespace?: string;
     tags: string[];
+    slow?: number;
 }
 
 export interface INetService extends INetServiceBase, INetPuertos {
@@ -53,6 +54,7 @@ export interface INet {
     cacheTags: string[];
     uploadDir: string;
     maxFileSize: number;
+    slow: number;
 }
 export class Net implements INet {
     /* STATIC */
@@ -63,6 +65,7 @@ export class Net implements INet {
             compress: false,
             uploadDir: "files/tmp",
             maxFileSize: cfg.maxFilesize ?? 8 * 1024 * 1024, // 8MB
+            slow: cfg.slow ?? 1000,
         };
 
         if (global.PRODUCCION) {
@@ -126,6 +129,7 @@ export class Net implements INet {
     public readonly cacheTags: string[];
     public readonly uploadDir: string;
     public readonly maxFileSize: number;
+    public readonly slow: number;
 
     public constructor(defecto: INet, user: Partial<INet>) {
         this.puertos   = new NetPuertos(defecto.puertos, user.puertos??{});
@@ -136,5 +140,6 @@ export class Net implements INet {
         this.cacheTags = user.cacheTags??defecto.cacheTags;
         this.uploadDir = user.uploadDir??defecto.uploadDir;
         this.maxFileSize = user.maxFileSize??defecto.maxFileSize;
+        this.slow = user.slow??defecto.slow;
     }
 }
