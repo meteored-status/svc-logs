@@ -22,6 +22,7 @@ mapeo.set(EService.logs_slave, {
     endpoint: "proxy-svc-logs-slave",
     namespace: "services",
     tags: ["logs", "slave"],
+    slow: 0,
 });
 mapeo.set(EService.status_backend, {
     endpoint: "switch-svc-status-backend",
