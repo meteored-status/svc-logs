@@ -44,7 +44,7 @@ export class ClienteGCS implements IClienteGCS {
         }
         // esta parte solo la ejecutamos cuando no es una ejecución única
         setTimeout(()=>{
-            this.check(false).then(()=>{}).catch(()=>{});
+            this.check(false).then(()=>undefined).catch(()=>undefined);
         }, 1000);
     }
 
@@ -195,18 +195,14 @@ export class ClienteGCS implements IClienteGCS {
         }
 
         const telemetry = Telemetry.build(this.cliente, pod, source);
-        try {
-            await Cloudflare.ingest(telemetry, data, idx);
-            await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
-            await data.delete();
-            await this.addStatusTerminado(source);
-            telemetry.toElastic()
-                .then(() => undefined)
-                .catch((err) => {
-                    error("Error registrando telemetría en Elastic", err);
-                });
-        } catch (err) {
-            error("Error procesando", source);
-        }
+        await Cloudflare.ingest(telemetry, data, idx);
+        await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
+        await data.delete();
+        await this.addStatusTerminado(source);
+        telemetry.toElastic()
+            .then(() => undefined)
+            .catch((err) => {
+                error("Error registrando telemetría en Elastic", err);
+            });
     }
 }
