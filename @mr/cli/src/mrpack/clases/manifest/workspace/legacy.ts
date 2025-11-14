@@ -5,6 +5,7 @@ import {ManifestDeploymentKind, Runtime} from "../../../../../manifest/workspace
 import type {IManifestBuildDatabase} from "../../../../../manifest/workspace/build/database";
 import type {IManifestBuildBundle} from "../../../../../manifest/workspace/build/bundle";
 import {BuildFW} from "../../../../../manifest/workspace/build";
+import type {IManifestDeploymentImagenEntorno} from "../../../../../manifest/workspace/deployment/imagen/entorno";
 
 export interface IManifestLegacyStorage {
     buckets: string[];
@@ -91,4 +92,9 @@ export interface IManifestDeploymentStorageLegacy {
     subdir?: string;
     subdirPostfix: string;
     previo?: string[]; // si cambiamos el directorio de los archivos, mantenemos los directorios anteriores para seguir teniendo acceso a los datos
+}
+
+export interface IManifestDeploymentImagenLegacy {
+    produccion?: string;
+    test?: string;
 }

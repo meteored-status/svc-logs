@@ -35,6 +35,13 @@ type SaveOptions = QueryOptions & {
     ttl?: number; // seconds
 }
 
+type IInsert = {
+    key: string;
+    value: string;
+    ttl: number;
+    sharedKey?: boolean;
+}
+
 export class Redis implements Disposable {
     /* STATIC */
 
@@ -87,16 +94,26 @@ export class Redis implements Disposable {
         return this._cluster;
     }
 
-    public async get(key: string, {shared}: QueryOptions = {}): Promise<Buffer|null> {
+    public async get(key: string|string[], {shared}: QueryOptions = {}): Promise<Buffer|Buffer[]|null> {
         try {
-            const theKey = this.buildKey(key, shared||false);
-
             const cluster = await this.cluster;
-
             const client = await PromiseTimeout(cluster.read, Redis.MAX_REDIS_GET_CLIENT_MS);
-            const data: string|null = await PromiseTimeout(client.get(theKey), this.options.timeout||Redis.MAX_REDIS_GET_MS) as string|null;
-            if (data) {
-                return Buffer.from(data, 'utf-8');
+
+            if (Array.isArray(key)) {
+                const theKeys = key.map(k => this.buildKey(k, shared||false));
+
+                const multi = client.multi();
+                theKeys.forEach(k => multi.get(k));
+
+                const data = await PromiseTimeout(multi.exec(), this.options.timeout||Redis.MAX_REDIS_GET_MS);
+                return data.map(item => !!item ? Buffer.from(item as unknown as string, 'utf-8') : null) as Buffer[];
+            } else {
+                const theKey = this.buildKey(key, shared||false);
+
+                const data: string|null = await PromiseTimeout(client.get(theKey), this.options.timeout||Redis.MAX_REDIS_GET_MS) as string|null;
+                if (data) {
+                    return Buffer.from(data, 'utf-8');
+                }
             }
         } catch (e) {
             warning(`Error obteniendo ${key} de REDIS`, e);
@@ -126,10 +143,14 @@ export class Redis implements Disposable {
         }
     }
 
-    public async loadJSON<T=any>(key: string, {shared}: QueryOptions = {}): Promise<T|null> {
+    public async loadJSON<T=any>(key: string|string[], {shared}: QueryOptions = {}): Promise<T|T[]|null> {
         const data = await this.get(key, {shared});
 
         if (data) {
+            if (Array.isArray(data)) {
+                // Si es un array, devolvemos el primero que no sea null
+                return data.map(aData => JSON.parse(aData.toString('utf-8')) as T);
+            }
             return JSON.parse(data.toString('utf-8')) as T;
         }
         return null;
@@ -139,6 +160,38 @@ export class Redis implements Disposable {
         await this.set(key, Buffer.from(JSON.stringify(data), 'utf-8'), {shared, ttl});
     }
 
+    public async bulkSet(items: IInsert[]): Promise<void> {
+        const cluster = await this.cluster;
+
+        const client = await cluster.primary;
+
+        const multi = client.multi();
+
+        for (const item of items) {
+            const theKey = this.buildKey(item.key, item.sharedKey??false);
+            multi.set(theKey, item.value);
+
+            if (item.ttl !== undefined && item.ttl>=0) {
+                multi.expire(theKey, item.ttl);
+            }
+        }
+
+        await multi.exec();
+    }
+
+    public async searchKeys(pattern: string, {shared}: QueryOptions = {}): Promise<string[]> {
+        try {
+            const cluster = await this.cluster;
+
+            const client = await PromiseTimeout(cluster.read, Redis.MAX_REDIS_GET_CLIENT_MS);
+
+            return await client.keys(this.buildKey(pattern, shared??false));
+        } catch (e) {
+            warning(`Error buscando keys con patrón ${pattern} en REDIS`, e);
+        }
+        return [];
+    }
+
     private buildKey(key: string, shared: boolean) {
         if (shared) {
             return key;
@@ -146,7 +199,6 @@ export class Redis implements Disposable {
         const namespace = (process.env['K8S_NAMESPACE']??'default').replace('meteored','mr');
         return `${namespace}:${this.config.servicio}:${key}`;
     }
-
 }
 
 

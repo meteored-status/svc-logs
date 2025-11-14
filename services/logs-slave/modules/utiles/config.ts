@@ -14,8 +14,8 @@ export class Configuracion extends ConfiguracionNet<IConfiguracion> implements I
     public google: Google;
     public readonly status: StatusConfig;
 
-    public constructor(defecto: IConfiguracion, user: Partial<IConfiguracion>, servicio: string, version: string, cronjob: boolean) {
-        super(defecto, user, servicio, version, cronjob, SERVICES);
+    public constructor(defecto: IConfiguracion, user: Partial<IConfiguracion>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
+        super(defecto, user, servicios, version, cronjob, SERVICES);
 
         this.google = new Google(defecto.google, this.user.google??{});
         this.status = new StatusConfig(defecto.status, user.status??{});
@@ -30,6 +30,5 @@ export class Configuracion extends ConfiguracionNet<IConfiguracion> implements I
                 ...CONFIG_STATUS_DEFECTO
             }
         }) as Configuracion;
-
     }
 }

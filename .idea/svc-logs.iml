@@ -3,15 +3,15 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/framework/services-comun/tools/bin" />
-      <excludeFolder url="file://$MODULE_DIR$/services/logs-repesca/output" />
       <excludeFolder url="file://$MODULE_DIR$/services/logs-slave/files" />
       <excludeFolder url="file://$MODULE_DIR$/services/logs-slave/output" />
-      <excludeFolder url="file://$MODULE_DIR$/services/logs-repesca/files" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
       <excludeFolder url="file://$MODULE_DIR$/services/workers-slave/files" />
       <excludeFolder url="file://$MODULE_DIR$/services/workers-slave/output" />
       <excludeFolder url="file://$MODULE_DIR$/@mr/cli/bin" />
       <excludeFolder url="file://$MODULE_DIR$/@mr/cli/bin/min" />
+      <excludeFolder url="file://$MODULE_DIR$/cronjobs/logs-repesca/files" />
+      <excludeFolder url="file://$MODULE_DIR$/cronjobs/logs-repesca/output" />
       <excludePattern pattern=".credenciales" />
       <excludePattern pattern=".pnp.*" />
       <excludePattern pattern=".src" />

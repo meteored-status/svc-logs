@@ -11,8 +11,8 @@ export class ConfiguracionNet<T extends IConfiguracionNet=IConfiguracionNet> ext
     /* INSTANCE */
     public readonly net: Net;
 
-    protected constructor(defecto: T, user: Partial<T>, servicio: string, version: string, cronjob: boolean, SERVICES?: Service) {
-        super(defecto, user, servicio, version, cronjob);
+    protected constructor(defecto: T, user: Partial<T>, servicios: [string, ...string[]], version: string, cronjob: boolean, SERVICES?: Service) {
+        super(defecto, user, servicios, version, cronjob);
 
         if (defecto.net==undefined) {
             if (SERVICES==undefined) {

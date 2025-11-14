@@ -1,6 +1,5 @@
 import {EventDAO, Search} from "../event-d-a-o";
 import {ElasticSearch} from "../../../../utiles/config";
-import {Fecha} from "../../../../../utiles/fecha";
 import {
     Elasticsearch,
     QueryDslQueryContainer,
@@ -28,19 +27,23 @@ export class ElasticEventDAO extends EventDAO {
     }
 
     /* STATIC */
-    public static getAlias(config: ElasticSearch): string {
-        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
-        return `${config.eventIndex}-${suffix}`;
-    }
-
-    public static getIndex(config: ElasticSearch): string {
-        return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
-    }
+    // public static getAlias(config: ElasticSearch): string {
+    //     const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
+    //     return `${config.eventIndex}-${suffix}`;
+    // }
+    //
+    // public static getIndex(config: ElasticSearch): string {
+    //     return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
+    // }
 
     public override async save(event: SendEvent): Promise<SendEvent> {
+        const data = this.eventToDocument(event);
         await this.client.index({
-            index: ElasticEventDAO.getIndex(this.config),
-            document: this.eventToDocument(event)
+            index: this.config.eventIndex,//ElasticEventDAO.getIndex(this.config),
+            document: {
+                "@timestamp": data.created,
+                ...data,
+            }
         });
 
         return event;
@@ -48,7 +51,7 @@ export class ElasticEventDAO extends EventDAO {
 
     public override async createScroll(): Promise<ElasticSearchScroll> {
         const pit = await this.client.openPointInTime({
-            index: ElasticEventDAO.getAlias(this.config),
+            index: this.config.eventIndex,//ElasticEventDAO.getAlias(this.config),
             keep_alive: "5m"
         });
 
@@ -68,7 +71,7 @@ export class ElasticEventDAO extends EventDAO {
         }
 
         if (!scroll) {
-            request.index = ElasticEventDAO.getAlias(this.config);
+            request.index = this.config.eventIndex;//ElasticEventDAO.getAlias(this.config);
         }
 
         if (options.created) {

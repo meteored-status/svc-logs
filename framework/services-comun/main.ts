@@ -27,8 +27,8 @@ export class Main {
         return new Promise<void>((resolve, reject)=>{
             let resuelto = false;
             const conexion = http.get("http://localhost:15020/healthz/ready", (message)=>{
-                message.on("error", ()=>{});
-                message.on("end", ()=>{});
+                message.on("error", ()=>undefined);
+                message.on("end", ()=>undefined);
                 if (!resuelto) {
                     resuelto = true;
                     if (message.statusCode==200) {
@@ -58,8 +58,8 @@ export class Main {
                     port: 15020,
                     path: "/quitquitquit",
                 }, (message)=>{
-                    message.on("error", ()=>{});
-                    message.on("end", ()=>{});
+                    message.on("error", ()=>undefined);
+                    message.on("end", ()=>undefined);
                     if (!resuelto) {
                         resuelto = true;
                         resolve();
@@ -80,9 +80,10 @@ export class Main {
 
     protected static async startSidecar(): Promise<void> {
         if (KUBERNETES) {
-            let intentos=1;
+            let intentos=0;
             let ok: boolean;
             do {
+                intentos++;
                 ok = await this.checkSidecar().then(async ()=>{
                     return true;
                 }).catch(async ()=>{
@@ -98,7 +99,7 @@ export class Main {
         await this.startSidecar();
 
         const configuracion = await configLoader.load();
-        this.CRONJOB = configuracion.pod.cronjob;
+        this.CRONJOB = configuracion. pod.cronjob;
         const engine = await Engine.build(configuracion, unix);
         try {
             await engine.master();
@@ -128,13 +129,14 @@ export class Main {
     }
 
     public static ejecutar<T extends IMainConfig=IMainConfig>(Engine: IEngine, configLoader: IConfiguracionLoader, cfg: Partial<T>={}): void {
-        this.start<T>({Engine, configLoader, unix: Date.now()}, cfg).then(async ()=>{}).catch(async (err)=>{
+        this.start<T>({Engine, configLoader, unix: Date.now()}, cfg).then(async ()=>undefined).catch(async (err)=>{
             error("Error iniciando el Engine", err);
             if (this.CRONJOB) {
                 try {
                     await this.stopSidecar();
-                } catch (err) {}
-                process.exit(0);
+                } finally {
+                    process.exit(0);
+                }
             } else {
                 process.exit(1);
             }

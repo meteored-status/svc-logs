@@ -73,7 +73,7 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
 
         otherTranslations.forEach(translation => {
             if (translation.tipo == "map") {
-                imports.push(`${pascalCase(translation.id)}Keys`);
+                imports.push(`${pascalCase(translation.id)}Record`);
             }
 
             if (translation.params && translation.params.length > 0) {
@@ -83,6 +83,10 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
 
         indexLines.push(`import {\n${imports.join(",\n    ")}\n} from "${"../".repeat(subDirsCount)}definitions${this.path()}/${this.id}";`);
 
+        indexLines.push('');
+
+        indexLines.push(`import {TranslationSet} from "services-comun/modules/traduccion/v2/translation-set";`);
+        indexLines.push(`import {MapExport, TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
         indexLines.push('');
 
         this.traducciones().forEach(translation => {
@@ -97,11 +101,22 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
             indexLines.push(`    public readonly ${translation.id}: string;`);
         });
 
+        const setTranslations = otherTranslations.filter(t => t.tipo == "set")
+        setTranslations.forEach( s => indexLines.push(`    public readonly ${s.id}: TranslationSet;`))
+
+        const mapTranslations = otherTranslations.filter(t => t.tipo == "map")
+        mapTranslations.forEach( s => {
+            const record = `${pascalCase(s.id)}Record`;
+            indexLines.push(`    public readonly ${s.id}: MapExport<${record}, ${record}>;`)
+        })
+
         indexLines.push('');
         indexLines.push(`    public constructor() {`);
         simpleTranslations.forEach(translation => {
             indexLines.push(`        this.${translation.id} = ${translation.id};`);
         });
+        setTranslations.forEach(translation => indexLines.push(`        this.${translation.id} = ${translation.id};`));
+        mapTranslations.forEach(translation => indexLines.push(`        this.${translation.id} = ${translation.id};`));
         indexLines.push(`    }`);
         indexLines.push('');
 
@@ -109,9 +124,9 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
             const args: string[] = [];
 
             if (translation.tipo == "map") {
-                args.push(`key: ${pascalCase(translation.id)}Keys`);
+                return;
             } else if (translation.tipo == "set") {
-                args.push(`idx: number`);
+                return;
             }
 
             if (translation.params && translation.params.length > 0) {
@@ -150,16 +165,22 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
             } else {
                 const args: string[] = [];
                 if (translation.tipo == "map") {
-                    args.push(`key: ${pascalCase(translation.id)}Keys`);
+                    args.push(`${pascalCase(translation.id)}Keys`);
                 } else if (translation.tipo == "set") {
-                    args.push(`idx: number`);
+                    args.push(``);
                 }
 
                 if (translation.params && translation.params.length > 0) {
                     args.push(`params: Partial<${pascalCase(translation.id)}Params>`);
                 }
 
-                indexLines.push(`    ${translation.id}: (${args.join(', ')}) => string;`);
+                if(translation.tipo == "set")
+                    indexLines.push(`    ${translation.id}: TranslationSet;`);
+                else if(translation.tipo == "map") {
+                    indexLines.push(`    ${translation.id}: MapExport<${pascalCase(translation.id)}Record, {}>`);
+                }
+                else
+                    indexLines.push(`    ${translation.id}: (${args.join(', ')}) => string;`);
             }
         });
         indexLines.push('}');

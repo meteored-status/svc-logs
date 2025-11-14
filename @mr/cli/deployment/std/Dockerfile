@@ -32,7 +32,6 @@ COPY --from=build /usr/src/app/yarn.lock ./
 COPY ./package.json ./
 COPY ./${RUTA}/${WS}/assets ./${RUTA}/${WS}/assets
 COPY ./${RUTA}/${WS}/app.js ./${RUTA}/${WS}
-COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/output ./${RUTA}/${WS}/output

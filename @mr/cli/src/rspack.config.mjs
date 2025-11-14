@@ -1,4 +1,3 @@
-import {CleanWebpackPlugin} from "clean-webpack-plugin";
 import {TsCheckerRspackPlugin} from "ts-checker-rspack-plugin";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
@@ -33,6 +32,7 @@ export default {
         filename: "[name]-run.js",
         path: resolve(__dirname, "../bin/min"),
         chunkFilename: "plugins/[name].js",
+        clean: true,
     },
     mode: "production",
     optimization: {
@@ -76,18 +76,6 @@ export default {
         ],
     },
     plugins: [
-        new CleanWebpackPlugin({
-            cleanOnceBeforeBuildPatterns: [
-                "**/*",
-                "!lib.js",
-                "!mrlang.js",
-                "!mrpack.js",
-            ],
-        }),
-        // new webpack.BannerPlugin({
-        //     banner: "#!/usr/bin/env node\nrequire(\"source-map-support\").install();",
-        //     raw: true,
-        // }),
         new rspack.DefinePlugin({
             DESARROLLO: JSON.stringify(false),
             TEST: JSON.stringify(false),

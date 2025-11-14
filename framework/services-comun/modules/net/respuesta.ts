@@ -26,6 +26,7 @@ export abstract class Respuesta {
     private lastModified?: Date;
     private etag?: string;
     private contentType?: string;
+    private contentDisposition?: string;
     private pasada?: string;
     private readonly vary: Set<string>;
     private length?: number;
@@ -199,6 +200,11 @@ export abstract class Respuesta {
         return this;
     }
 
+    public setContentTypeOctet(): Respuesta {
+        this.contentType = `application/octet-stream`;
+        return this;
+    }
+
     public setContentTypeHTML(charset: string|null="UTF-8"): Respuesta {
         this.contentType = charset!=null ?
             `text/html; charset=${charset}` :
@@ -248,6 +254,11 @@ export abstract class Respuesta {
 
     public setContentTypeTextPlain(): Respuesta {
         this.contentType = `text/plain`;
+        return this;
+    }
+
+    public setContentDisposition(contentDisposition: string): Respuesta {
+        this.contentDisposition = contentDisposition;
         return this;
     }
 
@@ -442,6 +453,9 @@ export abstract class Respuesta {
             responseHeaders["ETag"] = this.etag;
         }
         responseHeaders["Content-Type"] = this.contentType??"application/json; charset=UTF-8";
+        if (this.contentDisposition) {
+            responseHeaders["Content-Disposition"] = this.contentDisposition;
+        }
         if (this.encoding) {
             responseHeaders["Content-Encoding"] = this.encoding;
         }

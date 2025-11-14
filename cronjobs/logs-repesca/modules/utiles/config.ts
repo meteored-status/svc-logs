@@ -11,8 +11,8 @@ export class Configuracion extends ConfiguracionBase<IConfiguracionDefault> impl
     /* INSTANCE */
     public google: Google;
 
-    public constructor(defecto: IConfiguracionDefault, user: Partial<IConfiguracionDefault>, servicio: string, version: string, cronjob: boolean) {
-        super(defecto, user, servicio, version, cronjob);
+    public constructor(defecto: IConfiguracionDefault, user: Partial<IConfiguracionDefault>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
+        super(defecto, user, servicios, version, cronjob);
 
         this.google = new Google(defecto.google, this.user.google??{});
     }
