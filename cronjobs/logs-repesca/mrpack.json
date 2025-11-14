@@ -4,6 +4,7 @@
         "enabled": true,
         "type": "cronjob",
         "runtime": "node",
+        "target": "k8s",
         "alone": true,
         "arch": [
             "linux/amd64",
