@@ -57,7 +57,17 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
   export -f parseCluster
 
+  parseLambda() {
+    BASETOP="${1}"
+    RUTA="${2}"
+
+    echo "${BASETOP} - ${RUTA}: Preparando Lambda"
+  }
+   export -f parseLambda
+
   confige ". | keys | .[]" | xargs -I '{}' -P 1 bash -c "parseCluster ${BASETOP} {}"
+  ll services | xargs -I '{}' -P 1 bash -c "parseLambda ${BASETOP} {}" &
+  wait
 
 else
     echo "Omitiendo despliegue"
