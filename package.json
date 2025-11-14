@@ -6,12 +6,12 @@
     "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
     "packd": "yarn mrpack devel -c",
     "packd-f": "yarn mrpack devel -c -f",
-    "g:packd": "TS_NODE_PROJECT=\"config/tsconfig.json\" yarn workspace @mr/cli webpack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"config/webpack.config.ts\"",
+    "g:packd": "TS_NODE_PROJECT=\"config/tsconfig.json\" yarn workspace @mr/cli rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"config/rspack.config.ts\"",
     "update": "yarn mrpack update",
     "services-comun": "yarn workspace services-comun",
     "services-comun-status": "yarn workspace services-comun-status",
-    "logs": "yarn workspace logs",
     "logs-repesca": "yarn workspace logs-repesca",
+    "logs": "yarn workspace logs",
     "logs-slave": "yarn workspace logs-slave",
     "workers-slave": "yarn workspace workers-slave",
     "logs-base": "yarn workspace logs-base",
@@ -31,7 +31,7 @@
     "services/*",
     "statics/*"
   ],
-  "packageManager": "yarn@4.10.3",
+  "packageManager": "yarn@4.11.0",
   "bin": {
     "mrlang": "@mr/cli/bin/mrlang.js",
     "mrpack": "@mr/cli/bin/mrpack.js"

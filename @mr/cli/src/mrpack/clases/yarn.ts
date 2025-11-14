@@ -169,7 +169,7 @@ export class Yarn {
         console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Actualizando dependencias"));
         console.group();
         return new Promise<number>((resolve)=>{
-            spawn("yarn", ["upgrade-interactive",], {cwd: basedir, shell: true, stdio: "inherit"})
+            spawn("yarn", ["upgrade-interactive",], {cwd: basedir, shell: false, stdio: "inherit"})
                 .on("error", (err)=>{
                     console.error("Error actualizando dependencias", err)
                 })

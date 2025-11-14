@@ -28,8 +28,8 @@ export class Configuracion<T extends IConfiguracion = IConfiguracion> extends Co
     /* INSTANCE */
     public readonly status: StatusConfig;
 
-    public constructor(defecto: T, user: Partial<T>, servicio: string, version: string, cronjob: boolean) {
-        super(defecto, user, servicio, version, cronjob);
+    public constructor(defecto: T, user: Partial<T>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
+        super(defecto, user, servicios, version, cronjob);
 
         this.status = new StatusConfig(defecto.status, user.status??{});
     }

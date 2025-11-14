@@ -38,7 +38,7 @@ export class NetCacheRedis extends NetCache {
     protected async loadMetadata(conexion: Conexion, cfg: IRouteGroupCache): Promise<INetCache> {
         const key = `${this.cacheKey(conexion, cfg)}:metadata`;
         const redis = NetCacheRedis.redis(this.config);
-        const metadata = await redis.loadJSON<INetCache>(key);
+        const metadata = await redis.loadJSON<INetCache>(key) as INetCacheV1|null;
 
         if (!metadata) {
             return Promise.reject("No hay metadatos en caché");
@@ -50,7 +50,7 @@ export class NetCacheRedis extends NetCache {
     protected async loadData(conexion: Conexion, cfg: IRouteGroupCache): Promise<Buffer> {
         const key = `${this.cacheKey(conexion, cfg)}:data`;
         const redis = NetCacheRedis.redis(this.config);
-        const data = await redis.get(key);
+        const data = await redis.get(key) as Buffer|null;
         if (!data) {
             return Promise.reject("No hay datos en caché");
         }

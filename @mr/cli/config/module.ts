@@ -1,9 +1,6 @@
-import MiniCssExtractPlugin from "mini-css-extract-plugin";
-import webpack from "webpack";
+import {CssExtractRspackPlugin, ModuleOptions} from "@rspack/core";
 
 import {type ManifestBuildComponentes, ManifestBuildComponentesCSS} from "../manifest/workspace/build/bundle/componentes";
-
-type TModule = webpack.Configuration['module'];
 
 interface IModuleConfig {
     componentes: ManifestBuildComponentes;
@@ -14,8 +11,8 @@ interface IModuleConfig {
 
 export class Module {
     /* STATIC */
-    public static build({componentes, desarrollo, test, rules}: IModuleConfig): TModule {
-        const salida: TModule = {
+    public static build({componentes, desarrollo, test, rules}: IModuleConfig): ModuleOptions {
+        const salida: ModuleOptions = {
             rules: [],
         }
 
@@ -24,7 +21,7 @@ export class Module {
                 test: /\.pug$/,
                 use: [
                     {
-                        loader: "pug3-loader",
+                        loader: require.resolve("pug3-loader"),
                         options: {
                             pretty: desarrollo,
                         },
@@ -41,10 +38,12 @@ export class Module {
                 test: /\.css$/,
                 use: [
                     {
-                        loader: componentes.css==ManifestBuildComponentesCSS.INYECTADO?"style-loader":MiniCssExtractPlugin.loader,
+                        loader: componentes.css==ManifestBuildComponentesCSS.INYECTADO?
+                            require.resolve("style-loader"):
+                            CssExtractRspackPlugin.loader,
                     },
                     {
-                        loader: "css-loader",
+                        loader: require.resolve("css-loader"),
                         options: {
                             sourceMap: test,
                         },
@@ -55,16 +54,18 @@ export class Module {
                 test: /\.s[ac]ss$/i,
                 use: [
                     {
-                        loader: componentes.css==ManifestBuildComponentesCSS.INYECTADO?"style-loader":MiniCssExtractPlugin.loader,
+                        loader: componentes.css==ManifestBuildComponentesCSS.INYECTADO?
+                            require.resolve("style-loader"):
+                            CssExtractRspackPlugin.loader,
                     },
                     {
-                        loader: "css-loader",
+                        loader: require.resolve("css-loader"),
                         options: {
                             sourceMap: test,
                         },
                     },
                     {
-                        loader: "sass-loader",
+                        loader: require.resolve("sass-loader"),
                         options: {
                             // Prefer `dart-sass`
                             implementation: require.resolve("sass"),
@@ -75,26 +76,46 @@ export class Module {
                         },
                     },
                 ],
+                type: 'javascript/auto',
             });
         }
 
-        salida.rules!.push({
-            enforce: 'pre',
-            test: /\.([cm]?[tj]s|tsx)$/,
-            use: [
-                {
-                    loader: require.resolve("source-map-loader"),
-                },
-            ],
-        });
+        // salida.rules!.push({
+        //     enforce: 'pre',
+        //     test: /\.([cm]?[tj]s|tsx)$/,
+        //     use: [
+        //         {
+        //             loader: require.resolve("source-map-loader"),
+        //         },
+        //     ],
+        // });
         salida.rules!.push({
             test: /\.([cm]?ts|tsx)$/,
-            use: [
-                {
-                    loader: require.resolve("ts-loader"),
+            exclude: [/node_modules/],
+            loader: 'builtin:swc-loader',
+            options: {
+                jsc: {
+                    parser: {
+                        syntax: 'typescript',
+                        decorators: true,
+                        // dynamicImport: true,
+                    },
+                    transform: {
+                        // legacyDecorator: true,
+                        decoratorMetadata: true,
+                    },
                 },
-            ],
+            },
+            type: 'javascript/auto',
         });
+        // salida.rules!.push({
+        //     test: /\.([cm]?ts|tsx)$/,
+        //     use: [
+        //         {
+        //             loader: require.resolve("ts-loader"),
+        //         },
+        //     ],
+        // });
 
         if (rules!=undefined) {
             salida.rules!.push(...require(rules));

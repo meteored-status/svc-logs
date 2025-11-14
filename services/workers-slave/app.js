@@ -1,3 +1,5 @@
+require("source-map-support").install();
+
 process.env.CLIENTE ??= "";
 process.env.ENTORNO ??= "desarrollo";
 process.env.ZONA ??= "desarrollo";
@@ -17,6 +19,4 @@ if (process.env["DATADOG"]==="true") {
 Symbol.dispose ??= Symbol("Symbol.dispose");
 Symbol.asyncDispose ??= Symbol("Symbol.asyncDispose");
 
-require("./init");
-require("source-map-support").install();
 require("./output/app");

@@ -15,7 +15,7 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
     const paramDefinition = pascalCase(`${item.id}Params`);
     const keysDefinition = pascalCase(`${item.id}`);
 
-    imports.add(`import {TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
+    imports.add(`import {MapExport, TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
     imports.add(`import type {${keysDefinition}Record} from "${definitionModulePath(module)}";`);
 
     const keys: Record<string, string> = {};
@@ -100,7 +100,17 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
     fileLines.push(`});`);
 
     fileLines.push('');
-    fileLines.push(`export default (key: keyof ${keysDefinition}Record, params?: Partial<${keysDefinition}Record>) => translationMap.render(key, params);`);
+    fileLines.push(`const translationFunction = Object.assign(
+        (key: keyof ${keysDefinition}Record, params?: Partial<${keysDefinition}Record>) => translationMap.render(key, params),
+        {
+            map: () => translationMap
+        }
+    ) as MapExport<${keysDefinition}Record, ${keysDefinition}Record>;`);
+
+
+
+    fileLines.push(`export default translationFunction`);
+
 
     return fileLines.join('\n');
 

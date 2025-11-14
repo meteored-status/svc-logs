@@ -1,11 +1,12 @@
-import MiniCssExtractPlugin from "mini-css-extract-plugin";
-import {WebpackManifestPlugin} from "webpack-manifest-plugin";
-import webpack from "webpack";
+import {RspackManifestPlugin} from "rspack-manifest-plugin";
+import {TsCheckerRspackPlugin} from "ts-checker-rspack-plugin";
+import rspack, {CssExtractRspackPlugin, Plugins as TPlugins} from "@rspack/core";
 
 import {BuildFW} from "../manifest/workspace/build";
 import {Runtime} from "../manifest/workspace/deployment";
 
 interface IPluginsConfig {
+    basedir: string;
     entorno: string;
     desarrollo: boolean;
     database?: string;
@@ -15,33 +16,33 @@ interface IPluginsConfig {
 
 export class Plugins {
     /* STATIC */
-    protected static buildNode(): webpack.WebpackPluginInstance[] {
+    protected static buildNode(): TPlugins {
         return [];
     }
 
-    protected static buildBrowser(prefix: string): webpack.WebpackPluginInstance[] {
+    protected static buildBrowser(prefix: string): TPlugins {
         return [
-            new WebpackManifestPlugin({
+            new RspackManifestPlugin({
                 fileName: 'stats.json',
                 filter: (obj)=>!obj.path.includes('.js.map'),
-                generate: (seed, files, entrypoints)=>{
+                generate: (_, files, entries)=>{
                     const entrypoints_final: Record<string, string[]> = {
                         "_": files.map(elemento=>elemento.path.replace("auto/", "")),
                     };
-                    for (let actual in entrypoints) {
+                    for (let actual in entries) {
                         // noinspection JSUnfilteredForInLoop
-                        entrypoints_final[actual+".js"] = entrypoints[actual]
+                        entrypoints_final[actual+".js"] = entries[actual]
                             .filter((elemento)=>!elemento.includes(".js.map"))
                             .map((elemento)=>`/${prefix}js/bundle/${elemento}`);
                     }
                     return entrypoints_final;
                 },
-            })
+            }),
         ];
     }
 
-    public static build(runtime: Runtime, framework: BuildFW, {entorno, desarrollo, database, prefix = "", css}: IPluginsConfig): webpack.WebpackPluginInstance[] {
-        const salida: webpack.WebpackPluginInstance[] = [];
+    public static build(runtime: Runtime, framework: BuildFW, {basedir, entorno, desarrollo, database, prefix = "", css}: IPluginsConfig): TPlugins {
+        const salida: TPlugins = [];
         let nextjs: boolean;
 
         switch (runtime) {
@@ -59,7 +60,17 @@ export class Plugins {
                 break;
         }
 
-        salida.push(new webpack.DefinePlugin({
+        salida.push(new TsCheckerRspackPlugin({
+            typescript: {
+                // configFile: `config/tsconfig.json`,
+                configFile: `${basedir}/tsconfig.json`,
+                // memoryLimit: 10*1024*1024*1024,
+                // mode: "readonly",
+                // mode: "write-references",
+            },
+        }));
+
+        salida.push(new rspack.DefinePlugin({
             DESARROLLO: JSON.stringify(entorno==="desarrollo"),
             TEST: JSON.stringify(entorno==="test"),
             PRODUCCION: JSON.stringify(!desarrollo),
@@ -77,7 +88,7 @@ export class Plugins {
 
         if (css) {
             salida.push(
-                new MiniCssExtractPlugin({
+                new CssExtractRspackPlugin({
                     filename: "[name].css",
                     // filename: !produccion?"[name].css":"[name]/[contenthash].css",
                 }),

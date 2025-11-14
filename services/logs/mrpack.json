@@ -9,9 +9,22 @@
             "linux/amd64",
             "linux/arm64"
         ],
-        "kustomize": {
-            "legacy": "services"
-        }
+        "imagen": {
+            "produccion": {
+                "paquete": "services",
+                "nombre": "logs"
+            },
+            "test": {
+                "paquete": "services",
+                "nombre": "logs"
+            }
+        },
+        "kustomize": [
+            {
+                "name": "logs",
+                "dir": "services"
+            }
+        ]
     },
     "devel": {
         "enabled": true

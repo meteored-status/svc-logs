@@ -61,10 +61,10 @@ module.exports = function (buildDirs) {
             //
             // config.plugins.push(...plugins);
 
-            if (isServer && dev) {
-                const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
-                config.plugins.push(new ForkTsCheckerWebpackPlugin());
-            }
+            // if (isServer && dev) {
+            //     const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+            //     config.plugins.push(new ForkTsCheckerWebpackPlugin());
+            // }
 
             const entorno = dev?"desarrollo":(process.env.ENV??"test");
             const desarrollo = dev;

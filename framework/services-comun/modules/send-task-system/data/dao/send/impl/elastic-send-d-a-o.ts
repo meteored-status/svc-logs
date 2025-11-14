@@ -2,7 +2,6 @@ import {SendDAO} from "../send-d-a-o";
 import {Elasticsearch} from "../../../../../elasticsearch";
 import {Send, TSend, TStatus} from "../../../model/send";
 import {ElasticSearch} from "../../../../utiles/config";
-import {Fecha} from "../../../../../utiles/fecha";
 import {SparkpostSend} from "../../../model/sparkpost-send";
 
 interface IDocument {
@@ -19,9 +18,6 @@ interface IDocument {
     transmission_id?: string;
 }
 
-declare var PRODUCCION: boolean;
-declare var TEST: boolean;
-
 export class ElasticSendDAO extends SendDAO {
     /* INSTANCE */
     public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
@@ -29,14 +25,14 @@ export class ElasticSendDAO extends SendDAO {
     }
 
     /* STATIC */
-    public static getAlias(config: ElasticSearch): string {
-        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
-        return `${config.sendIndex}-${suffix}`;
-    }
-
-    public static getIndex(config: ElasticSearch): string {
-        return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
-    }
+    // public static getAlias(config: ElasticSearch): string {
+    //     const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
+    //     return `${config.sendIndex}-${suffix}`;
+    // }
+    //
+    // public static getIndex(config: ElasticSearch): string {
+    //     return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
+    // }
 
     public override async save(send: Send): Promise<Send> {
         if (send.metadata.id && send.metadata.index) {
@@ -46,9 +42,13 @@ export class ElasticSendDAO extends SendDAO {
                 doc: this.sendToDocument(send)
             });
         } else {
+            const data = this.sendToDocument(send);
             const response = await this.client.index({
-                index: ElasticSendDAO.getIndex(this.config),
-                document: this.sendToDocument(send)
+                index: this.config.sendIndex,//ElasticSendDAO.getIndex(this.config),
+                document: {
+                    "@timestamp": data.created,
+                    ...data,
+                }
             });
 
             send.metadata.id = response._id;
@@ -59,7 +59,7 @@ export class ElasticSendDAO extends SendDAO {
 
     public override async getPending(): Promise<Send[]> {
         const data = await this.client.search<IDocument>({
-            index: ElasticSendDAO.getIndex(this.config),
+            index: this.config.sendIndex,//ElasticSendDAO.getIndex(this.config),
             query: {
                 bool: {
                     must: [
@@ -84,7 +84,7 @@ export class ElasticSendDAO extends SendDAO {
 
     public override async findByTransmissionId(transmissionId: string): Promise<Send> {
         const data = await this.client.search<IDocument>({
-            index: ElasticSendDAO.getIndex(this.config),
+            index: this.config.sendIndex,//ElasticSendDAO.getIndex(this.config),
             query: {
                 bool: {
                     must: [

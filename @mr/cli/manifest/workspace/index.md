@@ -30,8 +30,8 @@ interface IManifestDeployment {
     alone?: boolean;
     arch?: string[];
     credenciales?: IManifestDeploymentCredenciales[];
-    imagen?: string;
-    kustomize?: IManifestDeploymentKustomize;
+    imagen?: IManifestDeploymentImagen;
+    kustomize?: IManifestDeploymentKustomize[];
     storage?: IManifestDeploymentStorage;
 }
 ```
@@ -50,9 +50,9 @@ interface IManifestDeployment {
 - `credenciales`: Credenciales necesarias durante el proceso de despliegue. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo** [IManifestDeploymentCredenciales[]](#imanifestdeploymentcredenciales).
     - **opcional**: Por defecto `[]`.
-- `imagen`: Nombre de la imagen. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
-    - **tipo**: string
-    - **opcional**: Por defecto se utiliza la imagen base del entorno de ejecución.
+- `imagen`: Datos sobre la imagen de Docker. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
+    - **tipo**: [IManifestDeploymentImagen](#imanifestdeploymentimagen).
+    - **opcional**: Por defecto se utiliza la imagen base del entorno de ejecución en el namespace services de GKE en Bélgica.
 - `kustomize`: Detalles de kustomización. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo**: [IManifestDeploymentKustomize[]](#imanifestdeploymentkustomize).
     - **opcional**: Ver detalles para más información.
@@ -103,15 +103,54 @@ interface IManifestDeploymentCredenciales {
 - `source`: Archivo de credenciales a importar.
 - `target`: Archivo de destino junto con su ruta relativa al workspace.
 
-## IManifestDeploymentKutomize
+## IManifestDeploymentImagen
 
 ```typescript
-interface IManifestDeploymentKutomize {
-    legacy?: string;
+interface IManifestDeploymentImagen {
+    produccion: IManifestDeploymentImagenEntorno;
+    test: IManifestDeploymentImagenEntorno;
 }
 ```
 
-- `kustomize`: Nombre del directorio dentro del proyecto kustomize.
+- `produccion`: Datos sobre la imagen de Docker en Producción.
+    - **tipo**: [IManifestDeploymentImagenEntorno](#imanifestdeploymentimagenentorno)
+- `test`: Datos sobre la imagen de Docker en Test.
+    - **tipo**: [IManifestDeploymentImagenEntorno](#imanifestdeploymentimagenentorno)
+
+## IManifestDeploymentImagenEntorno
+
+```typescript
+interface IManifestDeploymentImagenEntorno {
+    base?: string;
+    registro?: string;
+    paquete: string;
+    nombre: string;
+}
+```
+
+- `base`: Imagen base en el Dockerfile.
+    - **tipo**: string
+    - **opcional**: Imagen por defecto del entorno de ejecución.
+- `registro`: Registro de Docker a utilizar.
+    - **tipo**: string
+    - **opcional**: Google Cloud Artifact Registry en Bélgica.
+- `paquete`: Paquete dentro del registro.
+    - **tipo**: string
+- `nombre`: Nombre de la imagen que se va a generar.
+    - **tipo**: string
+
+## IManifestDeploymentKustomize
+
+```typescript
+interface IManifestDeploymentKustomize {
+    name: string;
+    dir?: string;
+}
+```
+
+- `name`: Nombre del workspace dentro del proyecto kustomize.
+    - **tipo**: string
+- `dir`: Nombre del directorio dentro del proyecto kustomize.
     - **tipo**: string
     - **opcional**: Por defecto se utiliza `services`.
 

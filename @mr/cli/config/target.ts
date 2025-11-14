@@ -1,8 +1,10 @@
+import {Target as TTarget} from "@rspack/core";
+
 import {Runtime} from "../manifest/workspace/deployment";
 
 export class Target {
     /* STATIC */
-    public static build(runtime: Runtime): string|string[] {
+    public static build(runtime: Runtime): TTarget {
         switch (runtime) {
             case Runtime.node:
                 return 'node';

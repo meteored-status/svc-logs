@@ -20,7 +20,7 @@ export interface IDocumento extends IFile {
 export class Storage implements IDocumento {
     /* STATIC */
     private static storage: NodeJS.Dict<StorageBase> = {};
-    protected static getStorage(config: Google): StorageBase {
+    private static getStorage(config: Google): StorageBase {
         return this.storage[config.id] ??= new StorageBase({
             projectId: config.id,
             keyFilename: config.storage.credenciales,
@@ -199,5 +199,25 @@ export class StorageError implements IDocumento {
     public constructor(private readonly file: string, public readonly contentType: string) {
         this.timeCreated = new Date(0);
         this.timeUpdated = new Date(0);
+    }
+}
+
+type StorageClientBuild = {
+    config: Google;
+    buckets?: string[];
+}
+
+export class StorageClient {
+    /* STATIC */
+    public static build({config, buckets = []}: StorageClientBuild): StorageClient {
+        return new StorageClient(config, buckets);
+    }
+
+    /* INSTANCE */
+    public constructor(private readonly config: Google, private readonly buckets: string[]) {
+    }
+
+    public async get(file: string): Promise<Storage> {
+        return Storage.get(this.config, this.buckets, file);
     }
 }

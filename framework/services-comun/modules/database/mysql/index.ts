@@ -62,7 +62,7 @@ interface IQueryOptions extends IQueryOptionsBase {
     transaction?: Transaction;
 }
 
-interface ISelectOptions<T, S=T> extends IQueryOptions {
+export interface ISelectOptions<T, S=T> extends IQueryOptions {
     fn?: (rows: T)=>S|Promise<S>;
     master?: boolean;
     cache?: ICacheConfig;

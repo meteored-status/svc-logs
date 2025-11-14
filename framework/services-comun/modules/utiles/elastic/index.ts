@@ -87,6 +87,59 @@ export const searchAll = async <I>(client: Elasticsearch, config: {index: string
  * @param client Cliente de elastic.
  * @param config Configuración de la búsqueda.
  * @param query Consulta.
+ * @param sort Ordenación.
+ * @private
+ */
+export async function *searchAllGenerator <I>(client: Elasticsearch, config: {index: string; keep_alive: string; size: number; source?: string[]}, query: QueryDslQueryContainer, sort?: Sort): AsyncGenerator<SearchResponse<I, ESAggregate>, void, unknown> {
+    // Creamos el Point In Time (pit)
+    const pit = await client.openPointInTime({
+        index: config.index,
+        keep_alive: config.keep_alive
+    });
+
+    const queryFunction = async (size: number, pit: string, after?: SortResults): Promise<[SearchResponse<I, ESAggregate>, SortResults|undefined]> => {
+        const params: SearchRequest = {
+            size,
+            query,
+            pit: {
+                id: pit,
+                keep_alive: config.keep_alive,
+            },
+            sort: sort ?? [
+                {
+                    _shard_doc: "asc",
+                },
+            ],
+            _source: config.source,
+            search_after: after
+        };
+
+        const data = await client.search<I>(params);
+
+        return [
+            data,
+            (data.hits.hits.length === 0)
+                ? undefined
+                : data.hits.hits[data.hits.hits.length - 1].sort
+        ];
+    }
+    let [bloque, after]: [SearchResponse<I, ESAggregate>|undefined, SortResults|undefined] = [undefined, undefined];
+
+    do {
+        [bloque, after] = await queryFunction(config.size, pit.id, after);
+        yield  bloque;
+    } while (bloque.hits.hits.length >= config.size);
+
+    await client.closePointInTime({
+        id: pit.id
+    });
+}
+
+/**
+ * Busca todos los elementos en los índices de elastic.
+ * @param client Cliente de elastic.
+ * @param config Configuración de la búsqueda.
+ * @param query Consulta.
  * @param fn Función de mapeo.
  * @param sort Ordenación.
  * @private
@@ -98,5 +151,5 @@ export const searchAllFn = async <T, I>(client: Elasticsearch, config: {index: s
 
 export default new Elasticsearch({
     credenciales: "files/credenciales/elastic.json",
-    // ca: "files/ssl/elastic-ca.crt",
+    ca: "files/ssl/elastic-ca.crt",
 });

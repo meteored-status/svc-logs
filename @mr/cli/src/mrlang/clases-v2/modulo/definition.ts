@@ -52,6 +52,10 @@ export class Definition {
         lines.push(`import {getLang} from "services-comun/modules/traduccion/v2/util/lang";`);
         lines.push('');
 
+        lines.push(`import {TranslationSet} from "services-comun/modules/traduccion/v2/translation-set";`);
+        lines.push(`import {MapExport, TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
+        lines.push('');
+
         if (Object.entries(this._recordsDefinitions).length) {
             lines.push(`import {ITranslationMapKeys} from "services-comun/modules/traduccion/v2/translation-map";`);
             lines.push('');

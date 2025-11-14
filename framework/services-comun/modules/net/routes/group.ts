@@ -56,7 +56,7 @@ export abstract class RouteGroup<T extends Configuracion=Configuracion> {
         const metodo = conexion.metodo;
 
         for (const handler of this.handlers) {
-            if (await handler.check(this.configuracion.pod, conexion, metodo)) {
+            if (await handler.check(conexion, metodo)) {
                 return !handler.stop;
             }
         }

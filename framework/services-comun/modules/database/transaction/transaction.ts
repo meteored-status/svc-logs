@@ -35,40 +35,45 @@ export abstract class Transaction implements ITransaction {
     public abstract rollback(): Promise<void>;
 }
 
-export const transactional = (getTM: () => TransactionManager, name?: string): Function => {
-    return (originalMethod: any) => {
-        return function (this: any, ...args: any[]) {
-            return Promise.resolve().then(async () => {
-                let t = args.find(arg => arg instanceof Transaction);
-                const initial = t === undefined;
-                if (!t) {
-                    t = await getTM().get();
-                    await t.begin();
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);
+export type TransactionOptions = {
+    name?: string;
+    isolationLevel?: IsolationLevel;
+}
+
+export const transactional = (getTM: () => TransactionManager, {name, isolationLevel}: TransactionOptions = {}): Function => {
+    return function (_target: Object | Function, _propertyKey: string, _descriptor: PropertyDescriptor): void {
+        const originalMethod = _descriptor.value;
+
+        _descriptor.value = async function (this: any, ...args: any[]): Promise<any> {
+            let t = args.find(arg => arg instanceof Transaction);
+            const initial = t === undefined;
+            if (!t) {
+                t = await getTM().get();
+                await t.begin(isolationLevel);
+                if (!PRODUCCION) info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);
+            } else {
+                if (!PRODUCCION) info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);
+            }
+            let salida;
+            try {
+                salida = await originalMethod.apply(this, [...args, t]);
+                if (initial) {
+                    await t.commit();
+                    if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT${name ? `: ${name}` : ``}`);
                 } else {
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);
+                    if (!PRODUCCION) info(`Transaction ${t.hash} => LEAVE${name ? `: ${name}` : ``}`);
                 }
-                let salida;
-                try {
-                    salida = await originalMethod.apply(this, [...args, t]);
-                    if (initial) {
-                        await t.commit();
-                        if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT${name ? `: ${name}` : ``}`);
-                    } else {
-                        if (!PRODUCCION) info(`Transaction ${t.hash} => LEAVE${name ? `: ${name}` : ``}`);
-                    }
-                } catch (e) {
-                    if (initial) {
-                        error(`Transaction ${t.hash} failed: `, e);
-                        await t.rollback();
-                        if (!PRODUCCION) info(`Transaction ${t.hash} => ROLLBACK${name ? `: ${name}` : ``}`);
-                        salida = Promise.reject(e);
-                    } else {
-                        throw e;
-                    }
+            } catch (e) {
+                if (initial) {
+                    error(`Transaction ${t.hash} failed: `, e);
+                    await t.rollback();
+                    if (!PRODUCCION) info(`Transaction ${t.hash} => ROLLBACK${name ? `: ${name}` : ``}`);
+                    salida = Promise.reject(e);
+                } else {
+                    throw e;
                 }
-                return salida;
-            });
+            }
+            return salida;
         }
     }
 }

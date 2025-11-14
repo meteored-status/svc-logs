@@ -1,32 +1,33 @@
 export interface IManifestDeploymentKustomize {
-    legacy?: string;
+    name: string;
+    dir?: string;
     credenciales?: Record<string, string>;
     ssl?: Record<string, string>;
 }
 
 export class ManifestDeploymentKustomize implements IManifestDeploymentKustomize {
     /* INSTANCE */
-    public legacy?: string;
+    public name: string;
+    public dir?: string;
     public credenciales?: Record<string, string>;
     public ssl?: Record<string, string>;
 
     protected constructor(deploy: IManifestDeploymentKustomize) {
-        this.legacy = deploy.legacy;
+        this.name = deploy.name;
+        this.dir = deploy.dir;
         this.credenciales = deploy.credenciales;
         this.ssl = deploy.ssl;
     }
 
     /* STATIC */
-    public static build(deploy?: IManifestDeploymentKustomize): ManifestDeploymentKustomize|undefined {
-        if (!deploy) {
-            return undefined;
-        }
+    public static build(deploy: IManifestDeploymentKustomize): ManifestDeploymentKustomize {
         return new this(deploy);
     }
 
     public toJSON(): IManifestDeploymentKustomize {
         return {
-            legacy: this.legacy,
+            name: this.name,
+            dir: this.dir,
             credenciales: this.credenciales,
             ssl: this.ssl,
         };

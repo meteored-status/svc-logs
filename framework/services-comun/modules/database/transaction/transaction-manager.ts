@@ -4,7 +4,7 @@ interface ITransactionManager {
     get(): Promise<ITransaction>;
 }
 
-export abstract class TransactionManager {
+export abstract class TransactionManager implements ITransactionManager {
     /* STATIC */
 
     /* INSTANCE */
