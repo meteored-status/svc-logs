@@ -65,9 +65,11 @@ if [[ -f "DESPLEGAR.txt" ]]; then
   }
    export -f parseLambda
 
+  if [[ -f "${BASETOP}/lambda.sh" ]]; then
+    echo "Creando lambda"
+    cat "${BASETOP}/lambda.sh"
+  fi
   confige ". | keys | .[]" | xargs -I '{}' -P 1 bash -c "parseCluster ${BASETOP} {}"
-  ll services | xargs -I '{}' -P 1 bash -c "parseLambda ${BASETOP} {}" &
-  wait
 
 else
     echo "Omitiendo despliegue"
