@@ -18,10 +18,17 @@ export const enum ManifestDeploymentKind {
     WORKER = 'worker',
 }
 
+export const enum Target {
+    k8s = "k8s",
+    lambda = "lambda",
+    none = "none",
+}
+
 export interface IManifestDeployment {
     enabled: boolean;
     type: ManifestDeploymentKind; // tipo de despliegue
     runtime: Runtime;
+    target: Target;
     alone?: boolean; // si solo se ha de desplegar en una zona, solo aplicable a SERVICE/CRONJOB/JOB
     arch?: string[]; // solo aplicable a SERVICE/CRONJOB/JOB
     credenciales?: IManifestDeploymentCredenciales[]; // solo aplicable a SERVICE/CRONJOB/JOB
@@ -40,6 +47,7 @@ export class ManifestDeployment implements IManifestDeployment {
     public enabled: boolean;
     public type: ManifestDeploymentKind;
     public runtime: Runtime;
+    public target: Target;
     public alone?: boolean;
     public arch?: string[];
     public credenciales?: ManifestDeploymentCredenciales[];
@@ -54,6 +62,7 @@ export class ManifestDeployment implements IManifestDeployment {
     protected constructor(deploy: IManifestDeployment) {
         this.enabled = deploy.enabled;
         this.type = deploy.type;
+        this.target = deploy.target;
         this.runtime = deploy.runtime;
         this.alone = deploy.alone;
         this.arch = deploy.arch;
@@ -70,6 +79,7 @@ export class ManifestDeployment implements IManifestDeployment {
             enabled: this.enabled,
             type: this.type,
             runtime: this.runtime,
+            target: this.target,
             alone: this.alone,
             arch: this.arch,
             credenciales: credenciales.length>0?

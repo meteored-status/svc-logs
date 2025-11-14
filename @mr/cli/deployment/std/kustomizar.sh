@@ -88,6 +88,10 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     DIRECTORIO=$(path1 "${RUTA}")
     WORKSPACE=$(path2 "${RUTA}")
 
+    if [[ "$(configw "${RUTA}" '.deploy.target')" != "k8s" ]]; then
+      return
+    fi
+
     echo "Kustomizando ${WORKSPACE}"
     confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > despliegue_${WORKSPACE}_{}.yaml"
 
@@ -110,23 +114,6 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         fi
       done
     done
-
-#    SERVICIOS=$(config "${RUTA}/package.json" '.servicio | if type == "array" then .[] else . end')
-#    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
-#
-#    for SERVICIO in ${SERVICIOS}; do
-#      echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
-#
-#      ZONAS=$(confige '.[] | .resourceLabels.zona')
-#      for ZONA in ${ZONAS}; do
-#        parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
-#        STATUS=$?
-#        if [[ $STATUS -ne 0 ]]; then
-#          echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA}"
-#          exit 1
-#        fi
-#      done
-#    done
   }
   export -f parseWorkspace
 
