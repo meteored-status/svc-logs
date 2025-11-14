@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+if [ $# -eq 0 ]; then
+  echo "Checker de Workpaces de service"
+  exit 1
+fi
+
+GROUP="${1}"
+
+checkWorkspace() {
+  RUTA="${1}"
+
+  if [[ $(configw "${RUTA}" .enabled) == "true" ]]; then
+    if [[ $(configw "${RUTA}" .deploy.enabled) == "true" ]]; then
+      if [[ $(configw "${RUTA}" .deploy.target) == "lambda" ]]; then
+        echo "${RUTA}"
+      fi
+    fi
+  fi
+}
+
+export -f checkWorkspace
+
+if [ -d "${GROUP}" ]; then
+  find "${GROUP}" -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -I '{}' -P 1 bash -c 'checkWorkspace "$@"' _ '{}'
+fi
