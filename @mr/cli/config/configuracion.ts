@@ -1,4 +1,4 @@
-import webpack from "webpack";
+import {Configuration} from "@rspack/core";
 
 import {BuildFW} from "../manifest/workspace/build";
 import {Devtool} from "./devtool";
@@ -13,8 +13,6 @@ import {Plugins} from "./plugins";
 import {Runtime} from "../manifest/workspace/deployment";
 import {Target} from "./target";
 
-type IConfiguracion = webpack.Configuration;
-
 interface IConfiguracionConfig {
     basedir: string;
     bundle: ManifestBuildBundleBase;
@@ -28,15 +26,13 @@ interface IConfiguracionConfig {
 
 export class Configuracion {
     /* STATIC */
-    public static build({basedir, bundle, dependencies, entorno, framework, runtime, database, rules}: IConfiguracionConfig): IConfiguracion {
+    public static build({basedir, bundle, dependencies, entorno, framework, runtime, database, rules}: IConfiguracionConfig): Configuration {
         const desarrollo = !["produccion", "test"].includes(entorno);
         const test = ["desarrollo","test"].includes(entorno);
         const mode = desarrollo ? "development" : "production";
 
-        const salida: webpack.Configuration = {
-            cache: {
-                type: "memory",
-            },
+        const salida: Configuration = {
+            cache: true,
             entry: Entry.build(runtime, framework, {
                 basedir,
                 entries: bundle.entries,
@@ -56,7 +52,7 @@ export class Configuracion {
                     ".mjs": [".mjs", ".mts"]
                 }
             },
-            devtool: bundle.source_map ? Devtool.build(runtime, bundle.source_map, entorno) : "source-map",
+            devtool: Devtool.build(runtime, bundle.source_map??["desarrollo", "test"], entorno),
             module: Module.build({
                 componentes: bundle.componentes,
                 desarrollo,
@@ -64,6 +60,7 @@ export class Configuracion {
                 rules,
             }),
             plugins: Plugins.build(runtime, framework, {
+                basedir,
                 entorno,
                 desarrollo,
                 database,

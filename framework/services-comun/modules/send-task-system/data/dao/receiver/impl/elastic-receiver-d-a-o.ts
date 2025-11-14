@@ -1,6 +1,5 @@
 import {ReceiverDAO} from "../receiver-d-a-o";
 import {ElasticSearch} from "../../../../utiles/config";
-import {Fecha} from "../../../../../utiles/fecha";
 import {Elasticsearch, SearchHit, SearchRequest, SortResults} from "../../../../../elasticsearch";
 import {Receiver} from "../../../model/receiver";
 import {ElasticSearchBulk, ElasticSearchBulkConfig} from "../../../../../database/bulk/elastic";
@@ -38,19 +37,23 @@ export class ElasticReceiverDAO extends ReceiverDAO {
         super();
     }
 
-    public static getAlias(config: ElasticSearch): string {
-        const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
-        return `${config.receiverIndex}-${suffix}`;
-    }
-
-    public static getIndex(config: ElasticSearch): string {
-        return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
-    }
+    // public static getAlias(config: ElasticSearch): string {
+    //     const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
+    //     return `${config.receiverIndex}-${suffix}`;
+    // }
+    //
+    // public static getIndex(config: ElasticSearch): string {
+    //     return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
+    // }
 
     public override async save(receiver: Receiver): Promise<Receiver> {
+        const data = this.receiverToDocument(receiver);
         await this.client.index({
-            index: ElasticReceiverDAO.getIndex(this.config),
-            document: this.receiverToDocument(receiver)
+            index: this.config.receiverIndex,//ElasticReceiverDAO.getIndex(this.config),
+            document: {
+                "@timestamp": data.created,
+                ...data
+            }
         });
 
         return receiver;
@@ -67,7 +70,7 @@ export class ElasticReceiverDAO extends ReceiverDAO {
         }
 
         if (!scroll) {
-            request.index = ElasticReceiverDAO.getAlias(this.config);
+            request.index = this.config.receiverIndex;//ElasticReceiverDAO.getAlias(this.config);
         }
 
         if (scroll) {
@@ -109,7 +112,7 @@ export class ElasticReceiverDAO extends ReceiverDAO {
 
     public override async createScroll(): Promise<ElasticSearchScroll> {
         const pit = await this.client.openPointInTime({
-            index: ElasticReceiverDAO.getAlias(this.config),
+            index: this.config.receiverIndex,//ElasticReceiverDAO.getAlias(this.config),
             keep_alive: "5m"
         });
 

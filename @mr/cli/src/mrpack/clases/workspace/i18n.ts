@@ -146,7 +146,7 @@ export class I18N extends Workspace {
             cwd: this.root,
             env: { ...process.env, FORCE_COLOR: "1" },
             stdio: "pipe",
-            shell: true,
+            shell: false,
         });
 
         const deferred = new Deferred<void>();

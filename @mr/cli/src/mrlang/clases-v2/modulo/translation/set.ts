@@ -99,7 +99,7 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
     fileLines.push(`]);`);
 
     fileLines.push('');
-    fileLines.push(`export default translationSet.render;`);
+    fileLines.push(`export default translationSet`);
 
     return fileLines.join('\n');
 

@@ -1,6 +1,8 @@
+import {type IManifestDeploymentImagenEntorno, ManifestDeploymentImagenEntorno} from "./entorno";
+
 export interface IManifestDeploymentImagen {
-    produccion?: string;
-    test?: string;
+    produccion: IManifestDeploymentImagenEntorno;
+    test: IManifestDeploymentImagenEntorno;
 }
 
 export class ManifestDeploymentImagen implements IManifestDeploymentImagen {
@@ -13,12 +15,12 @@ export class ManifestDeploymentImagen implements IManifestDeploymentImagen {
     }
 
     /* INSTANCE */
-    public produccion?: string;
-    public test?: string;
+    public produccion: ManifestDeploymentImagenEntorno;
+    public test: ManifestDeploymentImagenEntorno;
 
     protected constructor(storage: IManifestDeploymentImagen) {
-        this.produccion = storage.produccion;
-        this.test = storage.test;
+        this.produccion = ManifestDeploymentImagenEntorno.build(storage.produccion);
+        this.test = ManifestDeploymentImagenEntorno.build(storage.test);
     }
 
     public toJSON(): IManifestDeploymentImagen {

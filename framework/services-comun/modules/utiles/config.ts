@@ -58,15 +58,13 @@ export class Google<T extends ConfigGenerico=ConfigGenerico> implements IGoogle 
     }
 }
 
-type StringOne = [string, ...string[]];
-
 export interface IPodInfo {
     filesdir: string;
     version: string;
     hash: string;
     host: string;
     servicio: string;
-    servicios: StringOne;
+    servicios: [string, ...string[]];
     zona: string;
     cronjob: boolean;
     replica: string;
@@ -89,14 +87,21 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
                 return {};
             }),
         ]);
-        return new this<S>(defecto, cfg, data.servicio??"unknown", data.version??`0000.00.00-000`, manifest.deploy.cronjob??false);
+        const imagen = PRODUCCION && !TEST ?
+            manifest.deploy.imagen?.produccion.nombre :
+            manifest.deploy.imagen?.test.nombre;
+        const imagenes = manifest.deploy.kustomize?.map(k=>k.name) ?? [];
+        if (imagenes.length===0) {
+            imagenes.push(imagen??"unknown");
+        }
+        return new this<S>(defecto, cfg, imagenes as [string, ...string[]], data.version??`0000.00.00-000`, manifest.deploy.cronjob??false);
     }
 
     /* INSTANCE */
     public readonly pod: Readonly<IPodInfo>;
 
-    protected constructor(protected defecto: T, protected readonly user: Partial<T>, svc: string|string[], version: string, cronjob: boolean) {
-        const servicios = (!Array.isArray(svc)?[svc]:(svc.length>0?svc:["unknown"])) as StringOne;
+    protected constructor(protected defecto: T, protected readonly user: Partial<T>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
+        // const servicios = (!Array.isArray(svc)?[svc]:(svc.length>0?svc:["unknown"])) as StringOne;
         const host = PRODUCCION?os.hostname():servicios[0];
 
         const partes = host.split("-");
@@ -104,16 +109,16 @@ export class Configuracion<T extends IConfiguracion=IConfiguracion> implements I
         let wire: number;
         let deploy: string;
         if (PRODUCCION) {
-            replica = partes.at(-1) ?? "test";
+            replica = partes[-1] ?? "test";
             if (!cronjob) {
                 wire = 0;
-                deploy = partes.at(-2) ?? "test";
+                deploy = partes[-2] ?? "test";
             } else {
-                const tmp_wire = partes.at(-1);
+                const tmp_wire = partes[-1];
                 if (tmp_wire!=undefined) {
                     if (!isNaN(parseFloat(tmp_wire)) && isFinite(tmp_wire as any)) {
                         wire = parseInt(tmp_wire);
-                        deploy = partes.at(-3) ?? "test";
+                        deploy = partes[-3] ?? "test";
                     } else {
                         wire = 0;
                         deploy = tmp_wire;

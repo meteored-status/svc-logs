@@ -67,14 +67,14 @@ export class Init {
         }, null, 2), true);
 
         console.log(Colors.colorize([Colors.FgGreen], "Creando /i18n/package.json"));
-        const {devDependencies={}, config} = await readJSON<{ devDependencies?: Record<string, string>, config: IPackageConfig }>(`${i18n}/package.json`).catch(()=>({config: {lang: "en", langs: soportados, modulos: {}}} as { devDependencies?: Record<string, string>, config: IPackageConfig }));
+        const {scripts={}, devDependencies={}, config} = await readJSON<{ scripts?: Record<string, string>, devDependencies?: Record<string, string>, config: IPackageConfig }>(`${i18n}/package.json`).catch(()=>({config: {lang: "en", langs: soportados, modulos: {}}} as { scripts?: Record<string, string>, devDependencies?: Record<string, string>, config: IPackageConfig }));
         await safeWrite(`${i18n}/package.json`, JSON.stringify({
             name: "i18n",
             description: "Componentes de Traducción",
             version: "1.0.0",
             author: "José Antonio Jiménez",
             scripts: {
-                "generate": "yarn workspace @mr/cli mrlang generate",
+                "generate": scripts["generate"]==="yarn workspace @mr/cli mrlang generate -v2" ? scripts["generate"] : "yarn workspace @mr/cli mrlang generate",
                 "pull": "yarn workspace @mr/cli mrlang pull",
                 "push": "yarn workspace @mr/cli mrlang push",
             },

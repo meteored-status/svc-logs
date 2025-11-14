@@ -2,7 +2,6 @@ import type {IRouteGroupCache, NetCache} from "../../cache";
 import type {Checker, IExpresion} from "../../checkers";
 import type {Conexion, TMetodo} from "../../conexion";
 import type {Dominio} from "../../config/dominio";
-import type {IPodInfo} from "../../../utiles/config";
 import {Comodin} from "../../checkers/comodin";
 import {Exact} from "../../checkers/exact";
 import {Prefix} from "../../checkers/prefix";
@@ -93,6 +92,7 @@ export class RouteGroupBlock {
     private updateando: boolean;
     private readonly updater?: Required<TUpdater>;
     public readonly documentable: boolean;
+    private error: boolean;
 
     private constructor(data: IRouteGroupFinal) {
         this.ok = false;
@@ -113,6 +113,7 @@ export class RouteGroupBlock {
                 ...data.updater,
             };
         this.documentable = data.documentable;
+        this.error = false;
     }
 
     public getDocumentables(): Checker[] {
@@ -175,7 +176,7 @@ export class RouteGroupBlock {
             const salida = await this.handler(conexion, coincidencias);
             PromiseDelayed()
                 .then(async ()=>{
-                    await this.cache.handler!.save(conexion, this.cache).catch(()=>{});
+                    await this.cache.handler!.save(conexion, this.cache).catch(()=>undefined);
                 });
 
             return salida;
@@ -192,11 +193,12 @@ export class RouteGroupBlock {
             }
         }
 
-        // const span = conexion.tracer.span("Handler");
         await this.prehandler(conexion, coincidencias)
             .catch(async (err)=>{
-                error("Error en Handler.check", conexion.url, err);
-                // span.error(err.message);
+                if (!this.error) {
+                    error("Error en Handler.check", conexion.url, err, err?.stack);
+                    this.error = true;
+                }
 
                 if (!conexion.isTerminado()) {
                     await conexion.error(500, err)
@@ -205,8 +207,6 @@ export class RouteGroupBlock {
                         });
                 }
             });
-        // span.end();
-        // conexion.tracer.end();
     }
 
     private async parseCors(conexion: Conexion, expresion: Checker): Promise<void> {
@@ -223,7 +223,7 @@ export class RouteGroupBlock {
             });
     }
 
-    public async check(pod: IPodInfo, conexion: Conexion, metodo: TMetodo): Promise<boolean> {
+    public async check(conexion: Conexion, metodo: TMetodo): Promise<boolean> {
         for (const expresion of this.expresiones) {
             const coincidencias = expresion.check({
                 metodo,

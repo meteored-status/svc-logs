@@ -9,9 +9,22 @@
             "linux/amd64",
             "linux/arm64"
         ],
-        "kustomize": {
-            "legacy": "services"
-        }
+        "imagen": {
+            "produccion": {
+                "paquete": "services",
+                "nombre": "workers-slave"
+            },
+            "test": {
+                "paquete": "services",
+                "nombre": "workers-slave"
+            }
+        },
+        "kustomize": [
+            {
+                "name": "workers-slave",
+                "dir": "services"
+            }
+        ]
     },
     "devel": {
         "enabled": true

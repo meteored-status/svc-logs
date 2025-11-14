@@ -1,14 +1,14 @@
-import webpack from "webpack";
+import {Externals as TExternals} from "@rspack/core";
 
 import {Runtime} from "../manifest/workspace/deployment";
-
-type TExternals = webpack.Configuration["externals"];
 
 export class Externals {
     /* STATIC */
     private static ES_MODULES: Record<string, string> = {
         "formidable": "3",
         "pdf-merger-js": "5",
+        "mime": "4",
+        "uuid": "13",
         // "mysql": "3",
     };
 
@@ -20,15 +20,17 @@ export class Externals {
         }
 
         const commonjs: string[] = [];
+        const modules: string[] = [];
         const salida: TExternals = [];
         for (let mod in dependencies) {
             if (this.ES_MODULES[mod]==undefined || !check(dependencies[mod], this.ES_MODULES[mod])) {
                 salida.push({[mod]: `commonjs ${mod}`});
                 commonjs.push(mod);
                 // salida[mod] = `commonjs ${mod}`;
-            // } else {
-            //     salida.push({[mod]: `node-commonjs ${mod}`});
-            //     // salida[mod] = `module ${mod}`;
+            } else {
+                salida.push({[mod]: `module ${mod}`});
+                modules.push(mod);
+                // salida[mod] = `module ${mod}`;
             }
         }
         salida.push(function({request}, callback) {
@@ -37,7 +39,12 @@ export class Externals {
             }
             for (let mod of commonjs) {
                 if (request.startsWith(mod)) {
-                    return callback(null, `commonjs ${request}`);
+                    return callback(undefined, `commonjs ${request}`);
+                }
+            }
+            for (let mod of modules) {
+                if (request.startsWith(mod)) {
+                    return callback(undefined, `module ${request}`);
                 }
             }
             callback();

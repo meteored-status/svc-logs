@@ -10,8 +10,13 @@ import {ManifestWorkspaceDeploymentKustomizeLoader} from "./kustomize";
 import {ManifestWorkspaceDeploymentStorageLoader} from "./storage";
 import {IManifestDeploymentLegacy, type IManifestLegacy, RuntimeLegacy} from "../legacy";
 
-type IManifestDeploymentUpdate = IManifestDeployment | Exclude<IManifestDeployment, "kustomize"> & {
+type IManifestDeploymentUpdate1 = Exclude<IManifestDeployment, "kustomize"> & {
     kustomize?: string;
+}
+type IManifestDeploymentUpdate2 = Exclude<IManifestDeployment, "kustomize"> & {
+    kustomize: {
+        legacy: string;
+    };
 }
 
 export class ManifestWorkspaceDeploymentLoader {
@@ -22,11 +27,11 @@ export class ManifestWorkspaceDeploymentLoader {
             type: ManifestDeploymentKind.SERVICE,
             imagen: ManifestWorkspaceDeploymentImagenLoader.DEFAULT,
             runtime: Runtime.node,
-            kustomize: ManifestWorkspaceDeploymentKustomizeLoader.DEFAULT,
+            kustomize: [],//ManifestWorkspaceDeploymentKustomizeLoader.DEFAULT,
         };
     }
 
-    public static check(deploy: Partial<IManifestDeploymentUpdate|IManifestDeploymentLegacy> = {}): IManifestDeployment {
+    public static check(deploy: Partial<IManifestDeployment|IManifestDeploymentUpdate1|IManifestDeploymentLegacy> = {}, names: string[]): IManifestDeployment {
         const data = this.DEFAULT;
         if (deploy.enabled!=undefined) {
             data.enabled = deploy.enabled;
@@ -52,17 +57,29 @@ export class ManifestWorkspaceDeploymentLoader {
                     ];
                 }
                 data.credenciales = ManifestWorkspaceDeploymentCredencialesLoader.check(deploy.credenciales);
+                if (typeof deploy.kustomize == "string") {
+                    data.kustomize = names.map(name=>ManifestWorkspaceDeploymentKustomizeLoader.check({name, dir: deploy.kustomize as string}));
+                } else if (Array.isArray(deploy.kustomize)) {
+                    data.kustomize = deploy.kustomize.map(k=>ManifestWorkspaceDeploymentKustomizeLoader.check(k));
+                } else if (deploy.kustomize!=undefined && "legacy" in deploy.kustomize && typeof deploy.kustomize.legacy === "string") {
+                    data.kustomize = [];
+                    for (const name of names) {
+                        data.kustomize.push(ManifestWorkspaceDeploymentKustomizeLoader.check({
+                            name,
+                            dir: deploy.kustomize.legacy,
+                        }));
+                    }
+                }
                 if (deploy.imagen==undefined) {
-                    data.imagen = ManifestWorkspaceDeploymentImagenLoader.check(deploy.imagen);
+                    data.imagen = ManifestWorkspaceDeploymentImagenLoader.check(deploy.imagen, names.at(0), data.kustomize?.[0].dir);
                 } else if (typeof deploy.imagen == "string") {
                     data.imagen = ManifestWorkspaceDeploymentImagenLoader.check({
                         produccion: deploy.imagen,
                         test: deploy.imagen,
-                    });
+                    }, names.at(0), data.kustomize?.[0].dir);
                 } else {
-                    data.imagen = ManifestWorkspaceDeploymentImagenLoader.check(deploy.imagen);
+                    data.imagen = ManifestWorkspaceDeploymentImagenLoader.check(deploy.imagen, names.at(0), data.kustomize?.[0].dir);
                 }
-                data.kustomize = ManifestWorkspaceDeploymentKustomizeLoader.check(typeof deploy.kustomize == "string" ? {legacy: deploy.kustomize} : deploy.kustomize);
                 break;
             case ManifestDeploymentKind.BROWSER:
                 if (deploy.storage==undefined) {
@@ -77,13 +94,13 @@ export class ManifestWorkspaceDeploymentLoader {
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>): IManifestDeployment {
+    public static fromLegacy(config: Partial<IManifestLegacy>, names: string[]): IManifestDeployment {
         let type: ManifestDeploymentKind;
         let alone: boolean|undefined;
         let arch: string[]|undefined;
         let credenciales: IManifestDeploymentCredenciales[]|undefined;
         let imagen: IManifestDeploymentImagen|undefined;
-        let kustomize: IManifestDeploymentKustomize | undefined;
+        let kustomize: IManifestDeploymentKustomize[] | undefined;
         let storage: IManifestDeploymentStorage|undefined;
 
         const cronjob = config.cronjob ?? false;
@@ -96,10 +113,22 @@ export class ManifestWorkspaceDeploymentLoader {
             ];
             credenciales = ManifestWorkspaceDeploymentCredencialesLoader.fromLegacy(config);
             imagen = {
-                produccion: config.imagen,
-                test: config.imagen,
+                produccion: config.imagen ? {
+                    paquete: config.imagen,
+                    nombre: names.at(0) ?? "defecto",
+                } : {
+                    paquete: "services",
+                    nombre: names.at(0) ?? "defecto",
+                },
+                test: config.imagen ? {
+                    paquete: config.imagen,
+                    nombre: names.at(0) ?? "defecto",
+                } : {
+                    paquete: "services",
+                    nombre: names.at(0) ?? "defecto",
+                },
             };
-            kustomize = ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config);
+            kustomize = names.map(name=>ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config, name));
         } else {
             switch(config.runtime) {
                 case RuntimeLegacy.node:
@@ -111,11 +140,23 @@ export class ManifestWorkspaceDeploymentLoader {
                         "linux/arm64",
                     ];
                     imagen = {
-                        produccion: config.imagen,
-                        test: config.imagen,
+                        produccion: config.imagen ? {
+                            paquete: config.imagen,
+                            nombre: names.at(0) ?? "defecto",
+                        } : {
+                            paquete: "services",
+                            nombre: names.at(0) ?? "defecto",
+                        },
+                        test: config.imagen ? {
+                            paquete: config.imagen,
+                            nombre: names.at(0) ?? "defecto",
+                        } : {
+                            paquete: "services",
+                            nombre: names.at(0) ?? "defecto",
+                        },
                     };
                     credenciales = ManifestWorkspaceDeploymentCredencialesLoader.fromLegacy(config);
-                    kustomize = ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config);
+                    kustomize = names.map(name=>ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config, name));
                     break;
                 case RuntimeLegacy.browser:
                     type = ManifestDeploymentKind.BROWSER;

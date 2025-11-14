@@ -33,7 +33,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     CLUSTER="${6}"
 
     updateImagen "${KUSTOMIZER}" "${DIR}" "${WORKSPACE}" "${VERSION}"
-    kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
+    kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${ZONA}/${CLUSTER}/g" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
     echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
   }
   export -f parseWorkspaceEjecutar
@@ -46,10 +46,28 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     KUSTOMIZER="${5}"
     CLUSTER="${6}"
 
+    ALL="kustomizar/${KUSTOMIZER}/${SERVICIO}/_all"
     ENTORNOS="kustomizar/${KUSTOMIZER}/${SERVICIO}/entornos"
     CLIENTES="kustomizar/${KUSTOMIZER}/${SERVICIO}/clientes"
 
-    if [[ -d "${ENTORNOS}" ]]; then
+    if [[ -d "${ALL}" ]]; then
+      if [[ "${CLUSTER}" == "test" ]]; then
+        ENTORNO="test"
+      else
+        ENTORNO="produccion"
+      fi
+
+      ## todo el nombre de la imagen no se usa de cara al kustomize
+#      NOMBRE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .nombre // empty")
+#      if [[ -z "${NOMBRE}" || "${NOMBRE}" == "null" ]]; then
+#        NOMBRE="${WORKSPACE}"
+#      fi
+
+#      CLIENTE="${7:-*}"
+      bash "kustomizar/build.sh" "${PROJECT_ID}" "${KUSTOMIZER}" "${SERVICIO}" "${ENTORNO}" "${CLUSTER}" "${VERSION}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
+      echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
+
+    elif [[ -d "${ENTORNOS}" ]]; then
       if [[ -d "${ENTORNOS}/${CLUSTER}" ]]; then
         parseWorkspaceEjecutar "${ENTORNOS}/${CLUSTER}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${CLUSTER}" || exit 1
       fi
@@ -73,21 +91,59 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     echo "Kustomizando ${WORKSPACE}"
     confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > despliegue_${WORKSPACE}_{}.yaml"
 
-    SERVICIOS=$(config "${RUTA}/package.json" '.servicio | if type == "array" then .[] else . end')
     VERSION=$(cat "${RUTA}/version.txt" || echo "0000.00.00")
-    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
+    KUSTOMIZE_ARRAY=$(configw "${RUTA}" '.deploy.kustomize')
+    LENGTH=$(echo "${KUSTOMIZE_ARRAY}" | jq 'length')
+    for ((i=0; i<LENGTH; i++)); do
+      SERVICIO=$(echo "${KUSTOMIZE_ARRAY}" | jq -r ".[$i].name")
+      KUSTOMIZER=$(echo "${KUSTOMIZE_ARRAY}" | jq -r ".[$i].dir")
 
-    echo "${SERVICIOS}" | while read SERVICIO; do
       echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
 
-      confige '.[] | .resourceLabels.zona' | xargs -I '{}' -P 1 bash -c "parseWorkspaceCluster ${DIRECTORIO} ${WORKSPACE} ${SERVICIO} ${VERSION} ${KUSTOMIZER} {}" || exit 1
+      ZONAS=$(confige '.[] | .resourceLabels.zona')
+      for ZONA in ${ZONAS}; do
+        parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
+        STATUS=$?
+        if [[ $STATUS -ne 0 ]]; then
+          echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA}"
+          exit 1
+        fi
+      done
     done
+
+#    SERVICIOS=$(config "${RUTA}/package.json" '.servicio | if type == "array" then .[] else . end')
+#    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
+#
+#    for SERVICIO in ${SERVICIOS}; do
+#      echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
+#
+#      ZONAS=$(confige '.[] | .resourceLabels.zona')
+#      for ZONA in ${ZONAS}; do
+#        parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
+#        STATUS=$?
+#        if [[ $STATUS -ne 0 ]]; then
+#          echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA}"
+#          exit 1
+#        fi
+#      done
+#    done
   }
   export -f parseWorkspace
 
   lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" || exit 1 &
+  PID1=$!
   lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" || exit 1 &
-  wait
+  PID2=$!
+
+  wait $PID1
+  STATUS1=$?
+  wait $PID2
+  STATUS2=$?
+
+  if [[ $STATUS1 -ne 0 || $STATUS2 -ne 0 ]]; then
+    echo "Error ejecutando kustomize"
+    exit 1
+  fi
 else
     echo "Omitiendo kustomización"
 fi

@@ -1,9 +1,7 @@
-import webpack from "webpack";
+import {Entry as TEntry} from "@rspack/core";
 
 import {BuildFW} from "../manifest/workspace/build";
 import {Runtime} from "../manifest/workspace/deployment";
-
-type TEntry = webpack.Configuration["entry"];
 
 interface IEntryConfig {
     basedir: string;

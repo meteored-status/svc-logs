@@ -1,8 +1,7 @@
 import path from "node:path";
+import {Filename, Output as TOutput} from "@rspack/core";
 
 import {Runtime} from "../manifest/workspace/deployment";
-
-type ChunkFunction = string|((pathData: any, assetInfo?: any) => string);
 
 interface IOutputConfig {
     basedir: string;
@@ -12,15 +11,15 @@ interface IOutputConfig {
 
 export class Output {
     /* STATIC */
-    protected static buildNode({basedir}: IOutputConfig): Output {
-        return new this('[name].js', basedir, 'output');
+    protected static buildNode({basedir}: IOutputConfig): TOutput {
+        return new this('[name].js', basedir, 'output', false);
     }
 
-    protected static buildBrowser({basedir, desarrollo, css_critico}: IOutputConfig): Output {
+    protected static buildBrowser({basedir, desarrollo, css_critico}: IOutputConfig): TOutput {
         const output: string = !css_critico?"output/bundle":"output/critical";
         const filename: string = desarrollo?'[name].js':'[name]/[contenthash].js';
 
-        return new this(filename, basedir, output, (pathData)=>{
+        return new this(filename, basedir, output, true/*, (pathData: PathData): string => {
             let id = desarrollo?
                 `${pathData.chunk.id}`:
                 `${pathData.chunk.name}/${pathData.chunk.renderedHash}`;
@@ -37,10 +36,10 @@ export class Output {
 
             const name = id.replace(/-/g, "/");
             return `${name}.js`;
-        });
+        }*/);
     }
 
-    public static build(runtime: Runtime, config: IOutputConfig): Output {
+    public static build(runtime: Runtime, config: IOutputConfig): TOutput {
         switch (runtime) {
             case Runtime.node:
                 return this.buildNode(config);
@@ -55,9 +54,9 @@ export class Output {
     public readonly uniqueName: string;
     public readonly path: string;
 
-    public readonly chunkFilename?: ChunkFunction;
+    public readonly chunkFilename?: Filename;
 
-    public constructor(public readonly filename: string, basedir: string, output: string, chunkFilename?: ChunkFunction) {
+    public constructor(public readonly filename: Filename, basedir: string, output: string, public readonly clean: boolean, chunkFilename?: Filename) {
         this.chunkFilename = chunkFilename;
         this.path = path.resolve(basedir, output);
         this.uniqueName = path.basename(basedir);

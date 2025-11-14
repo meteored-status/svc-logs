@@ -51,3 +51,7 @@ export interface IPackageJson {
     workspaces?: string[];
     hash?: string;
 }
+
+export interface IPackageJsonLegacy extends IPackageJson {
+    servicio?: string | string[];
+}

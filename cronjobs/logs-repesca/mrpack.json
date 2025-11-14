@@ -9,9 +9,22 @@
             "linux/amd64",
             "linux/arm64"
         ],
-        "kustomize": {
-            "legacy": "services"
-        }
+        "imagen": {
+            "produccion": {
+                "paquete": "services",
+                "nombre": "logs-repesca"
+            },
+            "test": {
+                "paquete": "services",
+                "nombre": "logs-repesca"
+            }
+        },
+        "kustomize": [
+            {
+                "name": "logs-repesca",
+                "dir": "services"
+            }
+        ]
     },
     "devel": {
         "enabled": false

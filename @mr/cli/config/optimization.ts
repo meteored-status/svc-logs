@@ -1,9 +1,7 @@
-import TerserPlugin from "terser-webpack-plugin";
-import webpack from "webpack";
+// import TerserPlugin from "terser-webpack-plugin";
+import {Optimization as TOptimization} from "@rspack/core";
 
 import {Runtime} from "../manifest/workspace/deployment";
-
-type TOptimization = webpack.Configuration['optimization'];
 
 export class Optimization {
     /* STATIC */
@@ -11,31 +9,31 @@ export class Optimization {
         return {
             concatenateModules: false,
             minimize: !desarrollo,
-            minimizer: [
-                new TerserPlugin({
-                    terserOptions: {
-                        // mangle: {
-                        //     properties: {
-                        //         regex: /.*/,
-                        //         reserved: [
-                        //             "env",
-                        //             "setMaxListeners",
-                        //             "pipeline",
-                        //             "promisify",
-                        //         ],
-                        //     }
-                        // },
-                        compress: {
-                            // keep_fargs: false,
-                            passes: 10,
-                            // toplevel: true,
-                            // top_retain: [
-                            // ],
-                            unused: true,
-                        },
-                    },
-                }),
-            ],
+            // minimizer: [
+            //     new TerserPlugin({
+            //         terserOptions: {
+            //             // mangle: {
+            //             //     properties: {
+            //             //         regex: /.*/,
+            //             //         reserved: [
+            //             //             "env",
+            //             //             "setMaxListeners",
+            //             //             "pipeline",
+            //             //             "promisify",
+            //             //         ],
+            //             //     }
+            //             // },
+            //             compress: {
+            //                 // keep_fargs: false,
+            //                 passes: 10,
+            //                 // toplevel: true,
+            //                 // top_retain: [
+            //                 // ],
+            //                 unused: true,
+            //             },
+            //         },
+            //     }),
+            // ],
         };
     }
 
@@ -43,20 +41,20 @@ export class Optimization {
         return {
             concatenateModules: true,
             minimize: !desarrollo,
-            minimizer: [
-                new TerserPlugin({
-                    terserOptions: {
-                        compress: {
-                            // keep_fargs: false,
-                            passes: 10,
-                            // toplevel: true,
-                            // top_retain: [
-                            // ],
-                            unused: true,
-                        },
-                    },
-                }),
-            ],
+            // minimizer: [
+            //     new TerserPlugin({
+            //         terserOptions: {
+            //             compress: {
+            //                 // keep_fargs: false,
+            //                 passes: 10,
+            //                 // toplevel: true,
+            //                 // top_retain: [
+            //                 // ],
+            //                 unused: true,
+            //             },
+            //         },
+            //     }),
+            // ],
             runtimeChunk: 'single',
             splitChunks: {
                 cacheGroups: {

@@ -1,6 +1,5 @@
 {
   "name": "logs-repesca",
-  "servicio": "logs-repesca",
   "version": "0000.00.00-000",
   "description": "Servicio de repesca de logs",
   "repository": "git+https://github.com/meteored-status/svc-logs.git",
@@ -15,21 +14,21 @@
     "devel": "yarn node --no-warnings devel.js"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "^9.1.1",
-    "@google-cloud/storage": "^7.17.1",
+    "@elastic/elasticsearch": "^9.2.0",
+    "@google-cloud/storage": "^7.17.3",
     "crawler-user-agents": "^1.21.0",
-    "dd-trace": "^5.67.0",
+    "dd-trace": "^5.77.0",
     "geoip-lite": "^1.4.10",
-    "mysql2": "^3.15.1",
+    "mysql2": "^3.15.3",
     "source-map-support": "^0.5.21",
     "stream-shift": "1.0.3",
-    "superjson": "^2.2.2",
+    "superjson": "^2.2.5",
     "tslib": "^2.8.1",
-    "ua-parser-js": "^2.0.5"
+    "ua-parser-js": "^2.0.6"
   },
   "devDependencies": {
     "@types/geoip-lite": "^1.4.4",
-    "@types/node": "^22.18.7",
+    "@types/node": "^24.10.1",
     "logs-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"

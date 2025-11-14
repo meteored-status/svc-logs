@@ -348,6 +348,12 @@ export class Elasticsearch {
                     rejectUnauthorized: true,
                 };
             }
+        } else {
+            if (DESARROLLO) {
+                tls = {
+                    rejectUnauthorized: false,
+                }
+            }
         }
 
         return {

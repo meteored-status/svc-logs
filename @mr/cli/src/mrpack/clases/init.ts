@@ -17,7 +17,7 @@ import {Colors} from "./colors";
 import {Comando} from "./comando";
 import type {IManifestLegacy} from "./manifest/workspace/legacy";
 import {type IPackageFW, PaqueteTipo} from "./paquete";
-import type {IPackageJson as IPackageJsonBase} from "./packagejson";
+import type {IPackageJson as IPackageJsonBase, IPackageJsonLegacy} from "./packagejson";
 import type {IConfigServices} from "./workspace/service";
 import {Framework} from "./framework";
 import {ManifestWorkspaceLoader} from "./manifest/workspace";
@@ -130,7 +130,7 @@ export class Init {
             "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
             "packd": "yarn mrpack devel -c",
             "packd-f": "yarn mrpack devel -c -f",
-            "g:packd": "TS_NODE_PROJECT=\"config/tsconfig.json\" yarn workspace @mr/cli webpack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"config/webpack.config.ts\"",
+            "g:packd": "TS_NODE_PROJECT=\"config/tsconfig.json\" yarn workspace @mr/cli rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"config/rspack.config.ts\"",
             "update": "yarn mrpack update",
         };
         const bin = paquete.bin!=undefined;
@@ -396,12 +396,18 @@ export class Init {
         const paquete = await readJSON<IPackageJson>(`${basedir}/package.json`);
         let config: ManifestWorkspaceLoader;
         if (paquete.config!=undefined) {
-            config = new ManifestWorkspaceLoader(basedir).fromLegacy(paquete.config);
+            config = new ManifestWorkspaceLoader(basedir).fromLegacy(paquete.config, paquete);
             await config.save();
             delete paquete.config;
             await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
         } else {
-            config = await new ManifestWorkspaceLoader(basedir).load();
+            if ("servicio" in paquete) {
+                config = await new ManifestWorkspaceLoader(basedir).load(false, paquete as IPackageJsonLegacy);
+                delete paquete.servicio;
+                await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+            } else {
+                config = await new ManifestWorkspaceLoader(basedir).load();
+            }
         }
 
         return {paquete, config: config.manifest};
@@ -523,8 +529,12 @@ export class Init {
             await Promise.all([
                 safeWrite(`${basedir}/app.js`, APP({type: config.deploy.type}), true),
                 safeWrite(`${basedir}/devel.js`, DEVEL, true),
-                safeWrite(`${basedir}/init.js`, ``, false),
             ]);
+        }
+
+        if (await isFile(`${basedir}/init.js`)) {
+            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/init.js`));
+            await unlink(`${basedir}/init.js`);
         }
 
         if (await isFile(`${basedir}/output/.foreverignore`)) {
@@ -555,6 +565,10 @@ export class Init {
             }
             if (!contenido.includes("COPY ./${RUTA}/${WS}/mrpack.json")) {
                 contenido = contenido.replace("COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}", "COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}\nCOPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}");
+                cambio = true;
+            }
+            if (contenido.includes("COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}")) {
+                contenido = contenido.replace("COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}\n", "");
                 cambio = true;
             }
             if (cambio) {

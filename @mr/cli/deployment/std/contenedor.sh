@@ -16,7 +16,7 @@ if [[ -f "GENERAR.txt" ]]; then
     WORKSPACE=$(path2 "${RUTA}")
 
     VERSION=$(cat "${RUTA}/version.txt")
-    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
+#    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
 
     echo "${RUTA}: Versión ${VERSION}"
 
@@ -31,11 +31,23 @@ if [[ -f "GENERAR.txt" ]]; then
         mkdir -p "${RUTA}/public"
       fi
 
-      BASE_IMAGE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}")
-      if [[ "${BASE_IMAGE}" == "null" ]]; then
+      BASE_IMAGE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .base // empty")
+      if [[ -z "${BASE_IMAGE}" || "${BASE_IMAGE}" == "null" ]]; then
         BASE_IMAGE="node:lts-alpine"
       else
         BASE_IMAGE=$(echo "${BASE_IMAGE}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g")
+      fi
+      REGISTRO=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .registro // empty")
+      if [[ -z "${REGISTRO}" || "${REGISTRO}" == "null" ]]; then
+        REGISTRO="europe-west1-docker.pkg.dev"
+      fi
+      PAQUETE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .paquete // empty")
+      if [[ -z "${PAQUETE}" || "${PAQUETE}" == "null" ]]; then
+        PAQUETE="services"
+      fi
+      NOMBRE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .nombre // empty")
+      if [[ -z "${NOMBRE}" || "${NOMBRE}" == "null" ]]; then
+        NOMBRE="${WORKSPACE}"
       fi
       echo "${RUTA}: ${BASE_IMAGE}"
       ARCH=$(configw "${RUTA}" '.deploy.arch // empty | select(type == "array") | join(",")')
@@ -61,7 +73,7 @@ if [[ -f "GENERAR.txt" ]]; then
       if [[ -f "DESPLEGAR.txt" ]]; then
         DEPLOYED="deployed"
       else
-        DEPLOYED="ratained"
+        DEPLOYED="retained"
       fi
 
       docker buildx build \
@@ -73,29 +85,29 @@ if [[ -f "GENERAR.txt" ]]; then
         --build-arg BASE_IMAGE="${BASE_IMAGE}" \
         --build-arg DD_GIT_REPOSITORY_URL="${REPO_FULL_NAME}" \
         --build-arg DD_GIT_COMMIT_SHA="${COMMIT_SHA}" \
-        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:latest" \
-        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}" \
-        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}" \
-        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}" \
-        --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${DEPLOYED}_${_ENTORNO}" \
+        --tag "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:latest" \
+        --tag "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}" \
+        --tag "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${HASH}" \
+        --tag "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${_ENTORNO}" \
+        --tag "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${DEPLOYED}_${_ENTORNO}" \
         --push .
 
 #      echo "${RUTA}: Añadiendo etiquetas"
-#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}"
-#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
-#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${HASH}"
+#      docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${_ENTORNO}"
 #      if [[ -f "DESPLEGAR.txt" ]]; then
-#        docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed_${_ENTORNO}"
+#        docker tag "${PROJECT_ID}/${DIRECTORIO}-${WORKSPACE}" "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:deployed_${_ENTORNO}"
 #      fi
 #
 #      echo "${RUTA}: Subiendo contenedor"
-#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:latest"
-#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${HASH}"
-#      docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${_ENTORNO}"
+#      docker push "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:latest"
+#      docker push "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}"
+#      docker push "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${HASH}"
+#      docker push "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${_ENTORNO}"
 #      if [[ -f "DESPLEGAR.txt" ]]; then
-#        docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}"
+#        docker push "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:deployed-${_ENTORNO}"
 #      fi
 
     else
@@ -105,9 +117,17 @@ if [[ -f "GENERAR.txt" ]]; then
   export -f parseWorkspace
 
   lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  PID1=$!
   lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
-  wait
-
+  PID2=$!
+  wait $PID1
+  STATUS1=$?
+  wait $PID2
+  STATUS2=$?
+  if [[ $STATUS1 -ne 0 || $STATUS2 -ne 0 ]]; then
+    echo "Error generando contenedor"
+    exit 1
+  fi
 else
 
   if [[ -f "DESPLEGAR.txt" ]]; then
@@ -123,28 +143,50 @@ else
         WORKSPACE=$(path2 "${RUTA}")
 
         VERSION=$(cat "${RUTA}/version.txt")
-        KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
+#        KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
+
+        REGISTRO=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .registro // empty")
+        if [[ -z "${REGISTRO}" || "${REGISTRO}" == "null" ]]; then
+          REGISTRO="europe-west1-docker.pkg.dev"
+        fi
+        PAQUETE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .paquete // empty")
+        if [[ -z "${PAQUETE}" || "${PAQUETE}" == "null" ]]; then
+          PAQUETE="services"
+        fi
+        NOMBRE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .nombre // empty")
+        if [[ -z "${NOMBRE}" || "${NOMBRE}" == "null" ]]; then
+          NOMBRE="${WORKSPACE}"
+        fi
 
         docker buildx imagetools create \
-          --tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}" \
-          "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+          --tag "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:deployed-${_ENTORNO}" \
+          "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}"
 
-#        docker pull "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+#        docker pull "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}"
 ##       echo "Versiones actuales"
-##       TAGS=$(gcloud artifacts docker images list "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}" --format="get(tags)" | tr ',' '\n' | grep "${VERSION}")
+##       TAGS=$(gcloud artifacts docker images list "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}" --format="get(tags)" | tr ',' '\n' | grep "${VERSION}")
 ##       echo "${TAGS}"
 ##       if ! echo "${TAGS}" | grep -q "deployed_${_ENTORNO}"; then
 #          echo "Actualizando las etiquetas del contenedor"
-#          docker tag "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}" "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}"
-#          docker push "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:deployed-${_ENTORNO}"
+#          docker tag "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}" "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:deployed-${_ENTORNO}"
+#          docker push "${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:deployed-${_ENTORNO}"
 ##       fi
       }
 
       export -f parseWorkspace
 
       lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+      PID1=$!
       lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
-      wait
+      PID2=$!
+      wait $PID1
+      STATUS1=$?
+      wait $PID2
+      STATUS2=$?
+      if [[ $STATUS1 -ne 0 || $STATUS2 -ne 0 ]]; then
+        echo "Error tageando contenedor"
+        exit 1
+      fi
     else
       echo "Omitiendo la generación de contenedores"
     fi

@@ -188,7 +188,7 @@ export class Compilar {
         const entorno: Record<string, string> = {
             TS_NODE_PROJECT: "config/tsconfig.json",
         };
-        const {status, stdout, stderr} = await Comando.spawn("yarn", ["workspace", "@mr/cli", "webpack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `config/webpack.config.ts`], {cwd: this.basedir, env: entorno, colores: false});
+        const {status, stdout, stderr} = await Comando.spawn("yarn", ["workspace", "@mr/cli", "rspack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `config/rspack.config.ts`], {cwd: this.basedir, env: entorno, colores: false});
         if (status != 0) {
             console.error(this.name, "[KO   ]", "Error compilando:");
             console.error(stdout);
@@ -279,15 +279,27 @@ export class Compilar {
         const hashes = [
             JSON.stringify(this.packagejson.dependencies??{}),
         ];
-        if (this.config.deploy.imagen!=undefined) {
-            if (env=="test") {
-                if (this.config.deploy.imagen.test!=undefined) {
-                    hashes.push(this.config.deploy.imagen.test);
+        if (this.config.deploy.imagen) {
+            if (env==="test") {
+                if (this.config.deploy.imagen.test) {
+                    if (this.config.deploy.imagen.test.base) {
+                        hashes.push(this.config.deploy.imagen.test.base);
+                    }
+                    if (this.config.deploy.imagen.test.registro) {
+                        hashes.push(this.config.deploy.imagen.test.registro);
+                    }
+                    hashes.push(this.config.deploy.imagen.test.paquete);
+                    hashes.push(this.config.deploy.imagen.test.nombre);
                 }
-            } else {
-                if (this.config.deploy.imagen.produccion!=undefined) {
-                    hashes.push(this.config.deploy.imagen.produccion);
+            } else if (this.config.deploy.imagen.produccion) {
+                if (this.config.deploy.imagen.produccion.base) {
+                    hashes.push(this.config.deploy.imagen.produccion.base);
                 }
+                if (this.config.deploy.imagen.produccion.registro) {
+                    hashes.push(this.config.deploy.imagen.produccion.registro);
+                }
+                hashes.push(this.config.deploy.imagen.produccion.paquete);
+                hashes.push(this.config.deploy.imagen.produccion.nombre);
             }
         }
         for (const actual of checks) {

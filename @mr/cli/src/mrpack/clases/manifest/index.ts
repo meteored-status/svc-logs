@@ -2,6 +2,7 @@ import {readJSON, readJSONSync, safeWrite} from "services-comun/modules/utiles/f
 import {md5} from "services-comun/modules/utiles/hash";
 
 import type {ManifestRoot} from "../../../../manifest";
+import type {IPackageJsonLegacy} from "../packagejson";
 
 type ManifestDefault<T> = {DEFAULT: T};
 type ManifestLoad<T, K extends ManifestRoot<T>> = new (manifest: T)=>K;
@@ -25,13 +26,13 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         this.guardando = false;
     }
 
-    public abstract check(manifest?: Partial<T>): T;
+    public abstract check(manifest?: Partial<T>, paquete?: IPackageJsonLegacy): T;
 
-    public async load(env: boolean = false): Promise<ManifestLoader<T, K>> {
+    public async load(env: boolean = false, paquete?: IPackageJsonLegacy): Promise<ManifestLoader<T, K>> {
         const guardar = await readJSON<Partial<T>>(this.file)
             .then((manifest) => {
                 const hash_inicial = md5(JSON.stringify(manifest));
-                this.manifest = new this.Manifest(this.check(manifest));
+                this.manifest = new this.Manifest(this.check(manifest, paquete));
                 const hash_final = md5(JSON.stringify(this.manifest));
 
                 return hash_inicial!=hash_final;
@@ -51,10 +52,10 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         return this;
     }
 
-    public loadSync(): ManifestLoader<T, K> {
+    public loadSync(paquete?: IPackageJsonLegacy): ManifestLoader<T, K> {
         const salida = readJSONSync<Partial<T>>(this.file);
         if (salida!=null) {
-            this.manifest = new this.Manifest(this.check(salida));
+            this.manifest = new this.Manifest(this.check(salida, paquete));
         } else {
             this.manifest = new this.Manifest(this.defecto.DEFAULT);
         }

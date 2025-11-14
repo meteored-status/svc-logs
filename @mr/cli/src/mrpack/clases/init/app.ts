@@ -28,6 +28,8 @@ export default ({type}: IApp)=>{
     }
 
     return `
+require("source-map-support").install();
+
 process.env.CLIENTE ??= "";
 process.env.ENTORNO ??= "desarrollo";
 process.env.ZONA ??= "desarrollo";
@@ -40,8 +42,6 @@ ${lists.join("\n")}${tracer.join("")}
 Symbol.dispose ??= Symbol("Symbol.dispose");
 Symbol.asyncDispose ??= Symbol("Symbol.asyncDispose");
 
-require("./init");
-require("source-map-support").install();
 require("./output/app");
 `.trimStart()
 };

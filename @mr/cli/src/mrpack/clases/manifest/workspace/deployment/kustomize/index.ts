@@ -6,14 +6,18 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
     /* STATIC */
     public static get DEFAULT(): IManifestDeploymentKustomize {
         return {
-            legacy: "services",
+            name: "",
+            dir: "services",
         };
     }
 
     public static check(kustomize: Partial<IManifestDeploymentKustomize> = {}): IManifestDeploymentKustomize {
         const data = this.DEFAULT;
-        if (kustomize.legacy != undefined) {
-            data.legacy = kustomize.legacy;
+        if (kustomize.name != undefined) {
+            data.name = kustomize.name;
+        }
+        if (kustomize.dir != undefined) {
+            data.dir = kustomize.dir;
         }
         if (kustomize.credenciales != undefined) {
             data.credenciales = {};
@@ -39,17 +43,17 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>): IManifestDeploymentKustomize {
-        let legacy: string | undefined;
+    public static fromLegacy(config: Partial<IManifestLegacy>, name: string): IManifestDeploymentKustomize {
+        let dir: string | undefined;
 
         const cronjob = config.cronjob ?? false;
         if (cronjob) {
-            legacy = config.kustomize;
+            dir = config.kustomize;
         } else {
             switch (config.runtime) {
                 case RuntimeLegacy.node:
                 case RuntimeLegacy.php:
-                    legacy = config.kustomize;
+                    dir = config.kustomize;
                     break;
                 case RuntimeLegacy.browser:
                     break;
@@ -61,7 +65,8 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
         }
 
         return {
-            legacy,
+            name,
+            dir,
         };
     }
 
