@@ -115,7 +115,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           echo "set -e" >> "${BASETOP}/lambda.sh"
           echo "" >> "${BASETOP}/lambda.sh"
         fi
-        echo "cat \"${BASETOP}/@mr/cli/deployment/std/cloud-run.yml\" | sed \"s/\${PROJECT_ID}/${PROJECT_ID}/g\" | sed \"s/\${KUSTOMIZER}/${KUSTOMIZER}/g\" sed \"s/\${SERVICIO}/${SERVICIO}/g\" sed \"s/\${VERSION}/${VERSION}/g\" | gcloud run services replace --file - --region europe-west1" >> "${BASETOP}/lambda.sh"
+        echo "cat \"${BASETOP}/@mr/cli/deployment/std/cloud-run.yml\" | sed \"s/\${PROJECT_ID}/${PROJECT_ID}/g\" | sed \"s/\${KUSTOMIZER}/${KUSTOMIZER}/g\" | sed \"s/\${SERVICIO}/${SERVICIO}/g\" | sed \"s/\${VERSION}/${VERSION}/g\" | gcloud run services replace --file - --region europe-west1" >> "${BASETOP}/lambda.sh"
         cat "${BASETOP}/lambda.sh"
 #        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
       fi
