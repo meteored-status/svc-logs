@@ -88,7 +88,6 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     DIRECTORIO=$(path1 "${RUTA}")
     WORKSPACE=$(path2 "${RUTA}")
 
-    echo "Kustomizando ${WORKSPACE}"
     confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > despliegue_${WORKSPACE}_{}.yaml"
 
     VERSION=$(cat "${RUTA}/version.txt" || echo "0000.00.00")
@@ -116,29 +115,11 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           echo "set -e" >> "${BASETOP}/lambda.sh"
           echo "" >> "${BASETOP}/lambda.sh"
         fi
-#        europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
         cat "\"${BASETOP}/@mr/cli/deployment/std/cloud-run.yml\" | sed \"s/\${PROJECT_ID}/${PROJECT_ID}/g\" | sed \"s/\${KUSTOMIZER}/${KUSTOMIZER}/g\" sed \"s/\${SERVICIO}/${SERVICIO}/g\" sed \"s/\${VERSION}/${VERSION}/g\" | gcloud run services replace --file - --region europe-west1" >> "${BASETOP}/lambda.sh"
         cat "${BASETOP}/lambda.sh"
 #        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
       fi
     done
-
-#    SERVICIOS=$(config "${RUTA}/package.json" '.servicio | if type == "array" then .[] else . end')
-#    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
-#
-#    for SERVICIO in ${SERVICIOS}; do
-#      echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
-#
-#      ZONAS=$(confige '.[] | .resourceLabels.zona')
-#      for ZONA in ${ZONAS}; do
-#        parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
-#        STATUS=$?
-#        if [[ $STATUS -ne 0 ]]; then
-#          echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA}"
-#          exit 1
-#        fi
-#      done
-#    done
   }
   export -f parseWorkspace
 

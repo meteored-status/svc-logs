@@ -1,4 +1,4 @@
-import {type IManifestDeployment, ManifestDeploymentKind, Runtime} from "@mr/cli/manifest/deployment";
+import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/cli/manifest/deployment";
 import type {IManifestDeploymentCredenciales} from "@mr/cli/manifest/deployment/credenciales";
 import type {IManifestDeploymentImagen} from "@mr/cli/manifest/deployment/imagen";
 import type {IManifestDeploymentKustomize} from "@mr/cli/manifest/deployment/kustomize";
@@ -10,10 +10,14 @@ import {ManifestWorkspaceDeploymentKustomizeLoader} from "./kustomize";
 import {ManifestWorkspaceDeploymentStorageLoader} from "./storage";
 import {IManifestDeploymentLegacy, type IManifestLegacy, RuntimeLegacy} from "../legacy";
 
-type IManifestDeploymentUpdate = IManifestDeployment | Exclude<IManifestDeployment, "kustomize"> & {
+type IManifestDeploymentUpdate1 = Exclude<IManifestDeployment, "kustomize"> & {
     kustomize?: string;
 }
-
+type IManifestDeploymentUpdate2 = Exclude<IManifestDeployment, "kustomize"> & {
+    kustomize: {
+        legacy: string;
+    };
+}
 export class ManifestWorkspaceDeploymentLoader {
     /* STATIC */
     public static get DEFAULT(): IManifestDeployment {
@@ -22,11 +26,12 @@ export class ManifestWorkspaceDeploymentLoader {
             type: ManifestDeploymentKind.SERVICE,
             imagen: ManifestWorkspaceDeploymentImagenLoader.DEFAULT,
             runtime: Runtime.node,
+            target: Target.k8s,
             kustomize: [],//ManifestWorkspaceDeploymentKustomizeLoader.DEFAULT,
         };
     }
 
-    public static check(deploy: Partial<IManifestDeploymentUpdate|IManifestDeploymentLegacy> = {}, names: string[]): IManifestDeployment {
+    public static check(deploy: Partial<IManifestDeployment|IManifestDeploymentUpdate1|IManifestDeploymentUpdate2|IManifestDeploymentLegacy> = {}, names: string[]): IManifestDeployment {
         const data = this.DEFAULT;
         if (deploy.enabled!=undefined) {
             data.enabled = deploy.enabled;
@@ -42,6 +47,9 @@ export class ManifestWorkspaceDeploymentLoader {
             case ManifestDeploymentKind.SERVICE:
             case ManifestDeploymentKind.CRONJOB:
             case ManifestDeploymentKind.JOB:
+                if ("target" in deploy && deploy.target) {
+                    data.target = deploy.target;
+                }
                 data.alone = deploy.alone ?? false;
                 if ("arch" in deploy) {
                     data.arch = deploy.arch;
@@ -77,12 +85,14 @@ export class ManifestWorkspaceDeploymentLoader {
                 }
                 break;
             case ManifestDeploymentKind.BROWSER:
+                data.target = Target.none;
                 if (deploy.storage==undefined) {
                     throw new Error(`ManifestDeployment: deploy.storage no definido para "${data.type}"`);
                 }
                 data.storage = ManifestWorkspaceDeploymentStorageLoader.check(deploy.storage);
                 break
             case ManifestDeploymentKind.WORKER:
+                data.target = Target.none;
                 break;
         }
 
@@ -91,6 +101,7 @@ export class ManifestWorkspaceDeploymentLoader {
 
     public static fromLegacy(config: Partial<IManifestLegacy>, names: string[]): IManifestDeployment {
         let type: ManifestDeploymentKind;
+        let target: Target;
         let alone: boolean|undefined;
         let arch: string[]|undefined;
         let credenciales: IManifestDeploymentCredenciales[]|undefined;
@@ -168,16 +179,20 @@ export class ManifestWorkspaceDeploymentLoader {
         switch(config.runtime) {
             case RuntimeLegacy.browser:
                 runtime = Runtime.browser;
+                target = Target.none;
                 break;
             case RuntimeLegacy.cfworker:
                 runtime = Runtime.cfworker;
+                target = Target.none;
                 break;
             case RuntimeLegacy.php:
                 runtime = Runtime.php;
+                target = Target.k8s;
                 break;
             case RuntimeLegacy.node:
             default:
                 runtime = Runtime.node;
+                target = Target.k8s;
                 break;
         }
 
@@ -185,6 +200,7 @@ export class ManifestWorkspaceDeploymentLoader {
             enabled: config.deploy ?? true,
             type,
             runtime,
+            target,
             alone,
             arch,
             credenciales,
