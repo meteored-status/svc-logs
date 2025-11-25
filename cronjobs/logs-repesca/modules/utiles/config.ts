@@ -1,7 +1,7 @@
 import {GOOGLE} from "logs-base/modules/utiles/config";
 import {
     Configuracion as ConfiguracionBase, Google,
-    IConfiguracion as IConfiguracionBase, IGoogle,
+    type IConfiguracion as IConfiguracionBase, type IGoogle,
 } from "services-comun/modules/utiles/config";
 
 interface IConfiguracionDefault extends IConfiguracionBase {
@@ -11,16 +11,15 @@ export class Configuracion extends ConfiguracionBase<IConfiguracionDefault> impl
     /* INSTANCE */
     public google: Google;
 
-    public constructor(defecto: IConfiguracionDefault, user: Partial<IConfiguracionDefault>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
-        super(defecto, user, servicios, version, cronjob);
+    public constructor(defecto: IConfiguracionDefault, user: Partial<IConfiguracionDefault>) {
+        super(defecto, user);
 
         this.google = new Google(defecto.google, this.user.google??{});
     }
 
     /* STATIC */
-    private static configuracion?: Configuracion;
     public static async load(): Promise<Configuracion> {
-        return this.configuracion??=await this.cargar<IConfiguracionDefault>({
+        return await this.cargar<IConfiguracionDefault>({
             google: GOOGLE,
         }) as Configuracion;
     }

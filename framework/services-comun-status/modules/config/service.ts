@@ -1,20 +1,20 @@
 import {
     ConfiguracionNet,
-    IConfiguracionNet,
+    type IConfiguracionNet,
 } from "services-comun/modules/net/config/config";
+
 import {SERVICES} from "../services/config";
 
-interface IConfiguracion extends IConfiguracionNet {
+export interface IConfiguracion extends IConfiguracionNet {
 }
-export class Configuracion extends ConfiguracionNet<IConfiguracion> implements IConfiguracion {
+export class Configuracion<T extends IConfiguracion = IConfiguracion> extends ConfiguracionNet<T> implements IConfiguracion {
     /* INSTANCE */
-    public constructor(defecto: IConfiguracion, user: Partial<IConfiguracion>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
-        super(defecto, user, servicios, version, cronjob, SERVICES);
+    public constructor(defecto: T, user: Partial<T>) {
+        super(defecto, user, SERVICES);
     }
 
     /* STATIC */
-    private static configuracion?: Configuracion;
     public static async load(): Promise<Configuracion> {
-        return this.configuracion??=await this.cargar<IConfiguracion>({}) as Configuracion;
+        return await this.cargar<IConfiguracion>({}) as Configuracion;
     }
 }

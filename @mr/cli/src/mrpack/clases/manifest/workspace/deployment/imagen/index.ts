@@ -11,16 +11,12 @@ export class ManifestWorkspaceDeploymentImagenLoader {
         };
     }
 
-    public static check(imagen?: Partial<IManifestDeploymentImagen|IManifestDeploymentImagenLegacy>, name?: string, paquete?: string): IManifestDeploymentImagen {
+    public static check(imagen?: Partial<IManifestDeploymentImagen|IManifestDeploymentImagenLegacy>, name?: string): IManifestDeploymentImagen {
         const data = this.DEFAULT;
         if (!imagen) {
             if (name) {
                 data.produccion.nombre = name;
                 data.test.nombre = name;
-            }
-            if (paquete) {
-                data.produccion.paquete = paquete;
-                data.test.paquete = paquete;
             }
             return data;
         }
@@ -32,9 +28,6 @@ export class ManifestWorkspaceDeploymentImagenLoader {
                 if (name) {
                     data.produccion.nombre = name;
                 }
-                if (paquete) {
-                    data.produccion.paquete = paquete;
-                }
             } else {
                 data.produccion = ManifestWorkspaceDeploymentImagenEntornoLoader.check(imagen.produccion);
             }
@@ -45,9 +38,6 @@ export class ManifestWorkspaceDeploymentImagenLoader {
                 data.test.base = imagen.test;
                 if (name) {
                     data.test.nombre = name;
-                }
-                if (paquete) {
-                    data.test.paquete = paquete;
                 }
             } else {
                 data.test = ManifestWorkspaceDeploymentImagenEntornoLoader.check(imagen.test);

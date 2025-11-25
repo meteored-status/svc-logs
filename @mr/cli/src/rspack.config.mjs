@@ -9,7 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const {dependencies} = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf-8"));
 const externals = [];
 for (let mod in dependencies) {
-    externals.push({[mod]: `commonjs ${mod}`});
+    if (mod==="@inquirer/prompts") {
+        externals.push({[mod]: `"${mod}"`});
+    } else {
+        externals.push({[mod]: `commonjs ${mod}`});
+    }
 }
 externals.push(({request}, callback)=>{
     if (request!=null) {

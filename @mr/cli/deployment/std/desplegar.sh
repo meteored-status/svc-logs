@@ -57,14 +57,6 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
   export -f parseCluster
 
-  parseLambda() {
-    BASETOP="${1}"
-    RUTA="${2}"
-
-    echo "${BASETOP} - ${RUTA}: Preparando Lambda"
-  }
-   export -f parseLambda
-
   if [[ -f "${BASETOP}/lambda.sh" ]]; then
     echo "Desplegando lambdas"
     sh "${BASETOP}/lambda.sh"

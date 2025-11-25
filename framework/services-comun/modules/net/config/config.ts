@@ -1,8 +1,9 @@
-import {Configuracion} from "../../utiles/config";
+import {Configuracion, IConfiguracion} from "../../utiles/config";
 import {INet, Net} from "./net";
 import {Service} from "../service";
+import type {IPodInfo} from "../../utiles/pod";
 
-export interface IConfiguracionNet {
+export interface IConfiguracionNet extends IConfiguracion {
     net?: INet;
 }
 export class ConfiguracionNet<T extends IConfiguracionNet=IConfiguracionNet> extends Configuracion<T> implements IConfiguracionNet {
@@ -11,14 +12,14 @@ export class ConfiguracionNet<T extends IConfiguracionNet=IConfiguracionNet> ext
     /* INSTANCE */
     public readonly net: Net;
 
-    protected constructor(defecto: T, user: Partial<T>, servicios: [string, ...string[]], version: string, cronjob: boolean, SERVICES?: Service) {
-        super(defecto, user, servicios, version, cronjob);
+    protected constructor(defecto: T, user: Partial<T>, services?: Service) {
+        super(defecto, user);
 
-        if (defecto.net==undefined) {
-            if (SERVICES==undefined) {
+        if (!defecto.net) {
+            if (!services) {
                 throw new Error("Parámetro SERVICES no definido");
             }
-            defecto.net = SERVICES.configuracion(this.pod.servicio)
+            defecto.net = services.configuracion(this.pod.servicio)
         }
 
         this.net = new Net(defecto.net, user.net??{});

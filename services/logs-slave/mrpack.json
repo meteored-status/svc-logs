@@ -4,7 +4,6 @@
         "enabled": true,
         "type": "service",
         "runtime": "node",
-        "target": "lambda",
         "alone": true,
         "arch": [
             "linux/amd64",
