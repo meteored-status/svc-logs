@@ -7,14 +7,12 @@ export interface IConfiguracion extends IConfiguracionBase {
 }
 export class Configuracion extends ConfiguracionBase<IConfiguracion> implements IConfiguracion {
     /* INSTANCE */
-    public constructor(defecto: IConfiguracion, user: Partial<IConfiguracion>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
-        super(defecto, user, servicios, version, cronjob);
+    public constructor(defecto: IConfiguracion, user: Partial<IConfiguracion>) {
+        super(defecto, user);
     }
 
     /* STATIC */
-    private static configuracion?: Configuracion;
     public static async load(): Promise<Configuracion> {
-        return this.configuracion??=await this.cargar<IConfiguracion>({
-        }) as Configuracion;
+        return this.cargar<IConfiguracion, Configuracion>({});
     }
 }
