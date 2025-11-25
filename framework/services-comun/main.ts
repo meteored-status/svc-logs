@@ -99,6 +99,7 @@ export class Main {
         await this.startSidecar();
 
         const configuracion = await configLoader.load();
+        configLoader.load = () => { throw new Error("Solo se puede cargar la configuración una vez"); };
         this.CRONJOB = configuracion. pod.cronjob;
         const engine = await Engine.build(configuracion, unix);
         try {

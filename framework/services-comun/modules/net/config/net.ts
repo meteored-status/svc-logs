@@ -73,7 +73,9 @@ export class Net implements INet {
             return {
                 ...comun,
                 puertos: {
-                    http: 8080,
+                    http: process.env["PORT"]!==undefined?
+                        parseInt(process.env["PORT"]!):
+                        8080,
                     https: 4433,
                     // grpc: 50050,
                 },

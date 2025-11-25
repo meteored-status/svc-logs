@@ -41,8 +41,6 @@ interface IManifestDeployment {
     - **tipo** [ManifestDeploymentKind](#manifestdeploymentkind).
 - `runtime`: Información sobre el entorno de ejecución.
     - **tipo** [Runtime](#runtime).
-- `target`: Destino donde desplegar la compilación.
-    - **tipo** [Target](#target).
 - `alone`: Indica si el despliegue se realiza en una sola zona. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo**: boolean
     - **opcional**: Por defecto `false`.
@@ -93,19 +91,6 @@ enum Runtime {
 - `browser`: Entorno de ejecución Browser.
 - `cfworker`: Entorno de ejecución Cloudflare Worker.
 - `php`: Entorno de ejecución PHP.
-
----
-## Target
-```typescript
-enum Target {
-    k8s = "k8s",
-    lambda = "lambda",
-    none = "none",
-}
-```
-- `k8s`: Desplegar en Kubernetes.
-- `lambda`: Desplegar en una Lambda.
-- `none`: Sin despliegue.
 
 ---
 ## IManifestDeploymentCredenciales

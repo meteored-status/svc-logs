@@ -1,14 +1,16 @@
-import os from "node:os";
-
 import {exists, readJSON} from "./fs";
-import {md5} from "./hash";
-import {random} from "./random";
-import {type IManifest, Manifest} from "@mr/cli/manifest";
+import {crearPodInfo, type IPodInfo} from "./pod";
+
+export {type IPodInfo};
 
 export interface IConfigGenerico {}
 export class ConfigGenerico<T extends IConfigGenerico=IConfigGenerico> implements IConfigGenerico {
-    public constructor(protected defecto: T, protected user: Partial<T>) {
+    protected defecto: T;
+    protected user: Partial<T>;
 
+    public constructor(defecto: T, user: Partial<T>) {
+        this.defecto  = defecto;
+        this.user = user;
     }
 }
 
@@ -58,97 +60,33 @@ export class Google<T extends ConfigGenerico=ConfigGenerico> implements IGoogle 
     }
 }
 
-export interface IPodInfo {
-    filesdir: string;
-    version: string;
-    hash: string;
-    host: string;
-    servicio: string;
-    servicios: [string, ...string[]];
-    zona: string;
-    cronjob: boolean;
-    replica: string;
-    wire: number;
-    deploy: string;
+export interface IConfiguracion extends IConfigGenerico {
+    pod?: IPodInfo;
 }
-
-export interface IConfiguracion {}
-export class Configuracion<T extends IConfiguracion=IConfiguracion> implements IConfiguracion {
+export class Configuracion<T extends IConfiguracion=IConfiguracion> extends ConfigGenerico<T> implements IConfiguracion {
     /* STATIC */
     protected static async cargar<S extends IConfiguracion>(defecto: S): Promise<Configuracion<S>> {
-        const [data, manifest, cfg] = await Promise.all([
-            readJSON("package.json"),
-            readJSON<IManifest>("mrpack.json")
-                .then((data)=>new Manifest(data)),
-            exists("files/config.json").then(async (existe)=>{
-                if (existe) {
-                    return readJSON<Partial<S>>("files/config.json");
-                }
-                return {};
-            }),
+        const [pod, cfg] = await Promise.all([
+            crearPodInfo(),
+            exists("files/config.json").then(
+                existe=>existe?
+                    readJSON<Partial<S>>("files/config.json"):
+                    {}
+            ),
         ]);
-        const imagen = PRODUCCION && !TEST ?
-            manifest.deploy.imagen?.produccion.nombre :
-            manifest.deploy.imagen?.test.nombre;
-        const imagenes = manifest.deploy.kustomize?.map(k=>k.name) ?? [];
-        if (imagenes.length===0) {
-            imagenes.push(imagen??"unknown");
-        }
-        return new this<S>(defecto, cfg, imagenes as [string, ...string[]], data.version??`0000.00.00-000`, manifest.deploy.cronjob??false);
+        return new this<S>({
+            ...defecto,
+            pod,
+        }, cfg) as Configuracion<S>;
     }
 
     /* INSTANCE */
-    public readonly pod: Readonly<IPodInfo>;
+    public readonly pod: IPodInfo;
 
-    protected constructor(protected defecto: T, protected readonly user: Partial<T>, servicios: [string, ...string[]], version: string, cronjob: boolean) {
-        // const servicios = (!Array.isArray(svc)?[svc]:(svc.length>0?svc:["unknown"])) as StringOne;
-        const host = PRODUCCION?os.hostname():servicios[0];
+    public constructor(defecto: T, user: Partial<T>) {
+        super(defecto, user);
 
-        const partes = host.split("-");
-        let replica: string;
-        let wire: number;
-        let deploy: string;
-        if (PRODUCCION) {
-            replica = partes[-1] ?? "test";
-            if (!cronjob) {
-                wire = 0;
-                deploy = partes[-2] ?? "test";
-            } else {
-                const tmp_wire = partes[-1];
-                if (tmp_wire!=undefined) {
-                    if (!isNaN(parseFloat(tmp_wire)) && isFinite(tmp_wire as any)) {
-                        wire = parseInt(tmp_wire);
-                        deploy = partes[-3] ?? "test";
-                    } else {
-                        wire = 0;
-                        deploy = tmp_wire;
-                    }
-                } else {
-                    wire = 0;
-                    deploy = "test";
-                }
-            }
-        } else {
-            replica = random(5).toLowerCase();
-            wire = 0;
-            deploy = random(10).toLowerCase();
-        }
-
-        const servicio = servicios.find(svc=>host.includes(svc))??servicios[0];
-
-        this.pod = Object.seal({
-            filesdir: 'files',
-            version,
-            hash: md5(version),
-            host,
-            servicio,
-            servicios,
-            zona: process.env["ZONA"]??"desarrollo",
-            cronjob,
-            replica,
-            wire,
-            deploy,
-        });
+        this.pod = defecto.pod!;
     }
 }
 

@@ -6,7 +6,7 @@ source @mr/cli/deployment/std/aliases.sh
 if [[ -f "DESPLEGAR.txt" ]]; then
   BASETOP=$(pwd);
 
-  parseWorkspace() {
+  parseWorkspaceEjecutar() {
     BASETOP="${1}"
     INDICE="${2}"
     NOMBRE="${3}"
@@ -26,9 +26,9 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     fi
   }
 
-  export -f parseWorkspace
+  export -f parseWorkspaceEjecutar
 
-  parseCluster() {
+  parseWorkspace() {
     BASETOP="${1}"
     INDICE="${2}"
 
@@ -45,8 +45,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       rm "${BASETOP}/despliegue_${INDICE}.yaml"
     fi
 
-    lw cronjobs | xargs -I '{}' -P 1 bash -c "parseWorkspace ${BASETOP} ${INDICE} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
-    lw services | xargs -I '{}' -P 1 bash -c "parseWorkspace ${BASETOP} ${INDICE} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
+    lw cronjobs | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${INDICE} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
+    lw services | xargs -I '{}' -P 1 bash -c "parseWorkspaceEjecutar ${BASETOP} ${INDICE} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
     wait
 
     if [[ -f "${BASETOP}/despliegue_${INDICE}.yaml" ]]; then
@@ -55,21 +55,9 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     fi
   }
 
-  export -f parseCluster
+  export -f parseWorkspace
 
-  parseLambda() {
-    BASETOP="${1}"
-    RUTA="${2}"
-
-    echo "${BASETOP} - ${RUTA}: Preparando Lambda"
-  }
-   export -f parseLambda
-
-  if [[ -f "${BASETOP}/lambda.sh" ]]; then
-    echo "Desplegando lambdas"
-    sh "${BASETOP}/lambda.sh"
-  fi
-  confige ". | keys | .[]" | xargs -I '{}' -P 1 bash -c "parseCluster ${BASETOP} {}"
+  confige ". | keys | .[]" | xargs -I '{}' -P 1 bash -c "parseWorkspace ${BASETOP} {}"
 
 else
     echo "Omitiendo despliegue"

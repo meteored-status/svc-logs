@@ -32,6 +32,7 @@ export class PostgreSQLBulk<T> extends Bulk<T> {
                 query: this.config.query,
                 table: this.config.table,
                 duplicate: this.config.duplicate,
+                pk: this.config.pk,
             }
         }), {
             transaction,

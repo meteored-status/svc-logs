@@ -88,6 +88,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     DIRECTORIO=$(path1 "${RUTA}")
     WORKSPACE=$(path2 "${RUTA}")
 
+    echo "Kustomizando ${WORKSPACE}"
     confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > despliegue_${WORKSPACE}_{}.yaml"
 
     VERSION=$(cat "${RUTA}/version.txt" || echo "0000.00.00")
@@ -99,25 +100,33 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
       echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
 
-      if [[ "$(configw "${RUTA}" '.deploy.target')" == "k8s" ]]; then
-        ZONAS=$(confige '.[] | .resourceLabels.zona')
-        for ZONA in ${ZONAS}; do
-          parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
-          STATUS=$?
-          if [[ $STATUS -ne 0 ]]; then
-            echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA}"
-            exit 1
-          fi
-        done
-      elif [[ "$(configw "${RUTA}" '.deploy.target')" == "lambda" ]]; then
-        if [[ ! -f "${BASETOP}/lambda.sh" ]]; then
-          echo "#!/bin/bash" > "${BASETOP}/lambda.sh"
-          echo "set -e" >> "${BASETOP}/lambda.sh"
-          echo "" >> "${BASETOP}/lambda.sh"
+      ZONAS=$(confige '.[] | .resourceLabels.zona')
+      for ZONA in ${ZONAS}; do
+        parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
+        STATUS=$?
+        if [[ $STATUS -ne 0 ]]; then
+          echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA}"
+          exit 1
         fi
-        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
-      fi
+      done
     done
+
+#    SERVICIOS=$(config "${RUTA}/package.json" '.servicio | if type == "array" then .[] else . end')
+#    KUSTOMIZER=$(configw "${RUTA}" .deploy.kustomize.legacy)
+#
+#    for SERVICIO in ${SERVICIOS}; do
+#      echo "${WORKSPACE} (${SERVICIO}): Versión ${VERSION}"
+#
+#      ZONAS=$(confige '.[] | .resourceLabels.zona')
+#      for ZONA in ${ZONAS}; do
+#        parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
+#        STATUS=$?
+#        if [[ $STATUS -ne 0 ]]; then
+#          echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA}"
+#          exit 1
+#        fi
+#      done
+#    done
   }
   export -f parseWorkspace
 

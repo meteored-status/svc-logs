@@ -151,5 +151,5 @@ export const searchAllFn = async <T, I>(client: Elasticsearch, config: {index: s
 
 export default new Elasticsearch({
     credenciales: "files/credenciales/elastic.json",
-    ca: "files/ssl/elastic-ca.crt",
+    // ca: "files/ssl/elastic-ca.crt",
 });

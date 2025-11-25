@@ -95,7 +95,8 @@ interface IMySQLBuild {
 
 export class MySQL implements Disposable {
     /* STATIC */
-    public static build({credenciales=`files/credenciales/mysql.json`, database=DATABASE}: IMySQLBuild={}): MySQL {
+    public static build({credenciales=`files/credenciales/mysql.json`, database}: IMySQLBuild={}): MySQL {
+        database ??= (process.env["DATABASE"] ?? DATABASE);
         if (database != undefined) {
             database = database
                 .replaceAll("{CLIENTE}", process.env["CLIENTE"] ?? "")
