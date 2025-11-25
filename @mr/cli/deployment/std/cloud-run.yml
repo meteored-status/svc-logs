@@ -1,0 +1,37 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: services-logs-slave
+  annotations:
+    run.googleapis.com/ingress: all # O 'internal-and-cloud-load-balancing' si aplica
+spec:
+  template:
+    spec:
+      containers:
+        - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            timeoutSeconds: 240
+            periodSeconds: 5
+            failureThreshold: 30
+            httpGet:
+              scheme: HTTP
+              port: 8080
+              path: /admin/started
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              port: 8080
+              path: /admin/ready/
+            timeoutSeconds: 1
+            periodSeconds: 1
+            failureThreshold: 10
+          livenessProbe:
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            httpGet:
+              scheme: HTTP
+              port: 8080
+              path: /admin/live
