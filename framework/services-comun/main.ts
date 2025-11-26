@@ -8,8 +8,6 @@ import type {IPodInfo} from "./modules/utiles/pod";
 import {error, info, warning} from "./modules/utiles/log";
 import {PromiseDelayed} from "./modules/utiles/promise";
 
-const KUBERNETES = process.env["KUBERNETES"]=="true";
-
 emitter.setMaxListeners(256);
 
 export interface IMainConfig {

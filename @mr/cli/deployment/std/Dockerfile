@@ -36,6 +36,7 @@ COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}
 COPY ./${RUTA}/${WS}/output ./${RUTA}/${WS}/output
 RUN echo "#!/usr/bin/env bash" > run.sh
+RUN echo "echo \"test test test test\"" >> run.sh
 RUN echo "[ -n \"\${DD_SERVICE}\" ] && export DD_SERVICE=\"\$(echo \"\${K8S_NAMESPACE:-default}\" | sed 's/meteored/mr/g')/\${DD_SERVICE}\"" >> run.sh
 RUN echo "yarn workspace ${WS} node --no-warnings app.js" >> run.sh
 WORKDIR /usr/src/app/${RUTA}/${WS}
