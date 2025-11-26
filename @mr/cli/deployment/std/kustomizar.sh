@@ -122,8 +122,49 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         else
           CLOUDSQL=""
         fi
+        VOLUMES_JSON='[]'
+        MOUNTS_JSON='[]'
+        COUNTER=0
+        CREDENTIALS=$(configw "${RUTA}" '.deploy.credenciales // []')
+        if [[ "$CREDENTIALS" != "[]" ]]; then
+          while IFS= read -r item; do
+            SOURCE=$(echo "$item" | jq -r '.source')
+            TARGET=$(echo "$item" | jq -r '.target')
+            VOL_NAME="creds-vol-$COUNTER"
+
+            VOLUME_ENTRY=$(jq -n \
+              --arg name "$VOL_NAME" \
+              --arg secret_name "$SOURCE" \
+              --arg path "$TARGET" \
+              '{
+                  name: $name,
+                  secret: {
+                      secretName: $secret_name,
+                      items: [{key: "latest", path: $path}]
+                  }
+              }')
+            VOLUMES_JSON=$(echo "$VOLUMES_JSON" | jq ". + [$VOLUME_ENTRY]")
+
+            MOUNT_ENTRY=$(jq -n \
+              --arg name "$VOL_NAME" \
+              --arg target "$TARGET" \
+              '{
+                  name: $name,
+                  mountPath: "/usr/src/app/files/credenciales/" + $target,
+                  readOnly: true,
+                  subPath: $target
+              }')
+            MOUNTS_JSON=$(echo "$MOUNTS_JSON" | jq ". + [$MOUNT_ENTRY]")
+
+            COUNTER=$((COUNTER + 1))
+          done < <(echo "$CREDENTIALS" | jq -c '.[]')
+        fi
+
+        yq eval ".spec.template.spec.volumes += $VOLUMES_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+        yq eval ".spec.template.spec.containers[0].volumeMounts += $MOUNTS_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+
         echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1${CLOUDSQL}" >> "${BASETOP}/lambda.sh"
-#        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
+        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"
 #        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
       fi

@@ -78,9 +78,10 @@ else
   echo "_GENERAR_FORZAR=false" >> .env
 fi
 
-#if [[ -f ".env" ]]; then
-#  cat .env
-#fi
+#############################
+#### DESCARGAR YQ ####
+#############################
+download_tool yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 yq
 
 #############################
 #### DESCARGAR KUSTOMIZE ####
