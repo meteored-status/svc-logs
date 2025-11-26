@@ -12,6 +12,10 @@
         ],
         "credenciales": [
             {
+                "source": "cloudrun-bigquery",
+                "target": "bigquery.json"
+            },
+            {
                 "source": "cloudrun-mysql-status-master-1",
                 "target": "mysql.json"
             }
