@@ -71,11 +71,14 @@ export class Main extends MainBase {
 
     protected static override async start({Engine, configLoader, unix}: IMain, cfg: Partial<IClusterConfig>): Promise<void> {
         const config = this.buildConfig(cfg);
-        await this.startSidecar();
 
         this.CRONJOB = false;
 
         const configuracion = await configLoader.load();
+        configLoader.load = () => { throw new Error("Solo se puede cargar la configuración una vez"); };
+
+        await this.startSidecar(configuracion.pod);
+
         if (cluster.isPrimary) {
             if  (config.minimo_hilos<1) {
                 config.minimo_hilos = os.availableParallelism();

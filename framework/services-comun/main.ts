@@ -4,6 +4,7 @@ import http from "node:http";
 
 import type {IConfiguracionLoader} from "./modules/utiles/config";
 import type {IEngine} from "./modules/engine_base";
+import type {IPodInfo} from "./modules/utiles/pod";
 import {error, info, warning} from "./modules/utiles/log";
 import {PromiseDelayed} from "./modules/utiles/promise";
 
@@ -47,8 +48,8 @@ export class Main {
         });
     }
 
-    private static async stopSidecar(): Promise<void> {
-        if (KUBERNETES) {
+    private static async stopSidecar(pod?: IPodInfo): Promise<void> {
+        if (pod?.sidecar??true) {
             await new Promise<void>((resolve)=>{
                 let resuelto = false;
                 const conexion = http.request({
@@ -78,8 +79,8 @@ export class Main {
         }
     }
 
-    protected static async startSidecar(): Promise<void> {
-        if (KUBERNETES) {
+    protected static async startSidecar(pod: IPodInfo): Promise<void> {
+        if (pod.sidecar) {
             let intentos=0;
             let ok: boolean;
             do {
@@ -100,9 +101,7 @@ export class Main {
         const configuracion = await configLoader.load();
         configLoader.load = () => { throw new Error("Solo se puede cargar la configuración una vez"); };
 
-        if (configuracion.pod.sidecar) {
-            await this.startSidecar();
-        }
+        await this.startSidecar(configuracion.pod);
 
         this.CRONJOB = configuracion. pod.cronjob;
         const engine = await Engine.build(configuracion, unix);
@@ -113,9 +112,7 @@ export class Main {
         }
         await engine.ejecutar();
         if (configuracion.pod.cronjob) {
-            if (configuracion.pod.sidecar) {
-            await this.stopSidecar();
-            }
+            await this.stopSidecar(configuracion.pod);
             info("Proceso terminado");
             process.exit();
         } else {
