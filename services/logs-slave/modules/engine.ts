@@ -8,7 +8,7 @@ import Slave from "./net/handlers/slave";
 export class Engine extends EngineServer<Configuracion> {
     /* INSTANCE */
     public override async ejecutar(): Promise<void> {
-        await ClienteGCS.check();
+        // await ClienteGCS.check();
 
         this.initWebServer([
             Slave(this.configuracion),
