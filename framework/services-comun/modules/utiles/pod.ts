@@ -5,6 +5,7 @@ import {type IManifest, Manifest} from "@mr/cli/manifest";
 import {md5} from "./hash";
 import {random} from "./random";
 import {readJSON} from "./fs";
+import {ManifestDeploymentKind, Target} from "@mr/cli/manifest/deployment";
 
 export type IPodInfo = Readonly<{
     filesdir: string;
@@ -15,6 +16,7 @@ export type IPodInfo = Readonly<{
     servicios: [string, ...string[]];
     zona: string;
     cronjob: boolean;
+    sidecar: boolean;
     replica: string;
     wire: number;
     deploy: string;
@@ -29,6 +31,7 @@ export async function crearPodInfo(): Promise<IPodInfo> {
     const imagen = PRODUCCION && !TEST ?
         manifest.deploy.imagen?.produccion.nombre :
         manifest.deploy.imagen?.test.nombre;
+    const sidecar = [ManifestDeploymentKind.SERVICE, ManifestDeploymentKind.CRONJOB, ManifestDeploymentKind.JOB].includes(manifest.deploy.type) && manifest.deploy.target===Target.k8s;
     const servicios = manifest.deploy.kustomize?.map(k=>k.name) ?? [];
     if (servicios.length===0) {
         servicios.push(imagen??"unknown");
@@ -79,6 +82,7 @@ export async function crearPodInfo(): Promise<IPodInfo> {
         servicios: servicios as [string, ...string[]],
         zona: process.env["ZONA"]??"desarrollo",
         cronjob,
+        sidecar,
         replica,
         wire,
         deploy,

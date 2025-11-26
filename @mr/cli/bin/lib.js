@@ -18,13 +18,13 @@ class Modulo {
         const time = Date.now();
         console.log("Compilando herramientas...");
 
-        {
-            // reinstalar dependencias
-            const code = await this.spawn("yarn", ["install"]);
-            if (code != 0) {
-                return Promise.reject(new Error("Error al instalar dependencias [ yarn install ]"));
-            }
-        }
+        // {
+        //     // reinstalar dependencias
+        //     const code = await this.spawn("yarn", ["install"]);
+        //     if (code != 0) {
+        //         return Promise.reject(new Error("Error al instalar dependencias [ yarn install ]"));
+        //     }
+        // }
 
         {
             // compilar
