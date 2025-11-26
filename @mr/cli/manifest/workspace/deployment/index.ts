@@ -34,6 +34,7 @@ export interface IManifestDeployment {
     credenciales?: IManifestDeploymentCredenciales[]; // solo aplicable a SERVICE/CRONJOB/JOB
     imagen?: IManifestDeploymentImagen; // solo aplicable a SERVICE/CRONJOB/JOB
     kustomize?: IManifestDeploymentKustomize[]; // solo aplicable a SERVICE/CRONJOB/JOB
+    cloudsql?: string[]; // solo aplicable a SERVICE/CRONJOB/JOB en lambda
     storage?: IManifestDeploymentStorage; // solo aplicable a BROWSER
 }
 
@@ -53,6 +54,7 @@ export class ManifestDeployment implements IManifestDeployment {
     public credenciales?: ManifestDeploymentCredenciales[];
     public imagen?: ManifestDeploymentImagen;
     public kustomize?: ManifestDeploymentKustomize[];
+    public cloudsql?: string[];
     public storage?: ManifestDeploymentStorage;
 
     public get cronjob(): boolean {
@@ -69,6 +71,7 @@ export class ManifestDeployment implements IManifestDeployment {
         this.credenciales = deploy.credenciales?.map(actual => ManifestDeploymentCredenciales.build(actual));
         this.imagen = ManifestDeploymentImagen.build(deploy.imagen);
         this.kustomize = deploy.kustomize?.map(kustomize=>ManifestDeploymentKustomize.build(kustomize));
+        this.cloudsql = deploy.cloudsql;
         this.storage = ManifestDeploymentStorage.build(deploy.storage);
     }
 
@@ -87,6 +90,7 @@ export class ManifestDeployment implements IManifestDeployment {
                 undefined,
             imagen: this.imagen?.toJSON(),
             kustomize: this.kustomize?.map(k=>k.toJSON()),
+            cloudsql: this.cloudsql,
             storage: this.storage?.toJSON(),
         };
     }
