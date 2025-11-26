@@ -16,22 +16,16 @@ spec:
             periodSeconds: 5
             failureThreshold: 30
             httpGet:
-              scheme: HTTP
-              port: 8080
               path: /admin/started
           readinessProbe:
-            httpGet:
-              scheme: HTTP
-              port: 8080
-              path: /admin/ready/
             timeoutSeconds: 1
             periodSeconds: 1
             failureThreshold: 3
+            httpGet:
+              path: /admin/ready/
           livenessProbe:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
             httpGet:
-              scheme: HTTP
-              port: 8080
               path: /admin/live
