@@ -119,9 +119,6 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         CLOUDSQL=$(configw "${RUTA}" '.deploy.cloudsql // empty | if type=="array" and length > 0 then join(",") else empty end')
         if [[ -n "${CLOUDSQL}" ]]; then
           yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/cloudsql-instances\" = \"${CLOUDSQL}\"" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
-#          CLOUDSQL=" --set-cloudsql-instances=${CLOUDSQL}"
-#        else
-#          CLOUDSQL=""
         fi
         VOLUMES_JSON='[]'
         MOUNTS_JSON='[]'
@@ -165,7 +162,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         yq eval ".spec.template.spec.containers[0].volumeMounts += $MOUNTS_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
 
         echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
-        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
+#        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"
 #        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
       fi
