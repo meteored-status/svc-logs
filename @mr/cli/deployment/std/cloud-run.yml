@@ -16,7 +16,7 @@ spec:
             periodSeconds: 5
             failureThreshold: 30
             httpGet:
-              path: /admin/started
+              path: /admin/started/
           readinessProbe:
             timeoutSeconds: 1
             periodSeconds: 1
