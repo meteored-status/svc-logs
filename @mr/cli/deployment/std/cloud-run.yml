@@ -19,8 +19,6 @@ spec:
           env:
             - name: DATADOG
               value: "false"
-            - name: DD_SERVICE
-              value: services-logs-slave
             - name: ENTORNO
               value: "${ENTORNO}"
           ports:
