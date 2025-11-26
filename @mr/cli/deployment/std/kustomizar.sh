@@ -118,7 +118,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         cat "${BASETOP}/@mr/cli/deployment/std/cloud-run.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
         CLOUDSQL=$(configw "${RUTA}" '.deploy.cloudsql // empty | if type=="array" and length > 0 then join(",") else empty end')
         if [[ -n "${CLOUDSQL}" ]]; then
-          yq eval ".spec.template.metadata.annotations['run.googleapis.com/startup-cpu-boost'] = ${CLOUDSQL}" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+          yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/cloudsql-instances\" = \"${CLOUDSQL}\"" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
 #          CLOUDSQL=" --set-cloudsql-instances=${CLOUDSQL}"
 #        else
 #          CLOUDSQL=""
