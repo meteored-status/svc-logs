@@ -28,4 +28,4 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
             httpGet:
-              path: /admin/live
+              path: /admin/live/
