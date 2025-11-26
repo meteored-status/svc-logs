@@ -27,11 +27,13 @@ interface IManifestDeployment {
     enabled: boolean;
     type: ManifestDeploymentKind;
     runtime: Runtime;
+    target: Target;
     alone?: boolean;
     arch?: string[];
     credenciales?: IManifestDeploymentCredenciales[];
     imagen?: IManifestDeploymentImagen;
     kustomize?: IManifestDeploymentKustomize[];
+    cloudsql?: string[];
     storage?: IManifestDeploymentStorage;
 }
 ```
@@ -41,6 +43,8 @@ interface IManifestDeployment {
     - **tipo** [ManifestDeploymentKind](#manifestdeploymentkind).
 - `runtime`: Información sobre el entorno de ejecución.
     - **tipo** [Runtime](#runtime).
+- `target`: Destino donde desplegar la compilación.
+    - **tipo** [Target](#target).
 - `alone`: Indica si el despliegue se realiza en una sola zona. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo**: boolean
     - **opcional**: Por defecto `false`.
@@ -56,6 +60,9 @@ interface IManifestDeployment {
 - `kustomize`: Detalles de kustomización. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo**: [IManifestDeploymentKustomize[]](#imanifestdeploymentkustomize).
     - **opcional**: Ver detalles para más información.
+- `cloudsql`: Instancias de cloudsql a conectar. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB` y target de tipo `lambda`.*
+    - **tipo**: string[].
+    - **opcional**: Por defecto `[]`.
 - `storage`: Información sobre el almacenamiento. *Solo es válido para despliegues de tipo `BROWSER`.*
     - **tipo** [IManifestDeploymentStorage](#imanifestdeploymentstorage).
     - **opcional**: No se establece ningún valor por defecto, por lo que es imperativo indicarlo en despliegues de tipo `BROWSER`.
@@ -91,6 +98,19 @@ enum Runtime {
 - `browser`: Entorno de ejecución Browser.
 - `cfworker`: Entorno de ejecución Cloudflare Worker.
 - `php`: Entorno de ejecución PHP.
+
+---
+## Target
+```typescript
+enum Target {
+    k8s = "k8s",
+    lambda = "lambda",
+    none = "none",
+}
+```
+- `k8s`: Desplegar en Kubernetes.
+- `lambda`: Desplegar en una Lambda.
+- `none`: Sin despliegue.
 
 ---
 ## IManifestDeploymentCredenciales

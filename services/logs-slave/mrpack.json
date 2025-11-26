@@ -25,6 +25,9 @@
                 "name": "logs-slave",
                 "dir": "services"
             }
+        ],
+        "cloudsql": [
+            "meteored-status:europe-southwest1:status-master-1"
         ]
     },
     "devel": {

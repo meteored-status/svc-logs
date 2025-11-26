@@ -83,6 +83,9 @@ export class ManifestWorkspaceDeploymentLoader {
                         }));
                     }
                 }
+                if (data.target==Target.lambda && "cloudsql" in deploy && deploy.cloudsql!.length>0) {
+                    data.cloudsql = deploy.cloudsql ?? [];
+                }
                 break;
             case ManifestDeploymentKind.BROWSER:
                 data.target = Target.none;
