@@ -4,6 +4,7 @@ metadata:
   name: services-logs-slave
   annotations:
     run.googleapis.com/ingress: all # O 'internal-and-cloud-load-balancing' si aplica
+    run.googleapis.com/launch-stage: BETA
 spec:
   template:
     spec:
