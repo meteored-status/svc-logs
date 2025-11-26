@@ -44,3 +44,7 @@ spec:
             failureThreshold: 3
             httpGet:
               path: /admin/live/
+          resources:
+            limits:
+              cpu: "1"
+              memory: "5307Mi"
