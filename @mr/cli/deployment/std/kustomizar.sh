@@ -116,7 +116,13 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           echo "" >> "${BASETOP}/lambda.sh"
         fi
         cat "${BASETOP}/@mr/cli/deployment/std/cloud-run.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
-        echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
+        CLOUDSQL=$(configw "${RUTA}" '.deploy.cloudsql // empty | if type=="array" and length > 0 then join(",") else empty end')
+        if [[ -n "${CLOUDSQL}" ]]; then
+          CLOUDSQL=" --set-cloudsql-instances=${CLOUDSQL}"
+        else
+          CLOUDSQL=""
+        fi
+        echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1${CLOUDSQL}" >> "${BASETOP}/lambda.sh"
 #        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"
 #        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
