@@ -118,9 +118,10 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         cat "${BASETOP}/@mr/cli/deployment/std/cloud-run.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
         CLOUDSQL=$(configw "${RUTA}" '.deploy.cloudsql // empty | if type=="array" and length > 0 then join(",") else empty end')
         if [[ -n "${CLOUDSQL}" ]]; then
-          CLOUDSQL=" --set-cloudsql-instances=${CLOUDSQL}"
-        else
-          CLOUDSQL=""
+          yq eval ".spec.template.metadata.annotations['run.googleapis.com/startup-cpu-boost'] = ${CLOUDSQL}" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+#          CLOUDSQL=" --set-cloudsql-instances=${CLOUDSQL}"
+#        else
+#          CLOUDSQL=""
         fi
         VOLUMES_JSON='[]'
         MOUNTS_JSON='[]'
@@ -163,7 +164,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         yq eval ".spec.template.spec.volumes += $VOLUMES_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
         yq eval ".spec.template.spec.containers[0].volumeMounts += $MOUNTS_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
 
-        echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1${CLOUDSQL}" >> "${BASETOP}/lambda.sh"
+        echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
         cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"
 #        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
