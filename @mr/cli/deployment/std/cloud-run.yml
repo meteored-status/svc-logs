@@ -26,7 +26,7 @@ spec:
               path: /admin/ready/
             timeoutSeconds: 1
             periodSeconds: 1
-            failureThreshold: 10
+            failureThreshold: 3
           livenessProbe:
             periodSeconds: 30
             timeoutSeconds: 5
