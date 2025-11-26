@@ -17,6 +17,13 @@ spec:
     spec:
       containers:
         - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
+          env:
+            - name: DATADOG
+              value: "false"
+            - name: DD_SERVICE
+              value: services-logs-slave
+            - name: ENTORNO
+              value: "${ENTORNO}"
           ports:
             - containerPort: 8080
           startupProbe:

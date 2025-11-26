@@ -115,7 +115,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           echo "set -e" >> "${BASETOP}/lambda.sh"
           echo "" >> "${BASETOP}/lambda.sh"
         fi
-        cat "${BASETOP}/@mr/cli/deployment/std/cloud-run.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
+        cat "${BASETOP}/@mr/cli/deployment/std/cloud-run.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
         echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
 #        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"
