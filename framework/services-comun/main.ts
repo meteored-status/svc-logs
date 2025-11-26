@@ -96,10 +96,14 @@ export class Main {
 
     protected static async start<T extends IMainConfig>({Engine, configLoader, unix}: IMain, cfg: Partial<T>): Promise<void> {
         info("Iniciando Engine");
-        await this.startSidecar();
 
         const configuracion = await configLoader.load();
         configLoader.load = () => { throw new Error("Solo se puede cargar la configuración una vez"); };
+
+        if (configuracion.pod.sidecar) {
+            await this.startSidecar();
+        }
+
         this.CRONJOB = configuracion. pod.cronjob;
         const engine = await Engine.build(configuracion, unix);
         try {
@@ -109,7 +113,9 @@ export class Main {
         }
         await engine.ejecutar();
         if (configuracion.pod.cronjob) {
+            if (configuracion.pod.sidecar) {
             await this.stopSidecar();
+            }
             info("Proceso terminado");
             process.exit();
         } else {
@@ -134,6 +140,7 @@ export class Main {
             error("Error iniciando el Engine", err);
             if (this.CRONJOB) {
                 try {
+                    // todo tener en cuenta el lambda
                     await this.stopSidecar();
                 } finally {
                     process.exit(0);
