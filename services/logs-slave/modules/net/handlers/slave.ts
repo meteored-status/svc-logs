@@ -35,7 +35,7 @@ class Slave extends RouteGroup<Configuracion>{
     private parseLog(notify: INotifyPubSub): void {
         PromiseDelayed()
             .then(async ()=>{
-                if (notify.eventType!="OBJECT_FINALIZE") {
+                if (notify.eventType!=="OBJECT_FINALIZE") {
                     switch (notify.eventType) {
                         case "OBJECT_DELETE":
                             // deshabilitado por filtro de PubSub
@@ -126,7 +126,7 @@ class Slave extends RouteGroup<Configuracion>{
 
                     const salida = await this.sendRespuesta(conexion);
 
-                    if (post.message?.attributes!=undefined) {
+                    if (post.message?.attributes) {
                         this.parseLog(post.message.attributes);
                     }
 
@@ -137,8 +137,5 @@ class Slave extends RouteGroup<Configuracion>{
     }
 }
 
-let instancia: Slave|null = null;
-export default (config: Configuracion)=>{
-    return instancia??=new Slave(config);
-};
+export default (config: Configuracion)=>new Slave(config);
 

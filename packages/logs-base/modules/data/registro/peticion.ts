@@ -1,9 +1,9 @@
 import type {IRAWDataClient, IRAWDataRequest} from ".";
 
-interface ISSL {
-    name: string;
-    version: string;
-}
+// interface ISSL {
+//     name: string;
+//     version: string;
+// }
 
 interface IHeaders {
     apiKey?: string;
@@ -17,8 +17,8 @@ export interface IRegistroPeticion {
     path: string;
     uri: string;
     protocol: string;
-    ssl?: ISSL;
-    bytes: number;
+    // ssl?: ISSL;
+    // bytes: number;
     referer?: string;
     source: string;
     headers?: IHeaders;
@@ -40,9 +40,9 @@ export class RegistroPeticion implements IRegistroPeticion {
             path: client.request.path,
             uri: client.request.uri,
             protocol: client.request.protocol,
-            ssl: client.ssl!=undefined ?
-                {name: client.ssl?.protocol, version: client.ssl?.version} : undefined,
-            bytes: client.request.bytes,
+            // ssl: client.ssl!=undefined ?
+            //     {name: client.ssl?.protocol, version: client.ssl?.version} : undefined,
+            // bytes: client.request.bytes,
             referer: client.request.referer,
             source: client.request.source,
             headers: Object.keys(headers).length>0 ?
@@ -58,8 +58,8 @@ export class RegistroPeticion implements IRegistroPeticion {
     public get path(): string { return this.data.path; }
     public get uri(): string { return this.data.uri; }
     public get protocol(): string { return this.data.protocol; }
-    public get ssl(): ISSL|undefined { return this.data.ssl; }
-    public get bytes(): number { return this.data.bytes; }
+    // public get ssl(): ISSL|undefined { return this.data.ssl; }
+    // public get bytes(): number { return this.data.bytes; }
     public get referer(): string|undefined { return this.data.referer; }
     public get source(): string { return this.data.source; }
     public get headers(): IHeaders|undefined { return this.data.headers; }
@@ -76,8 +76,8 @@ export class RegistroPeticion implements IRegistroPeticion {
             path: this.data.path,
             uri: this.data.uri,
             protocol: this.data.protocol,
-            ssl: this.data.ssl,
-            bytes: this.data.bytes,
+            // ssl: this.data.ssl,
+            // bytes: this.data.bytes,
             referer: this.data.referer,
             source: this.data.source,
             headers: this.data.headers,

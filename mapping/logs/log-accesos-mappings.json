@@ -29,19 +29,6 @@
         "protocol": {
           "type": "keyword"
         },
-        "ssl": {
-          "properties": {
-            "name": {
-              "type": "keyword"
-            },
-            "version": {
-              "type": "keyword"
-            }
-          }
-        },
-        "bytes": {
-          "type": "unsigned_long"
-        },
         "referer": {
           "type": "text",
           "fields": {
@@ -72,17 +59,6 @@
         },
         "escalonada": {
           "type": "boolean"
-        },
-        "bytes": {
-          "type": "unsigned_long"
-        },
-        "codigo": {
-          "type": "short",
-          "fields": {
-            "keyword": {
-              "type": "keyword"
-            }
-          }
         }
       }
     },
@@ -96,61 +72,22 @@
             }
           }
         },
-        "tiempos": {
-          "properties": {
-            "inicio": {
-              "type": "date"
-            },
-            "lag": {
-              "type": "integer"
-            },
-            "fin": {
-              "type": "date"
-            },
-            "origin": {
-              "properties": {
-                "lag": {
-                  "type": "integer"
-                },
-                "total": {
-                  "type": "integer"
-                }
-              }
-            }
-          }
+        "tiempo": {
+          "type": "integer"
+        },
+        "contentType": {
+          "type": "keyword"
         },
         "headers": {
           "properties": {
-            "tags": {
-              "type": "keyword"
+            "node": {
+              "type":  "keyword"
             },
-            "etag": {
-              "type": "keyword"
+            "service":  {
+              "type":  "keyword"
             },
-            "expires": {
-              "type": "date"
-            },
-            "lastModified": {
-              "type": "date"
-            },
-            "mr": {
-              "properties": {
-                "chain": {
-                  "type": "keyword"
-                },
-                "node": {
-                  "type":  "keyword"
-                },
-                "service":  {
-                  "type":  "keyword"
-                },
-                "version": {
-                  "type":  "keyword"
-                },
-                "zone":  {
-                  "type":  "keyword"
-                }
-              }
+            "version": {
+              "type":  "keyword"
             }
           }
         }
@@ -241,76 +178,7 @@
         }
       }
     },
-    "extremo": {
-      "properties": {
-        "status": {
-          "type": "short",
-          "fields": {
-            "keyword": {
-              "type": "keyword"
-            }
-          }
-        },
-        "contentType": {
-          "type": "keyword"
-        },
-        "ip": {
-          "type": "ip"
-        },
-        "location": {
-          "properties": {
-            "pais": {
-              "type": "keyword"
-            },
-            "region": {
-              "type": "keyword"
-            },
-            "ciudad": {
-              "type": "keyword"
-            },
-            "coordenadas": {
-              "type": "geo_point"
-            },
-            "precision": {
-              "type": "integer"
-            },
-            "timezone": {
-              "type": "keyword"
-            },
-            "eu": {
-              "type": "boolean"
-            }
-          }
-        },
-        "bytes": {
-          "properties": {
-            "headers": {
-              "type": "integer"
-            },
-            "body": {
-              "type": "unsigned_long"
-            },
-            "total": {
-              "type": "unsigned_long"
-            },
-            "compression": {
-              "type": "scaled_float",
-              "scaling_factor": 100
-            }
-          }
-        }
-      }
-    },
     "origen": {
-      "properties": {
-        "status": {
-          "type": "short",
-          "fields": {
-            "keyword": {
-              "type": "keyword"
-            }
-          }
-        },
         "ip": {
           "type": "ip"
         },
