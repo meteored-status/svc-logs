@@ -1,8 +1,5 @@
-import db from "services-comun/modules/utiles/mysql";
-
 import type {Backends} from "./backends";
 import {Cliente, type ICliente} from ".";
-import {ClienteError} from "./error";
 
 export interface IGrupo {
     id: string;
@@ -10,10 +7,10 @@ export interface IGrupo {
     backends?: Backends;
 }
 
-interface IClienteGrupo extends ICliente {
-    gid: string;
-    gbackends?: Backends;
-}
+// interface IClienteGrupo extends ICliente {
+//     gid: string;
+//     gbackends?: Backends;
+// }
 
 export class Grupo implements IGrupo {
     /* STATIC */
@@ -22,23 +19,23 @@ export class Grupo implements IGrupo {
     }
 
     public static async searchCliente(cliente: Cliente, grp?: string): Promise<Cliente> {
-        if (grp==undefined) {
+        if (!grp) {
             return cliente;
         }
 
-        const [grupo] = await db.select<IGrupo, Grupo>("SELECT * FROM grupos WHERE id=? AND cliente=?", [grp, cliente.id], {
-            fn: (row)=>new this(cliente, row),
-            // cache: {
-            //     builder,
-            //     key: `${cliente.id}-${grp}`,
-            //     ttl: 600000,
-            // },
-        });
-        if (grupo==undefined) {
-            return Promise.reject(new ClienteError(`Grupo ${grp} no encontrado`));
-        }
+        // const [grupo] = await db.select<IGrupo, Grupo>("SELECT * FROM grupos WHERE id=? AND cliente=?", [grp, cliente.id], {
+        //     fn: (row)=>new this(cliente, row),
+        //     // cache: {
+        //     //     builder,
+        //     //     key: `${cliente.id}-${grp}`,
+        //     //     ttl: 600000,
+        //     // },
+        // });
+        // if (grupo==undefined) {
+        //     return Promise.reject(new ClienteError(`Grupo ${grp} no encontrado`));
+        // }
 
-        cliente.aplicarGrupo(grupo);
+        cliente.aplicarGrupo(new this(cliente, {cliente, id: grp}));
 
         return cliente;
     }
