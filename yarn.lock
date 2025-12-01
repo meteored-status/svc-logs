@@ -216,6 +216,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@google-cloud/bigquery@npm:^8.1.1":
+  version: 8.1.1
+  resolution: "@google-cloud/bigquery@npm:8.1.1"
+  dependencies:
+    "@google-cloud/common": "npm:^6.0.0"
+    "@google-cloud/paginator": "npm:^6.0.0"
+    "@google-cloud/precise-date": "npm:^5.0.0"
+    "@google-cloud/promisify": "npm:^5.0.0"
+    arrify: "npm:^3.0.0"
+    big.js: "npm:^6.2.2"
+    duplexify: "npm:^4.1.3"
+    extend: "npm:^3.0.2"
+    stream-events: "npm:^1.0.5"
+    teeny-request: "npm:^10.0.0"
+  checksum: 10/8c67339cf070993b1311a4c384d2f3a8205543c5c41ed8aca91f8d2960c49c08f11755ae4dd9b9bfe8ca47fc1528e7e435a1596afaf063927ad2e0824a400985
+  languageName: node
+  linkType: hard
+
 "@google-cloud/common@npm:^6.0.0":
   version: 6.0.0
   resolution: "@google-cloud/common@npm:6.0.0"
@@ -844,7 +862,7 @@ __metadata:
     source-map-support: "npm:^0.5.21"
     style-loader: "npm:^4.0.0"
     tree-kill: "npm:^1.2.2"
-    ts-checker-rspack-plugin: "npm:^1.2.0"
+    ts-checker-rspack-plugin: "npm:^1.2.1"
     ts-node: "npm:^10.9.2"
     tslib: "npm:^2.8.1"
     typescript: "npm:^5.9.3"
@@ -1444,7 +1462,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rspack/lite-tapable@npm:1.1.0, @rspack/lite-tapable@npm:^1.0.1":
+"@rspack/lite-tapable@npm:1.1.0, @rspack/lite-tapable@npm:^1.0.1, @rspack/lite-tapable@npm:^1.1.0":
   version: 1.1.0
   resolution: "@rspack/lite-tapable@npm:1.1.0"
   checksum: 10/41ff73fe5e1b8dccaad746c9c1bd36dd67649e1ad35776f311b5ba94333a397704e11158579e25a6a7e677c51abe35e66987b1b000faef48d4e4ad2470fea150
@@ -2137,6 +2155,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"arrify@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "arrify@npm:3.0.0"
+  checksum: 10/d6c6f3dad9571234f320e130d57fddb2cc283c87f2ac7df6c7005dffc5161b7bb9376f4be655ed257050330336e84afc4f3020d77696ad231ff580a94ae5aba6
+  languageName: node
+  linkType: hard
+
 "asap@npm:^2.0.0, asap@npm:~2.0.3":
   version: 2.0.6
   resolution: "asap@npm:2.0.6"
@@ -2256,6 +2281,13 @@ __metadata:
   version: 5.2.2
   resolution: "big.js@npm:5.2.2"
   checksum: 10/c04416aeb084f4aa1c5857722439c327cc0ada9bd99ab80b650e3f30e2e4f1b92a04527ed1e7df8ffcd7c0ea311745a04af12d53e2f091bf09a06f1292003827
+  languageName: node
+  linkType: hard
+
+"big.js@npm:^6.2.2":
+  version: 6.2.2
+  resolution: "big.js@npm:6.2.2"
+  checksum: 10/018af3e572780b41536a987c3fc3636efe7d05671e8bf4a6bd22b62316e32f57abfc0fc849732adfd81b00b249f873a5a107e01ab5aa4fc3d42c181cc821bf47
   languageName: node
   linkType: hard
 
@@ -4695,7 +4727,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-base@workspace:packages/logs-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.2.0"
+    "@google-cloud/bigquery": "npm:^8.1.1"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^24.10.1"
     crawler-user-agents: "npm:^1.22.0"
@@ -4725,7 +4757,7 @@ __metadata:
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     stream-shift: "npm:1.0.3"
-    superjson: "npm:^2.2.5"
+    superjson: "npm:^2.2.6"
     tslib: "npm:^2.8.1"
     ua-parser-js: "npm:^2.0.6"
   languageName: unknown
@@ -4735,7 +4767,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-slave@workspace:services/logs-slave"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.2.0"
+    "@google-cloud/bigquery": "npm:^8.1.1"
     "@google-cloud/storage": "npm:^7.17.3"
     "@types/geoip-lite": "npm:^1.4.4"
     "@types/node": "npm:^24.10.1"
@@ -4753,6 +4785,7 @@ __metadata:
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     stream-shift: "npm:1.0.3"
+    supports-color: "npm:^10.2.2"
     tslib: "npm:^2.8.1"
     ua-parser-js: "npm:^2.0.6"
   languageName: unknown
@@ -4861,9 +4894,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"memfs@npm:^4.43.1, memfs@npm:^4.50.0":
-  version: 4.51.0
-  resolution: "memfs@npm:4.51.0"
+"memfs@npm:^4.43.1, memfs@npm:^4.51.1":
+  version: 4.51.1
+  resolution: "memfs@npm:4.51.1"
   dependencies:
     "@jsonjoy.com/json-pack": "npm:^1.11.0"
     "@jsonjoy.com/util": "npm:^1.9.0"
@@ -4871,7 +4904,7 @@ __metadata:
     thingies: "npm:^2.5.0"
     tree-dump: "npm:^1.0.3"
     tslib: "npm:^2.0.0"
-  checksum: 10/b3b2e033603ec3a79017f24094fab46da6ac0e6becdee86761bbd30d9a6b5a2ad5c310467eb7b60ff6c765297ec06c8297f8128fb5ffe155ba27aebad71a8ff4
+  checksum: 10/a2f70cd1b366f910a39bb1a398c03d6f3f0db936376697eca3e176609e9f6acc0ed40fb44d6293dd15eb3f730c3fce536e5024395e3dc92f54374133c96ba1b7
   languageName: node
   linkType: hard
 
@@ -6938,12 +6971,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"superjson@npm:^2.2.5":
-  version: 2.2.5
-  resolution: "superjson@npm:2.2.5"
+"superjson@npm:^2.2.6":
+  version: 2.2.6
+  resolution: "superjson@npm:2.2.6"
   dependencies:
     copy-anything: "npm:^4"
-  checksum: 10/0016a841ab51c02abada4a321561dbfdbd9cf2d739fff44e036e2247b909f438d3c0b4897fedab5581251dae293af2ac96e276376e8508d603505d5d9248d3a4
+  checksum: 10/7bb6446b70e8a37ec9aa2f2d08295ae4e7e8268b86c89d83a306b3798cd0cc60d89016c0c5fa83b558db23e8de8863c585a4cf52d18c4834c48bad7d2b6ee25b
+  languageName: node
+  linkType: hard
+
+"supports-color@npm:^10.2.2":
+  version: 10.2.2
+  resolution: "supports-color@npm:10.2.2"
+  checksum: 10/bd132705fc07213a4024131fb061f0a46a48b49ecaf434bb029c0a5aa0339b969236d496d63969e3c248a90fdcac16d4f9c5bf187e7be0bfb5e804ed13bef6b0
   languageName: node
   linkType: hard
 
@@ -7114,15 +7154,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-checker-rspack-plugin@npm:^1.2.0":
-  version: 1.2.0
-  resolution: "ts-checker-rspack-plugin@npm:1.2.0"
+"ts-checker-rspack-plugin@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "ts-checker-rspack-plugin@npm:1.2.1"
   dependencies:
     "@babel/code-frame": "npm:^7.27.1"
-    "@rspack/lite-tapable": "npm:^1.0.1"
+    "@rspack/lite-tapable": "npm:^1.1.0"
     chokidar: "npm:^3.6.0"
     is-glob: "npm:^4.0.3"
-    memfs: "npm:^4.50.0"
+    memfs: "npm:^4.51.1"
     minimatch: "npm:^9.0.5"
     picocolors: "npm:^1.1.1"
   peerDependencies:
@@ -7131,7 +7171,7 @@ __metadata:
   peerDependenciesMeta:
     "@rspack/core":
       optional: true
-  checksum: 10/bb6edd14ad0960fcb09eaf7d5d79964beb6ef4648383c5971aebf22f1c6af07b66e15791b6af6ceed168bdadb48f6c3164b9aaa8935c28e6a259e0084bcd3a06
+  checksum: 10/c2e4a4e0cfda6a358e2b3c134446359f74ed57787c23cb270ae6d72bfa1fae91e42968d04c9c5921a39c2995869a56fb8f3c8f906f24d7a94a33dca31ece2f22
   languageName: node
   linkType: hard
 

@@ -1,12 +1,12 @@
 import geoip from "geoip-lite";
 
-import type {ICoordenadas} from "services-comun/modules/utiles/geopoint";
+import type {IGeoPoint} from "services-comun/modules/utiles/geopoint";
 
 export interface IRegistroLocalizacion {
     pais: string;
     region: string;
     ciudad: string;
-    coordenadas: ICoordenadas;
+    coordenadas: IGeoPoint;
     precision: number;
     timezone: string;
     eu: boolean;
@@ -34,12 +34,14 @@ export class RegistroLocalizacion implements IRegistroLocalizacion {
             region: data.region,
             ciudad: data.city,
             coordenadas: {
-                lat: data.ll[0],
-                lon: data.ll[1],
+                type: "Point",
+                coordinates: [data.ll[1], data.ll[0]],
+                // lon: data.ll[1],
+                // lat: data.ll[0],
             },
             precision: data.area,
             timezone: data.timezone,
-            eu: data.eu != "0",
+            eu: data.eu !== "0",
         });
     }
 
@@ -47,7 +49,7 @@ export class RegistroLocalizacion implements IRegistroLocalizacion {
     public get pais(): string { return this.data.pais; }
     public get region(): string { return this.data.region; }
     public get ciudad(): string { return this.data.ciudad; }
-    public get coordenadas(): ICoordenadas { return this.data.coordenadas; }
+    public get coordenadas(): IGeoPoint { return this.data.coordenadas; }
     public get precision(): number { return this.data.precision; }
     public get timezone(): string { return this.data.timezone; }
     public get eu(): boolean { return this.data.eu; }
