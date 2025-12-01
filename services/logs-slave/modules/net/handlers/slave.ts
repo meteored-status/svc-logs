@@ -48,7 +48,7 @@ class Slave extends RouteGroup<Configuracion>{
                 }
 
                 await ClienteGCS.addStatusProcesando(notify.bucketId, notify.objectId);
-                const cliente = await ClienteGCS.searchBucket(notify.bucketId);
+                const cliente = await ClienteGCS.searchBucket(notify.bucketId, notify.objectId);
                 await cliente.ingest(this.configuracion.pod, this.configuracion.google, notify.objectId);
             })
             .catch(async (err)=>{

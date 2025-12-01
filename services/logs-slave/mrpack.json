@@ -18,6 +18,10 @@
             {
                 "source": "cloudrun-mysql-status-master-1",
                 "target": "mysql.json"
+            },
+            {
+                "source": "cloudrun-storage",
+                "target": "storage.json"
             }
         ],
         "imagen": {
