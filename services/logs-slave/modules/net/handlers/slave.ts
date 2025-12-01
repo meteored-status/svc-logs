@@ -32,7 +32,12 @@ interface IPubSub {
 
 class Slave extends RouteGroup<Configuracion>{
     /* INSTANCE */
+    private log = false;
     private parseLog(notify: INotifyPubSub): void {
+        if (!this.log) {
+            this.log = true;
+            info("Evento", JSON.stringify(notify));
+        }
         PromiseDelayed()
             .then(async ()=>{
                 if (notify.eventType!=="OBJECT_FINALIZE") {
