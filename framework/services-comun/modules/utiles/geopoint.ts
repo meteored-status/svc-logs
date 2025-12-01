@@ -3,6 +3,11 @@ export interface ICoordenadas {
     lat: number;
 }
 
+export interface IGeoPoint {
+    "type": "Point",
+    "coordinates": [number, number];
+}
+
 export class Coordenadas {
     private static parseSeconds(seconds: string): number {
         const len = seconds.length-2;

@@ -1,7 +1,6 @@
 import {RegistroCache, type IRegistroCache} from "./cache";
 import {RegistroCliente, type IRegistroCliente} from "./cliente";
-import {RegistroExtremo, type IRegistroExtremo} from "./extremo";
-import {RegistroMetadata, type IRegistroMetadata, type IRegistroMetadataES} from "./metadata";
+// import {RegistroExtremo, type IRegistroExtremo} from "./extremo";
 import {RegistroOrigen, type IRegistroOrigen} from "./origen";
 import {RegistroPeticion, type IRegistroPeticion} from "./peticion";
 import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} from "./respuesta";
@@ -27,7 +26,7 @@ export interface IRAWDataClient {
     };
     region?: string;
     request: {
-        bytes: number;
+        // bytes: number;
         host: string;
         method: string;
         path: string;
@@ -38,11 +37,11 @@ export interface IRAWDataClient {
         ua?: string;
         uri: string;
     },
-    ssl?: {
-        cipher: string;
-        protocol: string;
-        version: string;
-    };
+    // ssl?: {
+    //     cipher: string;
+    //     protocol: string;
+    //     version: string;
+    // };
     src?: {
         port: number;
     };
@@ -75,13 +74,13 @@ export interface IRAWDataEdge {
         host: string;
     };
     response: {
-        body: {
-            bytes: number;
-        };
-        bytes: number;
-        compression: {
-            ratio: number;
-        };
+        // body: {
+        //     bytes: number;
+        // };
+        // bytes: number;
+        // compression: {
+        //     ratio: number;
+        // };
         contentType: string;
         status: number;
     };
@@ -89,35 +88,35 @@ export interface IRAWDataEdge {
     server?: {
         ip: string;
     },
-    time2FirstByte: number;
+    // time2FirstByte: number;
     timestamp: {
         start: Date;
-        end: Date;
+    //     end: Date;
     };
 }
 
 export interface IRAWDataOrigin {
-    dns: {
-        response: {
-            time: number;
-        };
-    };
+    // dns: {
+    //     response: {
+    //         time: number;
+    //     };
+    // };
     ip: string;
-    request: {
-        header: {
-            send: {
-                duration: number;
-            };
-        };
-    };
+    // request: {
+    //     header: {
+    //         send: {
+    //             duration: number;
+    //         };
+    //     };
+    // };
     response: {
         bytes: number;
         duration: number;
-        header: {
-            receive: {
-                duration: number;
-            };
-        };
+        // header: {
+        //     receive: {
+        //         duration: number;
+        //     };
+        // };
         http: {
             expires: string;
             lastModified: string;
@@ -144,10 +143,10 @@ export interface IRAWDataCache {
     reserve: {
         used: boolean;
     };
-    response: {
-        bytes: number;
-        status: number;
-    };
+    // response: {
+    //     bytes: number;
+    //     status: number;
+    // };
     status: string;
     tiered: {
         fill: boolean;
@@ -162,17 +161,17 @@ export interface IRAWDataRequest {
 
 export interface IRAWDataResponse {
     headers: {
-        tags?: string[];
-        etag?: string;
-        expires?: Date;
-        lastModified?: Date;
-        mr: {
-            chain?:   string[];
-            node?:    string;
-            service?: string;
-            version?: string;
-            zone?:    string;
-        };
+        // tags?: string[];
+        // etag?: string;
+        // expires?: Date;
+        // lastModified?: Date;
+        // mr: {
+        //     chain?:   string[];
+        node?:    string;
+        service?: string;
+        version?: string;
+        //     zone?:    string;
+        // };
     };
 }
 
@@ -266,34 +265,35 @@ export interface IRAWData {
 interface IRegistro {
     timestamp: Date;
     url: URL;
-    metadata: IRegistroMetadata;
+    proyecto: string;
+    subproyecto?: string;
     peticion: IRegistroPeticion;
     cache: IRegistroCache;
     respuesta: IRegistroRespuesta;
     cliente: IRegistroCliente;
-    extremo: IRegistroExtremo;
+    // extremo: IRegistroExtremo;
     origen?: IRegistroOrigen;
 }
 
 export interface IRegistroES {
-    "@timestamp": string;
+    timestamp: string;
     url: string;
-    metadata: IRegistroMetadataES;
+    proyecto: string;
+    subproyecto?: string;
     peticion: IRegistroPeticion;
     cache: IRegistroCache;
     respuesta: IRegistroRespuestaES;
     cliente: IRegistroCliente;
-    extremo: IRegistroExtremo;
+    // extremo: IRegistroExtremo;
     origen?: IRegistroOrigen;
 }
 
 interface IObj {
-    metadata: RegistroMetadata;
     peticion: RegistroPeticion;
     cache: RegistroCache;
     respuesta: RegistroRespuesta;
     cliente: RegistroCliente;
-    extremo: RegistroExtremo;
+    // extremo: RegistroExtremo;
     origen?: RegistroOrigen;
 }
 
@@ -307,39 +307,30 @@ export class Registro implements IRegistro {
 
     public static build(data: IRAWData, telemetry: Telemetry): Registro {
         const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
-        const metadata = RegistroMetadata.build({
-            proyecto: telemetry.proyecto,
-            subproyecto: telemetry.subproyecto,
-            ingest: new Date(),
-            pod: telemetry.servicio,
-            version: telemetry.version,
-            source: telemetry.source,
-            idx: telemetry.idx,
-        });
         const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
         const cache = RegistroCache.build(data.cache);
         const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
         const cliente = RegistroCliente.build(data.client);
-        const extremo = RegistroExtremo.build(data.edge);
+        // const extremo = RegistroExtremo.build(data.edge);
         const origen = RegistroOrigen.build(data.origin, telemetry.cliente.backends);
 
         return new this({
             timestamp: data.edge.timestamp.start,
             url,
-            metadata,
+            proyecto: telemetry.proyecto,
+            subproyecto: telemetry.subproyecto,
             peticion,
             cache,
             respuesta,
             cliente,
-            extremo,
+            // extremo,
             origen,
         }, {
-            metadata,
             peticion,
             cache,
             respuesta,
             cliente,
-            extremo,
+            // extremo,
             origen,
         });
     }
@@ -347,12 +338,13 @@ export class Registro implements IRegistro {
     /* INSTANCE */
     public get timestamp(): Date { return this.data.timestamp; }
     public get url(): URL { return this.data.url; }
-    public get metadata(): RegistroMetadata { return this.obj.metadata; }
+    public get proyecto(): string { return this.data.proyecto; }
+    public get subproyecto(): string|undefined { return this.data.subproyecto; }
     public get peticion(): RegistroPeticion { return this.obj.peticion; }
     public get cache(): RegistroCache { return this.obj.cache; }
     public get respuesta(): RegistroRespuesta { return this.obj.respuesta; }
     public get cliente(): RegistroCliente { return this.obj.cliente; }
-    public get extremo(): RegistroExtremo { return this.obj.extremo; }
+    // public get extremo(): RegistroExtremo { return this.obj.extremo; }
     public get origen(): RegistroOrigen|undefined { return this.obj.origen; }
 
     public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
@@ -360,14 +352,15 @@ export class Registro implements IRegistro {
 
     public toJSON(): IRegistroES {
         return {
-            "@timestamp": this.data.timestamp.toISOString(),
+            timestamp: this.data.timestamp.toISOString(),
             url: this.data.url.toString(),
-            metadata: this.obj.metadata.toJSON(),
+            proyecto: this.data.proyecto,
+            subproyecto: this.data.subproyecto,
             peticion: this.obj.peticion.toJSON(),
             cache: this.obj.cache.toJSON(),
             respuesta: this.obj.respuesta.toJSON(),
             cliente: this.obj.cliente.toJSON(),
-            extremo: this.obj.extremo.toJSON(),
+            // extremo: this.obj.extremo.toJSON(),
             origen: this.obj.origen?.toJSON(),
         };
     }
