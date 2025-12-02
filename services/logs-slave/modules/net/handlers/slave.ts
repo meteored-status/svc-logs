@@ -2,70 +2,41 @@ import {ClienteGCS} from "logs-base/modules/data/cliente/gcs";
 import {RouteGroup} from "services-comun/modules/net/routes/group";
 import type {IRouteGroup} from "services-comun/modules/net/routes/group/block";
 import {error, info} from "services-comun/modules/utiles/log";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {type ILogErrorPOST, LogError} from "../../data/error";
 import {type ILogServicioPOST, LogServicio} from "../../data/servicio";
 
 import {type Configuracion} from "../../utiles/config";
 
-interface INotifyPubSub {
-    bucketId: string;
-    objectId: string;
-    eventTime: string;
-    eventType: string;
-    notificationConfig: string;
-    objectGeneration: string;
-    payloadFormat: string;
-}
+// interface INotifyPubSub {
+//     bucketId: string;
+//     objectId: string;
+//     eventTime: string;
+//     eventType: string;
+//     notificationConfig: string;
+//     objectGeneration: string;
+//     payloadFormat: string;
+// }
+//
+// interface IPubSub {
+//     message: {
+//         attributes: INotifyPubSub;
+//         data: string;
+//         messageId: string;
+//         message_id: string;
+//         publishTime: string;
+//         publish_time: string;
+//     };
+//     subscription: string;
+// }
 
-interface IPubSub {
-    message: {
-        attributes: INotifyPubSub;
-        data: string;
-        messageId: string;
-        message_id: string;
-        publishTime: string;
-        publish_time: string;
+interface IMessasge {
+    protoPayload: {
+        resourceName: string;
     };
-    subscription: string;
 }
 
 class Slave extends RouteGroup<Configuracion>{
     /* INSTANCE */
-    private async parseLog(notify: INotifyPubSub): Promise<void> {
-        await PromiseDelayed()
-            .then(async ()=>{
-                if (notify.eventType!=="OBJECT_FINALIZE") {
-                    switch (notify.eventType) {
-                        case "OBJECT_DELETE":
-                            // deshabilitado por filtro de PubSub
-                            break;
-                        default:
-                            info("Evento todavía no soportado", notify.eventType, JSON.stringify(notify));
-                            break;
-                    }
-                    return;
-                }
-
-                await ClienteGCS.addStatusProcesando(notify.bucketId, notify.objectId);
-                const cliente = await ClienteGCS.searchBucket(notify.bucketId, notify.objectId);
-                await cliente.ingest(this.configuracion.pod, this.configuracion.google, notify.objectId);
-            })
-            .catch(async (err)=>{
-                if (err instanceof Error) {
-                    if (err.message.startsWith("Duplicate entry")) {
-                        return;
-                    }
-                    error("Error procesando", notify.bucketId, notify.objectId, err.message);
-                } else {
-                    error("Error procesando", notify.bucketId, notify.objectId, err);
-                }
-            })
-            .catch((err)=>{
-                error("Error procesando", notify.bucketId, notify.objectId, err);
-            });
-    }
-
     protected getHandlers(): IRouteGroup[] {
         return [
             {
@@ -114,21 +85,33 @@ class Slave extends RouteGroup<Configuracion>{
                 expresiones: [
                     {
                         metodos: ["POST"],
-                        prefix: "/pubsub/logs/ingest/",
+                        exact: "/",
                         checkQuery: false,
-                        resumen: "/pubsub/logs/ingest/",
+                        resumen: "/",
                     },
                 ],
                 handler: async (conexion) => {
-                    const post = conexion.post as IPubSub;
+                    const post = conexion.post as Partial<IMessasge>;
 
                     conexion.noCache();
 
                     // const salida = await this.sendRespuesta(conexion);
 
                     info("Evento", JSON.stringify(post));
-                    if (post.message?.attributes) {
-                        await this.parseLog(post.message.attributes);
+                    if (post.protoPayload?.resourceName) {
+                        const [base, path] = post.protoPayload.resourceName.split("/objects/");
+                        const bucket = base.substring(19); // quitamos el trozo de projects/_/buckets/
+                        try {
+                            await ClienteGCS.addStatusProcesando(bucket, path);
+                            const cliente = await ClienteGCS.searchBucket(bucket, path);
+                            await cliente.ingest(this.configuracion.pod, this.configuracion.google, path);
+                        } catch (err) {
+                            if (err instanceof Error) {
+                                error("Error procesando", bucket, path, err.message);
+                            } else {
+                                error("Error procesando", bucket, path, err);
+                            }
+                        }
                     }
 
                     return this.sendRespuesta(conexion);
