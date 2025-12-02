@@ -3,7 +3,7 @@ import {EngineServer} from "services-comun/modules/engine_server";
 import type {Configuracion} from "./utiles/config";
 
 import Slave from "./net/handlers/slave";
-import {readDir} from "services-comun/modules/utiles/fs";
+import {isDir, readDir} from "services-comun/modules/utiles/fs";
 
 export class Engine extends EngineServer<Configuracion> {
     /* INSTANCE */
@@ -12,6 +12,9 @@ export class Engine extends EngineServer<Configuracion> {
             Slave(this.configuracion),
         ], this.configuracion.net);
 
+        if (!await isDir("/cloudsql/")) {
+            console.log("No existe el directorio /cloudsql/");
+        }
         console.log(await readDir("files/credenciales/"));
 
         await super.ejecutar();
