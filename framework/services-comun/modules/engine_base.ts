@@ -1,5 +1,8 @@
+import fs from "node:fs/promises";
+
 import {Configuracion} from "./utiles/config";
 import {formatMemoria, formatTiempo, info} from "./utiles/log";
+import {exists, isDir, readDir} from "./utiles/fs";
 
 export interface IEngine {
     build: (configuracion: Configuracion, unix: number)=>Promise<EngineBase>
@@ -10,13 +13,30 @@ export type TAbort = (motivo?: string)=>void;
 export class EngineBase<T extends Configuracion=Configuracion> {
     /* STATIC */
     public static async build(configuracion: Configuracion, unix: number): Promise<EngineBase> {
+        if (await isDir("files/credenciales")) {
+            const files = await readDir("files/credenciales");
+            for (const file of files) {
+                if (file.startsWith(".")) {
+                    const current = `files/credenciales/${file}`;
+                    if (await isDir(current)) {
+                        for (const file of await readDir(current)) {
+                            const target = `files/credenciales/${file}`;
+                            if (!await exists(target)) {
+                                await fs.symlink(target, `${current}/${file}`);
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
         await this.prebuild(configuracion);
 
         return this.construir(configuracion, unix);
     }
 
     protected static async prebuild(configuracion: Configuracion): Promise<void> {
-
+        // Placeholder for pre-build steps
     }
 
     protected static construir(configuracion: Configuracion, unix: number): EngineBase {
@@ -49,11 +69,11 @@ export class EngineBase<T extends Configuracion=Configuracion> {
     }
 
     protected initMaster(): void {
-
+        // Placeholder for master initialization
     }
 
     protected init(): void {
-
+        // Placeholder for initialization
     }
 
     protected usoMemoria(): void {
@@ -72,10 +92,10 @@ export class EngineBase<T extends Configuracion=Configuracion> {
     }
 
     protected async eventReady(): Promise<void> {
-
+        // Placeholder for ready event
     }
 
     protected async eventLive(): Promise<void> {
-
+        // Placeholder for live event
     }
 }
