@@ -162,7 +162,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         yq eval ".spec.template.spec.containers[0].volumeMounts += $MOUNTS_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
 
         echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
-        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
+#        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"
 #        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
       fi
