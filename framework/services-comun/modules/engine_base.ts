@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 
 import {Configuracion} from "./utiles/config";
 import {formatMemoria, formatTiempo, info} from "./utiles/log";
-import {exists, isDir, readDir} from "./utiles/fs";
+import {exists, isDir, mkdir, readDir} from "./utiles/fs";
 
 export interface IEngine {
     build: (configuracion: Configuracion, unix: number)=>Promise<EngineBase>
@@ -13,17 +13,18 @@ export type TAbort = (motivo?: string)=>void;
 export class EngineBase<T extends Configuracion=Configuracion> {
     /* STATIC */
     public static async build(configuracion: Configuracion, unix: number): Promise<EngineBase> {
-        if (await isDir("files/credenciales")) {
-            const files = await readDir("files/credenciales");
+        if (await isDir("files/.credenciales")) {
+            if (!await isDir("files/credenciales")) {
+                await mkdir("files/credenciales", true);
+            }
+            const files = await readDir("files/.credenciales");
             for (const file of files) {
-                if (file.startsWith(".")) {
-                    const current = `files/credenciales/${file}`;
-                    if (await isDir(current)) {
-                        for (const file of await readDir(current)) {
-                            const target = `files/credenciales/${file}`;
-                            if (!await exists(target)) {
-                                await fs.symlink(`${current}/${file}`, target);
-                            }
+                const current = `files/.credenciales/${file}`;
+                if (await isDir(current)) {
+                    for (const file of await readDir(current)) {
+                        const target = `files/credenciales/${file}`;
+                        if (!await exists(target)) {
+                            await fs.symlink(`${current}/${file}`, target);
                         }
                     }
                 }
