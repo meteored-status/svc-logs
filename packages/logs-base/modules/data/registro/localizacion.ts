@@ -6,7 +6,7 @@ export interface IRegistroLocalizacion {
     pais: string;
     region: string;
     ciudad: string;
-    coordenadas: IGeoPoint;
+    coordenadas: string;
     precision: number;
     timezone: string;
     eu: boolean;
@@ -33,12 +33,13 @@ export class RegistroLocalizacion implements IRegistroLocalizacion {
             pais: data.country,
             region: data.region,
             ciudad: data.city,
-            coordenadas: {
-                type: "Point",
-                coordinates: [data.ll[1], data.ll[0]],
-                // lon: data.ll[1],
-                // lat: data.ll[0],
-            },
+            coordenadas: `POINT(${data.ll[1]} ${data.ll[0]})`,
+            // coordenadas: {
+            //     type: "Point",
+            //     coordinates: [data.ll[1], data.ll[0]],
+            //     // lon: data.ll[1],
+            //     // lat: data.ll[0],
+            // },
             precision: data.area,
             timezone: data.timezone,
             eu: data.eu !== "0",
@@ -49,7 +50,7 @@ export class RegistroLocalizacion implements IRegistroLocalizacion {
     public get pais(): string { return this.data.pais; }
     public get region(): string { return this.data.region; }
     public get ciudad(): string { return this.data.ciudad; }
-    public get coordenadas(): IGeoPoint { return this.data.coordenadas; }
+    public get coordenadas(): string { return this.data.coordenadas; }
     public get precision(): number { return this.data.precision; }
     public get timezone(): string { return this.data.timezone; }
     public get eu(): boolean { return this.data.eu; }
