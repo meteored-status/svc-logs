@@ -29,7 +29,7 @@ export class EngineBase<T extends Configuracion=Configuracion> {
                     }
                 }
             }
-
+            console.log("files", await readDir("files/credenciales"));
         }
         await this.prebuild(configuracion);
 
