@@ -319,27 +319,28 @@ export class ClienteGCS implements IClienteGCS {
         // await db.update("UPDATE repesca, procesando SET repesca.tratando=1 WHERE repesca.bucket=procesando.bucket AND repesca.archivo=procesando.archivo");
     }
 
-    private async getArchivoErr(config: Google, bucket: string, file: string, retry: number, err: any): Promise<Storage|null> {
-        if (err?.code == 404) {
-            return null;
-        }
-
-        if (retry >= 10) {
-            return Promise.reject(new Error(`Error obteniendo archivo: gs://${bucket}/${file} => ${JSON.stringify(err)}`));
-        }
-
-        retry++;
-        await PromiseDelayed(1000 * retry);
-        return this.getArchivo(config, bucket, file, retry);
-    }
+    // private async getArchivoErr(config: Google, bucket: string, file: string, retry: number, err: any): Promise<Storage|null> {
+    //     if (err?.code == 404) {
+    //         return null;
+    //     }
+    //
+    //     if (retry >= 10) {
+    //         return Promise.reject(new Error(`Error obteniendo archivo: gs://${bucket}/${file} => ${JSON.stringify(err)}`));
+    //     }
+    //
+    //     retry++;
+    //     await PromiseDelayed(1000 * retry);
+    //     return this.getArchivo(config, bucket, file, retry);
+    // }
 
     private async getArchivo(config: Google, bucket: string, file: string, retry: number = 0): Promise<Storage|null> {
-        try {
-            return Storage.getOne(config, bucket, file)
-                .catch(async (err) => this.getArchivoErr(config, bucket, file, retry, err));
-        } catch (err) {
-            return this.getArchivoErr(config, bucket, file, retry, err);
-        }
+        // try {
+            console.log(config, bucket, file);
+        return Storage.getOne(config, bucket, file);
+        //         .catch(async (err) => this.getArchivoErr(config, bucket, file, retry, err));
+        // } catch (err) {
+        //     return this.getArchivoErr(config, bucket, file, retry, err);
+        // }
     }
 
     public async ingest(pod: IPodInfo, storage: Google, source: string, idx?: number): Promise<void> {
