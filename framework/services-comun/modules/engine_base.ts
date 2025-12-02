@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 
 import {Configuracion} from "./utiles/config";
 import {formatMemoria, formatTiempo, info} from "./utiles/log";
-import {exists, isDir, mkdir, readDir} from "./utiles/fs";
+import {exists, isDir, mkdir, readDir, stats} from "./utiles/fs";
 
 export interface IEngine {
     build: (configuracion: Configuracion, unix: number)=>Promise<EngineBase>
@@ -13,23 +13,23 @@ export type TAbort = (motivo?: string)=>void;
 export class EngineBase<T extends Configuracion=Configuracion> {
     /* STATIC */
     public static async build(configuracion: Configuracion, unix: number): Promise<EngineBase> {
-        if (await isDir("files/.credenciales")) {
-            if (!await isDir("files/credenciales")) {
-                await mkdir("files/credenciales", true);
+        if (await isDir("/usr/src/app/files/.credenciales")) {
+            if (!await isDir("/usr/src/app/files/credenciales")) {
+                await mkdir("/usr/src/app/files/credenciales", true);
             }
-            const files = await readDir("files/.credenciales");
+            const files = await readDir("/usr/src/app/files/.credenciales");
             for (const file of files) {
-                const current = `files/.credenciales/${file}`;
+                const current = `/usr/src/app/files/.credenciales/${file}`;
                 if (await isDir(current)) {
                     for (const file of await readDir(current)) {
-                        const target = `files/credenciales/${file}`;
+                        const target = `/usr/src/app/files/credenciales/${file}`;
                         if (!await exists(target)) {
                             await fs.symlink(`${current}/${file}`, target);
                         }
                     }
                 }
             }
-            console.log("files", await readDir("files/credenciales"));
+            console.log("files", await stats("/usr/src/app/files/credenciales/mysql.json"));
         }
         await this.prebuild(configuracion);
 
