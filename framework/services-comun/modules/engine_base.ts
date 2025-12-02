@@ -17,14 +17,14 @@ export class EngineBase<T extends Configuracion=Configuracion> {
             if (!await isDir("/usr/src/app/files/credenciales")) {
                 await mkdir("/usr/src/app/files/credenciales", true);
             }
-            const files = await readDir("/usr/src/app/files/.credenciales");
-            for (const file of files) {
-                const current = `/usr/src/app/files/.credenciales/${file}`;
+            const dirs = await readDir("/usr/src/app/files/.credenciales");
+            for (const dir of dirs) {
+                const current = `/usr/src/app/files/.credenciales/${dir}`;
                 if (await isDir(current)) {
                     for (const file of await readDir(current)) {
                         const target = `/usr/src/app/files/credenciales/${file}`;
                         if (!await exists(target)) {
-                            await fs.symlink(`${current}/${file}`, target);
+                            await fs.symlink(`../.credenciales/${dir}/${file}`, target);
                         }
                     }
                 }
