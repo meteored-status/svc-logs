@@ -16,7 +16,7 @@ type IRedisHost = {
     port: string;
 }
 
-type IRedisOptions = {
+export type IRedisOptions = {
     timeout?: number;
 }
 

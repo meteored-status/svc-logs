@@ -21,12 +21,13 @@ export class SparkpostSender extends Sender<TransmissionID | null> {
     public override async run(): Promise<TransmissionID | null> {
         let email = this.send.email;
 
-        if (!email && this.send.content) {
-            email = JSON.parse(this.send.content);
+        if (!email && this.send.email) {
+            email = this.send.email;
         }
 
         if (!email) {
             error(`No se ha proporcionado un email para enviar.`);
+            this.koHandler?.();
             return null;
         }
 
@@ -58,7 +59,7 @@ export class SparkpostSender extends Sender<TransmissionID | null> {
             this.send.transmissionId = transmissionId;
             this.okHandler?.(transmissionId);
         } else {
-            this.koHandler?.()
+            this.koHandler?.();
         }
 
         return transmissionId || null;

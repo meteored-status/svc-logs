@@ -15,6 +15,13 @@ export type PubSubBuild = {
 
 export type TMessageData = MessageOptions;
 
+export type ConfigDataQueue = {
+    topicName: string;
+    subscriptionName: string;
+    messageLimit?: number;
+    waitTimeMs?: number;
+}
+
 export class PubSub {
     /* STATIC */
     public static build({credenciales = 'files/credenciales/pubsub.json', topic, subscription}: PubSubBuild = {}): PubSub {

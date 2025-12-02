@@ -1,5 +1,5 @@
 import {SendEventController} from "./send-event-controller";
-import {DAOFactory} from "../data/dao/d-a-o-factory";
+import {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {SparkpostEvent} from "../data/model/sparkpost-event";
 import {SparkpostSend} from "../data/model/sparkpost-send";
 
@@ -7,7 +7,7 @@ export class SparkpostEventController extends SendEventController {
     /* STATIC */
 
     /* INSTANCE */
-    public constructor(factory: DAOFactory) {
+    public constructor(factory: IDAOFactory) {
         super(factory);
     }
 

@@ -3,6 +3,7 @@ import {Elasticsearch} from "../../../../../elasticsearch";
 import {Send, TSend, TStatus} from "../../../model/send";
 import {ElasticSearch} from "../../../../utiles/config";
 import {SparkpostSend} from "../../../model/sparkpost-send";
+import {IMail} from "../../../../../email/manager";
 
 interface IDocument {
     id: string;
@@ -14,7 +15,7 @@ interface IDocument {
     tries: number;
     send_task_id: number;
     send_task_instance_id?: string;
-    content?: any;
+    content?: string;
     transmission_id?: string;
 }
 
@@ -60,6 +61,7 @@ export class ElasticSendDAO extends SendDAO {
     public override async getPending(): Promise<Send[]> {
         const data = await this.client.search<IDocument>({
             index: this.config.sendIndex,//ElasticSendDAO.getIndex(this.config),
+            size: 100, // Recogemos un máximo de 100 envíos pendientes
             query: {
                 bool: {
                     must: [
@@ -111,6 +113,15 @@ export class ElasticSendDAO extends SendDAO {
     }
 
     private sendToDocument(send: Send): IDocument {
+        let content: string | undefined = undefined;
+        switch (send.type) {
+            case TSend.SPARKPOST:
+                const sparkpostSend = send as SparkpostSend;
+                if (sparkpostSend.email) {
+                    content = JSON.stringify(sparkpostSend.email);
+                }
+                break;
+        }
         const base: IDocument = {
             id: send.id,
             type: send.type,
@@ -121,7 +132,7 @@ export class ElasticSendDAO extends SendDAO {
             tries: send.tries,
             send_task_id: send.sendTaskId,
             send_task_instance_id: send.sendTaskInstanceId,
-            content: send.content
+            content,
         };
 
         switch (send.type) {
@@ -136,6 +147,7 @@ export class ElasticSendDAO extends SendDAO {
     private documentToSend(document: IDocument, metadata: { id: string, index: string }): Send {
         switch (document.type) {
             case TSend.SPARKPOST:
+                const email = document.content ? JSON.parse(document.content) as IMail : undefined;
                 return new SparkpostSend({
                     id: document.id,
                     type: document.type,
@@ -146,8 +158,8 @@ export class ElasticSendDAO extends SendDAO {
                     tries: document.tries,
                     send_task_id: document.send_task_id,
                     send_task_instance_id: document.send_task_instance_id,
-                    content: document.content,
-                    transmissionId: document.transmission_id
+                    transmissionId: document.transmission_id,
+                    email
                 }, metadata);
         }
     }
