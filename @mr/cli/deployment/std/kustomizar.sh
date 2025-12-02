@@ -148,7 +148,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
               --arg target "$TARGET" \
               '{
                   name: $name,
-                  mountPath: "/usr/src/app/files/credenciales/\($target)",
+                  mountPath: "/usr/src/app/files/credenciales/",
                   readOnly: true,
                   subPath: $target
               }')
