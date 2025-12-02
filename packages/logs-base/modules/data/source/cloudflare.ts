@@ -6,7 +6,6 @@ import {z} from "zod";
 
 import {Storage} from "services-comun/modules/fs/storage";
 import {error, info} from "services-comun/modules/utiles/log";
-import elastic from "services-comun/modules/utiles/elastic";
 
 import type {Cliente} from "../cliente";
 import {type IRAWData, IRegistroES, Registro} from "../registro/";
@@ -395,28 +394,6 @@ export class Cloudflare {
         };
     });
 
-    public static async getIDX(cliente: Cliente, source: string): Promise<number|undefined> {
-        const hits = await elastic.search<{metadata: {idx: number}}>({
-            index: Registro.getIndex(cliente.id),
-            query: {
-                term: {
-                    "metadata.source": source,
-                },
-            },
-            sort: [
-                {
-                    "metadata.idx": "desc",
-                },
-            ],
-            size: 1,
-            _source: [
-                "metadata.idx",
-            ],
-        });
-
-        return hits.hits.hits[0]?._source?.metadata.idx;
-    }
-
     protected static BQ = new BigQuery({
         keyFilename: "files/credenciales/bigquery.json",
     });
@@ -443,11 +420,6 @@ export class Cloudflare {
         });
 
         const buffer: IRegistroES[] = [];
-        // const bulk = Bulk.init(elastic, {
-        //     // blockSize: 25000,
-        //     index: Registro.getIndex(telemetry.proyecto),
-        //     refresh: false,
-        // });
 
         for await (const linea of lector) {
             if (linea.length==0) {
