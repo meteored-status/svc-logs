@@ -1,8 +1,4 @@
-import {BulkAuto} from "services-comun/modules/elasticsearch/bulk/auto";
 import type {IPodInfo} from "services-comun/modules/utiles/config";
-import {error} from "services-comun/modules/utiles/log";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
-import elastic from "services-comun/modules/utiles/elastic";
 
 import type {Cliente} from "./cliente";
 
@@ -36,8 +32,6 @@ interface ITelemetryES {
 
 export class Telemetry implements ITelemetry {
     /* STATIC */
-    private static INDEX = `mr-telemetry-accesos`;
-
     public static build(cliente: Cliente, pod: IPodInfo, source: string): Telemetry {
         const [start, end] = source.split("/")
             .at(-1)!
@@ -54,18 +48,6 @@ export class Telemetry implements ITelemetry {
             start,
             end,
         });
-    }
-
-    private static bulk: BulkAuto = new BulkAuto(elastic, {
-        index: this.INDEX,
-    });
-
-    static {
-        this.bulk.start();
-    }
-
-    public static async stop(): Promise<void> {
-        return this.bulk.wait();
     }
 
     /* INSTANCE */
@@ -122,25 +104,5 @@ export class Telemetry implements ITelemetry {
             saltados: this.saltados,
             rps: this.data.ingestTime>0 ? Math.round((this.records / this.data.ingestTime) * 1000) : undefined,
         };
-    }
-
-    public async toElastic(): Promise<void> {
-        Telemetry.bulk.create({
-            doc: this.toJSON(),
-        });
-        // await elastic.index({
-        //     index: Telemetry.INDEX,
-        //     document: this.toJSON(),
-        // })
-        //     .catch(async (err) => {
-        //         if (err instanceof Error) {
-        //             if (err.name == "TimeoutError") {
-        //                 await PromiseDelayed(Math.floor(Math.random() * 1000) + 1000);
-        //                 return this.toElastic();
-        //             }
-        //             error("Error guardando telemetría", err.name, err.message, JSON.stringify(this.toJSON()));
-        //         }
-        //         return Promise.reject(err);
-        //     });
     }
 }
