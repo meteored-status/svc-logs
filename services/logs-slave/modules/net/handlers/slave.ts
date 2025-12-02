@@ -1,7 +1,7 @@
 import {ClienteGCS} from "logs-base/modules/data/cliente/gcs";
 import {RouteGroup} from "services-comun/modules/net/routes/group";
 import type {IRouteGroup} from "services-comun/modules/net/routes/group/block";
-import {error, info} from "services-comun/modules/utiles/log";
+import {error} from "services-comun/modules/utiles/log";
 import {type ILogErrorPOST, LogError} from "../../data/error";
 import {type ILogServicioPOST, LogServicio} from "../../data/servicio";
 
@@ -107,7 +107,7 @@ class Slave extends RouteGroup<Configuracion>{
                             return this.sendRespuesta(conexion);
                         } catch (err) {
                             if (err instanceof Error) {
-                                error("Error procesando", bucket, path, err.message);
+                                error("Error procesando", bucket, path, err.message, err.stack);
                                 return conexion.error(err.message);
                             } else {
                                 error("Error procesando", bucket, path, err);
