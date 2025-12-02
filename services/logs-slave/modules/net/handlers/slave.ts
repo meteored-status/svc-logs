@@ -32,13 +32,8 @@ interface IPubSub {
 
 class Slave extends RouteGroup<Configuracion>{
     /* INSTANCE */
-    private log = false;
-    private parseLog(notify: INotifyPubSub): void {
-        if (!this.log) {
-            this.log = true;
-            info("Evento", JSON.stringify(notify));
-        }
-        PromiseDelayed()
+    private async parseLog(notify: INotifyPubSub): Promise<void> {
+        await PromiseDelayed()
             .then(async ()=>{
                 if (notify.eventType!=="OBJECT_FINALIZE") {
                     switch (notify.eventType) {
@@ -129,13 +124,14 @@ class Slave extends RouteGroup<Configuracion>{
 
                     conexion.noCache();
 
-                    const salida = await this.sendRespuesta(conexion);
+                    // const salida = await this.sendRespuesta(conexion);
 
+                    info("Evento", JSON.stringify(post));
                     if (post.message?.attributes) {
-                        this.parseLog(post.message.attributes);
+                        await this.parseLog(post.message.attributes);
                     }
 
-                    return salida;
+                    return this.sendRespuesta(conexion);
                 },
             },
         ];
