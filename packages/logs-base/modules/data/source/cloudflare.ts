@@ -4,7 +4,6 @@ import {BigQuery} from "@google-cloud/bigquery";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {z} from "zod";
 
-import {Bulk} from "services-comun/modules/elasticsearch/bulk";
 import {Storage} from "services-comun/modules/fs/storage";
 import {error, info} from "services-comun/modules/utiles/log";
 import elastic from "services-comun/modules/utiles/elastic";
@@ -422,7 +421,7 @@ export class Cloudflare {
         keyFilename: "files/credenciales/bigquery.json",
     });
 
-    public static async ingest(telemetry: Telemetry, storage: Storage, idx?: number): Promise<void> {
+    public static async ingest(telemetry: Telemetry, storage: Storage): Promise<void> {
         let memoryOK = false;
         while (process.memoryUsage().heapUsed > 3 * 1024*1024*1024) {
             if (!memoryOK) {
@@ -450,14 +449,9 @@ export class Cloudflare {
         //     refresh: false,
         // });
 
-        idx ??=-1;
         for await (const linea of lector) {
             if (linea.length==0) {
                 // en este caso no nos saltamos linea de telemetría, ignoramos las lineas vacías tal como puede ser la de final de archivo
-                continue;
-            }
-            if (idx>=telemetry.records) {
-                telemetry.saltar();
                 continue;
             }
 

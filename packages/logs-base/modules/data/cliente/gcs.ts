@@ -322,7 +322,7 @@ export class ClienteGCS implements IClienteGCS {
         return Storage.getOne(config, bucket, file);
     }
 
-    public async ingest(pod: IPodInfo, storage: Google, source: string, idx?: number): Promise<void> {
+    public async ingest(pod: IPodInfo, storage: Google, source: string): Promise<void> {
         await this.addStatusProcesando(source);
 
         const data = await this.getArchivo(storage, this.bucket, source);
@@ -331,14 +331,9 @@ export class ClienteGCS implements IClienteGCS {
         }
 
         const telemetry = Telemetry.build(this.cliente, pod, source);
-        await Cloudflare.ingest(telemetry, data, idx);
+        await Cloudflare.ingest(telemetry, data);
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
         await data.delete();
         await this.addStatusTerminado(source);
-        telemetry.toElastic()
-            .then(() => undefined)
-            .catch((err) => {
-                error("Error registrando telemetría en Elastic", err);
-            });
     }
 }
