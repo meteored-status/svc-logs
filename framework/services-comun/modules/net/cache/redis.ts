@@ -1,6 +1,6 @@
 import {INetCache, INetCacheV1, IRouteGroupCache, NetCache} from "./index";
 import {Conexion} from "../conexion";
-import {Redis} from "../../database/redis";
+import {IRedisOptions, Redis} from "../../database/redis";
 import {Configuracion} from "../../utiles/config";
 import {md5} from "../../utiles/hash";
 import {TDevice} from "../device";
@@ -9,17 +9,19 @@ export class NetCacheRedis extends NetCache {
     /* STATIC */
     private static REDIS_CLIENT: Redis|null = null;
 
-    private static redis(config: Configuracion): Redis {
+    private static redis(config: Configuracion, credenciales?: string, options?: IRedisOptions): Redis {
         if (!this.REDIS_CLIENT) {
             this.REDIS_CLIENT = Redis.build({
                 pod: config.pod,
+                credenciales,
+                ...options,
             });
         }
         return this.REDIS_CLIENT;
     }
 
     /* INSTANCE */
-    public constructor(private readonly config: Configuracion) {
+    public constructor(private readonly config: Configuracion, private readonly credenciales?: string, private readonly options?: IRedisOptions) {
         super();
     }
 
@@ -37,7 +39,7 @@ export class NetCacheRedis extends NetCache {
 
     protected async loadMetadata(conexion: Conexion, cfg: IRouteGroupCache): Promise<INetCache> {
         const key = `${this.cacheKey(conexion, cfg)}:metadata`;
-        const redis = NetCacheRedis.redis(this.config);
+        const redis = NetCacheRedis.redis(this.config, this.credenciales, this.options);
         const metadata = await redis.loadJSON<INetCache>(key) as INetCacheV1|null;
 
         if (!metadata) {
@@ -49,7 +51,7 @@ export class NetCacheRedis extends NetCache {
 
     protected async loadData(conexion: Conexion, cfg: IRouteGroupCache): Promise<Buffer> {
         const key = `${this.cacheKey(conexion, cfg)}:data`;
-        const redis = NetCacheRedis.redis(this.config);
+        const redis = NetCacheRedis.redis(this.config, this.credenciales, this.options);
         const data = await redis.get(key) as Buffer|null;
         if (!data) {
             return Promise.reject("No hay datos en caché");
@@ -72,7 +74,7 @@ export class NetCacheRedis extends NetCache {
             return;
         }
 
-        const redis = NetCacheRedis.redis(this.config);
+        const redis = NetCacheRedis.redis(this.config, this.credenciales, this.options);
 
         const key = this.cacheKey(conexion, cfg);
 

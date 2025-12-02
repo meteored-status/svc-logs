@@ -20,7 +20,6 @@ export interface ISend {
     tries: number;
     send_task_id: number;
     send_task_instance_id?: string;
-    content?: string;
 }
 
 export interface IMetadata {
@@ -79,10 +78,6 @@ export abstract class Send {
 
     public set sendTaskInstanceId(value: string | undefined) {
         this.data.send_task_instance_id = value;
-    }
-
-    public get content(): string | undefined {
-        return this.data.content;
     }
 
     protected get data(): ISend {

@@ -1,12 +1,12 @@
 import {SendEvent} from "../data/model/send-event";
-import {DAOFactory} from "../data/dao/d-a-o-factory";
+import {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {Send} from "../data/model/send";
 
 export abstract class SendEventController {
     /* STATIC */
 
     /* INSTANCE */
-    protected constructor(protected readonly factory: DAOFactory) {
+    protected constructor(protected readonly factory: IDAOFactory) {
     }
 
     public async handle(event: SendEvent): Promise<void> {
