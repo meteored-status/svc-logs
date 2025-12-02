@@ -1,6 +1,5 @@
 import type {IInsert} from "services-comun/modules/database/mysql";
 import type {Google, IPodInfo} from "services-comun/modules/utiles/config";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {Storage} from "services-comun/modules/fs/storage";
 import {error} from "services-comun/modules/utiles/log";
 import db from "services-comun/modules/utiles/mysql";
