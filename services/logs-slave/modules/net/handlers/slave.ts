@@ -99,10 +99,9 @@ class Slave extends RouteGroup<Configuracion>{
                         const [base, path] = post.protoPayload.resourceName.split("/objects/");
                         const bucket = base.substring(19); // quitamos el trozo de projects/_/buckets/
                         try {
-                            console.log(bucket, path);
-                            // await ClienteGCS.addStatusProcesando(bucket, path);
-                            // const cliente = await ClienteGCS.searchBucket(bucket, path);
-                            // await cliente.ingest(this.configuracion.pod, this.configuracion.google, path);
+                            await ClienteGCS.addStatusProcesando(bucket, path);
+                            const cliente = await ClienteGCS.searchBucket(bucket, path);
+                            await cliente.ingest(this.configuracion.pod, this.configuracion.google, path);
 
                             return this.sendRespuesta(conexion);
                         } catch (err) {
