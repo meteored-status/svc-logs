@@ -28,7 +28,7 @@ interface IClienteGCSMySQL extends IClienteGCS {
 export class ClienteGCS implements IClienteGCS {
     /* STATIC */
     private static BUCKETS: Record<string, Record<string, IClienteGCSMySQL>> = {
-        "cf-logs": {
+        "cf-accesos": {
             "ed": {
                 bucket: "cf-accesos",
                 cliente: "ed",

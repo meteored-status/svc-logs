@@ -29,7 +29,6 @@ export class EngineBase<T extends Configuracion=Configuracion> {
                     }
                 }
             }
-            console.log("files", await stats("/usr/src/app/files/credenciales/mysql.json"));
         }
         await this.prebuild(configuracion);
 
