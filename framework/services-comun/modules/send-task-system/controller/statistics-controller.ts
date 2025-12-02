@@ -1,7 +1,7 @@
 import {Configuracion} from "../utiles/config";
 import {mkdir, readJSON, safeWrite} from "../../utiles/fs";
 import {error, info} from "../../utiles/log";
-import {DAOFactory} from "../data/dao/d-a-o-factory";
+import {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {SendEvent} from "../data/model/send-event";
 import {Receiver} from "../data/model/receiver";
 import {CalculatorBuilder} from "../statistics/calculator-builder";
@@ -16,7 +16,7 @@ export class StatisticsController {
     /* INSTANCE */
     public constructor(
         private readonly config: Configuracion,
-        private readonly factory: DAOFactory) {
+        private readonly factory: IDAOFactory) {
     }
 
     public async run(): Promise<void> {

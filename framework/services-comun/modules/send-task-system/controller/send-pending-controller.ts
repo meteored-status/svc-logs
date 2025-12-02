@@ -1,4 +1,4 @@
-import {DAOFactory} from "../data/dao/d-a-o-factory";
+import {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {Send, TStatus} from "../data/model/send";
 import {error, info} from "../../utiles/log";
 import {SenderBuilder} from "../sender/sender-builder";
@@ -7,7 +7,7 @@ export abstract class SendPendingController {
     /* STATIC */
 
     /* INSTANCE */
-    public constructor(private readonly factory: DAOFactory) {
+    public constructor(private readonly factory: IDAOFactory) {
     }
 
     public async run(): Promise<void> {

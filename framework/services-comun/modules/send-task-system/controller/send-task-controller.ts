@@ -1,7 +1,7 @@
 import {Send, TStatus} from "../data/model/send";
 import {SendTaskInstance} from "../data/model/send-task-instance";
 import {SenderBuilder} from "../sender/sender-builder";
-import {DAOFactory} from "../data/dao/d-a-o-factory";
+import {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {ReceiverIdentifierBuilder} from "../receiver/receiver-identifier-builder";
 import {Receiver} from "../data/model/receiver";
 
@@ -11,7 +11,7 @@ export abstract class SendTaskController {
     /* INSTANCE */
     protected constructor(
         private readonly _sendTask: number,
-        private readonly factory: DAOFactory
+        private readonly factory: IDAOFactory
     ) {
     }
 

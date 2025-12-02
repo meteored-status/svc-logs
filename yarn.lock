@@ -2739,6 +2739,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cron-parser@npm:^5.4.0":
+  version: 5.4.0
+  resolution: "cron-parser@npm:5.4.0"
+  dependencies:
+    luxon: "npm:^3.7.1"
+  checksum: 10/989353ce4c3fba0b1b3aabbccd4301743d25c75c472765483125c5ae13e8fe5f2d7dd6e826034d2612c888f52f860dcf08e22346a48fa197ccc8e7e7c0578267
+  languageName: node
+  linkType: hard
+
 "cross-spawn@npm:^7.0.6":
   version: 7.0.6
   resolution: "cross-spawn@npm:7.0.6"
@@ -4847,6 +4856,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"luxon@npm:^3.7.1":
+  version: 3.7.2
+  resolution: "luxon@npm:3.7.2"
+  checksum: 10/b24cd205ed306ce7415991687897dcc4027921ae413c9116590bc33a95f93b86ce52cf74ba72b4f5c5ab1c10090517f54ac8edfb127c049e0bf55b90dc2260be
+  languageName: node
+  linkType: hard
+
 "make-error@npm:^1.1.1":
   version: 1.3.6
   resolution: "make-error@npm:1.3.6"
@@ -5116,6 +5132,22 @@ __metadata:
   version: 1.0.4
   resolution: "module-details-from-path@npm:1.0.4"
   checksum: 10/2ebfada5358492f6ab496b70f70a1042f2ee7a4c79d29467f59ed6704f741fb4461d7cecb5082144ed39a05fec4d19e9ff38b731c76228151be97227240a05b2
+  languageName: node
+  linkType: hard
+
+"moment-timezone@npm:^0.6.0":
+  version: 0.6.0
+  resolution: "moment-timezone@npm:0.6.0"
+  dependencies:
+    moment: "npm:^2.29.4"
+  checksum: 10/324df65c9ed622c75d4e39dc5daf01dfcd8b4cb4eb63dec3270ddbfed3f5357e4d4b22a39bf3b4fe1fe2d78b21307abddfb13e7aa6a19b69b7f33bb712c8ad55
+  languageName: node
+  linkType: hard
+
+"moment@npm:^2.29.4":
+  version: 2.30.1
+  resolution: "moment@npm:2.30.1"
+  checksum: 10/ae42d876d4ec831ef66110bdc302c0657c664991e45cf2afffc4b0f6cd6d251dde11375c982a5c0564ccc0fa593fc564576ddceb8c8845e87c15f58aa6baca69
   languageName: node
   linkType: hard
 
@@ -6537,11 +6569,13 @@ __metadata:
     "@types/ungap__structured-clone": "npm:^1.2.0"
     "@ungap/structured-clone": "npm:^1.3.0"
     chokidar: "npm:^4.0.3"
+    cron-parser: "npm:^5.4.0"
     dd-trace: "npm:^5.80.0"
     diff3: "npm:^0.0.4"
     formidable: "npm:^3.5.4"
     isbot: "npm:^5.1.32"
     make-plural: "npm:^7.4.0"
+    moment-timezone: "npm:^0.6.0"
     mysql2: "npm:^3.15.3"
     node-ical: "npm:^0.22.1"
     pg: "npm:^8.16.3"

@@ -22,6 +22,7 @@ export class MySQL<T> extends Bulk<T> {
     }
 
     protected override async doUpdates(updates: T[], transaction?: Transaction): Promise<void> {
+        return this.doInserts(updates, transaction);
     }
 
     protected override async doInserts(inserts: T[], transaction?: Transaction): Promise<void> {
