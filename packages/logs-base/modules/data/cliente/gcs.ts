@@ -319,7 +319,6 @@ export class ClienteGCS implements IClienteGCS {
     }
 
     private async getArchivo(config: Google, bucket: string, file: string): Promise<Storage|null> {
-        console.log(config, bucket, file);
         return Storage.getOne(config, bucket, file);
     }
 
