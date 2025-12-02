@@ -14,6 +14,8 @@ export class Engine extends EngineServer<Configuracion> {
 
         if (!await isDir("/cloudsql/")) {
             console.log("No existe el directorio /cloudsql/");
+        } else {
+            console.log(await readDir("/cloudsql/"));
         }
         console.log(await readDir("files/credenciales/"));
 
