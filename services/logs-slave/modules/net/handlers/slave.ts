@@ -95,21 +95,23 @@ class Slave extends RouteGroup<Configuracion>{
 
                     conexion.noCache();
 
-                    // const salida = await this.sendRespuesta(conexion);
-
-                    info("Evento", JSON.stringify(post));
                     if (post.protoPayload?.resourceName) {
                         const [base, path] = post.protoPayload.resourceName.split("/objects/");
                         const bucket = base.substring(19); // quitamos el trozo de projects/_/buckets/
                         try {
                             await ClienteGCS.addStatusProcesando(bucket, path);
                             const cliente = await ClienteGCS.searchBucket(bucket, path);
+                            console.log(cliente);
                             await cliente.ingest(this.configuracion.pod, this.configuracion.google, path);
+
+                            return this.sendRespuesta(conexion);
                         } catch (err) {
                             if (err instanceof Error) {
                                 error("Error procesando", bucket, path, err.message);
+                                return conexion.error(err.message);
                             } else {
                                 error("Error procesando", bucket, path, err);
+                                return conexion.error(JSON.stringify(err));
                             }
                         }
                     }
