@@ -22,7 +22,7 @@ export class EngineBase<T extends Configuracion=Configuracion> {
                         for (const file of await readDir(current)) {
                             const target = `files/credenciales/${file}`;
                             if (!await exists(target)) {
-                                await fs.symlink(target, `${current}/${file}`);
+                                await fs.symlink(`${current}/${file}`, target);
                             }
                         }
                     }
