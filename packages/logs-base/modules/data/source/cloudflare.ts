@@ -8,6 +8,7 @@ import {error, info} from "services-comun/modules/utiles/log";
 
 import {type IRAWData, type IRegistroES, Registro} from "../registro/";
 import type {Telemetry} from "../telemetry";
+import {arrayChop} from "services-comun/modules/utiles/array";
 
 export class Cloudflare {
     /* STATIC */
@@ -157,7 +158,7 @@ export class Cloudflare {
         WorkerStatus: z.string().optional(), // todo para quitar
         WorkerSubrequest: z.boolean(),
         WorkerSubrequestCount: z.number().optional(), // todo para quitar
-        ZoneID: z.number().optional().optional(), // todo para quitar
+        ZoneID: z.number().optional(), // todo para quitar
         ZoneName: z.string(),
         CacheReserveUsed: z.boolean(),
         WorkerWallTimeUs: z.number().optional(), // todo para quitar
@@ -432,16 +433,18 @@ export class Cloudflare {
             }
 
             buffer.push(Registro.build(cf, telemetry).toJSON());
-            // bulk.create({doc: Registro.build(cf, telemetry).toJSON()});
         }
-        this.BQ.dataset("logs").table(`accesos`).insert(buffer)
-            .then(() => undefined)
-            .catch((err) => {
-                error("Error guardando registros en BigQuery", JSON.stringify(err));
-            });
-
-        // await bulk.run();
+        this.guardar(buffer).then(() => undefined);
 
         telemetry.endTimer();
+    }
+
+    private static async guardar(buffer: IRegistroES[]): Promise<void> {
+        for (const chunk of arrayChop(buffer, 10000)) {
+            await this.BQ.dataset("logs").table(`accesos`).insert(chunk)
+                .catch((err) => {
+                    error("Error guardando registros en BigQuery", JSON.stringify(err));
+                });
+        }
     }
 }
