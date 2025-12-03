@@ -440,7 +440,7 @@ export class Cloudflare {
     }
 
     private static async guardar(buffer: IRegistroES[]): Promise<void> {
-        for (const chunk of arrayChop(buffer, 10000)) {
+        for (const chunk of arrayChop(buffer, 1000)) {
             await this.BQ.dataset("logs").table(`accesos`).insert(chunk)
                 .catch((err) => {
                     error("Error guardando registros en BigQuery", JSON.stringify(err));
