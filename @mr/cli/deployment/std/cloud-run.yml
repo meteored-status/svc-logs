@@ -30,9 +30,9 @@ spec:
             httpGet:
               path: /admin/started/
           readinessProbe:
-            timeoutSeconds: 1
-            periodSeconds: 1
-            failureThreshold: 5
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
             httpGet:
               path: /admin/ready/
           livenessProbe:
