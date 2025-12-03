@@ -7,7 +7,7 @@ import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} f
 import type {Telemetry} from "../telemetry";
 
 export interface IRAWDataClient {
-    asn: number;
+    // asn: number;
     country: string;
     device: {
         type: string;
@@ -16,14 +16,14 @@ export interface IRAWDataClient {
         value: string;
         class: string;
     };
-    mtls?: {
-        auth: {
-            cert: {
-                fingerprint: string;
-            };
-            status: string;
-        };
-    };
+    // mtls?: {
+    //     auth: {
+    //         cert: {
+    //             fingerprint: string;
+    //         };
+    //         status: string;
+    //     };
+    // };
     region?: string;
     request: {
         // bytes: number;
@@ -42,34 +42,34 @@ export interface IRAWDataClient {
     //     protocol: string;
     //     version: string;
     // };
-    src?: {
-        port: number;
-    };
-    tcp?: {
-        rtt?: number;
-    };
-    x?: {
-        requestedWith: string;
-    };
+    // src?: {
+    //     port: number;
+    // };
+    // tcp?: {
+    //     rtt?: number;
+    // };
+    // x?: {
+    //     requestedWith: string;
+    // };
 }
 
 export interface IRAWDataEdge {
-    cf: {
-        connectingO2O: boolean;
-    };
-    colo: {
-        code: string;
-        id: number;
-    };
-    pathing: {
-        op: string;
-        src: string;
-        status: string;
-    };
-    rateLimit?: {
-        action: string;
-        id: number;
-    };
+    // cf: {
+    //     connectingO2O: boolean;
+    // };
+    // colo: {
+    //     code: string;
+    //     id: number;
+    // };
+    // pathing: {
+    //     op: string;
+    //     src: string;
+    //     status: string;
+    // };
+    // rateLimit?: {
+    //     action: string;
+    //     id: number;
+    // };
     request: {
         host: string;
     };
@@ -84,10 +84,10 @@ export interface IRAWDataEdge {
         contentType: string;
         status: number;
     };
-    ray: string;
-    server?: {
-        ip: string;
-    },
+    // ray: string;
+    // server?: {
+    //     ip: string;
+    // },
     // time2FirstByte: number;
     timestamp: {
         start: Date;
@@ -110,33 +110,33 @@ export interface IRAWDataOrigin {
     //     };
     // };
     response: {
-        bytes: number;
+        // bytes: number;
         duration: number;
         // header: {
         //     receive: {
         //         duration: number;
         //     };
         // };
-        http: {
-            expires: string;
-            lastModified: string;
-        };
-        status: number;
-        time: number;
+        // http: {
+        //     expires: string;
+        //     lastModified: string;
+        // };
+        // status: number;
+        // time: number;
     };
-    ssl: {
-        protocol: string;
-    };
-    tcp: {
-        handshake: {
-            duration: number;
-        };
-    };
-    tls: {
-        handshake: {
-            duration: number;
-        };
-    };
+    // ssl: {
+    //     protocol: string;
+    // };
+    // tcp: {
+    //     handshake: {
+    //         duration: number;
+    //     };
+    // };
+    // tls: {
+    //     handshake: {
+    //         duration: number;
+    //     };
+    // };
 }
 
 export interface IRAWDataCache {
@@ -182,82 +182,82 @@ export interface IRAWData {
     cookies: {
         user?: string;
     };
-    content?: {
-        scan: {
-            results?: string[];
-            types?: string[];
-        };
-    };
-    firewall?: {
-        matches: {
-            actions?: any[];
-            ruleIDs?: any[];
-            sources?: any[];
-        };
-    };
+    // content?: {
+    //     scan: {
+    //         results?: string[];
+    //         types?: string[];
+    //     };
+    // };
+    // firewall?: {
+    //     matches: {
+    //         actions?: any[];
+    //         ruleIDs?: any[];
+    //         sources?: any[];
+    //     };
+    // };
     origin?: IRAWDataOrigin;
-    parent: {
-        ray: string;
-    };
+    // parent: {
+    //     ray: string;
+    // };
     request: IRAWDataRequest;
     response: IRAWDataResponse;
-    security?: {
-        action: string;
-        actions?: string[];
-        level: string;
-        rule: {
-            description?: string;
-            id?: string;
-            ids?: string[];
-        };
-        sources?: string[];
-    };
-    smart?: {
-        route: {
-            colo: number;
-        };
-    };
-    upper?: {
-        tier: {
-            colo: number;
-        };
-    };
-    waf?: {
-        action: string;
-        flags: string;
-        matched: {
-            var: string;
-        };
-        profile: string;
-        rce: {
-            score?: number;
-        };
-        rule: {
-            id: string;
-            message: string;
-        };
-        score?: number;
-        sqli: {
-            score?: number;
-        };
-        xss: {
-            score?: number;
-        };
-    };
-    worker?: {
-        cpu: {
-            time: number;
-        };
-        status: string;
-        subrequest: {
-            count: number;
-        };
-        wall: {
-            time: number;
-        };
-    };
+    // security?: {
+    //     action: string;
+    //     actions?: string[];
+    //     level: string;
+    //     rule: {
+    //         description?: string;
+    //         id?: string;
+    //         ids?: string[];
+    //     };
+    //     sources?: string[];
+    // };
+    // smart?: {
+    //     route: {
+    //         colo: number;
+    //     };
+    // };
+    // upper?: {
+    //     tier: {
+    //         colo: number;
+    //     };
+    // };
+    // waf?: {
+    //     action: string;
+    //     flags: string;
+    //     matched: {
+    //         var: string;
+    //     };
+    //     profile: string;
+    //     rce: {
+    //         score?: number;
+    //     };
+    //     rule: {
+    //         id: string;
+    //         message: string;
+    //     };
+    //     score?: number;
+    //     sqli: {
+    //         score?: number;
+    //     };
+    //     xss: {
+    //         score?: number;
+    //     };
+    // };
+    // worker?: {
+    //     cpu: {
+    //         time: number;
+    //     };
+    //     status: string;
+    //     subrequest: {
+    //         count: number;
+    //     };
+    //     wall: {
+    //         time: number;
+    //     };
+    // };
     zone: {
-        id?: number;
+        // id?: number;
         name: string;
     };
 }

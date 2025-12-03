@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
-    "@google-cloud/storage": "^7.17.3",
+    "@google-cloud/storage": "^7.18.0",
     "chokidar": "^4.0.3",
     "crawler-user-agents": "^1.22.0",
     "dd-trace": "^5.80.0",
