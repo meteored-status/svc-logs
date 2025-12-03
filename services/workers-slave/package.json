@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.2.0",
-    "@google-cloud/storage": "^7.17.3",
+    "@google-cloud/storage": "^7.18.0",
     "chokidar": "^4.0.3",
     "dd-trace": "^5.80.0",
     "formidable": "^3.5.4",
