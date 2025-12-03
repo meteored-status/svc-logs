@@ -323,13 +323,17 @@ export class ClienteGCS implements IClienteGCS {
             return await Storage.getOne(config, bucket, file);
         } catch (err: any) {
             if (err instanceof Error && err.message.includes("No such object")) {
-                return null;
+                console.log(err.message);
+                // return null;
             }
-            if (err && "code" in err && err.code === 404) {
-                return null;
-            }
+            // if (err && "code" in err && err.code === 404) {
+            //     console.log(JSON.stringify(err));
+            //     return null;
+            // }
 
-            return Promise.reject(new Error(`Error obteniendo archivo: gs://${bucket}/${file} => ${JSON.stringify(err)}`));
+            console.log(JSON.stringify(err));
+            return null;
+            // return Promise.reject(new Error(`Error obteniendo archivo: gs://${bucket}/${file} => ${JSON.stringify(err)}`));
         }
     }
 
@@ -338,6 +342,7 @@ export class ClienteGCS implements IClienteGCS {
 
         const data = await this.getArchivo(storage, this.bucket, source);
         if (data==null) {
+            await this.addStatusTerminado(source);
             return;
         }
 
