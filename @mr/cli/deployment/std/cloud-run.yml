@@ -32,7 +32,7 @@ spec:
           readinessProbe:
             timeoutSeconds: 1
             periodSeconds: 1
-            failureThreshold: 3
+            failureThreshold: 5
             httpGet:
               path: /admin/ready/
           livenessProbe:
