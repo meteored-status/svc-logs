@@ -106,7 +106,7 @@ class Slave extends RouteGroup<Configuracion>{
                             return this.sendRespuesta(conexion);
                         } catch (err) {
                             if (err instanceof Error) {
-                                error("Error procesando", bucket, path, err.message, err.stack);
+                                error("Error procesando", bucket, path, err.message);
                                 return conexion.error(err.message);
                             } else {
                                 error("Error procesando", bucket, path, err);

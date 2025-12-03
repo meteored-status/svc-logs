@@ -318,7 +318,7 @@ export class ClienteGCS implements IClienteGCS {
         // await db.update("UPDATE repesca, procesando SET repesca.tratando=1 WHERE repesca.bucket=procesando.bucket AND repesca.archivo=procesando.archivo");
     }
 
-    private async getArchivo(config: Google, bucket: string, file: string): Promise<Storage|null> {
+    private async getArchivo(config: Google, bucket: string, file: string): Promise<Storage|undefined> {
         try {
             return await Storage.getOne(config, bucket, file);
         } catch (err: any) {
@@ -332,7 +332,8 @@ export class ClienteGCS implements IClienteGCS {
             // }
 
             console.log(JSON.stringify(err));
-            return null;
+            return;
+            // return null;
             // return Promise.reject(new Error(`Error obteniendo archivo: gs://${bucket}/${file} => ${JSON.stringify(err)}`));
         }
     }
@@ -341,13 +342,19 @@ export class ClienteGCS implements IClienteGCS {
         await this.addStatusProcesando(source);
 
         const data = await this.getArchivo(storage, this.bucket, source);
-        if (data==null) {
+        if (!data) {
             await this.addStatusTerminado(source);
             return;
         }
 
         const telemetry = Telemetry.build(this.cliente, pod, source);
-        await Cloudflare.ingest(telemetry, data);
+        try {
+            await Cloudflare.ingest(telemetry, data);
+        } catch (err) {
+            if (!(err instanceof Error) || !err.message.includes("No such object")) {
+                return Promise.reject(err);
+            }
+        }
         await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
         await data.delete();
         await this.addStatusTerminado(source);
