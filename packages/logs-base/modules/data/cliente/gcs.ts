@@ -322,6 +322,9 @@ export class ClienteGCS implements IClienteGCS {
         try {
             return await Storage.getOne(config, bucket, file);
         } catch (err: any) {
+            if (err instanceof Error && err.message.includes("No such object")) {
+                return null;
+            }
             if (err && "code" in err && err.code === 404) {
                 return null;
             }
