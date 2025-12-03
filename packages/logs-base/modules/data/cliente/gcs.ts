@@ -319,7 +319,15 @@ export class ClienteGCS implements IClienteGCS {
     }
 
     private async getArchivo(config: Google, bucket: string, file: string): Promise<Storage|null> {
-        return Storage.getOne(config, bucket, file);
+        try {
+            return await Storage.getOne(config, bucket, file);
+        } catch (err: any) {
+            if (err && "code" in err && err.code === 404) {
+                return null;
+            }
+
+            return Promise.reject(new Error(`Error obteniendo archivo: gs://${bucket}/${file} => ${JSON.stringify(err)}`));
+        }
     }
 
     public async ingest(pod: IPodInfo, storage: Google, source: string): Promise<void> {
