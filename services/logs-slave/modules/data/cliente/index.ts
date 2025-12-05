@@ -1,4 +1,3 @@
-
 import type {Backends} from "./backends";
 import {ClienteError} from "./error";
 import {ClienteGCS} from "./gcs";
@@ -51,21 +50,7 @@ export class Cliente {
         return new this({
             id,
             backends: data,
-        })
-
-        // const [cliente] = await db.select<ICliente, Cliente>("SELECT * FROM clientes WHERE id=?", [id], {
-        //     fn: (row)=>new this(row),
-        //     // cache: {
-        //     //     builder,
-        //     //     key: id,
-        //     //     ttl: 600000,
-        //     // },
-        // });
-        // if (cliente==undefined) {
-        //     return Promise.reject(new ClienteError(`Cliente ${id} no encontrado`));
-        // }
-        //
-        // return cliente;
+        });
     }
 
     /* INSTANCE */
