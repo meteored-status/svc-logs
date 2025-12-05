@@ -37,7 +37,7 @@ export default async (cliente: Cliente, storage: Storage)=>{
 
     for await (const linea of lector) {
         if (linea.length===0) {
-            // en este caso no nos saltamos linea de telemetría, ignoramos las lineas vacías tal como puede ser la de final de archivo
+            // ignoramos las lineas vacías tal como puede ser la de final de archivo
             continue;
         }
 
