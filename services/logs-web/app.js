@@ -8,6 +8,9 @@ if (process.env["DATADOG"]==="true") {
     const tracer = require("dd-trace").init();
     const blocklistStatus = [/^\/admin\/.*/, "/admin"];
     const blocklistIstio = ["/healthz/ready", "/quitquitquit"];
+    tracer.use("http", {
+        blocklist: blocklistStatus,
+    });
     tracer.use("fetch", {
         blocklist: [...blocklistStatus, ...blocklistIstio],
     });

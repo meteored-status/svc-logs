@@ -1,8 +1,8 @@
 {
-    "enabled": false,
+    "enabled": true,
     "deploy": {
-        "enabled": false,
-        "type": "cronjob",
+        "enabled": true,
+        "type": "service",
         "runtime": "node",
         "target": "k8s",
         "alone": true,
@@ -13,28 +13,24 @@
         "imagen": {
             "produccion": {
                 "paquete": "services",
-                "nombre": "logs-repesca"
+                "nombre": "logs-web"
             },
             "test": {
                 "paquete": "services",
-                "nombre": "logs-repesca"
+                "nombre": "logs-web"
             }
         },
         "kustomize": [
             {
-                "name": "logs-repesca",
+                "name": "logs-web",
                 "dir": "services"
             }
         ]
     },
     "devel": {
-        "enabled": false
+        "enabled": true
     },
     "build": {
-        "framework": "meteored",
-        "database": {
-            "produccion": "logs",
-            "test": "logs"
-        }
+        "framework": "meteored"
     }
 }

@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "logs-base": "workspace:*",
+    "logs-services": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"
   },
