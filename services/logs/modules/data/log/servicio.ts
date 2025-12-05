@@ -1,9 +1,9 @@
-import {LogServicio as LogServicioBase, type ILogServicioES} from "logs-base/modules/data/log/servicio";
-import {
+import type {
     AggregationsStringTermsAggregate,
     AggregationsStringTermsBucket,
     QueryDslQueryContainer
 } from "services-comun/modules/elasticsearch";
+import {type ILogServicioES, Log} from "logs-services/modules/data/servicio";
 import elastic from "services-comun/modules/utiles/elastic";
 
 interface SearchFilter {
@@ -31,7 +31,7 @@ type ESAggregator = {
     'by-tipo': Agregador;
 }
 
-export class LogServicio extends LogServicioBase {
+export class LogServicio {
     /* STATIC */
 
     /**
@@ -39,7 +39,7 @@ export class LogServicio extends LogServicioBase {
      * @param filter Filtros a aplicar
      * @param pagination Paginación a aplicar
      */
-    public static async search(filter: SearchFilter, {page = 1, perPage= 15}: SearchPagination): Promise<LogServicio[]> {
+    public static async search(filter: SearchFilter, {page = 1, perPage= 15}: SearchPagination): Promise<Log[]> {
 
         const {projects} = filter;
 
@@ -87,7 +87,7 @@ export class LogServicio extends LogServicioBase {
         }
 
         const salida = await elastic.search<ILogServicioES>({
-            index: this.getAlias(),
+            index: Log.getAlias(),
             from: (page-1)*perPage,
             size: perPage,
             query: {
@@ -106,7 +106,7 @@ export class LogServicio extends LogServicioBase {
 
         return salida.hits.hits.map(hit => {
             const data = hit._source!;
-            return new LogServicio({
+            return new Log({
                 timestamp: new Date(data["@timestamp"]),
                 proyecto: data.proyecto,
                 servicio: data.servicio,
@@ -129,7 +129,7 @@ export class LogServicio extends LogServicioBase {
         };
 
         const salida = await elastic.search<ILogServicioES, ESAggregator>({
-            index: this.getAlias(),
+            index: Log.getAlias(),
             size: 0,
             query: {
                 bool: {

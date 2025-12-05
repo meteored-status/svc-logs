@@ -1,7 +1,7 @@
 import {
     ConfigGenerico, Configuracion as ConfiguracionBase,
-    IConfigGenerico,
-    IConfiguracion as IConfiguracionBase
+    type IConfigGenerico,
+    type IConfiguracion as IConfiguracionBase
 } from "services-comun/modules/utiles/config";
 
 export interface IStatusConfig extends IConfigGenerico {

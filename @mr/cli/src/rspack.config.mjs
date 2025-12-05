@@ -7,14 +7,40 @@ import rspack from "@rspack/core";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const {dependencies} = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf-8"));
+const ES_MODULES = {
+    "@inquirer/prompts": "8",
+    "chokidar": "5",
+    "formidable": "3",
+    "mime": "4",
+    "pdf-merger-js": "5",
+    "uuid": "13",
+    // "mysql": "3",
+};
+
 const externals = [];
+
+function check(actual , version ) {
+    return actual.startsWith(`^${version}.`)
+        || actual.startsWith(`~${version}.`)
+        || actual.startsWith(`${version}.`);
+}
+
 for (let mod in dependencies) {
-    if (mod==="@inquirer/prompts") {
-        externals.push({[mod]: `"${mod}"`});
-    } else {
+    if (!ES_MODULES[mod] || !check(dependencies[mod], ES_MODULES[mod])) {
         externals.push({[mod]: `commonjs ${mod}`});
+        // salida[mod] = `commonjs ${mod}`;
+    } else {
+        externals.push({[mod]: `module ${mod}`});
+        // salida[mod] = `module ${mod}`;
     }
 }
+// for (let mod in dependencies) {
+//     if (mod==="@inquirer/prompts") {
+//         externals.push({[mod]: `"${mod}"`});
+//     } else {
+//         externals.push({[mod]: `commonjs ${mod}`});
+//     }
+// }
 externals.push(({request}, callback)=>{
     if (request!=null) {
         for (let mod in dependencies) {

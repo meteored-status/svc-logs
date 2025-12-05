@@ -50,9 +50,15 @@ export class GeneratorController {
                 periodicitiesBySendTask[periodicity.sendTaskId].push(periodicity);
             });
 
+            const sendSchedulesToDelete: SendSchedule[] = [];
             const sendSchedulesBySendTask: Record<number, SendSchedule> = {};
             sendSchedules.forEach(schedule => {
-                sendSchedulesBySendTask[schedule.sendTask] = schedule;
+                if (sendSchedulesBySendTask[schedule.sendTask]) {
+                    error(`La send-task ${schedule.sendTask} tiene más de un send-schedule asociado. Se usará el primero.`);
+                    sendSchedulesToDelete.push(schedule);
+                } else {
+                    sendSchedulesBySendTask[schedule.sendTask] = schedule;
+                }
             });
 
             // Filtramos las send-tasks que no tienen periodicities o send-schedules asociadas
@@ -102,6 +108,14 @@ export class GeneratorController {
             await bulkSchedules.run().catch(err => {
                 error(`Error al guardar las replanificaciones de send-tasks en la página ${sendTaskPagination.page - 1}:`, err);
             });
+
+            // Eliminar send-schedules duplicados
+            if (sendSchedulesToDelete.length > 0) {
+                info(`Eliminando ${sendSchedulesToDelete.length} send-schedules duplicados`);
+                await this.factory.sendSchedule.deleteById(sendSchedulesToDelete.map(s => s.id!)).catch(err => {
+                    error(`Error al eliminar send-schedules duplicados:`, err);
+                });
+            }
         }
 
         // Reintentar envíos fallidos

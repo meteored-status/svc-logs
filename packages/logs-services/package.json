@@ -1,0 +1,19 @@
+{
+  "name": "logs-services",
+  "version": "1.0.0",
+  "description": "Base Status",
+  "repository": "git+https://github.com/meteored-status/svc-logs.git",
+  "author": "Juan C. Martínez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/meteored-status/svc-logs/issues"
+  },
+  "homepage": "https://github.com/meteored-status/svc-logs#readme",
+  "devDependencies": {
+    "@elastic/elasticsearch": "^9.2.0",
+    "@types/node": "^24.10.1",
+    "services-comun": "workspace:*",
+    "services-comun-status": "workspace:*",
+    "tslib": "^2.8.1"
+  }
+}

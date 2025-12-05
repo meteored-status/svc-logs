@@ -5,9 +5,11 @@ import {Runtime} from "../manifest/workspace/deployment";
 export class Externals {
     /* STATIC */
     private static ES_MODULES: Record<string, string> = {
+        "@inquirer/prompts": "8",
+        "chokidar": "5",
         "formidable": "3",
-        "pdf-merger-js": "5",
         "mime": "4",
+        "pdf-merger-js": "5",
         "uuid": "13",
         // "mysql": "3",
     };

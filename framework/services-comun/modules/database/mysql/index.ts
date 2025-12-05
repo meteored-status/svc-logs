@@ -171,8 +171,8 @@ export class MySQL implements Disposable {
                 cluster.add(`SLAVE${i}`, await this.loadHost(data.slaves[i], common, data.ssl));
             }
         } else {
-            cluster.add("MASTER", await this.loadHost(data, {}));
-            cluster.add("SLAVE1", await this.loadHost(data, {}));
+            cluster.add("MASTER", await this.loadHost({...data}, {}));
+            cluster.add("SLAVE1", await this.loadHost({...data}, {}));
         }
         // await this.checkConexion(pool);
 

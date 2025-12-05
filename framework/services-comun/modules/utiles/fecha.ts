@@ -119,6 +119,10 @@ export class Fecha {
         ].join("");
     }
 
+    public static generarMarcaAnno(date: Date = new Date()): string {
+        return `${date.getUTCFullYear()}`;
+    }
+
     public static generarMarcaMes(date: Date = new Date()): string {
         return [
             date.getUTCFullYear(),

@@ -10,11 +10,12 @@
     "update": "yarn mrpack update",
     "services-comun": "yarn workspace services-comun",
     "services-comun-status": "yarn workspace services-comun-status",
-    "logs-repesca": "yarn workspace logs-repesca",
     "logs": "yarn workspace logs",
     "logs-slave": "yarn workspace logs-slave",
+    "logs-web": "yarn workspace logs-web",
     "workers-slave": "yarn workspace workers-slave",
     "logs-base": "yarn workspace logs-base",
+    "logs-services": "yarn workspace logs-services",
     "status-base": "yarn workspace status-base",
     "workers-base": "yarn workspace workers-base"
   },

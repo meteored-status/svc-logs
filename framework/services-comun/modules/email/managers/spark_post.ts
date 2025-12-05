@@ -5,6 +5,7 @@ import SparkPost from "sparkpost";
 
 export interface ICredenciales {
     api_key: string;
+    endpoint?: string;
 }
 
 interface ISendResult {
@@ -23,9 +24,15 @@ export class SparkPostManager implements IMailManager {
         this.credentials = credentials ? Promise.resolve(credentials) : readJSON<ICredenciales>("files/credenciales/sparkpost.json");
     }
 
-    public async deleteSuppression(email: string): Promise<void> {
+    private async getClient(): Promise<SparkPost> {
         const result = await this.credentials;
-        const client = new SparkPost(result.api_key);
+        return new SparkPost(result.api_key, {
+            endpoint: result.endpoint,
+        });
+    }
+
+    public async deleteSuppression(email: string): Promise<void> {
+        const client = await this.getClient();
 
         await client.suppressionList.delete(email);
     }
@@ -83,8 +90,7 @@ export class SparkPostManager implements IMailManager {
             };
         }
 
-        const result = await this.credentials;
-        const client = new SparkPost(result.api_key);
+        const client = await this.getClient();
 
         // Enviamos la transmisión
         return await client.transmissions.send(data_transmission);
