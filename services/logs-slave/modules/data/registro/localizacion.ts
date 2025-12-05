@@ -1,7 +1,5 @@
 import geoip from "geoip-lite";
 
-import type {IGeoPoint} from "services-comun/modules/utiles/geopoint";
-
 export interface IRegistroLocalizacion {
     pais: string;
     region: string;
@@ -15,13 +13,12 @@ export interface IRegistroLocalizacion {
 export class RegistroLocalizacion implements IRegistroLocalizacion {
     /* STATIC */
     public static build(ip?: string): RegistroLocalizacion|undefined {
-        if (ip==undefined || ip.length==0) {
+        if (!ip || ip.length===0) {
             return;
         }
 
         const data = geoip.lookup(ip);
         if (data==null) {
-            // console.log(ip);
             return;
         }
 
@@ -34,12 +31,6 @@ export class RegistroLocalizacion implements IRegistroLocalizacion {
             region: data.region,
             ciudad: data.city,
             coordenadas: `POINT(${data.ll[1]} ${data.ll[0]})`,
-            // coordenadas: {
-            //     type: "Point",
-            //     coordinates: [data.ll[1], data.ll[0]],
-            //     // lon: data.ll[1],
-            //     // lat: data.ll[0],
-            // },
             precision: data.area,
             timezone: data.timezone,
             eu: data.eu !== "0",

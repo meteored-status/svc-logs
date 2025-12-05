@@ -1,16 +1,11 @@
-import type {IInsert} from "services-comun/modules/database/mysql";
-import type {Google, IPodInfo} from "services-comun/modules/utiles/config";
+import type {Google} from "services-comun/modules/utiles/config";
 import {Storage} from "services-comun/modules/fs/storage";
-import {error} from "services-comun/modules/utiles/log";
 
-import {Cloudflare} from "../source/cloudflare";
-import {Telemetry} from "../telemetry";
 import {ClienteError} from "./error";
 import {Grupo} from "./grupo";
+import ingest from "../source/ingest";
 
-import {type Cliente} from ".";
-
-export type BucketClienteGCS = Record<string, ClienteGCS>;
+import type {Cliente} from "./index";
 
 type GCSTipo = "cloudflare";
 
@@ -208,39 +203,7 @@ export class ClienteGCS implements IClienteGCS {
             return Promise.reject(new ClienteError(`GCS ${bucket}/${path} no encontrado`));
         }
         return new this(await Grupo.searchID(data.cliente, data.grupo), data);
-        // const [cliente] = await db.select<IClienteGCSMySQL, ClienteGCS>(`SELECT * FROM gcs WHERE bucket=?`, [bucket], {
-        //     fn: async (raw)=>new this(await Grupo.searchID(raw.cliente, raw.grupo), raw),
-        //     // cache: {
-        //     //     builder,
-        //     //     key: bucket,
-        //     //     ttl: 600000,
-        //     // },
-        // });
-        // if (cliente==undefined) {
-        //     return Promise.reject(new ClienteError(`GCS ${bucket} no encontrado`));
-        // }
-        //
-        // return cliente;
     }
-
-    // public static async searchAll(): Promise<BucketClienteGCS> {
-    //     const clientes = await db.select<IClienteGCSMySQL, ClienteGCS>(`SELECT * FROM gcs`, [], {
-    //         fn: async (raw)=>new this(await Grupo.searchID(raw.cliente, raw.grupo), raw),
-    //     });
-    //
-    //     const salida: BucketClienteGCS = {};
-    //     for (const cliente of clientes) {
-    //         salida[cliente.bucket] = cliente;
-    //     }
-    //
-    //     return salida;
-    // }
-
-    // public static async addStatusProcesando(bucket: string, source: string): Promise<void> {
-    //     await db.insert("INSERT INTO procesando (bucket, archivo) VALUES (?, ?) ON DUPLICATE KEY UPDATE estado=?", [bucket, source, "recibido"]);
-    // }
-
-    private static PRIMERO = true;
 
     /* INSTANCE */
     public readonly bucket: string;
@@ -259,64 +222,6 @@ export class ClienteGCS implements IClienteGCS {
         return this;
     }
 
-    // public async addStatusProcesando(source: string): Promise<void> {
-    //     await db.update("UPDATE procesando SET estado=? WHERE bucket=? AND archivo=?", ["procesando", this.bucket, source]);
-    // }
-    //
-    // public async addStatusRepescando(source: string): Promise<void> {
-    //     await db.insert("INSERT INTO procesando (bucket, archivo, estado) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE estado=?", [this.bucket, source, "repescando", "repescando"]);
-    // }
-    //
-    // public async addStatusTerminado(source: string): Promise<void> {
-    //     await db.delete("DELETE FROM procesando WHERE bucket=? AND archivo=?", [this.bucket, source]);
-    // }
-    //
-    // public async addStatusError(source: string): Promise<void> {
-    //     await db.delete("DELETE FROM procesando WHERE bucket=? AND archivo=?", [this.bucket, source]);
-    // }
-
-    // public async addStatusRepesca(source: string, repesca: boolean, err?: any): Promise<void> {
-    //     if (ClienteGCS.PRIMERO) {
-    //         ClienteGCS.PRIMERO = false;
-    //         error(err);
-    //     }
-    //
-    //     let mensaje: string|null;
-    //     if (err!=undefined) {
-    //         if (err instanceof Error) {
-    //             mensaje = err.message;
-    //         } else {
-    //             mensaje = JSON.stringify(err);
-    //         }
-    //     } else {
-    //         mensaje = null;
-    //     }
-    //     const origen = !repesca?"ingest":"repesca";
-    //
-    //     await db.insert("INSERT INTO repesca (bucket, archivo, mensaje, origen) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE contador=contador+1, mensaje=?, origen=?", [this.bucket, source, mensaje, origen, mensaje, origen]);
-    // }
-
-    // public async pescarHuerfanos(google: Google, fechas: string[]): Promise<void> {
-    //     const bloques = await Promise.all(fechas.map(fecha=>Storage.list(google, this.bucket, fecha)));
-    //     const files: IInsert[] = bloques.flat().map(file=>{
-    //         const data = file.name.split("/")
-    //             .at(-1)!
-    //             .split("_")
-    //             .at(0)!
-    //             .replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, "$1-$2-$3T$4:$5:$6Z"); // esto incluye la fecha
-    //         const fecha = new Date(data);
-    //         return {
-    //             table: "repesca",
-    //             query: "INSERT INTO repesca (bucket, archivo, origen, fecha) VALUES (?, ?, ?, ?)",
-    //             params: [this.bucket, file.name, "huerfano", fecha],
-    //             duplicate: ["bucket", "archivo"],
-    //         };
-    //     });
-    //     await db.bulkInsert(files);
-    //     // todo esto se usa?
-    //     // await db.update("UPDATE repesca, procesando SET repesca.tratando=1 WHERE repesca.bucket=procesando.bucket AND repesca.archivo=procesando.archivo");
-    // }
-
     private async getArchivo(config: Google, bucket: string, file: string): Promise<Storage|undefined> {
         try {
             return await Storage.getOne(config, bucket, file);
@@ -331,25 +236,19 @@ export class ClienteGCS implements IClienteGCS {
         }
     }
 
-    public async ingest(pod: IPodInfo, storage: Google, source: string): Promise<void> {
-        // await this.addStatusProcesando(source);
-
+    public async ingest(storage: Google, source: string): Promise<void> {
         const data = await this.getArchivo(storage, this.bucket, source);
         if (!data) {
-            // await this.addStatusTerminado(source);
             return;
         }
 
-        const telemetry = Telemetry.build(this.cliente, pod, source);
         try {
-            await Cloudflare.ingest(telemetry, data);
+            await ingest(this.cliente, data);
         } catch (err) {
             if (!(err instanceof Error) || !err.message.includes("No such object")) {
                 return Promise.reject(err);
             }
         }
-        // await db.delete("DELETE FROM repesca WHERE bucket=? AND archivo=?", [this.bucket, source]);
         await data.delete();
-        // await this.addStatusTerminado(source);
     }
 }

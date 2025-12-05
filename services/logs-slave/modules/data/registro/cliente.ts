@@ -35,17 +35,17 @@ export class RegistroCliente implements IRegistroCliente {
     /* STATIC */
     public static build(data: IRAWDataClient): RegistroCliente {
         let crawler = Crawler.test(data.request.ua)?.name;
-        if (crawler==undefined && data.ip.class=="searchEngine") {
+        if (!crawler && data.ip.class==="searchEngine") {
             crawler = "Unknown";
         }
 
         let agent: IAgent|undefined;
-        if (data.request.ua!=undefined && data.request.ua.length>0) {
+        if (data.request.ua && data.request.ua.length>0) {
             const tmp = UAParser(data.request.ua);
             agent = {
                 raw: tmp.ua,
             };
-            if (tmp.browser.name!=undefined) {
+            if (tmp.browser.name) {
                 agent.browser = {
                     name: tmp.browser.name,
                     version: tmp.browser.version,
@@ -53,13 +53,13 @@ export class RegistroCliente implements IRegistroCliente {
                     type: tmp.browser.type,
                 };
             }
-            if (tmp.os.name!=undefined) {
+            if (tmp.os.name) {
                 agent.os = {
                     name: tmp.os.name,
                     version: tmp.os.version,
                 };
             }
-            if (tmp.device.model!=undefined) {
+            if (tmp.device.model) {
                 agent.device = {
                     model: tmp.device.model,
                     type: tmp.device.type,

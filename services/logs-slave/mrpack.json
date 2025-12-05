@@ -47,10 +47,6 @@
         "enabled": true
     },
     "build": {
-        "framework": "meteored",
-        "database": {
-            "produccion": "logs",
-            "test": "logs"
-        }
+        "framework": "meteored"
     }
 }

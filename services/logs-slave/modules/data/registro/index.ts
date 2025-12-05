@@ -1,0 +1,178 @@
+import {RegistroCache, type IRegistroCache} from "./cache";
+import {RegistroCliente, type IRegistroCliente} from "./cliente";
+import {RegistroOrigen, type IRegistroOrigen} from "./origen";
+import {RegistroPeticion, type IRegistroPeticion} from "./peticion";
+import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} from "./respuesta";
+import {Cliente} from "../cliente";
+
+export interface IRAWDataClient {
+    country: string;
+    device: {
+        type: string;
+    };
+    ip: {
+        value: string;
+        class: string;
+    };
+    region?: string;
+    request: {
+        host: string;
+        method: string;
+        path: string;
+        protocol: string;
+        referer?: string;
+        scheme: string;
+        source: string;
+        ua?: string;
+        uri: string;
+    },
+}
+
+export interface IRAWDataEdge {
+    request: {
+        host: string;
+    };
+    response: {
+        contentType: string;
+        status: number;
+    };
+    timestamp: {
+        start: Date;
+    };
+}
+
+export interface IRAWDataOrigin {
+    ip: string;
+    response: {
+        duration: number;
+    };
+}
+
+export interface IRAWDataCache {
+    reserve: {
+        used: boolean;
+    };
+    status: string;
+    tiered: {
+        fill: boolean;
+    };
+}
+
+export interface IRAWDataRequest {
+    headers: {
+        apiKey?: string;
+    };
+}
+
+export interface IRAWDataResponse {
+    headers: {
+        node?:    string;
+        service?: string;
+        version?: string;
+    };
+}
+
+export interface IRAWData {
+    client: IRAWDataClient;
+    edge: IRAWDataEdge;
+    cache: IRAWDataCache;
+    cookies: {
+        user?: string;
+    };
+    origin?: IRAWDataOrigin;
+    request: IRAWDataRequest;
+    response: IRAWDataResponse;
+    zone: {
+        name: string;
+    };
+}
+
+interface IRegistro {
+    timestamp: Date;
+    url: URL;
+    proyecto: string;
+    subproyecto?: string;
+    peticion: IRegistroPeticion;
+    cache: IRegistroCache;
+    respuesta: IRegistroRespuesta;
+    cliente: IRegistroCliente;
+    origen?: IRegistroOrigen;
+}
+
+export interface IRegistroES {
+    timestamp: string;
+    url: string;
+    proyecto: string;
+    subproyecto?: string;
+    peticion: IRegistroPeticion;
+    cache: IRegistroCache;
+    respuesta: IRegistroRespuestaES;
+    cliente: IRegistroCliente;
+    origen?: IRegistroOrigen;
+}
+
+interface IObj {
+    peticion: RegistroPeticion;
+    cache: RegistroCache;
+    respuesta: RegistroRespuesta;
+    cliente: RegistroCliente;
+    origen?: RegistroOrigen;
+}
+
+export class Registro implements IRegistro {
+    /* STATIC */
+    public static build(data: IRAWData, cliente: Cliente): Registro {
+        const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
+        const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
+        const cache = RegistroCache.build(data.cache);
+        const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
+        const clienteData = RegistroCliente.build(data.client);
+        const origen = RegistroOrigen.build(data.origin, cliente.backends);
+
+        return new this({
+            timestamp: data.edge.timestamp.start,
+            url,
+            proyecto: cliente.id,
+            subproyecto: cliente.grupo,
+            peticion,
+            cache,
+            respuesta,
+            cliente: clienteData,
+            origen,
+        }, {
+            peticion,
+            cache,
+            respuesta,
+            cliente: clienteData,
+            origen,
+        });
+    }
+
+    /* INSTANCE */
+    public get timestamp(): Date { return this.data.timestamp; }
+    public get url(): URL { return this.data.url; }
+    public get proyecto(): string { return this.data.proyecto; }
+    public get subproyecto(): string|undefined { return this.data.subproyecto; }
+    public get peticion(): RegistroPeticion { return this.obj.peticion; }
+    public get cache(): RegistroCache { return this.obj.cache; }
+    public get respuesta(): RegistroRespuesta { return this.obj.respuesta; }
+    public get cliente(): RegistroCliente { return this.obj.cliente; }
+    public get origen(): RegistroOrigen|undefined { return this.obj.origen; }
+
+    public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
+    }
+
+    public toJSON(): IRegistroES {
+        return {
+            timestamp: this.data.timestamp.toISOString(),
+            url: this.data.url.toString(),
+            proyecto: this.data.proyecto,
+            subproyecto: this.data.subproyecto,
+            peticion: this.obj.peticion.toJSON(),
+            cache: this.obj.cache.toJSON(),
+            respuesta: this.obj.respuesta.toJSON(),
+            cliente: this.obj.cliente.toJSON(),
+            origen: this.obj.origen?.toJSON(),
+        };
+    }
+}
