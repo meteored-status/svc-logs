@@ -6,7 +6,7 @@ export class Crawler {
     private static readonly cache: Record<string, Crawler|null|undefined> = {};
 
     public static test(ua?: string): Crawler|undefined {
-        if (ua==undefined) {
+        if (!ua) {
             return;
         }
 

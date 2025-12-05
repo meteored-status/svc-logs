@@ -4716,23 +4716,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"logs-base@workspace:*, logs-base@workspace:packages/logs-base":
-  version: 0.0.0-use.local
-  resolution: "logs-base@workspace:packages/logs-base"
-  dependencies:
-    "@google-cloud/bigquery": "npm:^8.1.1"
-    "@types/geoip-lite": "npm:^1.4.4"
-    "@types/node": "npm:^24.10.1"
-    crawler-user-agents: "npm:^1.22.0"
-    geoip-lite: "npm:^1.4.10"
-    services-comun: "workspace:*"
-    services-comun-status: "workspace:*"
-    tslib: "npm:^2.8.1"
-    ua-parser-js: "npm:^2.0.6"
-    zod: "npm:^4.1.13"
-  languageName: unknown
-  linkType: soft
-
 "logs-services@workspace:*, logs-services@workspace:packages/logs-services":
   version: 0.0.0-use.local
   resolution: "logs-services@workspace:packages/logs-services"
@@ -4760,9 +4743,6 @@ __metadata:
     formidable: "npm:^3.5.4"
     geoip-lite: "npm:^1.4.10"
     hexoid: "npm:^2.0.0"
-    logs-base: "workspace:*"
-    logs-status-base: "workspace:*"
-    mysql2: "npm:^3.15.3"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -4770,6 +4750,7 @@ __metadata:
     supports-color: "npm:^10.2.2"
     tslib: "npm:^2.8.1"
     ua-parser-js: "npm:^2.0.6"
+    zod: "npm:^4.1.13"
   languageName: unknown
   linkType: soft
 
