@@ -4,6 +4,7 @@ import {Service} from "services-comun/modules/net/service";
 export enum EService {
     logs,
     logs_slave,
+    logs_web,
     status_backend,
     status_external,
     status_frontend,
@@ -23,6 +24,11 @@ mapeo.set(EService.logs_slave, {
     namespace: "services",
     tags: ["logs", "slave"],
     slow: 0,
+});
+mapeo.set(EService.logs_web, {
+    endpoint: "proxy-svc-logs-web",
+    namespace: "services",
+    tags: ["logs", "web"],
 });
 mapeo.set(EService.status_backend, {
     endpoint: "switch-svc-status-backend",
