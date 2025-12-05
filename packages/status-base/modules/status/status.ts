@@ -1,8 +1,9 @@
-import {IClusterData, Spec} from "services-comun/modules/status/client/spec";
-import client, {Client} from "services-comun/modules/status/client/client";
-import {Configuracion} from "../utiles/config";
-import {Component} from "services-comun/modules/status/client/component";
+import type {Component} from "services-comun/modules/status/client/component";
+import {type IClusterData, Spec} from "services-comun/modules/status/client/spec";
 import {Status} from "services-comun/modules/status/client/status";
+import client, {Client} from "services-comun/modules/status/client/client";
+
+import type {Configuracion} from "../utiles/config";
 
 interface IDiffTime {
     time: number;
@@ -16,7 +17,7 @@ export enum TTimeUnit {
 }
 
 export enum TGroup {
-    LOGS_SLAVE          = "logs_slave",
+    LOGS_SLAVE = "logs_slave",
 }
 
 export abstract class LogsSpec<K> extends Spec<K> {

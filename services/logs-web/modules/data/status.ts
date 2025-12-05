@@ -1,9 +1,10 @@
-import client from "services-comun/modules/status/client/client";
+import type {Component} from "services-comun/modules/status/client/component";
+import type {IClusterData, IClusters, IWorkspace} from "services-comun/modules/status/client/spec";
 import {LogsSpec, TGroup} from "logs-status-base/modules/status/status";
-import {Configuracion} from "../utiles/config";
-import {IClusterData, IClusters, IWorkspace} from "services-comun/modules/status/client/spec";
 import {Monitor} from "services-comun/modules/status/client/monitor";
-import {Component} from "services-comun/modules/status/client/component";
+import client from "services-comun/modules/status/client/client";
+
+import type {Configuracion} from "../utiles/config";
 
 type ISpec = IWorkspace<ISlaveWorkspace>;
 

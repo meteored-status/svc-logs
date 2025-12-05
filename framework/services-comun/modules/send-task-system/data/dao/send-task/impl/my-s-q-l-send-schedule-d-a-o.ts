@@ -65,4 +65,21 @@ export class MySQLSendScheduleDAO extends AbstractSendScheduleDAO {
             })
         });
     }
+
+    public override async deleteById(ids: number|number[]): Promise<void> {
+        let idsArray: number[];
+        if (Array.isArray(ids)) {
+            idsArray = ids;
+        } else {
+            idsArray = [ids];
+        }
+
+        if (idsArray.length === 0) {
+            return;
+        }
+
+        const query = `DELETE FROM send_schedule WHERE ${idsArray.map(() => 'id = ?').join(' OR ')}`;
+
+        await this.db.delete(query, idsArray);
+    }
 }

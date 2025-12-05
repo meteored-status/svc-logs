@@ -50,7 +50,7 @@ export class SparkpostSender extends Sender<TransmissionID | null> {
                     contador++;
                 }
             } catch (e) {
-                error(`Error al enviar el email a SparkPost: ${e}`);
+                error(`Error al enviar el email a SparkPost: `, e);
                 contador++;
             }
         }

@@ -1,9 +1,9 @@
-import {LogError as LogErrorBase, type ILogErrorES} from "logs-base/modules/data/log/error";
 import elastic, {
     AggregationsStringTermsAggregate,
     AggregationsStringTermsBucket,
     QueryDslQueryContainer
 } from "services-comun/modules/utiles/elastic";
+import {Error, type ILogErrorES} from "logs-services/modules/data/error";
 
 interface SearchFilter {
     projects: string[];
@@ -44,15 +44,14 @@ interface IDelete {
     url?: string;
 }
 
-export class LogError extends LogErrorBase {
+export class LogError {
     /* STATIC */
-
     /**
      * Busca logs de errores aplicando filtros y paginación.
      * @param filter Filtros a aplicar
      * @param pagination Paginación a aplicar
      */
-    public static async search(filter: SearchFilter, {page = 1, perPage= 15}: SearchPagination): Promise<LogError[]> {
+    public static async search(filter: SearchFilter, {page = 1, perPage= 15}: SearchPagination): Promise<Error[]> {
         const {projects} = filter;
 
         const must: QueryDslQueryContainer[] = [
@@ -112,7 +111,7 @@ export class LogError extends LogErrorBase {
         }
 
         const salida = await elastic.search<ILogErrorES>({
-            index: LogErrorBase.getAlias(),
+            index: Error.getAlias(),
             from: (page-1)*perPage,
             size: perPage,
             query: {
@@ -132,7 +131,7 @@ export class LogError extends LogErrorBase {
 
         return salida.hits.hits.map(hit => {
             const data = hit._source!;
-            return new LogError({
+            return new Error({
                 timestamp: new Date(data["@timestamp"]),
                 checked: data.checked,
                 proyecto: data.proyecto,
@@ -160,7 +159,7 @@ export class LogError extends LogErrorBase {
         };
 
         const salida = await elastic.search<ILogErrorES, ESAggregator>({
-            index: this.getAlias(),
+            index: Error.getAlias(),
             size: 0,
             query: {
                 bool: {
@@ -273,7 +272,7 @@ export class LogError extends LogErrorBase {
         }
 
         const result = await elastic.updateByQuery({
-            index: this.getAlias(),
+            index: Error.getAlias(),
             query: {
                 bool: {
                     must
