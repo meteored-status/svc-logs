@@ -68,7 +68,7 @@ export default async (cliente: Cliente, storage: Storage)=>{
 
         const registro = Registro.build(cf, cliente);
         accesos.push(registro.toJSON());
-        if (cf.client.ip.class.includes("Search Engine")) {
+        if (cf.client.bot) {
             crawler.push(registro.toCrawler());
         }
     }

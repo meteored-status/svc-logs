@@ -75,12 +75,14 @@ export default z.object({
     OriginResponseDurationMs: z.number(),
     RequestHeaders: SCHEMA_REQUEST_HEADERS,
     ResponseHeaders: SCHEMA_RESPONSE_HEADERS,
+    VerifiedBotCategory: z.string(),
     WorkerSubrequest: z.boolean(),
     ZoneName: z.string(),
     CacheReserveUsed: z.boolean(),
 }).transform(o=>{
     return {
         client: {
+            bot: o.VerifiedBotCategory.length>0,
             country: o.ClientCountry,
             device: {
                 type: o.ClientDeviceType,
