@@ -6,6 +6,7 @@ import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} f
 import {Cliente} from "../cliente";
 
 export interface IRAWDataClient {
+    bot: boolean;
     country: string;
     device: {
         type: string;
