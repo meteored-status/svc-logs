@@ -133,7 +133,7 @@ export class Registro implements IRegistro {
             timestamp: data.edge.timestamp.start,
             url,
             proyecto: cliente.id,
-            subproyecto: cliente.grupo,
+            subproyecto: cliente.proyecto(respuesta.headers?.service),
             peticion,
             cache,
             respuesta,

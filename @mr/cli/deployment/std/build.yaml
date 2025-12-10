@@ -167,6 +167,17 @@ steps:
       - 'Subir Storage'
 
     #####
+    # GENERAR DOCUMENTACIÓN
+    #####
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/auto-doc.sh"
+    id: 'Generar Documentación'
+    waitFor:
+      - 'Desplegar'
+
+    #####
     # DESAUTORIZAR
     #####
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -176,6 +187,7 @@ steps:
     id: 'Desautorizar'
     waitFor:
       - 'Desplegar'
+      - 'Generar Documentación'
 
 #  - name: bash
 #    args:['cat', 'services/${_SERVICIO}/version.txt']

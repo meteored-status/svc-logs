@@ -23,6 +23,7 @@ export interface IPaths {
 
 export interface IPath {
     get?: IGet;
+    post?: IPost;
 }
 
 export interface IComponents {
@@ -40,12 +41,17 @@ export interface ISchemas {
 
 export interface IHTTPMethod {
     tags?: string[];
+    parameters?: IParameter[];
+    responses?: IResponses;
 }
 
 export interface IGet extends IHTTPMethod {
     description: string;
-    parameters?: IParameter[];
-    responses?: IResponses;
+}
+
+export interface IPost extends IHTTPMethod {
+    description: string;
+    requestBody?: IRequestBody;
 }
 
 export interface IParameter {
@@ -54,6 +60,12 @@ export interface IParameter {
     description?: string;
     required?: boolean;
     schema?: ISchema;
+}
+
+export interface IRequestBody {
+    description?: string;
+    content: IContent;
+    required?: boolean;
 }
 
 export interface ISchema {
