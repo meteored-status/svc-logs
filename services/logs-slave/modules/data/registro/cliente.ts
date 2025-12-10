@@ -31,6 +31,14 @@ export interface IRegistroCliente {
     agent?: IAgent;
 }
 
+export interface IRegistroClienteCrawler {
+    crawler: string;
+    device: string;
+    ip: string;
+    location?: IRegistroLocalizacion;
+    agent: string;
+}
+
 export class RegistroCliente implements IRegistroCliente {
     /* STATIC */
     public static build(data: IRAWDataClient): RegistroCliente {
@@ -95,6 +103,16 @@ export class RegistroCliente implements IRegistroCliente {
             ip: this.data.ip,
             location: this.location?.toJSON(),
             agent: this.data.agent,
+        };
+    }
+
+    public toCrawler(): IRegistroClienteCrawler {
+        return {
+            crawler: this.data.crawler ?? "Unknown",
+            device: this.data.device,
+            ip: this.data.ip,
+            location: this.location?.toJSON(),
+            agent: this.data.agent?.raw ?? "Unknown",
         };
     }
 }
