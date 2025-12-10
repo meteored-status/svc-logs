@@ -42,14 +42,15 @@
     "jszip": "^3.10.1",
     "mysql2": "^3.15.3",
     "source-map-support": "^0.5.21",
-    "tree-kill": "^1.2.2"
+    "tree-kill": "^1.2.2",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@rspack/cli": "^1.6.6",
-    "@rspack/core": "^1.6.6",
+    "@rspack/cli": "^1.6.7",
+    "@rspack/core": "^1.6.7",
     "@tsconfig/node24": "^24.0.3",
     "@types/diff3": "^0.0.2",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.10.2",
     "@types/source-map-support": "^0.5.10",
     "css-loader": "^7.1.2",
     "diff3": "^0.0.4",
@@ -57,7 +58,7 @@
     "pug": "^3.0.3",
     "pug3-loader": "^2.4.3",
     "rspack-manifest-plugin": "^5.2.0",
-    "sass": "^1.94.2",
+    "sass": "^1.95.1",
     "sass-loader": "^16.0.6",
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
@@ -67,5 +68,5 @@
     "tslib": "^2.8.1",
     "typescript": "^5.9.3"
   },
-  "version": "2025.12.5+1-bixus"
+  "version": "2025.12.10+1-juancmartinez"
 }

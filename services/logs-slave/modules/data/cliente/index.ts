@@ -81,4 +81,8 @@ export class Cliente {
     public aplicarGCS(gcs: ClienteGCS): void {
         this.gcs = gcs;
     }
+
+    public proyecto(service?: string): string|undefined {
+        return this.grupo ?? service;
+    }
 }

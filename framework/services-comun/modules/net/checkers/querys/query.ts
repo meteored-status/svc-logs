@@ -8,6 +8,7 @@ export interface IQuery {
     // fin de nota
 
     opcional?: boolean;
+    description?: string;
 }
 
 export abstract class Query {

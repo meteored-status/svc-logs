@@ -7,6 +7,7 @@ import {Exact} from "./querys/exact";
 import {Prefix} from "./querys/prefix";
 import {Options} from "./querys/options";
 import {Cualquiera} from "./querys/cualquiera";
+import {CustomSpecification} from "../schema/spec";
 
 export interface IDocumentable {
     enabled: boolean;
@@ -25,6 +26,9 @@ export interface IExpresion {
     resumen: string;
     checkQuery?: boolean;
     query?: NodeJS.Dict<IQuery>;
+    post?: CustomSpecification;
+    response?: CustomSpecification;
+    headers?: CustomSpecification;
     log?: boolean;
     internal?: boolean;
     deprecated?: boolean;

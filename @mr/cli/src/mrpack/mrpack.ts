@@ -8,6 +8,7 @@ import {ModuloInit} from "./modulos/init";
 import {ModuloUpdate} from "./modulos/update";
 import {ModuloUpload} from "./modulos/upload";
 import {ModuloFramework} from "./modulos/framework";
+import {ModuloAutoDoc} from "./modulos/auto-doc";
 
 export interface IMRPackConfig extends IModuloConfig {
     options: IModuloConfig["options"];/* & {
@@ -29,6 +30,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
     };
 
     private static MODULOS = [
+        "autodoc",
         "devel",
         "deploy",
         "framework",
@@ -78,6 +80,9 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
 
     protected async parseParams(config: IMRPack, positionals: string[]): Promise<void> {
         switch (positionals[0]) {
+            case "autodoc":
+                ModuloAutoDoc.run();
+                break;
             case "devel":
                 ModuloDevel.run();
                 break;
@@ -113,6 +118,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
                 console.log(`Indica el módulo a ejecutar.`);
                 console.log(`${Colors.colorize([Colors.FgMagenta], "Módulos disponibles:")}`);
                 console.group();
+                    console.log(`${Colors.colorize([Colors.FgBlue], "autodoc")}:   Genera la documentación automática del proyecto`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "devel")}:     Inicia el entorno de desarrollo`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "deploy")}:    Compila el proyecto en modo producción`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "framework")}: Operaciones sobre los frameworks`);
