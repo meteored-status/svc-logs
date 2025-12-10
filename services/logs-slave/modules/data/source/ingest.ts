@@ -6,7 +6,7 @@ import {error} from "services-comun/modules/utiles/log";
 import {Storage} from "services-comun/modules/fs/storage";
 
 import {Cliente} from "../cliente";
-import {type IRAWData, type IRegistroES, Registro} from "../registro";
+import {type IRAWData, type IRegistroCrawler, type IRegistroES, Registro} from "../registro";
 import SCHEMA from "./cloudflare";
 
 const FILTRAR_PATHS_PREFIX: string[] = [
@@ -17,12 +17,31 @@ const BQ = new BigQuery({
     keyFilename: "files/credenciales/bigquery.json",
 });
 
-async function guardar(buffer: IRegistroES[]): Promise<void> {
-    for (const chunk of arrayChop(buffer, 1000)) {
-    await BQ.dataset("logs").table(`accesos`).insert(chunk)
-        .catch((err) => {
-            error("Error guardando registros en BigQuery", JSON.stringify(err));
-        });
+async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[]): Promise<void> {
+    if (accesos.length===0 || crawler.length===0) {
+        return;
+    }
+
+    const dataset = BQ.dataset("logs");
+
+    if (accesos.length>0) {
+        const tablaAccesos = dataset.table(`accesos`);
+        for (const chunk of arrayChop(accesos, 1000)) {
+            await tablaAccesos.insert(chunk)
+                .catch((err) => {
+                    error("Error guardando registros de accesos en BigQuery", JSON.stringify(err));
+                });
+        }
+    }
+
+    if (crawler.length>0) {
+        const tablaCrawler = dataset.table(`accesos`);
+        for (const chunk of arrayChop(crawler, 1000)) {
+            await tablaCrawler.insert(chunk)
+                .catch((err) => {
+                    error("Error guardando registros de crawler en BigQuery", JSON.stringify(err));
+                });
+        }
     }
 }
 
@@ -33,7 +52,8 @@ export default async (cliente: Cliente, storage: Storage)=>{
         terminal: false,
     });
 
-    const buffer: IRegistroES[] = [];
+    const accesos: IRegistroES[] = [];
+    const crawler: IRegistroCrawler[] = [];
 
     for await (const linea of lector) {
         if (linea.length===0) {
@@ -46,8 +66,12 @@ export default async (cliente: Cliente, storage: Storage)=>{
             continue;
         }
 
-        buffer.push(Registro.build(cf, cliente).toJSON());
+        const registro = Registro.build(cf, cliente);
+        accesos.push(registro.toJSON());
+        if (cf.client.ip.class.includes("Search Engine")) {
+            crawler.push(registro.toCrawler());
+        }
     }
 
-    guardar(buffer).then(() => undefined);
+    guardar(accesos, crawler).then(() => undefined);
 }
