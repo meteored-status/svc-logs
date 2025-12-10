@@ -35,7 +35,7 @@ async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[]): Pro
     }
 
     if (crawler.length>0) {
-        const tablaCrawler = dataset.table(`accesos`);
+        const tablaCrawler = dataset.table(`accesos_crawler`);
         for (const chunk of arrayChop(crawler, 1000)) {
             await tablaCrawler.insert(chunk)
                 .catch((err) => {
