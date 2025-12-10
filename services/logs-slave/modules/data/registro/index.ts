@@ -1,5 +1,5 @@
 import {RegistroCache, type IRegistroCache} from "./cache";
-import {RegistroCliente, type IRegistroCliente} from "./cliente";
+import {RegistroCliente, type IRegistroCliente, IRegistroClienteCrawler} from "./cliente";
 import {RegistroOrigen, type IRegistroOrigen} from "./origen";
 import {RegistroPeticion, type IRegistroPeticion} from "./peticion";
 import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} from "./respuesta";
@@ -111,6 +111,18 @@ export interface IRegistroES {
     origen?: IRegistroOrigen;
 }
 
+export interface IRegistroCrawler {
+    timestamp: string;
+    url: string;
+    proyecto: string;
+    subproyecto?: string;
+    peticion: IRegistroPeticion;
+    cache: IRegistroCache;
+    respuesta: IRegistroRespuestaES;
+    cliente: IRegistroClienteCrawler;
+    origen?: IRegistroOrigen;
+}
+
 interface IObj {
     peticion: RegistroPeticion;
     cache: RegistroCache;
@@ -172,6 +184,20 @@ export class Registro implements IRegistro {
             cache: this.obj.cache.toJSON(),
             respuesta: this.obj.respuesta.toJSON(),
             cliente: this.obj.cliente.toJSON(),
+            origen: this.obj.origen?.toJSON(),
+        };
+    }
+
+    public toCrawler(): IRegistroCrawler {
+        return {
+            timestamp: this.data.timestamp.toISOString(),
+            url: this.data.url.toString(),
+            proyecto: this.data.proyecto,
+            subproyecto: this.data.subproyecto,
+            peticion: this.obj.peticion.toJSON(),
+            cache: this.obj.cache.toJSON(),
+            respuesta: this.obj.respuesta.toJSON(),
+            cliente: this.obj.cliente.toCrawler(),
             origen: this.obj.origen?.toJSON(),
         };
     }
