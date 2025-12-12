@@ -228,7 +228,7 @@ export class Registro implements IRegistro {
     }
 
     public toApp(header: string): IRegistroApp {
-        const partes = /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^(^)]+)(?:\((\w+)\))?$/.exec(header);
+        const partes = /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^(^)]+)(?:\((\w+)\))?;?$/.exec(header);
         if (!partes) {
             throw new Error(`Header de App inválido: ${header}`);
         }
@@ -237,17 +237,17 @@ export class Registro implements IRegistro {
         return {
             timestamp: this.data.timestamp.toISOString(),
             url: this.data.url.toString(),
-            sistema: os,
+            sistema: os.trim(),
             servicio: this.data.subproyecto ?? "unknown",
             tipo: undefined,
             app: {
-                package: app,
-                version,
-                sufijo,
+                package: app.trim(),
+                version: version.trim(),
+                sufijo: sufijo?.trim(),
             },
             os: {
-                nombre: os,
-                version: osver,
+                nombre: os.trim(),
+                version: osver.trim(),
             },
             peticion: this.obj.peticion.toAPP(),
             cache: this.obj.cache.toAPP(),
