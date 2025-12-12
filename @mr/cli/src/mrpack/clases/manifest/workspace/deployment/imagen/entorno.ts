@@ -1,35 +1,35 @@
 import type {IManifestDeploymentImagenEntorno} from "@mr/cli/manifest/deployment/imagen/entorno";
 
-export class ManifestWorkspaceDeploymentImagenEntornoLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeploymentImagenEntorno {
+class ManifestWorkspaceDeploymentImagenEntornoLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeploymentImagenEntorno {
         return {
             paquete: "services",
             nombre: "defecto",
         };
     }
 
-    public static check(imagen?: Partial<IManifestDeploymentImagenEntorno>): IManifestDeploymentImagenEntorno {
-        const data = this.DEFAULT;
+    public check(imagen?: Partial<IManifestDeploymentImagenEntorno>): IManifestDeploymentImagenEntorno {
+        const data = this.default;
         if (!imagen) {
             return data;
         }
 
-        if (imagen.base!=undefined) {
+        if (imagen.base) {
             data.base = imagen.base;
         }
-        if (imagen.registro!=undefined) {
+        if (imagen.registro) {
             data.registro = imagen.registro;
         }
-        if (imagen.paquete!=undefined) {
+        if (imagen.paquete) {
             data.paquete = imagen.paquete;
         }
-        if (imagen.nombre!=undefined) {
+        if (imagen.nombre) {
             data.nombre = imagen.nombre;
         }
 
         return data;
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceDeploymentImagenEntornoLoader();

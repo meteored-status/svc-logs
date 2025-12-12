@@ -30,6 +30,10 @@ interface IManifestDeployment {
     target: Target;
     alone?: boolean;
     arch?: string[];
+    buckets?: {
+        produccion: Record<string, string|string[]>;
+        test: Record<string, string|string[]>;
+    };
     credenciales?: IManifestDeploymentCredenciales[];
     imagen?: IManifestDeploymentImagen;
     kustomize?: IManifestDeploymentKustomize[];
@@ -51,6 +55,9 @@ interface IManifestDeployment {
 - `arch`: Indica las arquitecturas para las que generar el contenedor. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo**: string
     - **opcional**: Por defecto ["linux/amd64", "linux/arm64"].
+- `buckets`: Contenido del archivo de buckets para Google Storage. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
+    - **tipo** Objeto con las propiedades *produccion* y *test*, ambas propiedades contienen un registro de buckets.
+    - **opcional**: Por defecto `undefined`.
 - `credenciales`: Credenciales necesarias durante el proceso de despliegue. *Solo es válido para despliegues de tipo `SERVICE`, `CRONJOB` o `JOB`.*
     - **tipo** [IManifestDeploymentCredenciales[]](#imanifestdeploymentcredenciales).
     - **opcional**: Por defecto `[]`.

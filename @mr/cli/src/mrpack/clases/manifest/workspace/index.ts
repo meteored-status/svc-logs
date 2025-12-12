@@ -2,19 +2,19 @@ import {type IManifest, Manifest} from "@mr/cli/manifest";
 
 import type {IManifestLegacy} from "./legacy";
 import {ManifestLoader} from "..";
-import {ManifestWorkspaceDeploymentLoader} from "./deployment";
-import {ManifestWorkspaceDevelopmentLoader} from "./development";
-import {ManifestWorkspaceBuildLoader} from "./build";
 import type {IPackageJsonLegacy} from "../../packagejson";
+import ManifestWorkspaceDeploymentLoader from "./deployment";
+import ManifestWorkspaceDevelopmentLoader from "./development";
+import ManifestWorkspaceBuildLoader from "./build";
 
 export class ManifestWorkspaceLoader extends ManifestLoader<IManifest, Manifest> {
     /* STATIC */
-    public static get DEFAULT(): IManifest {
+    public static get default(): IManifest {
         return {
             enabled: true,
-            deploy: ManifestWorkspaceDeploymentLoader.DEFAULT,
-            devel: ManifestWorkspaceDevelopmentLoader.DEFAULT,
-            build: ManifestWorkspaceBuildLoader.DEFAULT,
+            deploy: ManifestWorkspaceDeploymentLoader.default,
+            devel: ManifestWorkspaceDevelopmentLoader.default,
+            build: ManifestWorkspaceBuildLoader.default,
         };
     }
 
@@ -45,7 +45,7 @@ export class ManifestWorkspaceLoader extends ManifestLoader<IManifest, Manifest>
     }
 
     public check(manifest: Partial<IManifest>, paquete?: IPackageJsonLegacy): IManifest {
-        const data = this.defecto.DEFAULT;
+        const data = this.defecto.default;
         if (manifest.enabled!==undefined) {
             data.enabled = manifest.enabled;
         }

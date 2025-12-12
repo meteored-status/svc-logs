@@ -1,7 +1,7 @@
-import {RegistroCache, type IRegistroCache} from "./cache";
-import {RegistroCliente, type IRegistroCliente, IRegistroClienteCrawler} from "./cliente";
+import {RegistroCache, type IRegistroCache, IRegistroCacheApp} from "./cache";
+import {RegistroCliente, type IRegistroCliente, IRegistroClienteCrawler, IRegistroClienteApp} from "./cliente";
 import {RegistroOrigen, type IRegistroOrigen} from "./origen";
-import {RegistroPeticion, type IRegistroPeticion} from "./peticion";
+import {RegistroPeticion, type IRegistroPeticion, IRegistroPeticionApp} from "./peticion";
 import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} from "./respuesta";
 import {Cliente} from "../cliente";
 
@@ -62,6 +62,7 @@ export interface IRAWDataCache {
 export interface IRAWDataRequest {
     headers: {
         apiKey?: string;
+        app?: string;
     };
 }
 
@@ -78,6 +79,7 @@ export interface IRAWData {
     edge: IRAWDataEdge;
     cache: IRAWDataCache;
     cookies: {
+        mrid?: string;
         user?: string;
     };
     origin?: IRAWDataOrigin;
@@ -121,6 +123,28 @@ export interface IRegistroCrawler {
     cache: IRegistroCache;
     respuesta: IRegistroRespuestaES;
     cliente: IRegistroClienteCrawler;
+    origen?: IRegistroOrigen;
+}
+
+export interface IRegistroApp {
+    timestamp: string;
+    url: string;
+    sistema: string;
+    servicio: string;
+    tipo?: string;
+    app: {
+        package: string;
+        version: string;
+        sufijo?: string;
+    };
+    os: {
+        nombre: string;
+        version: string;
+    };
+    peticion: IRegistroPeticionApp;
+    cache: IRegistroCacheApp;
+    respuesta: IRegistroRespuestaES;
+    cliente: IRegistroClienteApp;
     origen?: IRegistroOrigen;
 }
 
@@ -199,6 +223,36 @@ export class Registro implements IRegistro {
             cache: this.obj.cache.toJSON(),
             respuesta: this.obj.respuesta.toJSON(),
             cliente: this.obj.cliente.toCrawler(),
+            origen: this.obj.origen?.toJSON(),
+        };
+    }
+
+    public toApp(header: string): IRegistroApp {
+        const partes = /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^(^)]+)(?:\((\w+)\))?$/.exec(header);
+        if (!partes) {
+            throw new Error(`Header de App inválido: ${header}`);
+        }
+        const [, os, osver, version, app, sufijo] = partes;
+
+        return {
+            timestamp: this.data.timestamp.toISOString(),
+            url: this.data.url.toString(),
+            sistema: os,
+            servicio: this.data.subproyecto ?? "unknown",
+            tipo: undefined,
+            app: {
+                package: app,
+                version,
+                sufijo,
+            },
+            os: {
+                nombre: os,
+                version: osver,
+            },
+            peticion: this.obj.peticion.toAPP(),
+            cache: this.obj.cache.toAPP(),
+            respuesta: this.obj.respuesta.toJSON(),
+            cliente: this.obj.cliente.toAPP(),
             origen: this.obj.origen?.toJSON(),
         };
     }

@@ -20,6 +20,7 @@ export type IPodInfo = Readonly<{
     replica: string;
     wire: number;
     deploy: string;
+    buckets?: Record<string, string | string[]>;
 }>;
 
 export async function crearPodInfo(): Promise<IPodInfo> {
@@ -86,5 +87,6 @@ export async function crearPodInfo(): Promise<IPodInfo> {
         replica,
         wire,
         deploy,
+        buckets: manifest.deploy.buckets?.[PRODUCCION&&!TEST?"produccion":"test"],
     }));
 }

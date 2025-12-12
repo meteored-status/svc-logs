@@ -24,7 +24,7 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@types/node": "^24.10.2",
+    "@types/node": "^24.10.3",
     "logs-services": "workspace:*",
     "logs-status-base": "workspace:*",
     "services-comun": "workspace:*",

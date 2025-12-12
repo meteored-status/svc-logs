@@ -1,25 +1,25 @@
 import type {IManifestDeploymentRun} from "../../../../../../manifest/root/deploy/run";
 
-export class ManifestRootDeploymentRunLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeploymentRun {
+class ManifestRootDeploymentRunLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeploymentRun {
         return {
             enabled: true,
             latest: false,
         };
     }
 
-    public static check(devel: Partial<IManifestDeploymentRun>={}): IManifestDeploymentRun {
-        const data = this.DEFAULT;
-        if (devel.enabled!=undefined) {
+    public check(devel: Partial<IManifestDeploymentRun>={}): IManifestDeploymentRun {
+        const data = this.default;
+        if (devel.enabled) {
             data.enabled = devel.enabled;
         }
-        if (devel.enabled != undefined) {
+        if (devel.enabled) {
             data.enabled = devel.enabled;
         }
 
         return data;
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestRootDeploymentRunLoader();

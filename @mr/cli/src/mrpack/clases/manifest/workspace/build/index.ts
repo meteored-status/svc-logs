@@ -1,22 +1,22 @@
 import {BuildFW, type IManifestBuild} from "@mr/cli/manifest/build";
 import {IManifestBuildDatabase} from "@mr/cli/manifest/build/database";
 
-import {ManifestWorkspaceBuildBundleLoader} from "./bundle";
+import ManifestWorkspaceBuildBundleLoader from "./bundle";
 import {BuildFWLegacy, type IManifestBuildLegacy, type IManifestLegacy} from "../legacy";
-import {ManifestWorkspaceBuildDatabaseLoader} from "./database";
+import ManifestWorkspaceBuildDatabaseLoader from "./database";
 
-export class ManifestWorkspaceBuildLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestBuild {
+class ManifestWorkspaceBuildLoader {
+    /* INSTANCE */
+    public get default(): IManifestBuild {
         return {
             deps: [],
-            database: ManifestWorkspaceBuildDatabaseLoader.DEFAULT,
+            database: ManifestWorkspaceBuildDatabaseLoader.default,
             framework: BuildFW.meteored,
         };
     }
 
-    public static check(build: Partial<IManifestBuild|IManifestBuildLegacy>={}): IManifestBuild {
-        const data = this.DEFAULT;
+    public check(build: Partial<IManifestBuild|IManifestBuildLegacy>={}): IManifestBuild {
+        const data = this.default;
         if (build.deps) {
             if (Array.isArray(build.deps)) {
                 data.deps = build.deps;
@@ -44,9 +44,9 @@ export class ManifestWorkspaceBuildLoader {
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>): IManifestBuild {
+    public fromLegacy(config: Partial<IManifestLegacy>): IManifestBuild {
         let deps: string[]|undefined;
-        if (config.deps!=undefined && config.deps.length>0) {
+        if (config.deps && config.deps.length>0) {
             deps = config.deps;
         }
         let framework: BuildFW;
@@ -74,6 +74,6 @@ export class ManifestWorkspaceBuildLoader {
             bundle: ManifestWorkspaceBuildBundleLoader.fromLegacy(config.bundle),
         };
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceBuildLoader();

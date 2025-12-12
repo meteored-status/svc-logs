@@ -1,0 +1,244 @@
+[
+  {
+    "name": "timestamp",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "url",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "sistema",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "servicio",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "tipo",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "app",
+    "type": "RECORD",
+    "mode": "REQUIRED",
+    "fields": [
+      {
+        "name": "package",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "version",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "sufijo",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  },
+  {
+    "name": "os",
+    "type": "RECORD",
+    "mode": "REQUIRED",
+    "fields": [
+      {
+        "name": "nombre",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "version",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      }
+    ]
+  },
+  {
+    "name": "peticion",
+    "type": "RECORD",
+    "mode": "REQUIRED",
+    "fields": [
+      {
+        "name": "method",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "maxLength": "10"
+      },
+      {
+        "name": "scheme",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "maxLength": "10"
+      },
+      {
+        "name": "dominio",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "subdominio",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "path",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "uri",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "protocol",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      }
+    ]
+  },
+  {
+    "name": "cache",
+    "type": "RECORD",
+    "mode": "REQUIRED",
+    "fields": [
+      {
+        "name": "status",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "maxLength": "11"
+      }
+    ]
+  },
+  {
+    "name": "respuesta",
+    "type": "RECORD",
+    "mode": "REQUIRED",
+    "fields": [
+      {
+        "name": "status",
+        "type": "INTEGER",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "tiempo",
+        "type": "INTEGER",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "contentType",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "headers",
+        "type": "RECORD",
+        "mode": "NULLABLE",
+        "fields": [
+          {
+            "name": "service",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          },
+          {
+            "name": "node",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          },
+          {
+            "name": "version",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "cliente",
+    "type": "RECORD",
+    "mode": "REQUIRED",
+    "fields": [
+      {
+        "name": "device",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "ip",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "location",
+        "type": "RECORD",
+        "mode": "NULLABLE",
+        "fields": [
+          {
+            "name": "pais",
+            "type": "STRING",
+            "mode": "REQUIRED",
+            "maxLength": "2"
+          },
+          {
+            "name": "region",
+            "type": "STRING",
+            "mode": "REQUIRED"
+          },
+          {
+            "name": "ciudad",
+            "type": "STRING",
+            "mode": "REQUIRED"
+          },
+          {
+            "name": "coordenadas",
+            "type": "GEOGRAPHY",
+            "mode": "REQUIRED"
+          },
+          {
+            "name": "precision",
+            "type": "INTEGER",
+            "mode": "REQUIRED"
+          },
+          {
+            "name": "timezone",
+            "type": "STRING",
+            "mode": "REQUIRED"
+          },
+          {
+            "name": "eu",
+            "type": "BOOLEAN",
+            "mode": "REQUIRED"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "origen",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "fields": [
+      {
+        "name": "ip",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "nombre",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  }
+]
