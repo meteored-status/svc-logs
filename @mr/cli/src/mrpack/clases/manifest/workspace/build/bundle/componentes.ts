@@ -2,42 +2,42 @@ import {type IManifestBuildComponentes, ManifestBuildComponentesCSS} from "@mr/c
 
 import type {IManifestLegacyComponentes} from "../../legacy";
 
-export class ManifestWorkspaceBuildComponentesLoader {
-    /* STATIC */
-    public static get DEFAULT(): Partial<IManifestBuildComponentes> {
+class ManifestWorkspaceBuildComponentesLoader {
+    /* INSTANCE */
+    public get default(): Partial<IManifestBuildComponentes> {
         return {};
     }
 
-    public static check(componentes?: Partial<IManifestBuildComponentes>): Partial<IManifestBuildComponentes>|undefined {
-        if (componentes==undefined) {
+    public check(componentes?: Partial<IManifestBuildComponentes>): Partial<IManifestBuildComponentes>|undefined {
+        if (!componentes) {
             return;
         }
 
-        const data = this.DEFAULT;
-        if (componentes.optimizar!=undefined) {
+        const data = this.default;
+        if (componentes.optimizar) {
             data.optimizar = componentes.optimizar;
         }
-        if (componentes.pug!=undefined) {
+        if (componentes.pug) {
             data.pug = componentes.pug;
         }
-        if (componentes.css!=undefined) {
+        if (componentes.css) {
             data.css = componentes.css;
         }
 
-        if (Object.keys(data).length==0) {
+        if (Object.keys(data).length===0) {
             return;
         }
 
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacyComponentes>={}): Partial<IManifestBuildComponentes>|undefined {
-        if (config.optimizar==undefined && config.pug==undefined && config.css==undefined && config.css_type==undefined) {
+    public fromLegacy(config: Partial<IManifestLegacyComponentes>={}): Partial<IManifestBuildComponentes>|undefined {
+        if (!config.optimizar && !config.pug && !config.css && !config.css_type) {
             return;
         }
 
         let css: ManifestBuildComponentesCSS;
-        if (config.css==undefined || !config.css) {
+        if (!config.css) {
             css = ManifestBuildComponentesCSS.DESACTIVADO;
         } else {
             switch (config.css_type) {
@@ -61,5 +61,6 @@ export class ManifestWorkspaceBuildComponentesLoader {
         };
     }
 
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceBuildComponentesLoader();

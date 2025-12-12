@@ -1,7 +1,7 @@
-import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage";
 import {type IManifestDeploymentCredenciales, ManifestDeploymentCredenciales} from "./credenciales";
 import {type IManifestDeploymentImagen, ManifestDeploymentImagen} from "./imagen";
 import {type IManifestDeploymentKustomize, ManifestDeploymentKustomize} from "./kustomize";
+import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage";
 
 export const enum Runtime {
     node = "node",
@@ -24,6 +24,13 @@ export const enum Target {
     none = "none",
 }
 
+export type TManifestDeploymentBucketData = Record<string, string|string[]>;
+
+interface IManifestDeploymentBuckets {
+    produccion: TManifestDeploymentBucketData;
+    test: TManifestDeploymentBucketData;
+}
+
 export interface IManifestDeployment {
     enabled: boolean;
     type: ManifestDeploymentKind; // tipo de despliegue
@@ -31,10 +38,12 @@ export interface IManifestDeployment {
     target: Target;
     alone?: boolean; // si solo se ha de desplegar en una zona, solo aplicable a SERVICE/CRONJOB/JOB
     arch?: string[]; // solo aplicable a SERVICE/CRONJOB/JOB
+    buckets?: IManifestDeploymentBuckets; // solo aplicable a SERVICE/CRONJOB/JOB
     credenciales?: IManifestDeploymentCredenciales[]; // solo aplicable a SERVICE/CRONJOB/JOB
     imagen?: IManifestDeploymentImagen; // solo aplicable a SERVICE/CRONJOB/JOB
     kustomize?: IManifestDeploymentKustomize[]; // solo aplicable a SERVICE/CRONJOB/JOB
     cloudsql?: string[]; // solo aplicable a SERVICE/CRONJOB/JOB en lambda
+    schedule?: string; // solo aplicable a CRONJOB
     storage?: IManifestDeploymentStorage; // solo aplicable a BROWSER
 }
 
@@ -51,10 +60,12 @@ export class ManifestDeployment implements IManifestDeployment {
     public target: Target;
     public alone?: boolean;
     public arch?: string[];
+    public buckets?: IManifestDeploymentBuckets;
     public credenciales?: ManifestDeploymentCredenciales[];
     public imagen?: ManifestDeploymentImagen;
     public kustomize?: ManifestDeploymentKustomize[];
     public cloudsql?: string[];
+    public schedule?: string;
     public storage?: ManifestDeploymentStorage;
 
     public get cronjob(): boolean {
@@ -68,10 +79,12 @@ export class ManifestDeployment implements IManifestDeployment {
         this.runtime = deploy.runtime;
         this.alone = deploy.alone;
         this.arch = deploy.arch;
+        this.buckets = deploy.buckets;
         this.credenciales = deploy.credenciales?.map(actual => ManifestDeploymentCredenciales.build(actual));
         this.imagen = ManifestDeploymentImagen.build(deploy.imagen);
         this.kustomize = deploy.kustomize?.map(kustomize=>ManifestDeploymentKustomize.build(kustomize));
         this.cloudsql = deploy.cloudsql;
+        this.schedule = deploy.schedule;
         this.storage = ManifestDeploymentStorage.build(deploy.storage);
     }
 
@@ -85,12 +98,14 @@ export class ManifestDeployment implements IManifestDeployment {
             target: this.target,
             alone: this.alone,
             arch: this.arch,
+            buckets: this.buckets,
             credenciales: credenciales.length>0?
                 credenciales:
                 undefined,
             imagen: this.imagen?.toJSON(),
             kustomize: this.kustomize?.map(k=>k.toJSON()),
             cloudsql: this.cloudsql,
+            schedule: this.schedule,
             storage: this.storage?.toJSON(),
         };
     }

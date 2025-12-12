@@ -1,22 +1,22 @@
 import type {IManifestDeploymentBuild} from "../../../../../../manifest/root/deploy/build";
 
-export class ManifestRootDeploymentBuildLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeploymentBuild {
+class ManifestRootDeploymentBuildLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeploymentBuild {
         return {
             enabled: true,
             force: false,
         };
     }
 
-    public static check(devel: Partial<IManifestDeploymentBuild>={}): IManifestDeploymentBuild {
-        const data = this.DEFAULT;
-        if (devel.enabled!=undefined) {
+    public check(devel: Partial<IManifestDeploymentBuild>={}): IManifestDeploymentBuild {
+        const data = this.default;
+        if (devel.enabled) {
             data.enabled = devel.enabled;
         }
 
         return data;
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestRootDeploymentBuildLoader();

@@ -17,6 +17,16 @@ export interface IRegistroPeticion {
     headers?: IHeaders;
 }
 
+export interface IRegistroPeticionApp {
+    method: string;
+    scheme: string;
+    dominio: string;
+    subdominio: string;
+    path: string;
+    uri: string;
+    protocol: string;
+}
+
 export class RegistroPeticion implements IRegistroPeticion {
     /* STATIC */
     public static build(client: IRAWDataClient, request: IRAWDataRequest, zona: string): RegistroPeticion {
@@ -67,6 +77,18 @@ export class RegistroPeticion implements IRegistroPeticion {
             referer: this.data.referer,
             source: this.data.source,
             headers: this.data.headers,
+        };
+    }
+
+    public toAPP(): IRegistroPeticionApp {
+        return {
+            method: this.data.method,
+            scheme: this.data.scheme,
+            dominio: this.data.dominio,
+            subdominio: this.data.subdominio,
+            path: this.data.path,
+            uri: this.data.uri,
+            protocol: this.data.protocol,
         };
     }
 }

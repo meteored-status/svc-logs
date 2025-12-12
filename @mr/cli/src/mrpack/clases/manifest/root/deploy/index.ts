@@ -1,28 +1,28 @@
 import type {IManifestDeployment} from "../../../../../../manifest/root/deploy";
 
-import {ManifestRootDeploymentBuildLoader} from "./build";
-import {ManifestRootDeploymentRunLoader} from "./run";
+import ManifestRootDeploymentBuildLoader from "./build";
+import ManifestRootDeploymentRunLoader from "./run";
 
-export class ManifestRootDeploymentLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeployment {
+class ManifestRootDeploymentLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeployment {
         return {
-            build: ManifestRootDeploymentBuildLoader.DEFAULT,
-            run: ManifestRootDeploymentRunLoader.DEFAULT,
+            build: ManifestRootDeploymentBuildLoader.default,
+            run: ManifestRootDeploymentRunLoader.default,
         };
     }
 
-    public static check(bundle?: Partial<IManifestDeployment>): IManifestDeployment {
-        const data = this.DEFAULT;
-        if (bundle?.build!=undefined) {
+    public check(bundle?: Partial<IManifestDeployment>): IManifestDeployment {
+        const data = this.default;
+        if (bundle?.build) {
             data.build = ManifestRootDeploymentBuildLoader.check(bundle.build);
         }
-        if (bundle?.run!=undefined) {
+        if (bundle?.run) {
             data.run = ManifestRootDeploymentRunLoader.check(bundle.run);
         }
 
         return data;
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestRootDeploymentLoader();

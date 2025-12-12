@@ -4,7 +4,7 @@ import {md5} from "services-comun/modules/utiles/hash";
 import type {ManifestRoot} from "../../../../manifest";
 import type {IPackageJsonLegacy} from "../packagejson";
 
-type ManifestDefault<T> = {DEFAULT: T};
+type ManifestDefault<T> = {default: T};
 type ManifestLoad<T, K extends ManifestRoot<T>> = new (manifest: T)=>K;
 
 export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
@@ -20,7 +20,7 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
     protected guardando: boolean;
 
     protected constructor(basedir: string, protected readonly Manifest: ManifestLoad<T, K>, protected readonly defecto: ManifestDefault<T>) {
-        this.manifest = new Manifest(this.defecto.DEFAULT);
+        this.manifest = new Manifest(this.defecto.default);
 
         this.file = ManifestLoader.getFile(basedir);
         this.guardando = false;
@@ -31,14 +31,14 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
     public async load(env: boolean = false, paquete?: IPackageJsonLegacy): Promise<ManifestLoader<T, K>> {
         const guardar = await readJSON<Partial<T>>(this.file)
             .then((manifest) => {
-                const hash_inicial = md5(JSON.stringify(manifest));
+                const hashInicial = md5(JSON.stringify(manifest));
                 this.manifest = new this.Manifest(this.check(manifest, paquete));
-                const hash_final = md5(JSON.stringify(this.manifest));
+                const hashFinal = md5(JSON.stringify(this.manifest));
 
-                return hash_inicial!=hash_final;
+                return hashInicial!==hashFinal;
             })
             .catch(() => {
-                this.manifest = new this.Manifest(this.defecto.DEFAULT);
+                this.manifest = new this.Manifest(this.defecto.default);
                 return true;
             });
         if (guardar) {
@@ -57,7 +57,7 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         if (salida!=null) {
             this.manifest = new this.Manifest(this.check(salida, paquete));
         } else {
-            this.manifest = new this.Manifest(this.defecto.DEFAULT);
+            this.manifest = new this.Manifest(this.defecto.default);
         }
 
         return this;

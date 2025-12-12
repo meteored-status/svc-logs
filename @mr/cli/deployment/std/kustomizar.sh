@@ -110,12 +110,27 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           fi
         done
       elif [[ "$(configw "${RUTA}" '.deploy.target')" == "lambda" ]]; then
+
+        if [[ "$(configw "${RUTA}" '.deploy.type')" == "service" ]]; then
+          COMANDO="services"
+          TYPE="service"
+          SUBTYPE=""
+        elif [[ "$(configw "${RUTA}" '.deploy.type')" == "cronjob" ]]; then
+          COMANDO="jobs"
+          TYPE="job"
+          SUBTYPE="cronjob"
+        else
+          COMANDO="jobs"
+          TYPE="job"
+          SUBTYPE="job"
+        fi
+
         if [[ ! -f "${BASETOP}/lambda.sh" ]]; then
           echo "#!/bin/bash" > "${BASETOP}/lambda.sh"
           echo "set -e" >> "${BASETOP}/lambda.sh"
           echo "" >> "${BASETOP}/lambda.sh"
         fi
-        cat "${BASETOP}/@mr/cli/deployment/std/cloud-run.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
+        cat "${BASETOP}/@mr/cli/deployment/std/cloud-run-${TYPE}.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
         CLOUDSQL=$(configw "${RUTA}" '.deploy.cloudsql // empty | if type=="array" and length > 0 then join(",") else empty end')
         if [[ -n "${CLOUDSQL}" ]]; then
           yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/cloudsql-instances\" = \"${CLOUDSQL}\"" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
@@ -158,13 +173,30 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           done < <(echo "$CREDENTIALS" | jq -c '.[]')
         fi
 
-        yq eval ".spec.template.spec.volumes += $VOLUMES_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
-        yq eval ".spec.template.spec.containers[0].volumeMounts += $MOUNTS_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+        if [[ "${TYPE}" == "service" ]]; then
+          yq eval ".spec.template.spec.volumes += $VOLUMES_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+          yq eval ".spec.template.spec.containers[0].volumeMounts += $MOUNTS_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+        else
+          yq eval ".spec.template.spec.template.spec.volumes += $VOLUMES_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+          yq eval ".spec.template.spec.template.spec.containers[0].volumeMounts += $MOUNTS_JSON" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
+        fi
 
-        echo "gcloud run services replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
+        echo "echo \"Desplegando lambda-${TYPE} ${KUSTOMIZER}-${SERVICIO}\"" >> "${BASETOP}/lambda.sh"
+        echo "gcloud run ${COMANDO} replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
+        if [[ "${SUBTYPE}" == "cronjob" ]]; then
+          SCHEDULE=$(configw "${RUTA}" '.deploy.schedule // "0 0 31 2 *"')
+          echo "echo \"Creando programación para ${KUSTOMIZER}-${SERVICIO} (${SCHEDULE})\"" >> "${BASETOP}/lambda.sh"
+          echo "gcloud scheduler jobs create http ${KUSTOMIZER}-${SERVICIO}-scheduler-trigger \
+            --location=europe-west1 \
+            --schedule=\"${SCHEDULE}\" \
+            --time-zone=\"Etc/UTC\" \
+            --uri=\"https://europe-west1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/${KUSTOMIZER}-${SERVICIO}:run\" \
+            --http-method=POST \
+            --oauth-service-account-email=scheduler-invoker@${PROJECT_ID}.iam.gserviceaccount.com \
+            --headers=\"Content-Type=application/json,User-Agent=Google-Cloud-Scheduler\"" >> "${BASETOP}/lambda.sh"
+        fi
 #        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"
-#        echo "gcloud run deploy ${SERVICIO} --image europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${SERVICIO}:${VERSION}  --region europe-west1  --platform managed  --allow-unauthenticated" >> "${BASETOP}/lambda.sh"
       fi
     done
   }

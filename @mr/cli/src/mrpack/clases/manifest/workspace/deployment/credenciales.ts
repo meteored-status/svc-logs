@@ -1,17 +1,17 @@
 import type {IManifestDeploymentCredenciales} from "@mr/cli/manifest/deployment/credenciales";
 
-import {IManifestLegacy} from "../legacy";
+import type {IManifestLegacy} from "../legacy";
 
-export class ManifestWorkspaceDeploymentCredencialesLoader {
-    /* STATIC */
-    public static check(credenciales?: Partial<IManifestDeploymentCredenciales>[]): IManifestDeploymentCredenciales[]|undefined {
-        if (credenciales==undefined) {
+class ManifestWorkspaceDeploymentCredencialesLoader {
+    /* INSTANCE */
+    public check(credenciales?: Partial<IManifestDeploymentCredenciales>[]): IManifestDeploymentCredenciales[]|undefined {
+        if (!credenciales) {
             return;
         }
 
         const salida: IManifestDeploymentCredenciales[] = [];
         for (const actual of credenciales) {
-            if (actual.source!=undefined && actual.target!=undefined) {
+            if (actual.source && actual.target) {
                 salida.push({
                     source: actual.source,
                     target: actual.target
@@ -19,15 +19,15 @@ export class ManifestWorkspaceDeploymentCredencialesLoader {
             }
         }
 
-        if (salida.length==0) {
+        if (salida.length===0) {
             return;
         }
 
         return salida;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>): IManifestDeploymentCredenciales[]|undefined {
-        if (config.credenciales==undefined || config.credenciales.length==0) {
+    public fromLegacy(config: Partial<IManifestLegacy>): IManifestDeploymentCredenciales[]|undefined {
+        if (!config.credenciales || config.credenciales.length===0) {
             return undefined;
         }
 
@@ -36,10 +36,10 @@ export class ManifestWorkspaceDeploymentCredencialesLoader {
         }
         const salida: IManifestDeploymentCredenciales[] = [];
         for (const credenciales of config.credenciales) {
-            if (credenciales.source == undefined) {
+            if (!credenciales.source) {
                 throw new Error(`ManifestDeploymentCredenciales: source no definido`);
             }
-            if (credenciales.target == undefined) {
+            if (!credenciales.target) {
                 throw new Error(`ManifestDeploymentCredenciales: target no definido`);
             }
 
@@ -51,6 +51,6 @@ export class ManifestWorkspaceDeploymentCredencialesLoader {
 
         return salida;
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceDeploymentCredencialesLoader();

@@ -39,6 +39,12 @@ export interface IRegistroClienteCrawler {
     agent: string;
 }
 
+export interface IRegistroClienteApp {
+    device: string;
+    ip: string;
+    location?: IRegistroLocalizacion;
+}
+
 export class RegistroCliente implements IRegistroCliente {
     /* STATIC */
     public static build(data: IRAWDataClient): RegistroCliente {
@@ -113,6 +119,14 @@ export class RegistroCliente implements IRegistroCliente {
             ip: this.data.ip,
             location: this.location?.toJSON(),
             agent: this.data.agent?.raw ?? "Unknown",
+        };
+    }
+
+    public toAPP(): IRegistroClienteApp {
+        return {
+            device: this.data.device,
+            ip: this.data.ip,
+            location: this.location?.toJSON(),
         };
     }
 }

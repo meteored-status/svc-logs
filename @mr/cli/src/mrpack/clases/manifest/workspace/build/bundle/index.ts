@@ -4,59 +4,59 @@ import type {IManifestBuildBundleBase} from "@mr/cli/manifest/build/bundle/base"
 import type {IManifestLegacyBundle} from "../../legacy";
 import {ManifestWorkspaceBuildBundleBaseLoader} from "./base";
 
-export class ManifestWorkspaceBuildBundleLoader extends ManifestWorkspaceBuildBundleBaseLoader {
-    /* STATIC */
-    public static override get DEFAULT(): IManifestBuildBundle {
+class ManifestWorkspaceBuildBundleLoader extends ManifestWorkspaceBuildBundleBaseLoader {
+    /* INSTANCE */
+    public override get default(): IManifestBuildBundle {
         return {
-            ...super.DEFAULT,
+            ...super.default,
         };
     }
 
-    public static override check(bundle?: Partial<IManifestBuildBundle>): IManifestBuildBundle|undefined {
-        if (bundle==undefined) {
+    public override check(bundle?: Partial<IManifestBuildBundle>): IManifestBuildBundle|undefined {
+        if (!bundle) {
             return;
         }
 
         const data = {
-            ...this.DEFAULT,
+            ...this.default,
             ...super.check(bundle),
         };
-        if (bundle.web!=undefined) {
+        if (bundle.web) {
             if (Array.isArray(bundle.web)) {
-                data.web = bundle.web.map(actual=>ManifestWorkspaceBuildBundleBaseLoader.check(actual)).filter(actual=>actual!=undefined);
+                data.web = bundle.web.map(actual=>super.check(actual)).filter(actual=>actual!=undefined);
             } else {
-                data.web = ManifestWorkspaceBuildBundleBaseLoader.check(bundle.web);
+                data.web = super.check(bundle.web);
             }
         }
 
-        if (Object.keys(data).length==0) {
+        if (Object.keys(data).length===0) {
             return;
         }
 
         return data;
     }
 
-    public static override fromLegacy(config?: Partial<IManifestLegacyBundle>): IManifestBuildBundle|undefined {
-        if (config==undefined || Object.keys(config).length==0) {
+    public override fromLegacy(config?: Partial<IManifestLegacyBundle>): IManifestBuildBundle|undefined {
+        if (!config || Object.keys(config).length===0) {
             return;
         }
 
         const web: IManifestBuildBundleBase[] = [];
-        if (config.web!=undefined) {
+        if (config.web) {
             if (Array.isArray(config.web)) {
-                web.push(...config.web.map(actual=>ManifestWorkspaceBuildBundleBaseLoader.fromLegacy(actual)).filter(actual=>actual!=undefined));
+                web.push(...config.web.map(actual=>super.fromLegacy(actual)).filter(actual=>actual!==undefined));
             } else {
-                const actual = ManifestWorkspaceBuildBundleBaseLoader.fromLegacy(config.web);
-                if (actual!=undefined) {
+                const actual = super.fromLegacy(config.web);
+                if (actual) {
                     web.push(actual);
                 }
             }
         }
         return {
-            ...ManifestWorkspaceBuildBundleBaseLoader.fromLegacy(config ?? {}),
+            ...super.fromLegacy(config ?? {}),
             web,
         }
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceBuildBundleLoader();

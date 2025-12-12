@@ -2,14 +2,14 @@ import "dotenv/config";
 
 import {type IManifest, Manifest} from "../../../../../manifest/root";
 
-import {ManifestLoader} from "../index";
-import {ManifestRootDeploymentLoader} from "./deploy";
+import {ManifestLoader} from "..";
+import ManifestRootDeploymentLoader from "./deploy";
 
 export class ManifestRootLoader extends ManifestLoader<IManifest, Manifest> {
     /* STATIC */
-    public static get DEFAULT(): IManifest {
+    public static get default(): IManifest {
         return {
-            deploy: ManifestRootDeploymentLoader.DEFAULT,
+            deploy: ManifestRootDeploymentLoader.default,
         };
     }
 
@@ -19,8 +19,8 @@ export class ManifestRootLoader extends ManifestLoader<IManifest, Manifest> {
     }
 
     public check(manifest?: Partial<IManifest>): IManifest {
-        const data = this.defecto.DEFAULT;
-        if (manifest?.deploy!=undefined) {
+        const data = this.defecto.default;
+        if (manifest?.deploy) {
             data.deploy = ManifestRootDeploymentLoader.check(manifest.deploy);
         }
 
@@ -37,16 +37,16 @@ export class ManifestRootLoader extends ManifestLoader<IManifest, Manifest> {
 
     public applyENV(): ManifestRootLoader {
         if (![undefined, ""].includes(process.env["_GENERAR"])) {
-            this.manifest.deploy.build.enabled = process.env["_GENERAR"] != "false" && process.env["_GENERAR"] != "0";
+            this.manifest.deploy.build.enabled = process.env["_GENERAR"] !== "false" && process.env["_GENERAR"] !== "0";
         }
         if (![undefined, ""].includes(process.env["_GENERAR_FORZAR"])) {
-            this.manifest.deploy.build.force = process.env["_GENERAR_FORZAR"] == "true" || process.env["_GENERAR_FORZAR"] == "1";
+            this.manifest.deploy.build.force = process.env["_GENERAR_FORZAR"] === "true" || process.env["_GENERAR_FORZAR"] === "1";
         }
         if (![undefined, ""].includes(process.env["_DESPLEGAR"])) {
-            this.manifest.deploy.run.enabled = process.env["_DESPLEGAR"] != "false" && process.env["_DESPLEGAR"] != "0";
+            this.manifest.deploy.run.enabled = process.env["_DESPLEGAR"] !== "false" && process.env["_DESPLEGAR"] !== "0";
         }
         if (![undefined, ""].includes(process.env["_DESPLEGAR_LATEST"])) {
-            this.manifest.deploy.run.latest = process.env["_DESPLEGAR_LATEST"] == "true" || process.env["_DESPLEGAR_LATEST"] == "1";
+            this.manifest.deploy.run.latest = process.env["_DESPLEGAR_LATEST"] === "true" || process.env["_DESPLEGAR_LATEST"] === "1";
         }
 
         return this;
