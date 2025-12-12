@@ -2,28 +2,28 @@ import type {IManifestDevelopment} from "@mr/cli/manifest/development";
 
 import type {IManifestLegacy} from "./legacy";
 
-export class ManifestWorkspaceDevelopmentLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDevelopment {
+class ManifestWorkspaceDevelopmentLoader {
+    /* INSTANCE */
+    public get default(): IManifestDevelopment {
         return {
             enabled: true,
         };
     }
 
-    public static check(devel: Partial<IManifestDevelopment>={}): IManifestDevelopment {
-        const data = this.DEFAULT;
-        if (devel.enabled!=undefined) {
+    public check(devel: Partial<IManifestDevelopment>={}): IManifestDevelopment {
+        const data = this.default;
+        if (devel.enabled) {
             data.enabled = devel.enabled;
         }
 
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>): IManifestDevelopment {
+    public fromLegacy(config: Partial<IManifestLegacy>): IManifestDevelopment {
         return {
             enabled: config.devel ?? true,
         };
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceDevelopmentLoader();

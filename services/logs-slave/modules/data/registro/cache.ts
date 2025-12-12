@@ -6,6 +6,10 @@ export interface IRegistroCache {
     escalonada: boolean;
 }
 
+export interface IRegistroCacheApp {
+    status: string;
+}
+
 export class RegistroCache implements IRegistroCache {
     /* STATIC */
     public static build(data: IRAWDataCache): RegistroCache {
@@ -29,6 +33,12 @@ export class RegistroCache implements IRegistroCache {
             status: this.data.status,
             reserva: this.data.reserva,
             escalonada: this.data.escalonada,
+        };
+    }
+
+    public toAPP(): IRegistroCacheApp {
+        return {
+            status: this.data.status,
         };
     }
 }

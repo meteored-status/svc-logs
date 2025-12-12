@@ -1,25 +1,25 @@
 import type {IManifestDeploymentKustomize} from "@mr/cli/manifest/deployment/kustomize";
 
-import {type IManifestLegacy, RuntimeLegacy} from "../../legacy";
+import {type IManifestLegacy, RuntimeLegacy} from "../legacy";
 
-export class ManifestWorkspaceDeploymentKustomizeLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeploymentKustomize {
+class ManifestWorkspaceDeploymentKustomizeLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeploymentKustomize {
         return {
             name: "",
             dir: "services",
         };
     }
 
-    public static check(kustomize: Partial<IManifestDeploymentKustomize> = {}): IManifestDeploymentKustomize {
-        const data = this.DEFAULT;
-        if (kustomize.name != undefined) {
+    public check(kustomize: Partial<IManifestDeploymentKustomize> = {}): IManifestDeploymentKustomize {
+        const data = this.default;
+        if (kustomize.name) {
             data.name = kustomize.name;
         }
-        if (kustomize.dir != undefined) {
+        if (kustomize.dir) {
             data.dir = kustomize.dir;
         }
-        if (kustomize.credenciales != undefined) {
+        if (kustomize.credenciales) {
             data.credenciales = {};
             for (const key of Object.keys(kustomize.credenciales).sort()) {
                 const value = kustomize.credenciales[key];
@@ -29,7 +29,7 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
                 data.credenciales[key] = value;
             }
         }
-        if (kustomize.ssl != undefined) {
+        if (kustomize.ssl) {
             data.ssl = {};
             for (const key of Object.keys(kustomize.ssl).sort()) {
                 const value = kustomize.ssl[key];
@@ -43,7 +43,7 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>, name: string): IManifestDeploymentKustomize {
+    public fromLegacy(config: Partial<IManifestLegacy>, name: string): IManifestDeploymentKustomize {
         let dir: string | undefined;
 
         const cronjob = config.cronjob ?? false;
@@ -69,6 +69,6 @@ export class ManifestWorkspaceDeploymentKustomizeLoader {
             dir,
         };
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceDeploymentKustomizeLoader();

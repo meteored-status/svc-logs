@@ -4,11 +4,11 @@ import type {IManifestDeploymentImagen} from "@mr/cli/manifest/deployment/imagen
 import type {IManifestDeploymentKustomize} from "@mr/cli/manifest/deployment/kustomize";
 import type {IManifestDeploymentStorage} from "@mr/cli/manifest/deployment/storage";
 
-import {ManifestWorkspaceDeploymentCredencialesLoader} from "./credenciales";
-import {ManifestWorkspaceDeploymentImagenLoader} from "./imagen";
-import {ManifestWorkspaceDeploymentKustomizeLoader} from "./kustomize";
-import {ManifestWorkspaceDeploymentStorageLoader} from "./storage";
-import {IManifestDeploymentLegacy, type IManifestLegacy, RuntimeLegacy} from "../legacy";
+import {type IManifestDeploymentLegacy, type IManifestLegacy, RuntimeLegacy} from "../legacy";
+import ManifestWorkspaceDeploymentCredencialesLoader from "./credenciales";
+import ManifestWorkspaceDeploymentImagenLoader from "./imagen";
+import ManifestWorkspaceDeploymentKustomizeLoader from "./kustomize";
+import ManifestWorkspaceDeploymentStorageLoader from "./storage";
 
 type IManifestDeploymentUpdate1 = Exclude<IManifestDeployment, "kustomize"> & {
     kustomize?: string;
@@ -18,32 +18,32 @@ type IManifestDeploymentUpdate2 = Exclude<IManifestDeployment, "kustomize"> & {
         legacy: string;
     };
 }
-export class ManifestWorkspaceDeploymentLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeployment {
+class ManifestWorkspaceDeploymentLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeployment {
         return {
             enabled: true,
             type: ManifestDeploymentKind.SERVICE,
-            imagen: ManifestWorkspaceDeploymentImagenLoader.DEFAULT,
+            imagen: ManifestWorkspaceDeploymentImagenLoader.default,
             runtime: Runtime.node,
             target: Target.k8s,
             kustomize: [],//ManifestWorkspaceDeploymentKustomizeLoader.DEFAULT,
         };
     }
 
-    public static check(deploy: Partial<IManifestDeployment|IManifestDeploymentUpdate1|IManifestDeploymentUpdate2|IManifestDeploymentLegacy> = {}, names: string[]): IManifestDeployment {
-        const data = this.DEFAULT;
-        if (deploy.enabled!=undefined) {
+    public check(deploy: Partial<IManifestDeployment|IManifestDeploymentUpdate1|IManifestDeploymentUpdate2|IManifestDeploymentLegacy> = {}, names: string[]): IManifestDeployment {
+        const data = this.default;
+        if (deploy.enabled) {
             data.enabled = deploy.enabled;
         }
-        if (deploy.type!=undefined) {
+        if (deploy.type) {
             data.type = deploy.type;
         }
         if (deploy.runtime) {
             data.runtime = deploy.runtime;
         }
 
-        switch(data.type) {
+        switch (data.type) {
             case ManifestDeploymentKind.SERVICE:
             case ManifestDeploymentKind.CRONJOB:
             case ManifestDeploymentKind.JOB:
@@ -59,8 +59,13 @@ export class ManifestWorkspaceDeploymentLoader {
                         "linux/arm64",
                     ];
                 }
+                if ("buckets" in deploy) {
+                    if (deploy.buckets?.produccion && deploy.buckets?.test) {
+                        data.buckets = deploy.buckets;
+                    }
+                }
                 data.credenciales = ManifestWorkspaceDeploymentCredencialesLoader.check(deploy.credenciales);
-                if (deploy.imagen==undefined) {
+                if (deploy.imagen===undefined) {
                     data.imagen = ManifestWorkspaceDeploymentImagenLoader.check(deploy.imagen, names.at(0));
                 } else if (typeof deploy.imagen == "string") {
                     data.imagen = ManifestWorkspaceDeploymentImagenLoader.check({
@@ -74,7 +79,7 @@ export class ManifestWorkspaceDeploymentLoader {
                     data.kustomize = names.map(name=>ManifestWorkspaceDeploymentKustomizeLoader.check({name, dir: deploy.kustomize as string}));
                 } else if (Array.isArray(deploy.kustomize)) {
                     data.kustomize = deploy.kustomize.map(k=>ManifestWorkspaceDeploymentKustomizeLoader.check(k));
-                } else if (deploy.kustomize!=undefined) {
+                } else if (deploy.kustomize) {
                     data.kustomize = [];
                     for (const name of names) {
                         data.kustomize.push(ManifestWorkspaceDeploymentKustomizeLoader.check({
@@ -83,13 +88,20 @@ export class ManifestWorkspaceDeploymentLoader {
                         }));
                     }
                 }
-                if (data.target==Target.lambda && "cloudsql" in deploy && deploy.cloudsql!.length>0) {
+                if (data.target===Target.lambda && "cloudsql" in deploy && deploy.cloudsql!.length>0) {
                     data.cloudsql = deploy.cloudsql ?? [];
+                }
+                if (data.type===ManifestDeploymentKind.CRONJOB) {
+                    if ("schedule" in deploy && deploy.schedule) {
+                        data.schedule = deploy.schedule;
+                    } else if (data.target===Target.lambda) {
+                        data.schedule = "0 0 31 2 *"
+                    }
                 }
                 break;
             case ManifestDeploymentKind.BROWSER:
                 data.target = Target.none;
-                if (deploy.storage==undefined) {
+                if (!deploy.storage) {
                     throw new Error(`ManifestDeployment: deploy.storage no definido para "${data.type}"`);
                 }
                 data.storage = ManifestWorkspaceDeploymentStorageLoader.check(deploy.storage);
@@ -102,7 +114,7 @@ export class ManifestWorkspaceDeploymentLoader {
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>, names: string[]): IManifestDeployment {
+    public fromLegacy(config: Partial<IManifestLegacy>, names: string[]): IManifestDeployment {
         let type: ManifestDeploymentKind;
         let target: Target;
         let alone: boolean|undefined;
@@ -212,6 +224,6 @@ export class ManifestWorkspaceDeploymentLoader {
             storage,
         };
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceDeploymentLoader();

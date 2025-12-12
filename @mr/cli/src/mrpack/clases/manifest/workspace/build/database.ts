@@ -1,25 +1,25 @@
 import type {IManifestBuildDatabase} from "@mr/cli/manifest/build/database";
 
-export class ManifestWorkspaceBuildDatabaseLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestBuildDatabase|undefined {
+class ManifestWorkspaceBuildDatabaseLoader {
+    /* INSTANCE */
+    public get default(): IManifestBuildDatabase|undefined {
         return undefined;
     }
 
-    public static check(imagen?: Partial<IManifestBuildDatabase>): IManifestBuildDatabase|undefined {
-        if (imagen===undefined) {
-            return this.DEFAULT;
+    public check(imagen?: Partial<IManifestBuildDatabase>): IManifestBuildDatabase|undefined {
+        if (!imagen) {
+            return this.default;
         }
-        const data = this.DEFAULT ?? {};
-        if (imagen.produccion!=undefined) {
+        const data = this.default ?? {};
+        if (imagen.produccion) {
             data.produccion = imagen.produccion;
         }
-        if (imagen.test!=undefined) {
+        if (imagen.test) {
             data.test = imagen.test;
         }
 
         return data;
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceBuildDatabaseLoader();

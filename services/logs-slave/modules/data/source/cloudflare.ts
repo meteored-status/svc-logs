@@ -1,25 +1,19 @@
-import readline from "node:readline/promises";
-import {BigQuery} from "@google-cloud/bigquery";
 import {z} from "zod";
-
-import {arrayChop} from "services-comun/modules/utiles/array";
-import {error, info} from "services-comun/modules/utiles/log";
-import {PromiseDelayed} from "services-comun/modules/utiles/promise";
-import {Storage} from "services-comun/modules/fs/storage";
-
-import {type IRAWData, type IRegistroES, Registro} from "../registro";
-import {Cliente} from "../cliente";
 
 const SCHEMA_COOKIES = z.object({
     "cf-access-user": z.string().optional(),
+    "meteored": z.string().optional(),
 }).transform(o=>({
     "user": o["cf-access-user"],
+    "mrid": o["meteored"],
 }));
 
 const SCHEMA_REQUEST_HEADERS = z.object({
+    "meteored": z.string().optional(),
     "x-api-key": z.string().optional(),
 }).transform(o=>({
     apiKey: o["x-api-key"],
+    app: o["meteored"],
 }));
 
 const SCHEMA_RESPONSE_HEADERS = z.object({

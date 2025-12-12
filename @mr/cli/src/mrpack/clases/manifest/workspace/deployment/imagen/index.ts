@@ -1,18 +1,19 @@
 import type {IManifestDeploymentImagen} from "@mr/cli/manifest/deployment/imagen";
-import {IManifestDeploymentImagenLegacy} from "../../legacy";
-import {ManifestWorkspaceDeploymentImagenEntornoLoader} from "./entorno";
 
-export class ManifestWorkspaceDeploymentImagenLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeploymentImagen {
+import {IManifestDeploymentImagenLegacy} from "../../legacy";
+import ManifestWorkspaceDeploymentImagenEntornoLoader from "./entorno";
+
+class ManifestWorkspaceDeploymentImagenLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeploymentImagen {
         return {
-            produccion: ManifestWorkspaceDeploymentImagenEntornoLoader.DEFAULT,
-            test: ManifestWorkspaceDeploymentImagenEntornoLoader.DEFAULT,
+            produccion: ManifestWorkspaceDeploymentImagenEntornoLoader.default,
+            test: ManifestWorkspaceDeploymentImagenEntornoLoader.default,
         };
     }
 
-    public static check(imagen?: Partial<IManifestDeploymentImagen|IManifestDeploymentImagenLegacy>, name?: string): IManifestDeploymentImagen {
-        const data = this.DEFAULT;
+    public check(imagen?: Partial<IManifestDeploymentImagen|IManifestDeploymentImagenLegacy>, name?: string): IManifestDeploymentImagen {
+        const data = this.default;
         if (!imagen) {
             if (name) {
                 data.produccion.nombre = name;
@@ -22,7 +23,7 @@ export class ManifestWorkspaceDeploymentImagenLoader {
         }
 
         if (imagen.produccion) {
-            if (typeof imagen.produccion==="string") {
+            if (typeof imagen.produccion=="string") {
                 data.produccion = ManifestWorkspaceDeploymentImagenEntornoLoader.check();
                 data.produccion.base = imagen.produccion;
                 if (name) {
@@ -33,7 +34,7 @@ export class ManifestWorkspaceDeploymentImagenLoader {
             }
         }
         if (imagen.test) {
-            if (typeof imagen.test==="string") {
+            if (typeof imagen.test=="string") {
                 data.test = ManifestWorkspaceDeploymentImagenEntornoLoader.check();
                 data.test.base = imagen.test;
                 if (name) {
@@ -46,6 +47,6 @@ export class ManifestWorkspaceDeploymentImagenLoader {
 
         return data;
     }
-
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceDeploymentImagenLoader();

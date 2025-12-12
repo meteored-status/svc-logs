@@ -2,25 +2,25 @@ import type {IManifestDeploymentStorage} from "@mr/cli/manifest/deployment/stora
 import type {IManifestDeploymentStorageBuckets} from "@mr/cli/manifest/deployment/storage/buckets";
 
 import type {IManifestDeploymentStorageLegacy, IManifestLegacy} from "../../legacy";
-import {ManifestWorkspaceDeploymentStorageBucketsLoader} from "./buckets";
+import ManifestWorkspaceDeploymentStorageBucketsLoader from "./buckets";
 
-export class ManifestWorkspaceDeploymentStorageLoader {
-    /* STATIC */
-    public static get DEFAULT(): IManifestDeploymentStorage {
+class ManifestWorkspaceDeploymentStorageLoader {
+    /* INSTANCE */
+    public get default(): IManifestDeploymentStorage {
         return {
-            buckets: ManifestWorkspaceDeploymentStorageBucketsLoader.DEFAULT,
+            buckets: ManifestWorkspaceDeploymentStorageBucketsLoader.default,
             bundle: "bundle/",
             subdirPrefix: "",
             subdirPostfix: "",
         };
     }
 
-    public static check(storage?: Partial<IManifestDeploymentStorage|IManifestDeploymentStorageLegacy>): IManifestDeploymentStorage|undefined {
-        if (storage==undefined) {
+    public check(storage?: Partial<IManifestDeploymentStorage|IManifestDeploymentStorageLegacy>): IManifestDeploymentStorage|undefined {
+        if (!storage) {
             return;
         }
-        const data = this.DEFAULT;
-        if (storage.buckets!=undefined) {
+        const data = this.default;
+        if (storage.buckets) {
             if (Array.isArray(storage.buckets)) {
                 data.buckets = ManifestWorkspaceDeploymentStorageBucketsLoader.check({
                     produccion: storage.buckets,
@@ -35,19 +35,19 @@ export class ManifestWorkspaceDeploymentStorageLoader {
                 });
             }
         }
-        if (storage.bundle!=undefined) {
+        if (storage.bundle) {
             data.bundle = storage.bundle;
         }
-        if (storage.subdirPrefix!=undefined) {
+        if (storage.subdirPrefix) {
             data.subdirPrefix = storage.subdirPrefix;
         }
-        if (storage.subdir!=undefined) {
+        if (storage.subdir) {
             data.subdir = storage.subdir;
         }
-        if (storage.subdirPostfix!=undefined) {
+        if (storage.subdirPostfix) {
             data.subdirPostfix = storage.subdirPostfix;
         }
-        if (storage.previo!=undefined) {
+        if (storage.previo) {
             if (Array.isArray(storage.previo)) {
                 data.previo = storage.previo;
             } else {
@@ -58,8 +58,8 @@ export class ManifestWorkspaceDeploymentStorageLoader {
         return data;
     }
 
-    public static fromLegacy(config: Partial<IManifestLegacy>): IManifestDeploymentStorage {
-        if (config.storage==undefined) {
+    public fromLegacy(config: Partial<IManifestLegacy>): IManifestDeploymentStorage {
+        if (!config.storage) {
             throw new Error(`ManifestDeployment: config.storage no definido para "${config.runtime}"`);
         }
 
@@ -67,15 +67,15 @@ export class ManifestWorkspaceDeploymentStorageLoader {
         let subdirPrefix: string;
         let subdirPostfix: string;
         let buckets: IManifestDeploymentStorageBuckets;
-        if (config.storage.subdir==undefined) {
+        if (!config.storage.subdir) {
             subdirPrefix = "";
         } else {
             subdirPrefix = `${config.storage.subdir}/`;
         }
-        if (config.storage.subdir2==undefined) {
+        if (!config.storage.subdir2) {
             bundle = "";
             subdirPostfix = "/output";
-        } else if (config.storage.subdir2.length==0) {
+        } else if (config.storage.subdir2.length===0) {
             bundle = "bundle/";
             subdirPostfix = "";
         } else {
@@ -104,5 +104,6 @@ export class ManifestWorkspaceDeploymentStorageLoader {
         };
     }
 
-    /* INSTANCE */
 }
+
+export default new ManifestWorkspaceDeploymentStorageLoader();

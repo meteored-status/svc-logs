@@ -1,0 +1,36 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: ${KUSTOMIZER}-${IMAGEN}
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+spec:
+  template:
+    spec:
+      taskCount: 1
+      parallelism: 1
+      template:
+        spec:
+          containers:
+            - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
+              # Opcional: command y args si necesitas sobreescribir el ENTRYPOINT
+              # command: ["python", "script.py"]
+              env:
+                - name: DATADOG
+                  value: "false"
+                - name: ENTORNO
+                  value: "${ENTORNO}"
+              volumeMounts:
+                - name: temporal
+                  mountPath: "/usr/src/app/files/tmp/"
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: "4096Mi"
+          maxRetries: 3
+          timeoutSeconds: 600
+          volumes:
+            - name: temporal
+              emptyDir:
+                medium: Memory
+                sizeLimit: 1Gi

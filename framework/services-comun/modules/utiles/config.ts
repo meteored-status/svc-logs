@@ -16,7 +16,7 @@ export class ConfigGenerico<T extends IConfigGenerico=IConfigGenerico> implement
 
 interface IGoogleStorage<T extends IConfigGenerico=IConfigGenerico> {
     credenciales: string;
-    buckets: T;
+    buckets?: T;
     package?: string;
     subdir?: string;
     subdir2?: string;

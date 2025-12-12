@@ -6,7 +6,7 @@ import {error} from "services-comun/modules/utiles/log";
 import {Storage} from "services-comun/modules/fs/storage";
 
 import {Cliente} from "../cliente";
-import {type IRAWData, type IRegistroCrawler, type IRegistroES, Registro} from "../registro";
+import {type IRAWData, IRegistroApp, type IRegistroCrawler, type IRegistroES, Registro} from "../registro";
 import SCHEMA from "./cloudflare";
 
 const FILTRAR_PATHS_PREFIX: string[] = [
@@ -54,6 +54,7 @@ export default async (cliente: Cliente, storage: Storage)=>{
 
     const accesos: IRegistroES[] = [];
     const crawler: IRegistroCrawler[] = [];
+    const app: IRegistroApp[] = [];
 
     for await (const linea of lector) {
         if (linea.length===0) {
@@ -70,6 +71,15 @@ export default async (cliente: Cliente, storage: Storage)=>{
         accesos.push(registro.toJSON());
         if (cf.client.bot) {
             crawler.push(registro.toCrawler());
+        }
+        if (cf.request.headers.app) {
+            try {
+                app.push(registro.toApp(cf.request.headers.app));
+            } catch (err) {
+                if (err instanceof Error) {
+                    error(err.message);
+                }
+            }
         }
     }
 
