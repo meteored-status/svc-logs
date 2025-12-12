@@ -17,17 +17,17 @@ const BQ = new BigQuery({
     keyFilename: "files/credenciales/bigquery.json",
 });
 
-async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[]): Promise<void> {
-    if (accesos.length===0 || crawler.length===0) {
+async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[], app: IRegistroApp[]): Promise<void> {
+    if (accesos.length===0 || crawler.length===0 || app.length===0) {
         return;
     }
 
     const dataset = BQ.dataset("logs");
 
     if (accesos.length>0) {
-        const tablaAccesos = dataset.table(`accesos`);
+        const tabla = dataset.table(`accesos`);
         for (const chunk of arrayChop(accesos, 1000)) {
-            await tablaAccesos.insert(chunk)
+            await tabla.insert(chunk)
                 .catch((err) => {
                     error("Error guardando registros de accesos en BigQuery", JSON.stringify(err));
                 });
@@ -35,11 +35,21 @@ async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[]): Pro
     }
 
     if (crawler.length>0) {
-        const tablaCrawler = dataset.table(`accesos_crawler`);
+        const tabla = dataset.table(`accesos_crawler`);
         for (const chunk of arrayChop(crawler, 1000)) {
-            await tablaCrawler.insert(chunk)
+            await tabla.insert(chunk)
                 .catch((err) => {
                     error("Error guardando registros de crawler en BigQuery", JSON.stringify(err));
+                });
+        }
+    }
+
+    if (app.length>0) {
+        const tabla = dataset.table(`accesos_app`);
+        for (const chunk of arrayChop(app, 1000)) {
+            await tabla.insert(chunk)
+                .catch((err) => {
+                    error("Error guardando registros de app en BigQuery", JSON.stringify(err));
                 });
         }
     }
@@ -83,5 +93,5 @@ export default async (cliente: Cliente, storage: Storage)=>{
         }
     }
 
-    guardar(accesos, crawler).then(() => undefined);
+    guardar(accesos, crawler, app).then(() => undefined);
 }
