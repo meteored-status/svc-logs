@@ -14,13 +14,13 @@ class ManifestWorkspaceBuildComponentesLoader {
         }
 
         const data = this.default;
-        if (componentes.optimizar) {
+        if (componentes.optimizar!==undefined) {
             data.optimizar = componentes.optimizar;
         }
-        if (componentes.pug) {
+        if (componentes.pug!==undefined) {
             data.pug = componentes.pug;
         }
-        if (componentes.css) {
+        if (componentes.css!==undefined) {
             data.css = componentes.css;
         }
 

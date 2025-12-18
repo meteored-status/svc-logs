@@ -1,4 +1,4 @@
-export type IdiomaCorto= "ca" | "cs" | "da" | "de" | "en" | "es" | "eu" | "fi" | "fr" | "gl" | "hi" | "hu" | "it" | "nl" | "no" | "pl" | "pt" | "ro" | "ru" | "sk" | "sv" | "tr";
+export type IdiomaCorto= "ca" | "cs" | "da" | "de" | "en" | "es" | "eu" | "fi" | "fr" | "gl" | "hi" | "hu" | "it" | "nl" | "no" | "pl" | "pt" | "ro" | "ru" | "sk" | "sv" | "tr" | "bn" | "tl" | "el" | "id" | "ja" | "ko" | "ms" | "my" | "nb" | "sw" | "th" | "vi" | "hr" | "fil" | "he" | "fa" | "ur" | "ar";
 
 export type IdiomaLargo =
     | "de-DE" | "de-AT"
@@ -9,6 +9,7 @@ export type IdiomaLargo =
     | "nl-NL"
     | "pt-PT" | "pt-BR"
     | "ru-RU";
+    
 
 export type Idioma = IdiomaCorto | IdiomaLargo;
 

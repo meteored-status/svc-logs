@@ -136,6 +136,7 @@ export interface IRegistroApp {
         package: string;
         version: string;
         sufijo?: string;
+        ambient?: string;
     };
     os: {
         nombre: string;
@@ -228,11 +229,13 @@ export class Registro implements IRegistro {
     }
 
     public toApp(header: string): IRegistroApp {
-        const partes = /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^(^)]+)(?:\((\w+)\))?;?$/.exec(header);
+        const partes = /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^();]+)(?:\((\w+)\))?(?:;(bg|fg)?)?$/.exec(header);
         if (!partes) {
             throw new Error(`Header de App inválido: ${header}`);
         }
-        const [, os, osver, version, app, sufijo] = partes;
+        const [, os, osver, version, app, sufijo, ambient] = partes;
+        const sf = sufijo?.trim()??"";
+        const amb = ambient?.trim()??"";
 
         return {
             timestamp: this.data.timestamp.toISOString(),
@@ -243,7 +246,8 @@ export class Registro implements IRegistro {
             app: {
                 package: app.trim(),
                 version: version.trim(),
-                sufijo: sufijo?.trim(),
+                sufijo: sf.length>0?sf:undefined,
+                ambient: amb.length>0?sf:undefined,
             },
             os: {
                 nombre: os.trim(),
