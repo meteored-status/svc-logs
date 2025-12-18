@@ -43,6 +43,12 @@
         "name": "sufijo",
         "type": "STRING",
         "mode": "NULLABLE"
+      },
+      {
+        "name": "ambient",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "maxLength": "2"
       }
     ]
   },
