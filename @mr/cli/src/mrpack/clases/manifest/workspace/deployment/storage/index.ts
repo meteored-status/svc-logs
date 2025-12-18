@@ -35,7 +35,7 @@ class ManifestWorkspaceDeploymentStorageLoader {
                 });
             }
         }
-        if (storage.bundle) {
+        if (storage.bundle!==undefined) {
             data.bundle = storage.bundle;
         }
         if (storage.subdirPrefix) {

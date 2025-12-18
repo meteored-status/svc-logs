@@ -48,6 +48,7 @@ export class Idioma implements IIdioma {
     }
 
     private detectar(): TIdioma {
+
         if (!this.data.enabled) {
             return this.data.defecto;
         }

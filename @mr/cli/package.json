@@ -35,22 +35,22 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
-    "@inquirer/prompts": "^8.0.2",
+    "@inquirer/prompts": "^8.1.0",
     "chokidar": "^4.0.3",
-    "dd-trace": "^5.80.0",
+    "dd-trace": "^5.81.0",
     "dotenv": "^17.2.3",
     "jszip": "^3.10.1",
-    "mysql2": "^3.15.3",
+    "mysql2": "^3.16.0",
     "source-map-support": "^0.5.21",
     "tree-kill": "^1.2.2",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@rspack/cli": "^1.6.7",
-    "@rspack/core": "^1.6.7",
+    "@rspack/cli": "^1.6.8",
+    "@rspack/core": "^1.6.8",
     "@tsconfig/node24": "^24.0.3",
     "@types/diff3": "^0.0.2",
-    "@types/node": "^24.10.3",
+    "@types/node": "^24.10.4",
     "@types/source-map-support": "^0.5.10",
     "css-loader": "^7.1.2",
     "diff3": "^0.0.4",
@@ -58,15 +58,15 @@
     "pug": "^3.0.3",
     "pug3-loader": "^2.4.3",
     "rspack-manifest-plugin": "^5.2.0",
-    "sass": "^1.96.0",
+    "sass": "^1.97.0",
     "sass-loader": "^16.0.6",
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
     "style-loader": "^4.0.0",
-    "ts-checker-rspack-plugin": "^1.2.1",
+    "ts-checker-rspack-plugin": "^1.2.3",
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3"
   },
-  "version": "2025.12.12+5-bixus"
+  "version": "2025.12.18+1-bixus"
 }

@@ -173,6 +173,10 @@ export class BackendRequest {
                 return this.fetch<T, K>(url, init, headers, cfg, post, retry);
             }
 
+            if (e instanceof RequestError) {
+                return Promise.reject(e);
+            }
+
             if (e instanceof TypeError) {
                 return Promise.reject(new RequestError({
                     status: 500,
