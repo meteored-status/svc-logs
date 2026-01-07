@@ -46,8 +46,8 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@rspack/cli": "^1.6.8",
-    "@rspack/core": "^1.6.8",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
     "@tsconfig/node24": "^24.0.3",
     "@types/diff3": "^0.0.2",
     "@types/node": "^24.10.4",
@@ -58,7 +58,7 @@
     "pug": "^3.0.3",
     "pug3-loader": "^2.4.3",
     "rspack-manifest-plugin": "^5.2.0",
-    "sass": "^1.97.0",
+    "sass": "^1.97.2",
     "sass-loader": "^16.0.6",
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
@@ -68,5 +68,5 @@
     "tslib": "^2.8.1",
     "typescript": "^5.9.3"
   },
-  "version": "2025.12.18+1-bixus"
+  "version": "2026.1.7+1-bixus"
 }

@@ -18,7 +18,7 @@ const BQ = new BigQuery({
 });
 
 async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[], app: IRegistroApp[]): Promise<void> {
-    if (accesos.length===0 || crawler.length===0 || app.length===0) {
+    if (accesos.length===0 && crawler.length===0 && app.length===0) {
         return;
     }
 
