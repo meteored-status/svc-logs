@@ -1,4 +1,4 @@
-import {BigQuery} from "@google-cloud/bigquery";
+import {BigQuery, type Dataset} from "@google-cloud/bigquery";
 import readline from "node:readline/promises";
 
 import {arrayChop} from "services-comun/modules/utiles/array";
@@ -17,6 +17,18 @@ const BQ = new BigQuery({
     keyFilename: "files/credenciales/bigquery.json",
 });
 
+async function guardarDataset<T>(dataset: Dataset, table: string, data: T[]): Promise<void> {
+    if (data.length>0) {
+        const tabla = dataset.table(table);
+        for (const chunk of arrayChop(data, 1000)) {
+            await tabla.insert(chunk)
+                .catch((err) => {
+                    error(`Error guardando registros de ${table} en BigQuery`, JSON.stringify(err));
+                });
+        }
+    }
+}
+
 async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[], app: IRegistroApp[]): Promise<void> {
     if (accesos.length===0 && crawler.length===0 && app.length===0) {
         return;
@@ -24,35 +36,9 @@ async function guardar(accesos: IRegistroES[], crawler: IRegistroCrawler[], app:
 
     const dataset = BQ.dataset("logs");
 
-    if (accesos.length>0) {
-        const tabla = dataset.table(`accesos`);
-        for (const chunk of arrayChop(accesos, 1000)) {
-            await tabla.insert(chunk)
-                .catch((err) => {
-                    error("Error guardando registros de accesos en BigQuery", JSON.stringify(err));
-                });
-        }
-    }
-
-    if (crawler.length>0) {
-        const tabla = dataset.table(`accesos_crawler`);
-        for (const chunk of arrayChop(crawler, 1000)) {
-            await tabla.insert(chunk)
-                .catch((err) => {
-                    error("Error guardando registros de crawler en BigQuery", JSON.stringify(err));
-                });
-        }
-    }
-
-    if (app.length>0) {
-        const tabla = dataset.table(`accesos_app`);
-        for (const chunk of arrayChop(app, 1000)) {
-            await tabla.insert(chunk)
-                .catch((err) => {
-                    error("Error guardando registros de app en BigQuery", JSON.stringify(err));
-                });
-        }
-    }
+    await guardarDataset(dataset, `accesos`, accesos);
+    await guardarDataset(dataset, `accesos_crawler`, crawler);
+    await guardarDataset(dataset, `accesos_app`, app);
 }
 
 export default async (cliente: Cliente, storage: Storage)=>{

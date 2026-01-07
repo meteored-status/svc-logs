@@ -33,9 +33,19 @@ export class ClienteGCS implements IClienteGCS {
                 cliente: "fce",
                 tipo: "cloudflare"
             },
+            "hoteles": {
+                bucket: "cf-accesos",
+                cliente: "hoteles",
+                tipo: "cloudflare"
+            },
             "motor": {
                 bucket: "cf-accesos",
                 cliente: "motor",
+                tipo: "cloudflare"
+            },
+            "motenic": {
+                bucket: "cf-accesos",
+                cliente: "motenic",
                 tipo: "cloudflare"
             },
             "mr": {
