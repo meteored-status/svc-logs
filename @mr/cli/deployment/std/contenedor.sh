@@ -6,7 +6,7 @@ source @mr/cli/deployment/std/aliases.sh
 if [[ -f "GENERAR.txt" ]]; then
   mkdir -p .yarn/plugins
 
-#  docker run --privileged --rm tonistiigi/binfmt --install all
+  #docker run --privileged --rm tonistiigi/binfmt --install all
   docker buildx create --name mrpack --driver docker-container --use
   docker buildx inspect --bootstrap
 
