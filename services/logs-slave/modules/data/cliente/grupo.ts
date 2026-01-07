@@ -1,5 +1,5 @@
 import type {Backends} from "./backends";
-import {Cliente, type ICliente} from "./index";
+import {Cliente, type ICliente} from ".";
 
 export interface IGrupo {
     id: string;

@@ -13,7 +13,9 @@ export class Cliente {
     private static BACKENDS: Record<string, Backends> = {
         "ed": {},
         "fce": {},
+        "hoteles": {},
         "motor": {},
+        "motenic": {},
         "mr": {
             "34.38.93.178": "GKE Bélgica",
             "34.95.250.252": "GKE Brasil",
