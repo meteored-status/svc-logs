@@ -247,7 +247,7 @@ export class Registro implements IRegistro {
                 package: app.trim(),
                 version: version.trim(),
                 sufijo: sf.length>0?sf:undefined,
-                ambient: amb.length>0?sf:undefined,
+                ambient: amb.length>0?amb:undefined,
             },
             os: {
                 nombre: os.trim(),
