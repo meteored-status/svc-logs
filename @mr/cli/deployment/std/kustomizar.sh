@@ -131,7 +131,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           echo "" >> "${BASETOP}/lambda.sh"
         fi
         cat "${BASETOP}/@mr/cli/deployment/std/cloud-run-${TYPE}.yml" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" | sed "s/\${IMAGEN}/${SERVICIO}/g" | sed "s/\${VERSION}/${VERSION}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g" > "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
-        CLOUDSQL=$(configw "${RUTA}" '.deploy.cloudsql // empty | if type=="array" and length > 0 then join(",") else empty end')
+        CLOUDSQL=$(configw "${RUTA}" ".deploy.cloudsql.${_ENTORNO} // empty | if type==\"array\" and length > 0 then join(\",\") else empty end")
         if [[ -n "${CLOUDSQL}" ]]; then
           yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/cloudsql-instances\" = \"${CLOUDSQL}\"" "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml" -i
         fi

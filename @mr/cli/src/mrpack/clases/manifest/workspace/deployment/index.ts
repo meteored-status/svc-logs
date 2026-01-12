@@ -88,8 +88,20 @@ class ManifestWorkspaceDeploymentLoader {
                         }));
                     }
                 }
-                if (data.target===Target.lambda && "cloudsql" in deploy && deploy.cloudsql!.length>0) {
-                    data.cloudsql = deploy.cloudsql ?? [];
+                if (data.target==Target.lambda && "cloudsql" in deploy) {
+                    if (typeof deploy.cloudsql === "string") {
+                        data.cloudsql = {
+                            produccion: [deploy.cloudsql],
+                            test: [deploy.cloudsql],
+                        };
+                    } else if (Array.isArray(deploy.cloudsql)) {
+                        data.cloudsql = {
+                            produccion: deploy.cloudsql,
+                            test: deploy.cloudsql,
+                        };
+                    } else {
+                        data.cloudsql = deploy.cloudsql;
+                    }
                 }
                 if (data.type===ManifestDeploymentKind.CRONJOB) {
                     if ("schedule" in deploy && deploy.schedule) {

@@ -42,7 +42,10 @@ export interface IManifestDeployment {
     credenciales?: IManifestDeploymentCredenciales[]; // solo aplicable a SERVICE/CRONJOB/JOB
     imagen?: IManifestDeploymentImagen; // solo aplicable a SERVICE/CRONJOB/JOB
     kustomize?: IManifestDeploymentKustomize[]; // solo aplicable a SERVICE/CRONJOB/JOB
-    cloudsql?: string[]; // solo aplicable a SERVICE/CRONJOB/JOB en lambda
+    cloudsql?: { // solo aplicable a SERVICE/CRONJOB/JOB en lambda
+        produccion: string[];
+        test: string[];
+    };
     schedule?: string; // solo aplicable a CRONJOB
     storage?: IManifestDeploymentStorage; // solo aplicable a BROWSER
 }
@@ -64,7 +67,10 @@ export class ManifestDeployment implements IManifestDeployment {
     public credenciales?: ManifestDeploymentCredenciales[];
     public imagen?: ManifestDeploymentImagen;
     public kustomize?: ManifestDeploymentKustomize[];
-    public cloudsql?: string[];
+    public cloudsql?: {
+        produccion: string[];
+        test: string[];
+    };
     public schedule?: string;
     public storage?: ManifestDeploymentStorage;
 

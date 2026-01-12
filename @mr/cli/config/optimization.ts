@@ -55,7 +55,7 @@ export class Optimization {
             //         },
             //     }),
             // ],
-            runtimeChunk: 'single',
+            runtimeChunk: false,
             splitChunks: {
                 cacheGroups: {
                     // network: {

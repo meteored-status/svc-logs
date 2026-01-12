@@ -1,6 +1,10 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2026.1.7+1
+- [Juan Carlos] Soporte a la versión 16 de NextJS.
+
+---
 ## 2025.9.24+1
 
 ### Changed
