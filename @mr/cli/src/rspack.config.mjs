@@ -67,7 +67,7 @@ export default {
     mode: "production",
     optimization: {
         concatenateModules: true,
-        runtimeChunk: "single",
+        runtimeChunk: false,
         splitChunks: {
             chunks: "all",
         },
