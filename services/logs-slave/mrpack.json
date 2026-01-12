@@ -35,9 +35,14 @@
                 "dir": "services"
             }
         ],
-        "cloudsql": [
-            "meteored-status:europe-southwest1:status-master-1"
-        ]
+        "cloudsql": {
+            "produccion": [
+                "meteored-status:europe-southwest1:status-master-1"
+            ],
+            "test": [
+                "meteored-status:europe-southwest1:status-master-1"
+            ]
+        }
     },
     "devel": {
         "enabled": true

@@ -215,10 +215,12 @@ export class Service extends Workspace {
         }
 
         let comando: string;
+        const args: string[] = [];
         switch(config.build.framework) {
             // case EFramework.astro:
             case BuildFW.nextjs:
                 comando = "dev";
+                args.push("--webpack");
                 break;
             case BuildFW.meteored:
             default:
@@ -229,7 +231,7 @@ export class Service extends Workspace {
             type: Log.label_compilar,
             label: this.label,
         }, `Iniciando compilador`);
-        this.compilador = spawn("yarn", ["run", this.nombre, "run", comando], {
+        this.compilador = spawn("yarn", ["run", this.nombre, "run", comando, ...args], {
             cwd: this.root,
             env: { ...process.env, FORCE_COLOR: "1" },
             stdio: "pipe",

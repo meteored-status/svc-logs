@@ -17,7 +17,7 @@
     "@tsconfig/node24": "^24.0.3",
     "@types/diff3": "^0.0.2",
     "@types/formidable": "^3.4.6",
-    "@types/node": "^24.10.4",
+    "@types/node": "^24.10.7",
     "@types/pg": "^8.16.0",
     "@types/pidusage": "^2.0.5",
     "@types/qs": "^6.14.0",
@@ -30,10 +30,10 @@
     "diff3": "^0.0.4",
     "formidable": "^3.5.4",
     "isbot": "^5.1.32",
-    "make-plural": "^7.4.0",
+    "make-plural": "^8.1.0",
     "moment-timezone": "^0.6.0",
     "mysql2": "^3.16.0",
-    "node-ical": "^0.22.1",
+    "node-ical": "^0.23.1",
     "pg": "^8.16.3",
     "pidusage": "^4.0.1",
     "qs": "^6.14.1",
@@ -43,5 +43,5 @@
     "tslib": "^2.8.1",
     "uuid": "^13.0.0"
   },
-  "version": "2026.1.7+1-bixus"
+  "version": "2026.1.7+2-juancmartinez"
 }
