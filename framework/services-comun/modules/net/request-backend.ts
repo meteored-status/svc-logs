@@ -127,7 +127,7 @@ export class BackendRequest {
         //     headers.set("traceparent", config.traceparent);
         // }
         if (post != undefined) {
-            init.method = "POST";
+            init.method = init.method || "POST";
             init.cache = "no-cache";
             if (!headers.has("Content-Type")) {
                 if (cfg.contentType != undefined) {
@@ -321,6 +321,56 @@ export class BackendRequest {
             return this.fetch<T, P>(partes.join("/"), {
                 method: "POST",
             }, new Headers(), this.propagarContexto(cfg), post);
+        }
+    }
+
+    protected static async put<T, P>(url: string, post: P, cfg?: IRequestConfig): Promise<RequestResponse<T>> {
+        if (PRODUCCION) {
+            return this.fetch<T, P>(url, {
+                method: "PUT",
+            }, new Headers(), this.propagarContexto(cfg), post);
+        }
+
+        try {
+            return await this.fetch<T, P>(url, {
+                method: "PUT",
+            }, new Headers(), this.propagarContexto(cfg), post);
+        } catch (err) {
+            if (!url.startsWith("http://localhost:") || cfg?.dominioAlternativo == undefined) {
+                return Promise.reject(err);
+            }
+
+            const partes = url.replace("http://localhost:", "").split("/");
+            partes.shift();
+            partes.unshift(cfg.dominioAlternativo);
+            return this.fetch<T, P>(partes.join("/"), {
+                method: "PUT",
+            }, new Headers(), this.propagarContexto(cfg), post);
+        }
+    }
+
+    protected static async delete<T = undefined>(url: string, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
+        if (PRODUCCION) {
+            return this.fetch<T>(url, {
+                method: "DELETE",
+            }, new Headers(), this.propagarContexto(cfg));
+        }
+
+        try {
+            return await this.fetch<T>(url, {
+                method: "DELETE",
+            }, new Headers(), this.propagarContexto(cfg));
+        } catch (err) {
+            if (!url.startsWith("http://localhost:") || cfg.dominioAlternativo == undefined) {
+                return Promise.reject(err);
+            }
+
+            const partes = url.replace("http://localhost:", "").split("/");
+            partes.shift();
+            partes.unshift(cfg.dominioAlternativo);
+            return this.fetch<T>(partes.join("/"), {
+                method: "DELETE",
+            }, new Headers(), this.propagarContexto(cfg));
         }
     }
 

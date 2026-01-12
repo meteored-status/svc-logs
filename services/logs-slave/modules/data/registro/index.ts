@@ -228,8 +228,10 @@ export class Registro implements IRegistro {
         };
     }
 
-    public toApp(header: string): IRegistroApp {
-        const partes = /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^();]+)(?:\((\w+)\))?(?:;(bg|fg)?)?$/.exec(header);
+    public toApp(header?: string): IRegistroApp {
+        const partes = header ?
+            /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^();]+)(?:\((\w+)\))?(?:;(bg|fg)?)?$/.exec(header):
+            ["", "unknown", "unknown", "unknown", "unknown"];
         if (!partes) {
             throw new Error(`Header de App inválido: ${header}`);
         }
