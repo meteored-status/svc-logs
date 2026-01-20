@@ -16,14 +16,14 @@
   "dependencies": {
     "@elastic/elasticsearch": "^9.2.0",
     "chokidar": "^4.0.3",
-    "dd-trace": "^5.81.0",
+    "dd-trace": "^5.82.0",
     "formidable": "^3.5.4",
     "hexoid": "^2.0.0",
     "source-map-support": "^0.5.21",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@types/node": "^24.10.7",
+    "@types/node": "^24.10.9",
     "logs-services": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"

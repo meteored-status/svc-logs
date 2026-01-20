@@ -185,15 +185,30 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         echo "gcloud run ${COMANDO} replace ${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml --region europe-west1" >> "${BASETOP}/lambda.sh"
         if [[ "${SUBTYPE}" == "cronjob" ]]; then
           SCHEDULE=$(configw "${RUTA}" '.deploy.schedule // "0 0 31 2 *"')
-          echo "echo \"Creando programación para ${KUSTOMIZER}-${SERVICIO} (${SCHEDULE})\"" >> "${BASETOP}/lambda.sh"
-          echo "gcloud scheduler jobs create http ${KUSTOMIZER}-${SERVICIO}-scheduler-trigger \
-            --location=europe-west1 \
-            --schedule=\"${SCHEDULE}\" \
-            --time-zone=\"Etc/UTC\" \
-            --uri=\"https://europe-west1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/${KUSTOMIZER}-${SERVICIO}:run\" \
-            --http-method=POST \
-            --oauth-service-account-email=scheduler-invoker@${PROJECT_ID}.iam.gserviceaccount.com \
-            --headers=\"Content-Type=application/json,User-Agent=Google-Cloud-Scheduler\"" >> "${BASETOP}/lambda.sh"
+          EXISTE=$(gcloud scheduler jobs describe "${KUSTOMIZER}-${SERVICIO}-scheduler-trigger" --location=europe-west1 --format="value(schedule)" 2>/dev/null)
+          if [[ -z "$EXISTE" ]]; then
+            echo "echo \"Creando programación para ${KUSTOMIZER}-${SERVICIO} (${SCHEDULE})\"" >> "${BASETOP}/lambda.sh"
+            echo "gcloud scheduler jobs create http ${KUSTOMIZER}-${SERVICIO}-scheduler-trigger \
+              --location=europe-west1 \
+              --schedule=\"${SCHEDULE}\" \
+              --time-zone=\"Etc/UTC\" \
+              --uri=\"https://europe-west1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/${KUSTOMIZER}-${SERVICIO}:run\" \
+              --http-method=POST \
+              --oauth-service-account-email=scheduler-invoker@${PROJECT_ID}.iam.gserviceaccount.com \
+              --headers=\"Content-Type=application/json,User-Agent=Google-Cloud-Scheduler\"" >> "${BASETOP}/lambda.sh"
+            elif [[ "$EXISTE" != "$SCHEDULE" ]]; then
+              echo "echo \"Actualizando programación para ${KUSTOMIZER}-${SERVICIO} (${SCHEDULE})\"" >> "${BASETOP}/lambda.sh"
+              echo "gcloud scheduler jobs update http ${KUSTOMIZER}-${SERVICIO}-scheduler-trigger \
+                --location=europe-west1 \
+                --schedule=\"${SCHEDULE}\" \
+                --time-zone=\"Etc/UTC\"" >> "${BASETOP}/lambda.sh"
+            fi
+        elif [[ "${SUBTYPE}" == "job" ]]; then
+          EXISTE=$(gcloud scheduler jobs describe "${KUSTOMIZER}-${SERVICIO}-scheduler-trigger" --location=europe-west1 --format="value(schedule)" 2>/dev/null)
+          if [[ -n "$EXISTE" ]]; then
+            echo "echo \"Eliminando programación para ${KUSTOMIZER}-${SERVICIO}\"" >> "${BASETOP}/lambda.sh"
+            echo "gcloud scheduler jobs delete ${KUSTOMIZER}-${SERVICIO}-scheduler-trigger --location=europe-west1 --quiet" >> "${BASETOP}/lambda.sh"
+          fi
         fi
 #        cat "${BASETOP}/${KUSTOMIZER}-${SERVICIO}.yml"
 #        cat "${BASETOP}/lambda.sh"

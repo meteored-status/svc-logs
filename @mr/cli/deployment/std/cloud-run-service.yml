@@ -13,6 +13,7 @@ spec:
 #        autoscaling.knative.dev/maxScale: "20"
         autoscaling.knative.dev/target: "80"
         run.googleapis.com/startup-cpu-boost: "true"
+#        run.googleapis.com/vpc-access-connector: projects/${PROJECT_ID}/locations/europe-west1/connectors/cloud-run
     spec:
       containers:
         - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}

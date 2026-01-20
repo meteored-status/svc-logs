@@ -207,7 +207,7 @@ export class Compilar {
 
         {
             // todo falta añadir la fecha del commit (this.fecha)
-            const {status, stderr} = await Comando.spawn("yarn", ["run", this.name, "run", "next", "build", /*"--webpack"*/], {cwd: this.basedir, env: {ZONA: nodeEnv}, colores: false});
+            const {status, stderr} = await Comando.spawn("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {ZONA: nodeEnv}, colores: false});
             if (status != 0) {
                 console.error(this.name, "[KO   ]", "Error compilando:");
                 console.error(stderr);

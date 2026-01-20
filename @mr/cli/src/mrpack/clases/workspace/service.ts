@@ -220,7 +220,7 @@ export class Service extends Workspace {
             // case EFramework.astro:
             case BuildFW.nextjs:
                 comando = "dev";
-                // args.push("--webpack");
+                args.push("--webpack");
                 break;
             case BuildFW.meteored:
             default:
