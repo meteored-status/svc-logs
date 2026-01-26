@@ -1,8 +1,9 @@
-import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
-import {EService, SERVICES} from "../../config";
-import {ICurrentOUT} from "./current/interface";
-import {IDeleteIN} from "./delete/interface";
+import {BackendRequest, type RequestResponse} from "services-comun/modules/net/request-backend";
 import {logRejection} from "services-comun/modules/decorators/metodo";
+
+import {EService, SERVICES} from "../../config";
+import type {ICurrentOUT} from "./current/interface";
+import type {IDeleteIN} from "./delete/interface";
 
 export class Component extends BackendRequest {
     /* STATIC */
@@ -14,7 +15,7 @@ export class Component extends BackendRequest {
     }
 
     @logRejection(true)
-    public static async delete(token: string, data: IDeleteIN): Promise<RequestResponse<{}>> {
+    public static async remove(token: string, data: IDeleteIN): Promise<RequestResponse<{}>> {
         return this.post<{}, IDeleteIN>(`${this.SERVICIO}/backend/component/delete`, data, {auth: token});
     }
 }

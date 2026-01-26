@@ -37,17 +37,16 @@
     "@google-cloud/storage": "^7.18.0",
     "@inquirer/prompts": "^8.2.0",
     "chokidar": "^4.0.3",
-    "dd-trace": "^5.82.0",
+    "dd-trace": "^5.83.0",
     "dotenv": "^17.2.3",
     "jszip": "^3.10.1",
     "mysql2": "^3.16.1",
     "source-map-support": "^0.5.21",
-    "tree-kill": "^1.2.2",
-    "typescript": "^5.9.3"
+    "tree-kill": "^1.2.2"
   },
   "devDependencies": {
-    "@rspack/cli": "^1.7.2",
-    "@rspack/core": "^1.7.2",
+    "@rspack/cli": "^1.7.3",
+    "@rspack/core": "^1.7.3",
     "@tsconfig/node24": "^24.0.4",
     "@types/diff3": "^0.0.2",
     "@types/node": "^24.10.9",
@@ -58,7 +57,7 @@
     "pug": "^3.0.3",
     "pug3-loader": "^2.4.3",
     "rspack-manifest-plugin": "^5.2.1",
-    "sass": "^1.97.2",
+    "sass": "^1.97.3",
     "sass-loader": "^16.0.6",
     "services-comun": "workspace:*",
     "source-map-loader": "^5.0.0",
@@ -68,5 +67,5 @@
     "tslib": "^2.8.1",
     "typescript": "^5.9.3"
   },
-  "version": "2026.1.20+2-bixus"
+  "version": "2026.1.26+2-bixus"
 }
