@@ -108,7 +108,7 @@ interface IElasticSearchBasic extends IElasticSearchBase {
     password: string;
 }
 export type IElasticSearch = (IElasticSearchApiKey | IElasticSearchBasic) & {
-    // master?: (IElasticSearchApiKey | IElasticSearchBasic); // todo: punto de partida para master/slave
+    failover?: IElasticSearchBase[];
 };
 
 export interface IMetadata {
@@ -122,8 +122,49 @@ export interface IESConfig {
     ca?: string;
 }
 
+class ClienteFailover {
+    private readonly failover: Client[];
+    private i: number;
+
+    public constructor(public regular: Client) {
+        this.failover = [];
+        this.i = 0;
+    }
+
+    public addFailover(cliente: Client): void {
+        this.failover.push(cliente);
+    }
+
+    public async check<T>(request: (cliente: Client)=>Promise<T>): Promise<T> {
+        try {
+            return await request(this.regular);
+        } catch (err) {
+            if (this.failover.length===0) {
+                return Promise.reject(err);
+            }
+
+            if (this.failover.length===0) {
+                return await request(this.failover[0]);
+            }
+
+            const i = this.i;
+
+            do {
+                this.i = (this.i + 1) % this.failover.length;
+                try {
+                    return await request(this.failover[this.i]);
+                } catch (err) {
+                    // seguimos intentando
+                }
+            } while (i!==this.i);
+
+            return Promise.reject(err);
+        }
+    }
+}
+
 export class Elasticsearch {
-    protected cliente: Promise<Client>;
+    protected cliente: Promise<ClienteFailover>;
 
     public constructor(protected config: IESConfig) {
         this.cliente = this.load();
@@ -132,137 +173,140 @@ export class Elasticsearch {
         this.cliente.then(()=>undefined).catch(()=>undefined);
     }
 
-    private async load(): Promise<Client> {
+    private async load(): Promise<ClienteFailover> {
         return this.loadConfig()
-            // .catch(err=>{console.log(err);return Promise.reject(err);})
-            // .catch(()=>null);
             .catch(()=>Promise.reject("Elastic not enabled"));
     }
 
     public async clearScroll(params: ClearScrollRequest): Promise<ClearScrollResponse> {
         const cliente = await this.cliente;
-        return cliente.clearScroll(params);
+        return cliente.regular.clearScroll(params);
     }
 
     public async delete(params: DeleteRequest): Promise<DeleteResponse> {
         const cliente = await this.cliente;
-        return cliente.delete(params);
+        return cliente.regular.delete(params);
     }
 
     public async scroll<T>(params: ScrollRequest): Promise<ScrollResponse<T>> {
         const cliente = await this.cliente;
-        return cliente.scroll<T>(params);
+        return cliente.regular.scroll<T>(params);
     }
 
     public async search<T, K extends ESAggregate = ESAggregate>(params: SearchRequest): Promise<SearchResponse<T, K>> {
         const cliente = await this.cliente;
-        return cliente.search<T, K>(params);
+        return cliente.check(cliente=>cliente.search<T, K>(params));
+        // return cliente.regular.search<T, K>(params);
     }
 
     public async get<T>(params: GetRequest): Promise<GetResponse<T>> {
         const cliente = await this.cliente;
-        return cliente.get(params, {
+        return cliente.check(cliente=>cliente.get(params, {
             // ignore: [404],
-        });
+        }));
+        // return cliente.regular.get(params, {
+        //     // ignore: [404],
+        // });
     }
 
     public async index(params: IndexRequest): Promise<IndexResponse> {
         const cliente = await this.cliente;
-        return cliente.index(params);
+        return cliente.regular.index(params);
     }
 
     public async create(params: CreateRequest): Promise<CreateResponse> {
         const cliente = await this.cliente;
-        return cliente.index(params);
+        return cliente.regular.create(params);
     }
 
     public async reindex(params: ReindexRequest): Promise<ReindexResponse> {
         const cliente = await this.cliente;
-        return cliente.reindex(params);
+        return cliente.regular.reindex(params);
     }
 
     public async update<T>(params: UpdateRequest): Promise<UpdateResponse<T>> {
         const cliente = await this.cliente;
-        return cliente.update(params);
+        return cliente.regular.update(params);
     }
 
     public async openPointInTime(params: OpenPointInTimeRequest): Promise<OpenPointInTimeResponse> {
         const cliente = await this.cliente;
-        return cliente.openPointInTime(params);
+        return cliente.regular.openPointInTime(params);
     }
 
     public async closePointInTime(params: ClosePointInTimeRequest): Promise<ClosePointInTimeResponse> {
         const cliente = await this.cliente;
-        return cliente.closePointInTime(params);
+        return cliente.regular.closePointInTime(params);
     }
 
     public async deleteByQuery(params: DeleteByQueryRequest): Promise<DeleteByQueryResponse> {
         const cliente = await this.cliente;
-        return cliente.deleteByQuery(params);
+        return cliente.regular.deleteByQuery(params);
     }
 
     public async updateByQuery(params: UpdateByQueryRequest): Promise<UpdateByQueryResponse> {
         const cliente = await this.cliente;
-        return cliente.updateByQuery(params);
+        return cliente.regular.updateByQuery(params);
     }
 
     public async count(params: CountRequest): Promise<CountResponse> {
         const cliente = await this.cliente;
-        return cliente.count(params);
+        return cliente.check(cliente=>cliente.count(params));
+        // return cliente.regular.count(params);
     }
 
     public async bulk(params: BulkRequest): Promise<BulkResponse> {
         const cliente = await this.load();
         try {
-            return await cliente.bulk(params);
+            return await cliente.regular.bulk(params);
         } finally {
-            await cliente.close();
+            await cliente.regular.close();
         }
     }
 
     public async info(params: InfoRequest = {}): Promise<InfoResponse> {
         const cliente = await this.cliente;
-        return cliente.info(params);
+        return cliente.regular.info(params);
     }
 
     public async indicesCreate(params: IndicesCreateRequest): Promise<IndicesCreateResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.create(params);
+        return cliente.regular.indices.create(params);
     }
 
     public async indicesDelete(params: IndicesDeleteRequest): Promise<IndicesDeleteResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.delete(params);
+        return cliente.regular.indices.delete(params);
     }
 
     public async indicesExists(params: IndicesExistsRequest): Promise<IndicesExistsResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.exists(params);
+        return cliente.regular.indices.exists(params);
     }
 
     public async indicesExistsAlias(params: IndicesExistsAliasRequest): Promise<IndicesExistsAliasResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.existsAlias(params);
+        return cliente.regular.indices.existsAlias(params);
     }
 
     public async indicesForcemerge(params: IndicesForcemergeRequest): Promise<IndicesForcemergeResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.forcemerge(params);
+        return cliente.regular.indices.forcemerge(params);
     }
 
     public async indicesGet(params: IndicesGetRequest): Promise<IndicesGetResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.get(params);
+        return cliente.regular.indices.get(params);
     }
 
     public async indicesGetAlias(params: IndicesGetAliasRequest): Promise<IndicesGetAliasResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.getAlias(params);
+        return cliente.regular.indices.getAlias(params);
     }
 
     public async indicesUpdateAliases(params: IndicesUpdateAliasesRequest): Promise<IndicesUpdateAliasesResponse> {
         const cliente = await this.cliente;
-        return cliente.indices.updateAliases(params);
+        return cliente.regular.indices.updateAliases(params);
     }
 
     public async ready(intento: number = 1): Promise<void> {
@@ -277,17 +321,17 @@ export class Elasticsearch {
 
     public async ccrStats(): Promise<CcrStatsResponse> {
         const cliente = await this.cliente;
-        return cliente.ccr.stats();
+        return cliente.regular.ccr.stats();
     }
 
     public async ccrPauseFollow(params: CcrPauseFollowRequest): Promise<CcrPauseFollowResponse> {
         const cliente = await this.cliente;
-        return cliente.ccr.pauseFollow(params);
+        return cliente.regular.ccr.pauseFollow(params);
     }
 
     public async ccrUnfollow(params: CcrUnfollowRequest): Promise<CcrUnfollowResponse> {
         const cliente = await this.cliente;
-        return cliente.ccr.unfollow(params);
+        return cliente.regular.ccr.unfollow(params);
     }
 
     public async disponible(): Promise<boolean> {
@@ -310,25 +354,41 @@ export class Elasticsearch {
 
     public async nodes(): Promise<NodesStatsResponse> {
         const cliente = await this.cliente;
-        return cliente.nodes.stats();
+        return cliente.regular.nodes.stats();
     }
 
-    protected async loadConfig(): Promise<Client> {
-        if (await exists(this.config.credenciales)) {
-            const config: IElasticSearch = await readJSON<IElasticSearch>(this.config.credenciales);
-
-            if ("apiKey" in config) {
-                return this.crearClienteApiKey(config, config.ca ?? this.config.ca);
-            }
-            if ("user" in config) {
-                return this.crearClienteBasic(config, config.ca ?? this.config.ca);
-            }
+    protected async loadConfig(): Promise<ClienteFailover> {
+        if (!await exists(this.config.credenciales)) {
+            return Promise.reject(new Error("Elastic disabled"));
         }
 
-        return Promise.reject(new Error("Elastic disabled"));
+        const config: IElasticSearch = await readJSON<IElasticSearch>(this.config.credenciales);
+        const common = await this.getCommonConfig(config, config.ca ?? this.config.ca);
+
+        let cliente: ClienteFailover;
+        if ("apiKey" in config) {
+            cliente = new ClienteFailover(this.crearClienteApiKey(config, common));
+            if (config.failover) {
+                for (const failover of config.failover) {
+                    cliente.addFailover(this.crearClienteApiKey(config, await this.getCommonConfig(failover, failover.ca ?? this.config.ca)))
+                }
+            }
+        } else if ("user" in config) {
+            cliente = new ClienteFailover(this.crearClienteBasic(config, common));
+            if (config.failover) {
+                for (const failover of config.failover) {
+                    cliente.addFailover(this.crearClienteBasic(config, await this.getCommonConfig(failover, failover.ca ?? this.config.ca)))
+                }
+            }
+        } else {
+            return Promise.reject(new Error("Elastic disabled"));
+        }
+
+
+        return cliente;
     }
 
-    private async getCommonConfig(config: IElasticSearch, ca?: string): Promise<ClientOptions> {
+    private async getCommonConfig(config: IElasticSearchBase, ca?: string): Promise<ClientOptions> {
         let tls: TlsConnectionOptions|undefined;
         if (ca) {
             if (!PRODUCCION) {
@@ -348,11 +408,9 @@ export class Elasticsearch {
                     rejectUnauthorized: true,
                 };
             }
-        } else {
-            if (DESARROLLO) {
-                tls = {
-                    rejectUnauthorized: false,
-                }
+        } else if (DESARROLLO) {
+            tls = {
+                rejectUnauthorized: false,
             }
         }
 
@@ -364,18 +422,18 @@ export class Elasticsearch {
         };
     }
 
-    private async crearClienteApiKey(config: IElasticSearchApiKey, ca?: string): Promise<Client> {
+    private crearClienteApiKey(config: IElasticSearchApiKey, common: ClientOptions): Client {
         return new Client({
-            ...await this.getCommonConfig(config, ca),
+            ...common,
             auth: {
                 apiKey: config.apiKey,
             },
         });
     }
 
-    private async crearClienteBasic(config: IElasticSearchBasic, ca?: string): Promise<Client> {
+    private crearClienteBasic(config: IElasticSearchBasic, common: ClientOptions): Client {
         return new Client({
-            ...await this.getCommonConfig(config, ca),
+            ...common,
             auth: {
                 username: config.user,
                 password: config.password,

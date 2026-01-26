@@ -68,7 +68,7 @@ export default async (cliente: Cliente, storage: Storage)=>{
         if (cf.client.bot) {
             crawler.push(registro.toCrawler());
         }
-        if (cf.request.headers.app || (["mr"].includes(cliente.id) && cf.client.request.path.startsWith("/app/"))) {
+        if (cf.request.headers.app || (["mr"].includes(cliente.id) && cf.client.request.path.startsWith("/app/")) || (["tiempo"].includes(cliente.id) && cf.client.request.path.includes("peticionMovil.php"))) {
             try {
                 app.push(registro.toApp(cf.request.headers.app));
             } catch (err) {

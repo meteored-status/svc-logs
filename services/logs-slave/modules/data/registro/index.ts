@@ -239,11 +239,15 @@ export class Registro implements IRegistro {
         const sf = sufijo?.trim()??"";
         const amb = ambient?.trim()??"";
 
+        const servicio = os==="unknown" && this.data.peticion.path.includes("peticionMovil.php") ?
+            "legacy" :
+            (this.data.subproyecto ?? "unknown");
+
         return {
             timestamp: this.data.timestamp.toISOString(),
             url: this.data.url.toString(),
             sistema: os.trim(),
-            servicio: this.data.subproyecto ?? "unknown",
+            servicio,
             tipo: undefined,
             app: {
                 package: app.trim(),

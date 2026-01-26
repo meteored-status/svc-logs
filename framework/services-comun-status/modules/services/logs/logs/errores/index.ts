@@ -79,7 +79,7 @@ export default class Index extends BackendRequest {
     }
 
     @logRejection(true)
-    public static async delete(post: IDeleteIN): Promise<RequestResponse<IDeleteOUT>> {
+    public static async remove(post: IDeleteIN): Promise<RequestResponse<IDeleteOUT>> {
         const url = `${this.SERVICIO}/private/logs/error/delete/`;
         return await this.post<IDeleteOUT, IDeleteIN>(url, post);
     }

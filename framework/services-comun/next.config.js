@@ -24,6 +24,8 @@ const hashDir = (dir) => {
     return md5(hashes.join(''));
 }
 
+let ok = false;
+
 module.exports = function (buildDirs) {
     const salida = {
         compress: false,
@@ -39,32 +41,16 @@ module.exports = function (buildDirs) {
             ];
         },
         // trailingSlash: true,
-        webpack: (config, { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }) => {
-            // let cfg;
-            // if (isServer) {
-            //     if (dev) {
-            //         cfg = require("./webpack/service.develop.config")("desarrollo", __dirname, undefined, true);
-            //     } else {
-            //         cfg = require("./webpack/service.production.config")(process.env.ENV??"test", __dirname, undefined, true);
-            //     }
-            // } else {
-            //     if (dev) {
-            //         const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
-            //         config.plugins.push(new ForkTsCheckerWebpackPlugin());
-            //
-            //         cfg = require("./webpack/web.develop.config")("desarrollo", __dirname, undefined, undefined, undefined, true);
-            //     } else {
-            //         cfg = require("./webpack/web.production.config")(process.env.ENV??"test", __dirname, undefined, undefined, undefined, true);
-            //     }
-            // }
-            // const plugins = cfg.plugins.filter(actual=>actual.constructor.name==="DefinePlugin");
-            //
-            // config.plugins.push(...plugins);
-
-            // if (isServer && dev) {
-            //     const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
-            //     config.plugins.push(new ForkTsCheckerWebpackPlugin());
-            // }
+        webpack: (config, { dev, isServer, webpack }) => {
+            if (isServer && dev && !ok) {
+                ok = true;
+                const {TsCheckerRspackPlugin} = require('ts-checker-rspack-plugin');
+                config.plugins.push(new TsCheckerRspackPlugin({
+                    typescript: {
+                        configFile: `tsconfig.json`,
+                    },
+                }));
+            }
 
             const entorno = dev?"desarrollo":(process.env.ENV??"test");
             const desarrollo = dev;
