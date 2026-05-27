@@ -1,19 +1,42 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 7b62a0acf7b47082d6c9c69ba27061aa
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.21+6-josantoniojimnez
+ */
+
 import JSZip from "jszip";
-import {Colors} from "services-comun/modules/utiles/colors";
 
 import {isDir, isFile, mkdir, readDir, readFileString, unlink} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
-import {PaqueteFile, type IPaqueteFile, type PaqueteFileFiles} from "./file";
+import {PaqueteFile, type IPaqueteFile, type IUpdateTracker, type PaqueteFileFiles} from "./file";
 
+/**
+ * Representación serializable de un directorio dentro de un paquete mrpack.
+ *
+ * @property hijos - Mapa de nombre → fichero o subdirectorio.
+ */
 export interface IPaqueteDirectory extends IPaqueteFile {
     hijos: Record<string, IPaqueteFile|IPaqueteDirectory>;
 }
 
+/**
+ * Par (status local, ficheros ZIP) para un `PaqueteDirectory`.
+ *
+ * @property status - Instancia local de `PaqueteDirectory`, o `undefined` si no existe.
+ * @property files  - Mapa de rutas relativas a objetos `JSZipObject`.
+ */
 export interface PaqueteDirectoryFiles extends PaqueteFileFiles {
     status?: PaqueteDirectory;
 }
 
+/**
+ * Representa un directorio dentro de un paquete mrpack.
+ * Contiene listas de `PaqueteFile` y subdirectorios `PaqueteDirectory` anidados,
+ * y orquesta las operaciones recursivas de hash, actualización y reset.
+ */
 export class PaqueteDirectory extends PaqueteFile {
     /* STATIC */
     public static override get DEFECTO(): IPaqueteDirectory {
@@ -72,6 +95,11 @@ export class PaqueteDirectory extends PaqueteFile {
         return PaqueteDirectory.build(this.nombre, this.path, this.toJSON());
     }
 
+    /**
+     * Recalcula el hash de este directorio a partir de los hashes de sus hijos directos.
+     *
+     * @param autor - Autor que se registra si el hash cambia.
+     */
     protected rehash(autor: string): void {
         const hashes: string[] = [];
         for (const key of Object.keys(this.archivos)) {
@@ -84,14 +112,30 @@ export class PaqueteDirectory extends PaqueteFile {
         this.recalcularHash(hashes, autor);
     }
 
+    /**
+     * Elimina un fichero hijo del registro interno de este directorio.
+     *
+     * @param file - Fichero a eliminar.
+     */
     public deleteFile(file: PaqueteFile): void {
         delete this.archivos[file.nombre];
     }
 
+    /**
+     * Elimina un subdirectorio hijo del registro interno de este directorio.
+     *
+     * @param directory - Subdirectorio a eliminar.
+     */
     public deleteDirectory(directory: PaqueteDirectory): void {
         delete this.directorios[directory.nombre];
     }
 
+    /**
+     * Convierte este directorio en una entrada `PaqueteFile` plana.
+     * Útil cuando el tipo cambia en disco (era un directorio y ahora es un fichero).
+     *
+     * @returns Nueva instancia de `PaqueteFile` con el mismo nombre y ruta.
+     */
     public toFile(): PaqueteFile {
         return new PaqueteFile(this.nombre, this.path, {
             autor: this.autor,
@@ -100,10 +144,21 @@ export class PaqueteDirectory extends PaqueteFile {
         });
     }
 
+    /**
+     * Crea el directorio físico en disco (incluyendo intermedios).
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     */
     public override async crearPath(basedir: string): Promise<void> {
         await mkdir(`${basedir}/${this.filename}`, true);
     }
 
+    /**
+     * Comprueba si este directorio existe físicamente en disco.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @returns `true` si existe como directorio.
+     */
     public async isDirectory(basedir: string): Promise<boolean> {
         return await isDir(`${basedir}/${this.filename}`);
     }
@@ -160,17 +215,30 @@ export class PaqueteDirectory extends PaqueteFile {
             }
 
             if (await isFile(`${dir}/${file}`)) {
-                cambio = true;
-                this.archivos[file] = PaqueteFile.build(file, this.filename);
+                if (this.archivos[file] === undefined) {
+                    cambio = true;
+                    this.archivos[file] = PaqueteFile.build(file, this.filename);
+                }
             } else if (await isDir(`${dir}/${file}`)) {
-                cambio = true;
-                this.directorios[file] = PaqueteDirectory.build(file, this.filename);
+                if (this.directorios[file] === undefined) {
+                    cambio = true;
+                    this.directorios[file] = PaqueteDirectory.build(file, this.filename);
+                }
             }
         }
 
         return cambio;
     }
 
+    /**
+     * Recorre recursivamente el árbol de hijos actualizando los hashes de cada nodo.
+     * Respeta `.mr-ignore` (excluir) y `.mr-nohash` (incluir pero no contribuir al hash padre).
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @param autor   - Autor que se registra en los nodos que cambian.
+     * @param ignore  - Lista adicional de nombres de fichero/directorio a ignorar.
+     * @returns Hash actualizado de este directorio.
+     */
     public override async update(basedir: string, autor: string, ignore: string[] = []): Promise<string> {
         const dir = `${basedir}/${this.filename}`;
 
@@ -179,6 +247,17 @@ export class PaqueteDirectory extends PaqueteFile {
         if (files.includes(".mr-ignore")) {
             ignore.push(...await readFileString(`${dir}/.mr-ignore`).then(data=>data.trim().split("\n")));
         }
+
+        // Entradas listadas en .mr-nohash se incluyen en el paquete pero su hash
+        // no contribuye al hash del directorio padre, por lo que los cambios en
+        // esos hijos no disparan la detección de cambios del paquete.
+        const nohash: string[] = [];
+        if (files.includes(".mr-nohash")) {
+            nohash.push(...await readFileString(`${dir}/.mr-nohash`).then(
+                data => data.trim().split("\n").map(l => l.trim()).filter(l => l.length > 0),
+            ));
+        }
+
         files.sort();
 
         for (const file of ignore) {
@@ -194,10 +273,16 @@ export class PaqueteDirectory extends PaqueteFile {
 
         const hashes: string[] = [];
         for (const key of Object.keys(this.archivos)) {
-            hashes.push(await this.archivos[key].update(basedir, autor));
+            const hash = await this.archivos[key].update(basedir, autor);
+            if (!nohash.includes(key)) {
+                hashes.push(hash);
+            }
         }
         for (const key of Object.keys(this.directorios)) {
-            hashes.push(await this.directorios[key].update(basedir, autor));
+            const hash = await this.directorios[key].update(basedir, autor);
+            if (!nohash.includes(key)) {
+                hashes.push(hash);
+            }
         }
 
         this.recalcularHash(hashes, autor);
@@ -205,6 +290,12 @@ export class PaqueteDirectory extends PaqueteFile {
         return this.hash;
     }
 
+    /**
+     * Añade recursivamente todos los hijos al ZIP de empaquetado.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @param zip     - Instancia JSZip donde se añaden los ficheros.
+     */
     public override async pack(basedir: string, zip: JSZip): Promise<void> {
         for (const file of Object.keys(this.archivos)) {
             await this.archivos[file].pack(basedir, zip);
@@ -214,43 +305,119 @@ export class PaqueteDirectory extends PaqueteFile {
         }
     }
 
-    protected async checkCambiosEjecutar(basedir: string, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean): Promise<boolean> {
-        let autor = this.autor;
+    /**
+     * Devuelve la lista de rutas de ficheros cuyos hashes han cambiado desde el último `update`.
+     *
+     * @returns Array de rutas relativas al paquete.
+     */
+    public listarCambios(): string[] {
+        const cambios: string[] = [];
+        for (const key of Object.keys(this.archivos)) {
+            const archivo = this.archivos[key];
+            if (archivo.hashCambio) {
+                cambios.push(archivo.filename);
+            }
+        }
+        for (const key of Object.keys(this.directorios)) {
+            cambios.push(...this.directorios[key].listarCambios());
+        }
+        return cambios;
+    }
+
+    /**
+     * Inyecta bloques de autoría en todos los ficheros `.ts` del subárbol que hayan cambiado.
+     * Tras la inyección recalcula el hash del directorio si algún hijo lo modificó.
+     *
+     * @param basedir  - Raíz absoluta del monorepo.
+     * @param autor    - Nombre del autor a estampar.
+     * @param version  - Versión del paquete a registrar en cada bloque.
+     */
+    public async inyectarAutorias(basedir: string, autor: string, version: string): Promise<void> {
+        let cambio = false;
+
+        for (const key of Object.keys(this.archivos)) {
+            const hashAnterior = this.archivos[key].hash;
+            await this.archivos[key].inyectarAutoria(basedir, autor, version);
+            if (this.archivos[key].hash !== hashAnterior) {
+                cambio = true;
+            }
+        }
+
+        for (const key of Object.keys(this.directorios)) {
+            const hashAnterior = this.directorios[key].hash;
+            await this.directorios[key].inyectarAutorias(basedir, autor, version);
+            if (this.directorios[key].hash !== hashAnterior) {
+                cambio = true;
+            }
+        }
+
+        if (cambio) {
+            this.rehash(autor);
+        }
+    }
+
+    /**
+     * Aplica recursivamente los cambios de la nueva versión sobre los hijos de este directorio.
+     * Se procesa en paralelo; al final recalcula el hash si algún hijo cambió.
+     *
+     * @param basedir  - Raíz absoluta del monorepo.
+     * @param antiguo  - Estado publicado anterior.
+     * @param nuevo    - Estado publicado nuevo.
+     * @param bin      - Si `true`, el directorio es tratado como binario.
+     * @param tracker  - Tracker mutable para registrar artefactos afectados.
+     * @returns `true` si algún hijo fue modificado.
+     */
+    protected async checkCambiosEjecutar(basedir: string, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean, tracker?: IUpdateTracker): Promise<boolean> {
+        const archivos = Object.keys(this.archivos);
+        const directorios = Object.keys(this.directorios);
+
+        const {promesas, autorRef, bins} = await this._procesarExistentes(basedir, antiguo, nuevo, bin, tracker);
+        const promesasNuevos = this._procesarNuevos(basedir, archivos, directorios, antiguo, nuevo, bin, bins, tracker);
+
+        const cambios = await Promise.all([...promesas, ...promesasNuevos]);
+        const cambio = cambios.some(c => c);
+        if (cambio) {
+            this.rehash(autorRef.value);
+        }
+
+        return cambio;
+    }
+
+    private async _procesarExistentes(basedir: string, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean, tracker?: IUpdateTracker): Promise<{promesas: Promise<boolean>[]; autorRef: {value: string}; bins: string[]}> {
+        const autorRef = {value: this.autor};
         const archivos = Object.keys(this.archivos);
         const directorios = Object.keys(this.directorios);
         const promesas: Promise<boolean>[] = [];
         const bins: string[] = [];
-        if (nuevo.status?.archivos[".mr-bin"]!=undefined) {
+
+        if (nuevo.status?.archivos[".mr-bin"] !== undefined) {
             let archivo: PaqueteFile;
-            if (this.archivos[".mr-bin"]!=undefined) {
+            if (this.archivos[".mr-bin"] !== undefined) {
                 archivo = this.archivos[".mr-bin"];
             } else {
                 archivo = PaqueteFile.build(".mr-bin", this.filename);
                 this.archivos[".mr-bin"] = archivo;
                 promesas.push(Promise.resolve(true));
             }
-            const bin = nuevo.status.archivos[".mr-bin"];
+            const mrBin = nuevo.status.archivos[".mr-bin"];
             const cambio = await archivo.checkCambios(basedir, this, {
                 status: antiguo.status?.archivos[".mr-bin"],
                 files: antiguo.files,
             }, {
-                status: bin,
+                status: mrBin,
                 files: nuevo.files,
-            }, false).then((cambio)=>{
-                if (cambio) {
-                    autor = archivo.autor;
-                }
-                return cambio;
+            }, false, tracker).then((c) => {
+                if (c) { autorRef.value = archivo.autor; }
+                return c;
             });
             promesas.push(Promise.resolve(cambio));
 
             const contenido = await archivo.getContents(basedir);
-            bins.push(...contenido.split("\n").map(line=>line.trim()).filter(line=>line.length>0));
+            bins.push(...contenido.split("\n").map(line => line.trim()).filter(line => line.length > 0));
         }
 
-        // comprobamos archivos actuales
         for (const key of archivos) {
-            if (key==".mr-bin") {
+            if (key === ".mr-bin") {
                 continue;
             }
             const archivo = this.archivos[key];
@@ -260,15 +427,12 @@ export class PaqueteDirectory extends PaqueteFile {
             }, {
                 status: nuevo.status?.archivos[key],
                 files: nuevo.files,
-            }, bin||bins.includes(key)).then((cambio)=>{
-                if (cambio) {
-                    autor = archivo.autor;
-                }
-                return cambio;
+            }, bin || bins.includes(key), tracker).then((c) => {
+                if (c) { autorRef.value = archivo.autor; }
+                return c;
             }));
         }
 
-        // comprobamos directorios actuales
         for (const key of directorios) {
             const directorio = this.directorios[key];
             promesas.push(directorio.checkCambios(basedir, this, {
@@ -277,102 +441,105 @@ export class PaqueteDirectory extends PaqueteFile {
             }, {
                 status: nuevo.status?.directorios[key],
                 files: nuevo.files,
-            }, bin||bins.includes(key)).then((cambio)=>{
-                if (cambio) {
-                    autor = directorio.autor;
-                }
-                return cambio;
+            }, bin || bins.includes(key), tracker).then((c) => {
+                if (c) { autorRef.value = directorio.autor; }
+                return c;
             }));
         }
 
-        // comprobamos nuevos
-        if (nuevo.status!=undefined) {
-            let cambio = false;
-            // comprobamos archivos nuevos
-            for (const key of Object.keys(nuevo.status.archivos)) {
-                if (archivos.includes(key)) {
-                    continue;
-                }
-                cambio = true;
-                const archivo = PaqueteFile.build(key, this.filename);
-                this.archivos[key] = archivo;
-                promesas.push(archivo.checkCambios(basedir, this, {
-                    status: undefined,
-                    files: antiguo.files,
-                }, {
-                    status: nuevo.status.archivos[key],
-                    files: nuevo.files,
-                }, bin||bins.includes(key)).then(()=>true));
-            }
-
-            // comprobamos directorios nuevos
-            for (const key of Object.keys(nuevo.status.directorios)) {
-                if (directorios.includes(key)) {
-                    continue;
-                }
-                cambio = true;
-                const directorio = PaqueteDirectory.build(key, this.filename);
-                this.directorios[key] = directorio;
-                promesas.push(directorio.checkCambios(basedir, this, {
-                    status: undefined,
-                    files: antiguo.files,
-                }, {
-                    status: nuevo.status.directorios[key],
-                    files: nuevo.files,
-                }, bin||bins.includes(key)).then(()=>true));
-            }
-            if (cambio) {
-                this.resort();
-            }
-        }
-
-        const cambios = await Promise.all(promesas);
-        const cambio = cambios.some(cambio=>cambio);
-        if (cambio) {
-            this.rehash(autor);
-        }
-
-        return cambio;
+        return {promesas, autorRef, bins};
     }
 
-    public override async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean): Promise<boolean> {
-        if (antiguo.status==undefined) {
-            if (nuevo.status==undefined || this.hash==nuevo.status.hash) {
-                // este directorio es nuevo (local) => mantenemos lo que tenemos
-                // este directorio es nuevo (local y remoto) pero son iguales => mantenemos lo que tenemos
-                // console.log("Ignorando cambios directorio 1", this.filename);
+    private _procesarNuevos(basedir: string, archivosExist: string[], directoriosExist: string[], antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean, bins: string[], tracker?: IUpdateTracker): Promise<boolean>[] {
+        if (nuevo.status === undefined) {
+            return [];
+        }
+
+        const promesas: Promise<boolean>[] = [];
+        let hayNuevos = false;
+
+        for (const key of Object.keys(nuevo.status.archivos)) {
+            if (archivosExist.includes(key)) {
+                continue;
+            }
+            hayNuevos = true;
+            const archivo = PaqueteFile.build(key, this.filename);
+            this.archivos[key] = archivo;
+            promesas.push(archivo.checkCambios(basedir, this, {
+                status: undefined,
+                files: antiguo.files,
+            }, {
+                status: nuevo.status.archivos[key],
+                files: nuevo.files,
+            }, bin || bins.includes(key), tracker).then(() => true));
+        }
+
+        for (const key of Object.keys(nuevo.status.directorios)) {
+            if (directoriosExist.includes(key)) {
+                continue;
+            }
+            hayNuevos = true;
+            const directorio = PaqueteDirectory.build(key, this.filename);
+            this.directorios[key] = directorio;
+            promesas.push(directorio.checkCambios(basedir, this, {
+                status: undefined,
+                files: antiguo.files,
+            }, {
+                status: nuevo.status.directorios[key],
+                files: nuevo.files,
+            }, bin || bins.includes(key), tracker).then(() => true));
+        }
+
+        if (hayNuevos) {
+            this.resort();
+        }
+
+        return promesas;
+    }
+
+    /**
+     * Aplica los cambios de la nueva versión sobre este directorio (rama pública).
+     * Gestiona la creación, actualización y eliminación del propio directorio.
+     *
+     * @param basedir  - Raíz absoluta del monorepo.
+     * @param padre    - Directorio padre (para eliminar la referencia si se borra éste).
+     * @param antiguo  - Estado publicado anterior.
+     * @param nuevo    - Estado publicado nuevo.
+     * @param bin      - Si `true`, directorio tratado como binario.
+     * @param tracker  - Tracker mutable para registrar artefactos afectados.
+     * @returns `true` si el directorio fue modificado.
+     */
+    public override async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteDirectoryFiles, nuevo: PaqueteDirectoryFiles, bin: boolean, tracker?: IUpdateTracker): Promise<boolean> {
+        if (antiguo.status===undefined) {
+            if (nuevo.status===undefined || this.hash===nuevo.status.hash) {
                 return false;
             }
-
-            // este directorio es nuevo (local y remoto) pero hay diferencias entre local y remoto => comprobamos contenidos
-            return this.checkCambiosEjecutar(basedir, antiguo, nuevo, bin);
+            return this.checkCambiosEjecutar(basedir, antiguo, nuevo, bin, tracker);
         }
 
-        if (nuevo.status==undefined) {
-            if(this.hash==antiguo.status.hash) {
-                // este directorio es antiguo (local) se ha eliminado => lo eliminamos
-                console.log(" - Eliminando      ", `${Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename)}/`);
+        if (nuevo.status===undefined) {
+            if(this.hash===antiguo.status.hash) {
                 await unlink(`${basedir}/${this.filename}`);
                 padre.deleteDirectory(this);
-
+                tracker?.entradas.push({archivo: `${this.filename}/`, estado: "ok"});
                 return true;
             }
-
-            // este directorio es antiguo (local) pero ha cambiado => mantenemos lo que tenemos
-            // console.log("Ignorando cambios directorio 2", this.filename);
-            return false
-        }
-
-        if (this.hash==nuevo.status.hash) {
-            // este directorio es antiguo (local) y remoto pero son iguales => mantenemos lo que tenemos
-            // console.log("Ignorando cambios directorio 3", this.filename);
             return false;
         }
 
-        // este directorio es antiguo (local) y remoto pero hay diferencias entre local y remoto => comprobamos contenidos
-        return this.checkCambiosEjecutar(basedir, antiguo, nuevo, bin);
+        if (this.hash===nuevo.status.hash) {
+            return false;
+        }
+
+        return this.checkCambiosEjecutar(basedir, antiguo, nuevo, bin, tracker);
     }
 
+    /**
+     * Restaura recursivamente todos los hijos de este directorio al estado de la versión indicada.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @param nuevo   - Estado publicado cuyo contenido se restaura.
+     */
     public override async resetCambios(basedir: string, nuevo: PaqueteDirectoryFiles): Promise<void> {
         const status = nuevo.status!;
         const promesas: Promise<void>[] = [];

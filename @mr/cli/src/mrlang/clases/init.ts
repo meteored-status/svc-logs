@@ -1,5 +1,12 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Mon, 18 May 2026 12:17:59 GMT
+ * Hash: 317fbdd36c9becfee9c312622e273c4f
+ * Versión: 2026.5.18+4-josantoniojimnez
+ */
+
 import {isDir, mkdir, readDir, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
-import {soportados} from "services-comun/modules/net/i18n";
+import {soportados} from "@mr/core-i18n/langs";
 
 import {Colors} from "../../mrpack/clases/colors";
 import type {IPackageConfig} from "./modulo";

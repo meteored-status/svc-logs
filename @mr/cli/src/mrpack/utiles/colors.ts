@@ -1,3 +1,10 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 0d461f10e36c1aaf088a06a5819ce123
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 export class Colors {
     /* STATIC */
     public static Reset = "\x1b[0m";
@@ -27,8 +34,16 @@ export class Colors {
     public static BgWhite = "\x1b[47m";
 
     public static clear: string = "\x1b[2J";
-
-    public static colorize(config: string[], text: string, tty: boolean = false): string {
+    /**
+     * Aplica los códigos de escape ANSI dados al texto y añade el código de reset al final.
+     * Si `tty` es `true`, devuelve el texto sin ningún código (modo no TTY/pipe).
+     *
+     * @param config - Array de códigos de escape ANSI a aplicar (p.ej. `[Colors.FgGreen, Colors.Bright]`).
+     * @param text   - Texto sobre el que aplicar los colores.
+     * @param tty    - Si `true`, devuelve el texto sin colorear.
+     * @returns Cadena con los códigos ANSI o el texto plano según `tty`.
+     */
+    public static colorize(config: string[], text: string, {tty = false}: {tty?: boolean} = {}): string {
         if (!tty) {
             return `${config.join("")}${text}${this.Reset}`;
         }
@@ -36,6 +51,12 @@ export class Colors {
         return text;
     }
 
+    /**
+     * Genera la secuencia de escape ANSI para mover el cursor N líneas hacia arriba.
+     *
+     * @param posiciones - Número de líneas a subir. Si es ≤ 0, devuelve cadena vacía.
+     * @returns Secuencia de escape ANSI o `""` si `posiciones` ≤ 0.
+     */
     public static up(posiciones: number): string {
         if (posiciones <= 0) {
             return "";
@@ -43,6 +64,12 @@ export class Colors {
         return `\x1b[${posiciones}A`;
     }
 
+    /**
+     * Genera la secuencia de escape ANSI para mover el cursor N líneas hacia abajo.
+     *
+     * @param posiciones - Número de líneas a bajar. Si es ≤ 0, devuelve cadena vacía.
+     * @returns Secuencia de escape ANSI o `""` si `posiciones` ≤ 0.
+     */
     public static down(posiciones: number): string {
         if (posiciones <= 0) {
             return "";

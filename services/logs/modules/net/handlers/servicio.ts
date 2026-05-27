@@ -1,7 +1,7 @@
-import {RouteGroup} from "services-comun/modules/net/routes/group";
+import {RouteGroup} from "@mr/core-network/server/http/routes/group";
 import {Configuracion} from "../../utiles/config";
-import {IRouteGroup} from "services-comun/modules/net/routes/group/block";
-import {Conexion} from "services-comun/modules/net/conexion";
+import {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";
+import {Conexion} from "@mr/core-network/server/http/conexion";
 import {error} from "services-comun/modules/utiles/log";
 import {LogServicio} from "../../data/log/servicio";
 import {IListIN, IListOUT} from "services-comun-status/modules/services/logs/logs/servicios/list/interface";

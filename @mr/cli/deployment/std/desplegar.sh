@@ -61,6 +61,12 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     echo "Desplegando lambdas"
     sh "${BASETOP}/lambda.sh"
   fi
+  LAMBDAS=$(find . -maxdepth 1 -type f -name "lambda-*.sh")
+  for LAMBDA in ${LAMBDAS}; do
+    echo "Desplegando ${LAMBDA}"
+    sh "${LAMBDA}"
+  done
+
   confige ". | keys | .[]" | xargs -I '{}' -P 1 bash -c "parseCluster ${BASETOP} {}"
 
 else

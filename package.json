@@ -6,8 +6,10 @@
     "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
     "packd": "yarn mrpack devel -c",
     "packd-f": "yarn mrpack devel -c -f",
-    "g:packd": "TS_NODE_PROJECT=\"config/tsconfig.json\" yarn workspace @mr/cli rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"config/rspack.config.ts\"",
+    "g:packd": "yarn workspace @mr/core-dev rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"bundler/rspack/rspack.config.ts\"",
     "update": "yarn mrpack update",
+    "patch": "yarn workspace @mr/core-dev mrpack:patch",
+    "patch:apply": "yarn workspace @mr/core-dev mrpack:patch:apply",
     "services-comun": "yarn workspace services-comun",
     "services-comun-status": "yarn workspace services-comun-status",
     "logs": "yarn workspace logs",
@@ -22,16 +24,17 @@
   "workspaces": [
     "@mr/cli",
     "@mr/core/*",
-    "@mr/client/*",
+    "@mr/user/*",
     "cronjobs/*",
     "framework/*",
     "i18n",
+    "jobs/*",
     "packages/*",
     "scripts/*",
     "services/*",
     "statics/*"
   ],
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn@4.15.0",
   "bin": {
     "mrlang": "@mr/cli/bin/mrlang.js",
     "mrpack": "@mr/cli/bin/mrpack.js"

@@ -2,8 +2,10 @@ import process from "node:process";
 import {error, info, warning} from "../../utiles/log";
 import {createClient, type RedisClientType} from "redis";
 import {PromiseTimeout} from "../../utiles/promise";
-import {IPodInfo} from "../../utiles/config";
+import {IPodInfo} from "../../utiles/pod";
 import {readJSON} from "../../utiles/fs";
+import {md5} from "../../utiles/hash";
+import {random} from "../../utiles/random";
 
 interface IRedisBuild {
     pod: IPodInfo;
@@ -18,6 +20,7 @@ type IRedisHost = {
 
 export type IRedisOptions = {
     timeout?: number;
+    clientTimeout?: number;
 }
 
 type IRedis = IRedisHost;
@@ -97,7 +100,7 @@ export class Redis implements Disposable {
     public async get(key: string|string[], {shared}: QueryOptions = {}): Promise<Buffer|Buffer[]|null> {
         try {
             const cluster = await this.cluster;
-            const client = await PromiseTimeout(cluster.read, Redis.MAX_REDIS_GET_CLIENT_MS);
+            const client = await PromiseTimeout(cluster.read, this.options.clientTimeout||Redis.MAX_REDIS_GET_CLIENT_MS);
 
             if (Array.isArray(key)) {
                 const theKeys = key.map(k => this.buildKey(k, shared||false));
@@ -109,7 +112,6 @@ export class Redis implements Disposable {
                 return data.map(item => !!item ? Buffer.from(item as unknown as string, 'utf-8') : null) as Buffer[];
             } else {
                 const theKey = this.buildKey(key, shared||false);
-
                 const data: string|null = await PromiseTimeout(client.get(theKey), this.options.timeout||Redis.MAX_REDIS_GET_MS) as string|null;
                 if (data) {
                     return Buffer.from(data, 'utf-8');
@@ -125,7 +127,7 @@ export class Redis implements Disposable {
         try {
             const cluster = await this.cluster;
 
-            const client = await PromiseTimeout(cluster.primary, Redis.MAX_REDIS_GET_CLIENT_MS);
+            const client = await PromiseTimeout(cluster.primary, this.options.clientTimeout||Redis.MAX_REDIS_GET_CLIENT_MS);
 
             const theKey = this.buildKey(key, shared||false);
 
@@ -183,13 +185,94 @@ export class Redis implements Disposable {
         try {
             const cluster = await this.cluster;
 
-            const client = await PromiseTimeout(cluster.read, Redis.MAX_REDIS_GET_CLIENT_MS);
+            const client = await PromiseTimeout(cluster.read, this.options.clientTimeout||Redis.MAX_REDIS_GET_CLIENT_MS);
 
             return await client.keys(this.buildKey(pattern, shared??false));
         } catch (e) {
             warning(`Error buscando keys con patrón ${pattern} en REDIS`, e);
         }
         return [];
+    }
+
+    public async aquireLock(keys: string[], {shared, ttl}: SaveOptions = {}): Promise<string|null> {
+        if (keys.length === 0) {
+            return null;
+        }
+
+        try {
+            const cluster = await this.cluster;
+
+            const client = await PromiseTimeout(cluster.primary, Redis.MAX_REDIS_GET_CLIENT_MS);
+
+            const theKeys = keys.map(k => this.buildKey(k, shared ?? false));
+
+            const lockID = md5(`${Date.now()}-${random(8)}`);
+
+            const scriptLUA = `
+                local ttl = tonumber(ARGV[2])
+                for i, key in ipairs(KEYS) do
+                    if redis.call("exists", key) == 1 then
+                        return 0
+                    end
+                end
+                for i, key in ipairs(KEYS) do
+                    if ttl and ttl > 0 then
+                        redis.call("set", key, ARGV[1], "PX", tostring(ttl))
+                    else
+                        redis.call("set", key, ARGV[1])
+                    end
+                end
+                return 1
+            `;
+
+            const result = await client.eval(scriptLUA, {
+                keys: theKeys,
+                arguments: [
+                    lockID,
+                    ttl !== undefined && ttl>=0 ? `${ttl * 1000}` : '-1',
+                ],
+            });
+
+            return result === 1 ? lockID : '';
+        } catch (e) {
+            warning(`Error adquiriendo lock para keys ${keys.join(', ')} en REDIS`, e);
+        }
+        return null;
+    }
+
+    public async releaseLock(keys: string[], lockId: string, {shared}: QueryOptions = {}): Promise<void> {
+        if (keys.length === 0) {
+            return;
+        }
+
+        try {
+            const cluster = await this.cluster;
+
+            const client = await PromiseTimeout(cluster.primary, Redis.MAX_REDIS_GET_CLIENT_MS);
+
+            const theKeys = keys.map(k => this.buildKey(k, shared ?? false));
+
+            const scriptLUA = `
+                local released = 0
+                for i, key in ipairs(KEYS) do
+                    if redis.call("get", key) == ARGV[1] then
+                        redis.call("del", key)
+                        released = released + 1
+                    end
+                end
+                return released
+            `;
+
+            await client.eval(scriptLUA, {
+                keys: theKeys,
+                arguments: [
+                    lockId,
+                ],
+            });
+        } catch (e) {
+            warning(`Error liberando lock para keys ${keys.join(', ')} en REDIS`, e);
+        }
+
     }
 
     private buildKey(key: string, shared: boolean) {

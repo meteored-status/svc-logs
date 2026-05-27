@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: aa13679ae61f0fc0b6ac1a49cccaef15
+ */
+
 import {createHash} from "node:crypto";
 
 import {mkdir, safeWrite} from "services-comun/modules/utiles/fs";

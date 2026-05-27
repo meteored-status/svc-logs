@@ -1,5 +1,19 @@
 const {spawn} = require("child_process");
 
+// Suprimir DEP0040 (módulo built-in `punycode` deprecado en Node 24).
+// Origen: dd-trace y @google-cloud/storage instrumentan / importan node-fetch@2.7.0,
+// que carga whatwg-url@5.0.0 → tr46@0.0.3 → require('punycode').
+// Actualizar tr46@0.0.3 requeriría romper node-fetch@2.x (dependencia de gaxios/teeny-request).
+{
+    const _emit = process.emit.bind(process);
+    process.emit = function(event, ...args) {
+        if (event === "warning" && args[0]?.code === "DEP0040") {
+            return true;
+        }
+        return _emit(event, ...args);
+    };
+}
+
 class Deferred {
     constructor() {
         this.promise = new Promise((resolve, reject) => {

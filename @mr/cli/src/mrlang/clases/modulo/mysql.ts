@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 9cf760a3bb6b755671c8fb983165eb07
+ */
+
 import {readDir, unlink} from "services-comun/modules/utiles/fs";
 
 import {Colors} from "../../../mrpack/clases/colors";

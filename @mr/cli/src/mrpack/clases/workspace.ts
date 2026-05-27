@@ -1,11 +1,29 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 2db8317300b03a751e0b70d191bcd9d7
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 import chokidar, {type FSWatcher} from "chokidar";
 
+/**
+ * Datos básicos de un workspace del monorepo.
+ *
+ * @property nombre - Nombre del workspace (directorio).
+ * @property path   - Subdirectorio relativo a `root` donde se aloja el workspace (p.ej. `"services"`). Opcional.
+ * @property root   - Raíz absoluta del monorepo.
+ */
 export interface IWorkspace {
     nombre: string;
     path?: string;
     root: string;
 }
 
+/**
+ * Clase base para cualquier workspace del monorepo.
+ * Gestiona el watcher de ficheros y propaga los eventos de cambio a sus workspaces dependientes.
+ */
 export class Workspace {
     /* STATIC */
 
@@ -27,10 +45,20 @@ export class Workspace {
         this.iniciado = false;
     }
 
+    /**
+     * Registra un workspace dependiente que será notificado cuando este workspace cambie.
+     *
+     * @param ws - Workspace hijo a añadir.
+     */
     public addHijo(ws: Workspace): void {
         this.hijos.push(ws);
     }
 
+    /**
+     * Inicia el workspace si aún no está iniciado: ejecuta `run()` y arranca el watcher.
+     * Llamadas posteriores a un workspace ya iniciado son no-ops.
+     *
+     */
     public async init(): Promise<void> {
         if (this.iniciado) {
             return;
@@ -62,7 +90,12 @@ export class Workspace {
         }
     }
 
+    /**
+     * Tarea principal del workspace que se ejecuta al iniciarlo y tras cada cambio detectado.
+     * Las subclases deben sobreescribir este método para implementar la compilación.
+     *
+     */
     protected async run(): Promise<void> {
-
+        // compilar
     }
 }

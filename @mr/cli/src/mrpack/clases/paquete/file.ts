@@ -1,13 +1,70 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 16b32d14c21f1e828c5476f1be3f8cc3
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.15+38-josantoniojimnez
+ */
+
 import type JSZip from "jszip";
 import path from "node:path";
-import {Colors} from "services-comun/modules/utiles/colors";
 
 import {Fecha} from "services-comun/modules/utiles/fecha";
-import {isFile, md5File, mkdir, readFile, readFileString, safeWrite, unlink} from "services-comun/modules/utiles/fs";
+import {isFile, mkdir, readFile, readFileString, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
 import {PaqueteDirectory} from "./directory";
 import merge3 from "../../utiles/merge";
+
+const PACKAGE_JSON_PRIORIDAD = ["name", "description", "author", "scripts", "bin", "config"];
+
+/**
+ * Patrón que identifica el bloque de autoría al inicio de un fichero `.ts`.
+ * Se excluye del cálculo del hash para que actualizar el comentario
+ * (fecha, autor) no genere un hash diferente y evitar así falsos positivos en
+ * los pushes sucesivos.
+ */
+const PATRON_AUTORIA = /^\/\*\*\n \* Editor: [^\n]*\n \* Fecha: [^\n]*\n(?: \* Hash: [^\n]*\n)?(?: \* Versión: [^\n]*\n)?(?: \* Anterior: [^\n]*\n)? \*\/\n\n/;
+
+const PATRON_VERSION_BLOQUE = /^ \* Versión: ([^\n]+)$/m;
+
+/**
+ * Elimina todos los bloques de autoría consecutivos del inicio del contenido.
+ * Puede haber más de uno si un push anterior inyectó un bloque encima de otro
+ * que aún no había sido limpiado.
+ *
+ * @param contenido - Texto completo del fichero `.ts`.
+ * @returns Texto sin los bloques de autoría iniciales.
+ */
+function stripAutoria(contenido: string): string {
+    let resultado = contenido;
+    while (PATRON_AUTORIA.test(resultado)) {
+        resultado = resultado.replace(PATRON_AUTORIA, "");
+    }
+    return resultado;
+}
+
+function normalizarJSON(obj: unknown, prioridad: string[] = []): unknown {
+    if (Array.isArray(obj)) {
+        return obj.map(item => normalizarJSON(item));
+    }
+    if (obj !== null && typeof obj === "object") {
+        const entrada = obj as Record<string, unknown>;
+        const resultado: Record<string, unknown> = {};
+        for (const key of prioridad) {
+            if (key in entrada) {
+                resultado[key] = normalizarJSON(entrada[key]);
+            }
+        }
+        for (const key of Object.keys(entrada).sort()) {
+            if (!prioridad.includes(key)) {
+                resultado[key] = normalizarJSON(entrada[key]);
+            }
+        }
+        return resultado;
+    }
+    return obj;
+}
 
 export interface IPaqueteFile {
     autor: string;
@@ -19,6 +76,22 @@ export interface PaqueteFileFiles {
     files: {[key: string]: JSZip.JSZipObject};
 }
 
+/**
+ * Tracker mutable que fluye por el árbol de ficheros durante `actualizarVersion`.
+ *
+ * @property hayConflictos - Se pone a `true` en cuanto algún fichero produce conflicto en el merge 3-way.
+ * @property entradas      - Una entrada por cada fichero afectado por la actualización (borrado, sobreescrito o mezclado).
+ */
+export interface IUpdateTracker {
+    hayConflictos: boolean;
+    entradas: {archivo: string; estado: "ok" | "error"}[];
+}
+
+/**
+ * Representa un fichero dentro de un paquete mrpack.
+ * Gestiona el cálculo de hash, la inyección de bloques de autoría,
+ * la mezcla 3-way con diff3 y la aplicación de actualizaciones desde ZIP.
+ */
 export class PaqueteFile {
     /* STATIC */
     public static get DEFECTO(): IPaqueteFile {
@@ -39,6 +112,7 @@ export class PaqueteFile {
     public hash: string;
 
     public readonly filename: string;
+    public hashCambio: boolean;
 
     protected constructor(public readonly nombre: string, protected readonly path: string, protected data: IPaqueteFile) {
         this.autor = data.autor;
@@ -46,6 +120,7 @@ export class PaqueteFile {
         this.hash = data.hash;
 
         this.filename = this.path.length>0 ? `${this.path}/${this.nombre}` : this.nombre;
+        this.hashCambio = false;
     }
 
     public toJSON(): IPaqueteFile {
@@ -60,19 +135,66 @@ export class PaqueteFile {
         return PaqueteFile.build(this.nombre, this.path, this.toJSON());
     }
 
+    /**
+     * Recalcula el hash del fichero a partir de los hashes de su contenido.
+     * Actualiza `autor`, `fecha` y `hashCambio` si el hash cambia.
+     *
+     * @param hashes - Hashes de los componentes (contenido, subhashes…).
+     * @param autor  - Autor que se registra si el hash cambia.
+     * @returns `true` si el hash ha cambiado.
+     */
     protected recalcularHash(hashes: string[], autor: string): boolean {
         const hash = md5([this.filename, ...hashes].join(""));
-        if (hash==this.hash) {
+        if (hash===this.hash) {
             return false;
         }
 
         this.autor = autor;
         this.fecha = new Date();
         this.hash = hash;
+        this.hashCambio = true;
 
         return true;
     }
 
+    /**
+     * Inyecta el bloque de autoría al inicio del fichero `.ts` si su hash ha cambiado.
+     * El hash se calcula sobre el cuerpo sin el bloque anterior, por lo que es estable.
+     *
+     * @param basedir  - Raíz absoluta del monorepo.
+     * @param autor    - Nombre del autor a estampar.
+     * @param version  - Versión del paquete a registrar en el bloque.
+     * @returns Hash actualizado del fichero.
+     */
+    public async inyectarAutoria(basedir: string, autor: string, version: string): Promise<string> {
+        if (!this.nombre.endsWith(".ts") || !this.hashCambio) {
+            return this.hash;
+        }
+
+        const contenido = await readFileString(`${basedir}/${this.filename}`);
+        // Extraer versión anterior del bloque de autoría actual (si existe)
+        const matchVersion = PATRON_VERSION_BLOQUE.exec(contenido);
+        const versionAnterior = matchVersion?.[1];
+        // Extraemos el cuerpo sin TODOS los bloques de autoría anteriores (si los hubiera)
+        const cuerpo = stripAutoria(contenido);
+        const hashCuerpo = md5(cuerpo);
+        const lineaAnterior = versionAnterior !== undefined ? ` * Anterior: ${versionAnterior}\n` : "";
+        const comentario = `/**\n * Editor: ${autor}\n * Fecha: ${new Date().toUTCString()}\n * Hash: ${hashCuerpo}\n * Versión: ${version}\n${lineaAnterior} */\n\n`;
+        const nuevo = comentario + cuerpo;
+        await safeWrite(`${basedir}/${this.filename}`, nuevo, true);
+        // El hash se calcula sobre el CUERPO (sin el bloque de autoría) para que sea
+        // coherente con lo que calcula update() y no genere falsos positivos en el
+        // siguiente push por el mero hecho de que la fecha del comentario haya cambiado.
+        this.hash = md5([this.filename, hashCuerpo].join(""));
+
+        return this.hash;
+    }
+
+    /**
+     * Convierte este fichero en un `PaqueteDirectory` vacío (útil cuando el tipo cambia en disco).
+     *
+     * @returns Nueva instancia de `PaqueteDirectory` con el mismo nombre y ruta.
+     */
     public toDirectory(): PaqueteDirectory {
         return PaqueteDirectory.build(this.nombre, this.path, {
             autor: this.autor,
@@ -82,97 +204,147 @@ export class PaqueteFile {
         });
     }
 
+    /**
+     * Crea los directorios intermedios necesarios para alojar este fichero.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     */
     public async crearPath(basedir: string): Promise<void> {
         await mkdir(path.dirname(`${basedir}/${this.filename}`), true);
     }
 
+    /**
+     * Comprueba si este fichero existe físicamente en disco.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @returns `true` si el fichero existe.
+     */
     public async isFile(basedir: string): Promise<boolean> {
         return await isFile(`${basedir}/${this.filename}`);
     }
 
+    /**
+     * Lee y devuelve el contenido del fichero en disco.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @returns Contenido del fichero como cadena de texto.
+     */
     public async getContents(basedir: string): Promise<string> {
         return readFileString(`${basedir}/${this.filename}`);
     }
 
+    /**
+     * Recalcula el hash del fichero leyendo su contenido actual en disco.
+     * Para ficheros `.ts` ignora el bloque de autoría antes de calcular el hash.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @param autor   - Autor que se registra si el hash cambia.
+     * @returns Hash actualizado.
+     */
     public async update(basedir: string, autor: string): Promise<string> {
-        this.recalcularHash([await md5File(`${basedir}/${this.filename}`)], autor);
+        let contenido = await readFileString(`${basedir}/${this.filename}`).catch(() => "");
+        if (this.nombre.endsWith(".ts")) {
+            // Excluir todos los bloques de autoría del cálculo del hash para que sea
+            // idéntico al hash que almacena inyectarAutoria (basado en el cuerpo real).
+            contenido = stripAutoria(contenido);
+        }
+        this.recalcularHash([md5(contenido)], autor);
 
         return this.hash;
     }
 
+    /**
+     * Añade el fichero al ZIP de empaquetado con máxima compresión DEFLATE.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @param zip     - Instancia JSZip donde se añade el fichero.
+     */
     public async pack(basedir: string, zip: JSZip): Promise<void> {
         zip.file(this.filename, readFile(`${basedir}/${this.filename}`), {binary: true, compression: "DEFLATE", compressionOptions: {level: 9,}, createFolders: true});
     }
 
-    public async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteFileFiles, nuevo: PaqueteFileFiles, bin: boolean): Promise<boolean> {
-        if (antiguo.status==undefined) {
-            if (nuevo.status==undefined && bin) {
+    /**
+     * Aplica los cambios de la nueva versión sobre el fichero local usando diff3.
+     * Maneja los casos: fichero nuevo, eliminar, sobreescribir y mezclar 3-way.
+     *
+     * @param basedir  - Raíz absoluta del monorepo.
+     * @param padre    - Directorio padre (para eliminar la referencia si se borra el fichero).
+     * @param antiguo  - Estado publicado anterior (base del diff3).
+     * @param nuevo    - Estado publicado nuevo (target del diff3).
+     * @param bin      - Si `true`, el fichero pertenece a un directorio binario: no se mezcla.
+     * @param tracker  - Tracker mutable donde se registran los ficheros afectados y conflictos.
+     * @returns `true` si el fichero fue modificado.
+     */
+    public async checkCambios(basedir: string, padre: PaqueteDirectory, antiguo: PaqueteFileFiles, nuevo: PaqueteFileFiles, bin: boolean, tracker?: IUpdateTracker): Promise<boolean> {
+        if (antiguo.status===undefined) {
+            if (nuevo.status===undefined && bin) {
                 // archivo nuevo en directorio binario => eliminar
-                console.log(" - Borrando        ", Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename));
                 await unlink(`${basedir}/${this.filename}`);
                 padre.deleteFile(this);
-
+                tracker?.entradas.push({archivo: this.filename, estado: "ok"});
                 return true;
             }
-            if (nuevo.status==undefined || this.hash==nuevo.status.hash) {
-                // archivo nuevo => mantener
-                // archivo nuevo y sin cambios respecto al nuevo => mantener
-                // console.log("Ignorando cambios archivo 1", this.filename);
+            if (nuevo.status===undefined || this.hash==nuevo.status.hash) {
                 return false;
             }
 
-            console.log(" - Mezclando       ", this.filename);
-            this.recalcularHash([await this.mezclar(basedir, nuevo.files[this.filename])], nuevo.status.autor);
+            const mezcla = await this.mezclar(basedir, nuevo.files[this.filename]);
+            if (mezcla.conflict && tracker) tracker.hayConflictos = true;
+            tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok"});
+            this.recalcularHash([mezcla.hash], nuevo.status.autor);
 
             return true;
         }
 
-        if (nuevo.status==undefined) {
-            if (this.hash==antiguo.status.hash) {
+        if (nuevo.status===undefined) {
+            if (this.hash===antiguo.status.hash) {
                 // archivo antiguo y sin cambios que se debe borrar => borrar
-                console.log(" - Borrando        ", Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename));
                 await unlink(`${basedir}/${this.filename}`);
                 padre.deleteFile(this);
-
+                tracker?.entradas.push({archivo: this.filename, estado: "ok"});
                 return true;
             }
 
-            // archivo antiguo y con cambios que se debe borrar => ver que hacer => de momento lo mantenemos
-            console.log(" - Manteniendo     ", Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename));
+            // archivo antiguo y con cambios que se debe borrar => mantener por ahora
+            tracker?.entradas.push({archivo: this.filename, estado: "ok"});
             return false;
         }
 
-        if (antiguo.status.hash==nuevo.status.hash) {
-            // el antiguo no se ha cambiado respecto del nuevo => mantener
-            // console.log("Ignorando cambios archivo 2", this.filename);
+        if (antiguo.status.hash===nuevo.status.hash) {
             return false;
         }
 
-        if (antiguo.status.hash==this.hash) {
+        if (antiguo.status.hash===this.hash) {
             // el antiguo no se ha cambiado respecto del actual => sobreescribir
-            console.log(" - Sobreescribiendo", Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename));
-
             await this.crearPath(basedir);
             await safeWrite(`${basedir}/${this.filename}`, await nuevo.files[this.filename].async("text"), true);
             this.autor = nuevo.status.autor;
             this.fecha = nuevo.status.fecha;
             this.hash = nuevo.status.hash;
+            tracker?.entradas.push({archivo: this.filename, estado: "ok"});
 
             return true;
         }
 
-        if (antiguo.status.hash!=this.hash && nuevo.status.hash!=this.hash) {
+        if (antiguo.status.hash!==this.hash && nuevo.status.hash!==this.hash) {
             // el antiguo, el actual y el nuevo son diferentes => mezclar
-            console.log(" - Mezclando       ", Colors.colorize([Colors.FgGreen, Colors.Bright], this.filename));
-            this.recalcularHash([await this.mezclar(basedir, nuevo.files[this.filename], !bin ? antiguo.files[this.filename] : undefined)], nuevo.status.autor);
+            const mezcla = await this.mezclar(basedir, nuevo.files[this.filename], !bin ? antiguo.files[this.filename] : undefined);
+            if (mezcla.conflict && tracker) tracker.hayConflictos = true;
+            tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok"});
+            this.recalcularHash([mezcla.hash], nuevo.status.autor);
 
             return true;
         }
 
-        // console.log("Ignorando cambios archivo 3", this.filename);
         return false;
     }
 
+    /**
+     * Sobreescribe el fichero local con el contenido de la versión indicada.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @param nuevo   - Estado publicado cuyo contenido se restaura.
+     */
     public async resetCambios(basedir: string, nuevo: PaqueteFileFiles): Promise<void> {
         const status = nuevo.status!;
 
@@ -181,10 +353,18 @@ export class PaqueteFile {
         this.autor = status.autor;
     }
 
-    private async mezclar(basedir: string, nuevo: JSZip.JSZipObject, antiguo?: JSZip.JSZipObject): Promise<string> {
+    private preMezcla(texto: string): string {
+        if (this.filename !== "package.json") {
+            return texto;
+        }
+        return JSON.stringify(normalizarJSON(JSON.parse(texto), PACKAGE_JSON_PRIORIDAD), null, 2) + "\n";
+    }
+
+    private async mezclar(basedir: string, nuevo: JSZip.JSZipObject, antiguo?: JSZip.JSZipObject): Promise<{hash: string; conflict: boolean}> {
         let mezcla: string;
-        // el package.json no lo mezclamos, lo sobreescribimos de momento
-        if (this.filename=="package.json" || antiguo==undefined || !await isFile(`${basedir}/${this.filename}`)) {
+        let conflict = false;
+
+        if (antiguo===undefined || !await isFile(`${basedir}/${this.filename}`)) {
             mezcla = await nuevo.async("text");
         } else {
             const [a, b, c] = await Promise.all([
@@ -193,12 +373,18 @@ export class PaqueteFile {
                 nuevo.async("text"),
             ]);
 
-            mezcla = merge3(a, b, c, this.filename);
+            const textoA = this.preMezcla(a);
+            const textoB = this.preMezcla(b);
+            const textoC = this.preMezcla(c);
+
+            const resultado = merge3(textoA, textoB, textoC, this.filename);
+            mezcla = resultado.text;
+            conflict = resultado.conflict;
         }
 
         await this.crearPath(basedir);
         await safeWrite(`${basedir}/${this.filename}`, mezcla, true);
 
-        return md5(mezcla);
+        return {hash: md5(mezcla), conflict};
     }
 }

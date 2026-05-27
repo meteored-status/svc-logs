@@ -1,4 +1,10 @@
-import {ManifestDeploymentKind} from "@mr/cli/manifest/deployment";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 52ddccfda198bc57b4199b67a8bcb669
+ */
+
+import {ManifestDeploymentKind} from "@mr/core-dev/manifest/deployment";
 
 interface IApp {
     type: ManifestDeploymentKind;

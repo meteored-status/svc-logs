@@ -1,5 +1,13 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: e681bfeafb62261502a8e93dba684122
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 import {type IModulo, type IModuloConfig, Modulo} from "../modulo";
 import {Colors} from "../clases/colors";
+import {run} from "../clases/deploy";
 
 export interface IDeployConfig extends IModuloConfig {
     options: IModuloConfig["options"] & {
@@ -11,6 +19,9 @@ export interface IDeploy extends IModulo {
     env?: string;
 }
 
+/**
+ * Módulo CLI `mrpack deploy`: compila el proyecto para producción o test.
+ */
 export class ModuloDeploy<T extends IDeployConfig> extends Modulo<T> {
     /* STATIC */
     protected static override OPTIONS: IDeployConfig = {
@@ -31,12 +42,16 @@ export class ModuloDeploy<T extends IDeployConfig> extends Modulo<T> {
         super (config);
     }
 
+    /**
+     * Lanza el proceso de compilación para el entorno indicado, o muestra la ayuda.
+     *
+     * @param config - Opciones del módulo (`help`, `env`).
+     */
     protected async parseParams(config: IDeploy): Promise<void> {
         if (config.help || config.env==undefined || !["produccion", "test"].includes(config.env)) {
             this.mostrarAyuda();
         } else {
-            const {Deploy} = await import(/* webpackChunkName: "mrpack/devel" */ "../clases/deploy");
-            Deploy.run(this.root, config.env);
+            run(this.root, config.env);
         }
     }
 

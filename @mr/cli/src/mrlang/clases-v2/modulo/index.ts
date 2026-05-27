@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 76b7a6428a3f362c0b3207852fe2d909
+ */
+
 export interface IModulo {
     id: string;
     version: number;

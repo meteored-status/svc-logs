@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: e49b2ee46511ed9efe375f859c826959
+ */
+
 import {Colors} from "services-comun/modules/utiles/colors";
 import {isDir, isFile, mkdir, readDir, readJSON, rmdir, safeWrite} from "services-comun/modules/utiles/fs";
 

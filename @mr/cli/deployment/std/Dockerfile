@@ -6,6 +6,7 @@ ARG DD_GIT_COMMIT_SHA
 ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
+RUN apk add --no-cache tzdata
 RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
 COPY ./.yarn/plugins ./.yarn/plugins
 COPY ./.yarn/releases ./.yarn/releases
@@ -13,6 +14,7 @@ COPY ./.yarnrc.yml ./
 COPY ./${RUTA}/${WS} ./${RUTA}/${WS}
 COPY ./package.json ./
 COPY ./yarn.lock ./
+ENV NODE_ENV=production
 RUN yarn workspaces focus --production ${WS}
 
 FROM ${BASE_IMAGE} AS app
@@ -21,6 +23,7 @@ ARG DD_GIT_COMMIT_SHA
 ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
+RUN apk add --no-cache tzdata
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
 ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
 ENV NODE_ENV=production

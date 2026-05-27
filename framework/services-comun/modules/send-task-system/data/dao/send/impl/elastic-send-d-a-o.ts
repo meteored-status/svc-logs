@@ -1,3 +1,10 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 27 May 2026 06:28:30 GMT
+ * Hash: e83caf074d0d684489b52e7e5d2c4d09
+ * Versión: 2026.5.27+1-davidmartinezmoya
+ */
+
 import {SendDAO} from "../send-d-a-o";
 import {Elasticsearch} from "../../../../../elasticsearch";
 import {Send, TSend, TStatus} from "../../../model/send";
@@ -24,16 +31,6 @@ export class ElasticSendDAO extends SendDAO {
     public constructor(private readonly config: ElasticSearch, private readonly client: Elasticsearch) {
         super();
     }
-
-    /* STATIC */
-    // public static getAlias(config: ElasticSearch): string {
-    //     const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
-    //     return `${config.sendIndex}-${suffix}`;
-    // }
-    //
-    // public static getIndex(config: ElasticSearch): string {
-    //     return `${this.getAlias(config)}-${Fecha.generarMarcaMes()}`;
-    // }
 
     public override async save(send: Send): Promise<Send> {
         if (send.metadata.id && send.metadata.index) {

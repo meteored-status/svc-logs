@@ -1,3 +1,10 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 982ac47a6fffe64da6b2ac995cb93671
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 import {readJSON} from "services-comun/modules/utiles/fs";
 import {Colors} from "./clases/colors";
 import {IPackageJson} from "./clases/packagejson";
@@ -6,7 +13,6 @@ import {ModuloDevel} from "./modulos/devel";
 import {ModuloDeploy} from "./modulos/deploy";
 import {ModuloInit} from "./modulos/init";
 import {ModuloUpdate} from "./modulos/update";
-import {ModuloUpload} from "./modulos/upload";
 import {ModuloFramework} from "./modulos/framework";
 import {ModuloAutoDoc} from "./modulos/auto-doc";
 
@@ -19,6 +25,10 @@ export interface IMRPack extends IModulo {
 
 }
 
+/**
+ * Punto de entrada del CLI `mrpack`.
+ * Muestra la versión y delega en el submódulo indicado como primer positional.
+ */
 export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
     /* STATIC */
     protected static override OPTIONS: IMRPackConfig = {
@@ -29,15 +39,14 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
         strict: false,
     };
 
-    private static MODULOS = [
+    private static readonly MODULOS = [
         "autodoc",
         "devel",
         "deploy",
         "framework",
         "init",
         "update",
-        "upload",
-    ];
+    ] as const;
 
     public static override run(): void {
         super.run(new this(this.OPTIONS));
@@ -48,6 +57,10 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
         super(config);
     }
 
+    /**
+     * Muestra la versión del CLI y delega en el ciclo de parseo de la clase base.
+     *
+     */
     protected override async run(): Promise<void> {
         const {version} = await readJSON<IPackageJson>(`${this.root}/@mr/cli/package.json`);
         const [v, autor] = version!.split("-");
@@ -70,14 +83,25 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
         await super.run();
     }
 
+    /**
+     * Valida que se haya indicado exactamente un submódulo válido; muestra la ayuda si no.
+     *
+     * @param positionals - Argumentos posicionales (se espera uno: el nombre del submódulo).
+     */
     protected override async parsePositionals(positionals: string[]): Promise<void> {
-        if (positionals.length!=1 || !MRPack.MODULOS.includes(positionals[0])) {
+        if (positionals.length!=1 || !(MRPack.MODULOS as readonly string[]).includes(positionals[0])) {
             this.mostrarAyuda();
 
             return Promise.reject();
         }
     }
 
+    /**
+     * Delega la ejecución en el submódulo indicado como primer positional.
+     *
+     * @param config      - Opciones globales del CLI (actualmente solo `help`).
+     * @param positionals - Lista de argumentos posicionales; el primero es el nombre del submódulo.
+     */
     protected async parseParams(config: IMRPack, positionals: string[]): Promise<void> {
         switch (positionals[0]) {
             case "autodoc":
@@ -98,13 +122,6 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
             case "update":
                 ModuloUpdate.run();
                 break;
-            case "upload":
-                ModuloUpload.run();
-                break;
-            default:
-                this.mostrarAyuda();
-
-                return Promise.reject();
         }
     }
 
@@ -124,7 +141,6 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
                     console.log(`${Colors.colorize([Colors.FgBlue], "framework")}: Operaciones sobre los frameworks`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "init")}:      Inicializa la configuración del proyecto`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "update")}:    Actualiza las librerías`);
-                    console.log(`${Colors.colorize([Colors.FgBlue], "upload")}:    Sube los frameworks para compartirlos entre proyectos`);
                 console.groupEnd();
                 console.log(`${Colors.colorize([Colors.FgRed], "Solo puede indicarse uno")}`);
             console.groupEnd();

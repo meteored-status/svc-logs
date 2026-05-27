@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 48ace921c0b4032dfaf9f7721f49921a
+ */
+
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 import {type IModuloConfig, Modulo as ModuloBase} from "../mrpack/modulo";

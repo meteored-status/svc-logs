@@ -1,4 +1,11 @@
-import type {IManifestDeploymentKustomize} from "@mr/cli/manifest/deployment/kustomize";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 0303b8083ea65711d23098e45b7d7dd3
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
+import type {IManifestDeploymentKustomize} from "@mr/core-dev/manifest/deployment/kustomize";
 
 import {type IManifestLegacy, RuntimeLegacy} from "../legacy";
 
@@ -11,6 +18,12 @@ class ManifestWorkspaceDeploymentKustomizeLoader {
         };
     }
 
+    /**
+     * Normaliza y valida la configuración de kustomize de un workspace.
+     *
+     * @param kustomize - Datos parciales de la configuración de kustomize.
+     * @returns Configuración de kustomize completa y normalizada.
+     */
     public check(kustomize: Partial<IManifestDeploymentKustomize> = {}): IManifestDeploymentKustomize {
         const data = this.default;
         if (kustomize.name) {
@@ -43,6 +56,13 @@ class ManifestWorkspaceDeploymentKustomizeLoader {
         return data;
     }
 
+    /**
+     * Migra la configuración de kustomize desde el formato legacy.
+     *
+     * @param config - Datos en formato legacy a migrar.
+     * @param name   - Nombre del recurso kustomize.
+     * @returns Configuración de kustomize migrada al formato actual.
+     */
     public fromLegacy(config: Partial<IManifestLegacy>, name: string): IManifestDeploymentKustomize {
         let dir: string | undefined;
 

@@ -1,9 +1,17 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 27 May 2026 06:28:30 GMT
+ * Hash: 532959ad6618a645a6bd2b02ffdaac73
+ * Versión: 2026.5.27+1-davidmartinezmoya
+ */
+
 import {error, info} from "../../utiles/log";
 import {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {PromiseDelayed} from "../../utiles/promise";
 import {SendTaskController} from "../controller/send-task-controller";
+import {PendingSendTask} from "../data/model/pending-send-task";
 
-export type ControllerBuilder = (sendTaskId: number, factory: IDAOFactory) => SendTaskController;
+export type ControllerBuilder = (sendTask: PendingSendTask, factory: IDAOFactory) => SendTaskController;
 
 export class PendingSendTaskListener {
     /* STATIC */
@@ -29,7 +37,7 @@ export class PendingSendTaskListener {
             // Procesar el envío pendiente en segundo plano
             PromiseDelayed().then(async () => {
                 try {
-                    await this.controllerBuilder(pendingSendTask.id, this.factory).run();
+                    await this.controllerBuilder(pendingSendTask, this.factory).run();
                     pendingSendTask.complete();
                 } catch (e) {
                     error('Error processing pending send task', e);

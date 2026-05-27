@@ -1,4 +1,11 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: a1450cbd553b8899d416760d8491689d
+ */
+
 import {pascalCase} from "../util/case";
+import {langModulePath} from "./translation/common";
 
 export class Definition {
     /* STATIC */
@@ -45,19 +52,17 @@ export class Definition {
         return `${this.dir()}/index.ts`;
     }
 
-    public content(): string {
+    public index(): string {
         const lines: string[] = [];
 
         // Importamos utilidades
         lines.push(`import {getLang} from "services-comun/modules/traduccion/v2/util/lang";`);
         lines.push('');
-
         lines.push(`import {TranslationSet} from "services-comun/modules/traduccion/v2/translation-set";`);
-        lines.push(`import {MapExport, TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
         lines.push('');
 
         if (Object.entries(this._recordsDefinitions).length) {
-            lines.push(`import {ITranslationMapKeys} from "services-comun/modules/traduccion/v2/translation-map";`);
+            lines.push(`import {TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
             lines.push('');
         }
 
@@ -77,13 +82,7 @@ export class Definition {
 
         if (Object.entries(this._recordsDefinitions).length) {
             Object.entries(this._recordsDefinitions).forEach(([name, keys]) => {
-                lines.push(`export interface ${name}Record extends ITranslationMapKeys {`);
-                keys.forEach(key => {
-                    lines.push(`    ${key}?: string;`);
-                });
-                lines.push('}');
-
-                lines.push(`export type ${name}Keys = keyof ${name}Record;`);
+                lines.push(`export type ${name}Keys = ${keys.map(k => `"${k}"`).join(' | ')};`);
             });
 
             lines.push('');
@@ -99,6 +98,39 @@ export class Definition {
         lines.push('');
 
         lines.push(`export default (lang: string, defecto?: string): Promise<${pascalCase(this._name)}> => import(/* webpackChunkName: "i18n/langs/[request]${this._dir}/${this._name}" */ \`i18n/.src/langs/\${getLang(IDIOMAS, lang, defecto)}${this._dir}/${this._name}\`).then(m => m.default);`);
+
+        return lines.join('\n');
+    }
+
+    public bundle(): string {
+        const lines: string[] = [];
+
+        // Importamos utilidades
+        lines.push(`import {getLang} from "services-comun/modules/traduccion/v2/util/lang";`);
+        lines.push('');
+
+        // Imports
+        lines.push(`import {${pascalCase(this._name)}} from "./index";`);
+        lines.push('');
+
+        this._langs.map(lang => lang.replace('-', '')).forEach(lang => {
+            lines.push(`import ${lang} from "${langModulePath(this._dir, this._name, lang)}";`);
+        });
+        lines.push('');
+
+        // Idiomas disponibles
+        lines.push(`const IDIOMAS: string[] = [${this._langs.map(lang => `'${lang.replace('-', '')}'`).join(', ')}] as const;`);
+        lines.push(`type TLang = typeof IDIOMAS[number];`)
+        lines.push('');
+
+        lines.push(`const langs: Record<TLang, ${pascalCase(this._name)}> = {`);
+        this._langs.map(lang => lang.replace('-', '')).forEach(lang => {
+            lines.push(`    ${lang}: ${lang},`);
+        });
+        lines.push(`};`);
+        lines.push('');
+
+        lines.push(`export default (lang: string, defecto?: string): ${pascalCase(this._name)} => langs[getLang(IDIOMAS, lang, defecto)];`)
 
         return lines.join('\n');
     }

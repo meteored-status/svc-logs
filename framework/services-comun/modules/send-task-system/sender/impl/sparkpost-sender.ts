@@ -1,3 +1,10 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 27 May 2026 06:28:30 GMT
+ * Hash: 90fa1a6d3cdcfe73ab5bbc2cb2efe8c8
+ * Versión: 2026.5.27+1-davidmartinezmoya
+ */
+
 import {Sender} from "../sender";
 import {SparkpostSend} from "../../data/model/sparkpost-send";
 import {SparkPostManager} from "../../../email/managers/spark_post";
@@ -19,11 +26,7 @@ export class SparkpostSender extends Sender<TransmissionID | null> {
     }
 
     public override async run(): Promise<TransmissionID | null> {
-        let email = this.send.email;
-
-        if (!email && this.send.email) {
-            email = this.send.email;
-        }
+        const email = this.send.email;
 
         if (!email) {
             error(`No se ha proporcionado un email para enviar.`);
@@ -31,7 +34,7 @@ export class SparkpostSender extends Sender<TransmissionID | null> {
             return null;
         }
 
-        const sparkpost = new SparkPostManager();
+        const sparkpost = await SparkPostManager.build();
 
         let transmissionId: string | undefined = undefined;
         let contador: number = 0;

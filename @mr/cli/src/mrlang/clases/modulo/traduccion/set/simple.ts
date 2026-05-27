@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 32a19b3c4492e9e354f4f9852647d159
+ */
+
 interface ITemplate {
     id: string;
     modulo: string;

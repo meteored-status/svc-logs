@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 682e25bc46f34c7a4705720022f5740c
+ */
+
 import {JSONItem, JSONValue, JSONValuePlural, JSONValueSingular} from "../../data";
 import {Definition} from "../definition";
 import {definitionModulePath, LANG_REGEXPS} from "./common";
@@ -64,11 +70,10 @@ export default (lang: string, value: JSONValue, item: JSONItem, module: ModuloJS
             fileLines.push('');
 
             if (item.params && item.params.length > 0) {
-                fileLines.push(`const pluralValue = new PluralValue<${paramDefinition}>(values, ${langKey});`);
+                fileLines.push(`const pluralValue = new PluralValue<${paramDefinition}>(values, ${langKey}, ["${item.params.join("\", \"")}"]);`);
                 fileLines.push('');
                 fileLines.push(`const literal = new Literal<${paramDefinition}>(pluralValue);`);
-                fileLines.push(`export default literal.render;`);
-
+                fileLines.push(`export default (params: Partial<${paramDefinition}>) => literal.render(params);`);
                 definition.addParamDefinition(paramDefinition, item.params);
             } else {
                 fileLines.push(`const pluralValue = new PluralValue(values, ${langKey});`);

@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: a15d62861a26e124f51d5edbf867aece
+ */
+
 export default `
 schema-version: v1
 rulesets:

@@ -1,0 +1,10 @@
+{
+  "extends": "@tsconfig/node24/tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "module": "node20",
+    "target": "es6",
+    "types": ["node", "@mr/core-dev"],
+    "esModuleInterop": true
+  }
+}

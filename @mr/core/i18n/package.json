@@ -1,0 +1,14 @@
+{
+  "name": "@mr/core-i18n",
+  "version": "2026.5.15+5-josantoniojimnez",
+  "description": "Utilidades relacionadas con las traducciones de MR{FW}",
+  "author": "José Antonio Jiménez",
+  "config": {
+    "subible": true,
+    "tipo": "core"
+  },
+  "devDependencies": {
+    "@mr/core-dev": "workspace:*",
+    "@types/node": "^24.12.4"
+  }
+}

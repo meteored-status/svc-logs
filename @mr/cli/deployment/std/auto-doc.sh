@@ -17,7 +17,7 @@ fi
 
 if [[ -n "$_MYSQL" ]]; then
   echo "Generando documentación"
-  docker run -v /workspace:/root -e "ENV=${_ENTORNO}" node:lts-alpine yarn --cwd /root mrpack autodoc --env="${_ENTORNO}"
+  docker run -v /workspace:/root -e "ENV=${_ENTORNO}" node:24.14-alpine yarn --cwd /root mrpack autodoc --env="${_ENTORNO}"
   echo "Generando documentación => OK"
 fi
 

@@ -8,6 +8,19 @@ if [[ -f "DESPLEGAR.txt" ]]; then
   gcloud container clusters list --project "${PROJECT_ID}" --filter="resourceLabels.entorno=${_ENTORNO}" --format=json > entornos.json
   gcloud container clusters list --project "${PROJECT_ID}" --filter="(resourceLabels.entorno=${_ENTORNO}) AND (resourceLabels.clientes=true)" --format=json > clientes.json
 
+  parseCluster() {
+      local INDICE="${1}"
+      CLUSTER=$(confige ".[${INDICE}].name")
+      REGION=$(confige ".[${INDICE}].zone")
+
+      echo "Obteniendo clientes para \"${CLUSTER}\""
+      gcloud container clusters describe "${CLUSTER}" --project "${PROJECT_ID}" --zone "${REGION}" --format=json > "${CLUSTER}.json"
+  }
+
+  export -f parseCluster
+
+  configc ". | keys | .[]" | xargs -I '{}' -P 10 bash -c "parseCluster {}"
+
   initCluster() {
     HASH="${1}"
     REGION="$(path1 "${HASH}")"

@@ -10,14 +10,14 @@ const {dependencies} = JSON.parse(readFileSync(resolve(__dirname, "../package.js
 const ES_MODULES = {
     "@inquirer/prompts": "8",
     "chokidar": "5",
-    "formidable": "3",
-    "mime": "4",
-    "pdf-merger-js": "5",
-    "uuid": "13",
-    // "mysql": "3",
 };
 
-const externals = [];
+const externals = [
+    // typescript es una devDependency usada en tiempo de build (TsCheckerRspackPlugin);
+    // no debe empaquetarse: su dynamic require interno genera el warning "Critical dependency".
+    {"typescript": "commonjs typescript"},
+    {"ts-checker-rspack-plugin": "commonjs ts-checker-rspack-plugin"},
+];
 
 function check(actual , version ) {
     return actual.startsWith(`^${version}.`)

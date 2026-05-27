@@ -1,8 +1,16 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 5749b91687449f3b6e4be9ade75a335f
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ */
+
 import path from "node:path";
 
-import {BuildFW} from "@mr/cli/manifest/build";
-import {Manifest} from "@mr/cli/manifest";
-import {Runtime} from "@mr/cli/manifest/deployment";
+import {BuildFW} from "@mr/core-dev/manifest/build";
+import {Manifest} from "@mr/core-dev/manifest";
+import {Runtime} from "@mr/core-dev/manifest/deployment";
 import {
     isDir,
     isFile,
@@ -17,15 +25,31 @@ import {md5} from "services-comun/modules/utiles/hash";
 
 import {Comando} from "../comando";
 import {IPackageJson} from "../packagejson";
-import type {Manifest as ManifestRoot} from "../../../../manifest/root";
+import type {Manifest as ManifestRoot} from "../../../../manifest";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
 interface ITag {
     tags: string[];
 }
 
+interface IPackConfig {
+    compilar?: Compilar;
+}
+
+/**
+ * Gestiona la compilación y despliegue de un workspace del monorepo.
+ * Soporta los frameworks `meteored` (rspack) y `nextjs`, y los runtimes `node`, `browser` y `php`.
+ */
 export class Compilar {
     /* STATIC */
+    /**
+     * Construye una instancia de `Compilar` para el workspace indicado.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     * @param name    - Nombre del workspace (directorio).
+     * @param path    - Subdirectorio relativo a `basedir` donde se aloja el workspace (p.ej. `"services"`).
+     * @returns Instancia configurada, o `null` si el directorio no es un workspace válido.
+     */
     public static async build(basedir: string, name: string, path: string): Promise<Compilar|null> {
         const dir = `${basedir}/${path}/${name}`;
         if (!await isDir(dir) || !await isFile(`${dir}/package.json`)) {
@@ -38,6 +62,12 @@ export class Compilar {
         return new this(basedir, name, path, json, manifest);
     }
 
+    /**
+     * Calcula y guarda el hash MD5 del directorio de caché de Yarn (`.yarn/cache/.md5`).
+     * Si el directorio no existe, no hace nada.
+     *
+     * @param basedir - Raíz absoluta del monorepo.
+     */
     public static async md5Deps(basedir: string): Promise<void> {
         const dir = `${basedir}/.yarn/cache`;
         if (!await isDir(dir)) {
@@ -67,10 +97,21 @@ export class Compilar {
         this.dependiente = this.config.build.deps.length>0;
     }
 
+    /**
+     * Persiste el `package.json` del workspace en disco con indentado de 2 espacios.
+     *
+     */
     protected async guardar(): Promise<void> {
         await safeWrite(`${this.dir}/package.json`, `${JSON.stringify(this.packagejson, null, 2)}\n`, true, true);
     }
 
+    /**
+     * Registra los workspaces que dependen de éste (i.e. los que listan este workspace en `build.deps`).
+     * Tras llamar a este método `this.dependencias` contiene los workspaces dependientes,
+     * necesario para propagar la señal de compilación completada en `pack`.
+     *
+     * @param dependencias - Lista completa de compiladores del monorepo.
+     */
     public checkDependencias(dependencias: Compilar[]): void {
         for (const actual of dependencias) {
             if (actual.config.build.deps.includes(this.name)) {
@@ -79,7 +120,16 @@ export class Compilar {
         }
     }
 
-    public async pack(env: string, manifest: ManifestRoot, compilar?: Compilar): Promise<void> {
+    /**
+     * Genera el artefacto de despliegue del workspace (compilación + cálculo de versión).
+     * Respeta el grafo de dependencias: espera a que todos sus `build.deps` hayan terminado
+     * antes de ejecutar y, al finalizar, notifica a los workspaces dependientes.
+     *
+     * @param env      - Entorno de despliegue (`"test"` o `"produccion"`).
+     * @param manifest - Manifest raíz del monorepo con la configuración global de despliegue.
+     * @param config   - Objeto de configuración; si contiene `compilar`, indica el workspace que acaba de terminar.
+     */
+    public async pack(env: string, manifest: ManifestRoot, {compilar}: IPackConfig = {}): Promise<void> {
         if (compilar!=undefined) {
             delete this.pendientes[compilar.name];
             const keys = Object.keys(this.pendientes);
@@ -98,7 +148,7 @@ export class Compilar {
             }
 
             console.warn(this.name, "[WARN ]", "Servicio desactivado para despliegue. Hay servicios dependientes que podrían no generarse correctamente:", this.dependencias.map((dependencia)=>dependencia.name).join(", "));
-            return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, this))).then(() => undefined);
+            return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, {compilar: this}))).then(() => undefined);
         }
 
         if (manifest.deploy.build.enabled) {
@@ -122,7 +172,7 @@ export class Compilar {
             return;
         }
 
-        return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, this))).then(() => undefined);
+        return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, {compilar: this}))).then(() => undefined);
     }
 
     private async packMeteored(env: string, manifest: ManifestRoot): Promise<void> {
@@ -166,29 +216,25 @@ export class Compilar {
                 break;
             case Runtime.php: {
                 await this.checkVersionService(env, manifest, [
-                        `${this.dir}/assets`,
-                        `${this.dir}/base/nginx/local.conf`,
-                        `${this.dir}/autoload.php`,
-                        `${this.dir}/composer.json`,
-                        `${this.dir}/composer.lock`,
-                        await isFile(`${this.dir}/Dockerfile`) ?
-                            `${this.dir}/Dockerfile` :
-                            `${this.basedir}/framework/services-comun/despliegue/Dockerfile-php`,
-                        `${this.dir}/Dockerfile`,
-                        `${this.dir}/index.php`,
-                        `${this.dir}/Meteored`,
-                        `${this.dir}/vendor`,
-                    ]);
+                    `${this.dir}/assets`,
+                    `${this.dir}/base/nginx/local.conf`,
+                    `${this.dir}/autoload.php`,
+                    `${this.dir}/composer.json`,
+                    `${this.dir}/composer.lock`,
+                    await isFile(`${this.dir}/Dockerfile`) ?
+                        `${this.dir}/Dockerfile` :
+                        `${this.basedir}/framework/services-comun/despliegue/Dockerfile-php`,
+                    `${this.dir}/index.php`,
+                    `${this.dir}/Meteored`,
+                    `${this.dir}/vendor`,
+                ]);
                 }
                 break;
         }
     }
 
     private async webpack(env: string): Promise<void> {
-        const entorno: Record<string, string> = {
-            TS_NODE_PROJECT: "config/tsconfig.json",
-        };
-        const {status, stdout, stderr} = await Comando.spawn("yarn", ["workspace", "@mr/cli", "rspack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `config/rspack.config.ts`], {cwd: this.basedir, env: entorno, colores: false});
+        const {status, stdout, stderr} = await Comando("yarn", ["workspace", "@mr/core-dev", "rspack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `bundler/rspack/rspack.config.ts`], {cwd: this.basedir, colores: false});
         if (status != 0) {
             console.error(this.name, "[KO   ]", "Error compilando:");
             console.error(stdout);
@@ -203,11 +249,13 @@ export class Compilar {
             await safeWrite(`${this.dir}/.env.local`, await readFileString(`${this.dir}/.env.${nodeEnv}.local`), true, true);
         } else if (! await isFile(`${this.dir}/.env.local`)) {
             await safeWrite(`${this.dir}/.env.local`, `ENV=${env}`, true, true);
+        } else {
+            console.log(`Existe el fichero .env.local, se mantiene tal cual.`);
         }
 
         {
             // todo falta añadir la fecha del commit (this.fecha)
-            const {status, stderr} = await Comando.spawn("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {ZONA: nodeEnv}, colores: false});
+            const {status, stderr} = await Comando("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {NODE_OPTIONS: '--max_old_space_size=8192', ZONA: nodeEnv}, colores: false});
             if (status != 0) {
                 console.error(this.name, "[KO   ]", "Error compilando:");
                 console.error(stderr);
@@ -216,9 +264,7 @@ export class Compilar {
         }
         await this.checkVersionService(env, manifest, [
             `${this.basedir}/.yarnrc.yml`,
-            this.config.build.framework==BuildFW.nextjs?
-                `${this.dir}/.next/BUILD_ID`:
-                `${this.dir}/output`,
+            `${this.dir}/.next/BUILD_ID`,
             await isFile(`${this.dir}/Dockerfile`) ?
                 `${this.dir}/Dockerfile` :
                 `${this.basedir}/framework/services-comun/despliegue/Dockerfile-next`,
@@ -279,6 +325,9 @@ export class Compilar {
         const hashes = [
             JSON.stringify(this.packagejson.dependencies??{}),
         ];
+        if (this.packagejson.optionalDependencies) {
+            hashes.push(JSON.stringify(this.packagejson.optionalDependencies));
+        }
         if (this.config.deploy.imagen) {
             if (env==="test") {
                 if (this.config.deploy.imagen.test) {

@@ -1,8 +1,16 @@
-import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/cli/manifest/deployment";
-import type {IManifestDeploymentCredenciales} from "@mr/cli/manifest/deployment/credenciales";
-import type {IManifestDeploymentImagen} from "@mr/cli/manifest/deployment/imagen";
-import type {IManifestDeploymentKustomize} from "@mr/cli/manifest/deployment/kustomize";
-import type {IManifestDeploymentStorage} from "@mr/cli/manifest/deployment/storage";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 0e2aa840916b262bd5de0a387f1b6ad4
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.21+8-juancmartinez
+ */
+
+import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/core-dev/manifest/deployment";
+import type {IManifestDeploymentCredenciales} from "@mr/core-dev/manifest/deployment/credenciales";
+import type {IManifestDeploymentImagen} from "@mr/core-dev/manifest/deployment/imagen";
+import type {IManifestDeploymentKustomize} from "@mr/core-dev/manifest/deployment/kustomize";
+import type {IManifestDeploymentStorage} from "@mr/core-dev/manifest/deployment/storage";
 
 import {type IManifestDeploymentLegacy, type IManifestLegacy, RuntimeLegacy} from "../legacy";
 import ManifestWorkspaceDeploymentCredencialesLoader from "./credenciales";
@@ -18,6 +26,14 @@ type IManifestDeploymentUpdate2 = Exclude<IManifestDeployment, "kustomize"> & {
         legacy: string;
     };
 }
+
+/**
+ * Normaliza la sección `deploy` del `mrpack.json` de un workspace.
+ *
+ * Además de aplicar defaults y compatibilidad con formatos legacy,
+ * preserva overlays avanzados como `deploy.annotations` para que se
+ * propaguen al modelo tipado final.
+ */
 class ManifestWorkspaceDeploymentLoader {
     /* INSTANCE */
     public get default(): IManifestDeployment {
@@ -31,6 +47,13 @@ class ManifestWorkspaceDeploymentLoader {
         };
     }
 
+    /**
+     * Valida y normaliza la configuración de despliegue de un workspace.
+     *
+     * @param deploy - Bloque `deploy` parcial del manifest (formato actual o legacy).
+     * @param names  - Nombres de recursos kustomize asociados al workspace.
+     * @returns Configuración `deploy` completa y tipada.
+     */
     public check(deploy: Partial<IManifestDeployment|IManifestDeploymentUpdate1|IManifestDeploymentUpdate2|IManifestDeploymentLegacy> = {}, names: string[]): IManifestDeployment {
         const data = this.default;
         if (deploy.enabled) {
@@ -110,6 +133,10 @@ class ManifestWorkspaceDeploymentLoader {
                         data.schedule = "0 0 31 2 *"
                     }
                 }
+                // Se preservan anotaciones personalizadas para el recurso service.
+                if ("annotations" in deploy && deploy.annotations) {
+                    data.annotations = deploy.annotations;
+                }
                 break;
             case ManifestDeploymentKind.BROWSER:
                 data.target = Target.none;
@@ -126,6 +153,13 @@ class ManifestWorkspaceDeploymentLoader {
         return data;
     }
 
+    /**
+     * Migra la configuración de despliegue desde el formato legacy al formato actual.
+     *
+     * @param config - Datos en formato legacy a migrar.
+     * @param names  - Nombres de recursos kustomize asociados al workspace.
+     * @returns Configuración `deploy` migrada al formato actual.
+     */
     public fromLegacy(config: Partial<IManifestLegacy>, names: string[]): IManifestDeployment {
         let type: ManifestDeploymentKind;
         let target: Target;
