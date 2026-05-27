@@ -34,6 +34,7 @@
     "./manifest/deployment/imagen": "./manifest/deployment/imagen/index.ts",
     "./manifest/deployment/imagen/entorno": "./manifest/deployment/imagen/entorno.ts",
     "./manifest/deployment/kustomize": "./manifest/deployment/kustomize/index.ts",
+    "./manifest/deployment/lambda": "./manifest/deployment/lambda/index.ts",
     "./manifest/deployment/storage": "./manifest/deployment/storage/index.ts",
     "./manifest/deployment/storage/buckets": "./manifest/deployment/storage/buckets.ts",
     "./manifest/development": "./manifest/development.ts"
