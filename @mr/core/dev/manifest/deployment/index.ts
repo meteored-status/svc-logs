@@ -10,7 +10,7 @@ import {type IManifestDeploymentCredenciales, ManifestDeploymentCredenciales} fr
 import {type IManifestDeploymentImagen, ManifestDeploymentImagen} from "./imagen/index.ts";
 import {type IManifestDeploymentKustomize, ManifestDeploymentKustomize} from "./kustomize/index.ts";
 import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage/index.ts";
-import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations/index.ts";
+import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations.ts";
 
 /**
  * Entorno de ejecución del artefacto desplegado.
