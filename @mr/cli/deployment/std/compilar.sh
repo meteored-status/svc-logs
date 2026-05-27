@@ -16,7 +16,7 @@ if [[ -n "$_MYSQL" ]]; then
 fi
 
 echo "Compilando"
-docker run -v /workspace:/root -e "ENV=${_ENTORNO}" node:lts-alpine yarn --cwd /root mrpack deploy --env="${_ENTORNO}"
+docker run -v /workspace:/root -e "ENV=${_ENTORNO}" node:24.14-alpine yarn --cwd /root mrpack deploy --env="${_ENTORNO}"
 echo "Compilando => OK"
 
 if [[ -n "$_MYSQL" ]]; then

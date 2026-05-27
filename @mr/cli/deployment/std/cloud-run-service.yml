@@ -3,17 +3,20 @@ kind: Service
 metadata:
   name: ${KUSTOMIZER}-${IMAGEN}
   annotations:
-    run.googleapis.com/ingress: all # O 'internal-and-cloud-load-balancing' si aplica
+#    run.googleapis.com/ingress: all # O 'internal-and-cloud-load-balancing' si aplica
+    run.googleapis.com/ingress: "internal-and-cloud-load-balancing"
     run.googleapis.com/launch-stage: BETA
 spec:
   template:
     metadata:
       annotations:
-#        autoscaling.knative.dev/minScale: "1"
-#        autoscaling.knative.dev/maxScale: "20"
+        #        autoscaling.knative.dev/minScale: "1"
+        #        autoscaling.knative.dev/maxScale: "20"
         autoscaling.knative.dev/target: "80"
         run.googleapis.com/startup-cpu-boost: "true"
-#        run.googleapis.com/vpc-access-connector: projects/${PROJECT_ID}/locations/europe-west1/connectors/cloud-run
+        run.googleapis.com/vpc-access-egress: "private-ranges-only"
+        run.googleapis.com/network-interfaces: '[{"network":"servicios-1","subnetwork":"servicios-1"}]'
+    #        run.googleapis.com/vpc-access-connector: projects/${PROJECT_ID}/locations/europe-west1/connectors/cloud-run
     spec:
       containers:
         - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
@@ -22,6 +25,8 @@ spec:
               value: "false"
             - name: ENTORNO
               value: "${ENTORNO}"
+            - name: ZONA
+              value: "${ZONA}"
           ports:
             - containerPort: 8080
           startupProbe:

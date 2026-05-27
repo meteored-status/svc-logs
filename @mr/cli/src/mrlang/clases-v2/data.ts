@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 4c0bcfc924b60a1d49d4b6a515eda9ac
+ */
+
 export type TPluralKey = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 export type TOrigen = 'auto' | 'interno';
 export type TVariable = 'literal' | 'map' | 'set';

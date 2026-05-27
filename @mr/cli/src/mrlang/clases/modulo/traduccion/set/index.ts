@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: c57d919e84db826926647a6d867712ae
+ */
+
 import {TValor} from "services-comun/modules/traduccion/set";
 
 import {type ITraduccion as ITraduccionBase, Traduccion, TraduccionTipo} from "..";

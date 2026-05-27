@@ -29,4 +29,5 @@ export -f parseWorkspace
 
 lw cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
 lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+lw jobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
 wait

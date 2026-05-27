@@ -1,15 +1,60 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 5d2815888edb67658321232447e385f1
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.22+6-josantoniojimnez
+ */
+
 import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
 import chokidar, {type ChokidarOptions} from "chokidar";
 import treeKill from "tree-kill";
 
-import {BuildFW} from "@mr/cli/manifest/build";
-import {Runtime} from "@mr/cli/manifest/deployment";
+import {BuildFW} from "@mr/core-dev/manifest/build";
+import {Runtime} from "@mr/core-dev/manifest/deployment";
 
 import {Colors} from "../colors";
 import {type IWorkspace, Workspace} from "../workspace";
 import {Log} from "../log";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
+/**
+ * Frecuencia de comprobación de actualizaciones de frameworks.
+ *
+ * - `all`    — comprobar en cada arranque (comportamiento por defecto).
+ * - `daily`  — comprobar como máximo una vez al día.
+ * - `weekly` — comprobar como máximo una vez a la semana.
+ */
+export const enum FrameworkUpdates {
+    all    = "all",
+    daily  = "daily",
+    weekly = "weekly",
+}
+
+/**
+ * Convierte cualquier valor leído de JSON al tipo `FrameworkUpdates`.
+ * Si el valor no es uno de los permitidos (`"all"`, `"daily"`, `"weekly"`),
+ * devuelve `"all"` como valor por defecto.
+ *
+ * @param value - Valor leído del fichero de configuración (tipo desconocido).
+ * @returns Valor normalizado de `FrameworkUpdates`.
+ */
+export function sanitizeFrameworkUpdates(value: unknown): FrameworkUpdates {
+    if (value === FrameworkUpdates.daily || value === FrameworkUpdates.weekly) {
+        return value;
+    }
+    return FrameworkUpdates.all;
+}
+
+/**
+ * Configuración personal de workspaces leída de `config.workspaces.json`.
+ *
+ * @property devel     - Workspaces habilitados/deshabilitados para el modo devel.
+ * @property packd     - Workspaces habilitados/deshabilitados para la compilación.
+ * @property i18n      - Si `true`, el workspace de i18n está habilitado.
+ * @property services  - Mapa de variables de entorno adicionales por servicio.
+ * @property framework - Política de actualización automática de frameworks.
+ */
 export interface IConfigServices {
     devel: {
         available: string[];
@@ -21,8 +66,20 @@ export interface IConfigServices {
     };
     i18n: boolean;
     services: Record<string, string>;
+    framework?: {
+        updates: FrameworkUpdates;
+    };
 }
 
+/**
+ * Datos de un workspace de tipo servicio.
+ *
+ * @property pad      - Anchura mínima del nombre para alinear la salida en consola.
+ * @property compilar - Si `true`, compila el workspace al arrancar.
+ * @property ejecutar - Si `true`, ejecuta el servicio tras compilar.
+ * @property forzar   - Si `true`, fuerza la compilación aunque no haya cambios.
+ * @property global   - Configuración global de workspaces.
+ */
 export interface IService extends IWorkspace {
     pad: number;
     compilar: boolean;
@@ -31,6 +88,11 @@ export interface IService extends IWorkspace {
     global: IConfigServices;
 }
 
+/**
+ * Workspace de tipo servicio ejecutable.
+ * Combina compilación (rspack/next) y ejecución del proceso Node con reinicios automáticos,
+ * watchers de ficheros y respeto a la configuración global de `config.workspaces.json`.
+ */
 export class Service extends Workspace {
     /* STATIC */
     private static TIMEOUT = 300000;
@@ -69,13 +131,13 @@ export class Service extends Workspace {
         this.watcher?.close();
         const options: ChokidarOptions = {
             persistent: true,
-            ignored: (path) => path.endsWith("~") || path.startsWith(`output/`) || path.startsWith(`assets/`) || path.startsWith(`files/`) || path.startsWith(`.next/`),
+            ignored: (path) => path.endsWith("~") || path.includes(`/output/`) || path.includes(`/assets/`) || path.includes(`/files/`) || path.includes(`/.next/`),
             ignoreInitial: true,
             cwd: this.dir,
         };
 
         const watchFN = (path: string): void => {
-            if (path == "mrpack.json") {
+            if (path === "mrpack.json") {
                 this.updatePackageFile();
             } else {
                 this.cambio();
@@ -89,13 +151,14 @@ export class Service extends Workspace {
     }
 
     public override cambio(): void {
-        this.runCompilar().then(() => {
-        }).catch((err) => {
-            Log.error({
-                type: Log.label_base,
-                label: this.label,
-            }, "Error reiniciando el compilador", err);
-        });
+        this.runCompilar()
+            .then(() => undefined)
+            .catch((err) => {
+                Log.error({
+                    type: Log.label_base,
+                    label: this.label,
+                }, "Error reiniciando el compilador", err);
+            });
         for (const actual of this.hijos) {
             actual.cambio();
         }
@@ -109,40 +172,55 @@ export class Service extends Workspace {
             clearTimeout(this.timeout);
         }
         this.timeout = setTimeout(()=>{
-            this.stopCompilar().then(() => {
-            }).catch((err) => {
-                Log.error({
-                    type: Log.label_base,
-                    label: this.label,
-                }, "Error pausando el compilador", err);
-            });
+            this.stopCompilar()
+                .then(() => undefined)
+                .catch((err) => {
+                    Log.error({
+                        type: Log.label_base,
+                        label: this.label,
+                    }, "Error pausando el compilador", err);
+                });
         }, Service.TIMEOUT);
     }
 
     private updatePackageFile(): void {
         this.config = new ManifestWorkspaceLoader(this.dir).load();
 
-        this.run().then(() => {
-        }).catch((err) => {
-            Log.error({
-                type: Log.label_base,
-                label: this.label,
-            }, "Error aplicando configuración específica", err);
-        });
+        this.run()
+            .then(() => undefined)
+            .catch((err) => {
+                Log.error({
+                    type: Log.label_base,
+                    label: this.label,
+                }, "Error aplicando configuración específica", err);
+            });
     }
 
+    /**
+     * Actualiza la configuración global de workspaces y re-ejecuta `run()` para aplicar los cambios.
+     * Esto puede iniciar o detener el compilador/ejecutor del servicio según los nuevos flags.
+     *
+     * @param global - Nueva configuración global leída de `config.workspaces.json`.
+     */
     public updateGlobal(global: IConfigServices): void {
         this.global_compilar = !global.packd.disabled.includes(this.nombre);
         this.global_ejecutar = !global.devel.disabled.includes(this.nombre);
 
-        this.run().then(()=>{}).catch((err)=>{
-            Log.error({
-                type: Log.label_base,
-                label: this.label,
-            }, "Error aplicando configuración global", err);
-        });
+        this.run()
+            .then(()=>undefined)
+            .catch((err)=>{
+                Log.error({
+                    type: Log.label_base,
+                    label: this.label,
+                }, "Error aplicando configuración global", err);
+            });
     }
 
+    /**
+     * Tarea principal del workspace servicio: inicia o detiene el compilador y el ejecutor
+     * en función de la configuración local y global.
+     *
+     */
     protected override async run(): Promise<void> {
         await super.run();
         await Promise.all([
@@ -321,6 +399,15 @@ export class Service extends Workspace {
             return false;
         }
 
+        if (!config.enabled) {
+            if (this.ejecucion==undefined) {
+                Log.info({
+                    type: Log.label_ejecutar,
+                    label: this.label,
+                }, `Omitiendo workspace "${this.nombre}"`);
+            }
+            return false;
+        }
 
         if (!config.devel) {
             if (this.ejecucion==undefined) {
@@ -351,7 +438,7 @@ export class Service extends Workspace {
             cwd: this.root,
             env: { ...process.env, FORCE_COLOR: "1" },
             stdio: "pipe",
-            shell: true,
+            shell: false,
         });
         this.ejecucion.stdout.on("data", (data: Buffer)=>{
             const lineas = data.toString().split("\n").filter(linea=>linea.length>0);
@@ -387,14 +474,16 @@ export class Service extends Workspace {
                     type: Log.label_ejecutar,
                     label: this.label,
                 }, `Terminado (`, status, `) Programando nueva ejecución en 30 segundos`);
+                this.ejecucion = undefined;
                 setTimeout(()=>{
-                    this.runEjecutar().then(() => {
-                    }).catch((err) => {
-                        Log.error({
-                            type: Log.label_ejecutar,
-                            label: this.label,
-                        }, "Error en reinicio", err);
-                    });
+                    this.runEjecutar()
+                        .then(() => undefined)
+                        .catch((err) => {
+                            Log.error({
+                                type: Log.label_ejecutar,
+                                label: this.label,
+                            }, "Error en reinicio", err);
+                        });
                 }, 30000);
             } else {
                 if (config.deploy.cronjob) {
@@ -404,13 +493,14 @@ export class Service extends Workspace {
                     }, `Terminado: Programando nueva ejecución en 10 minutos`);
                     this.ejecucion = undefined;
                     setTimeout(() => {
-                        this.runEjecutar().then(() => {
-                        }).catch((err) => {
-                            Log.error({
-                                type: Log.label_ejecutar,
-                                label: this.label,
-                            }, "Error en inicio programado", err);
-                        });
+                        this.runEjecutar()
+                            .then(() => undefined)
+                            .catch((err) => {
+                                Log.error({
+                                    type: Log.label_ejecutar,
+                                    label: this.label,
+                                }, "Error en inicio programado", err);
+                            });
                     }, 600000);
                 }
             }

@@ -1,38 +1,44 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: e52c13dea36122d3a439214e3ac71e9e
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.21+4-josantoniojimnez
+ */
+
 import {type IModulo, type IModuloConfig, Modulo} from "../modulo";
 import {Colors} from "../clases/colors";
+import {actualizarTodo, enviarTodo, gestionar, resetearTodo} from "../clases/framework";
 
 export interface IFrameworkConfig extends IModuloConfig {
     options: IModuloConfig["options"] & {
-        add: { type: "string", multiple: true, };
-        list: { type: "string", default: undefined, };
-        remove: { type: "string", multiple: true, };
-        repository: { type: "string", default: undefined, };
-        reset: { type: "boolean", default: false, };
-        update: { type: "boolean", default: true, };
+        update: { type: "boolean"; short: "u"; default: false };
+        reset:  { type: "boolean"; short: "r"; default: false };
+        send:   { type: "boolean"; short: "s"; default: false };
+        yes:    { type: "boolean"; short: "y"; default: false };
     };
 }
 
 export interface IFramework extends IModulo {
-    add?: string[];
-    list?: string;
-    remove?: string[];
-    repository?: string;
-    reset: boolean;
     update: boolean;
+    reset:  boolean;
+    send:   boolean;
+    yes:    boolean;
 }
 
+/**
+ * Módulo CLI `mrpack framework`: gestión interactiva de frameworks (actualizar, resetear, enviar).
+ */
 export class ModuloFramework<T extends IFrameworkConfig> extends Modulo<T> {
     /* STATIC */
     protected static override OPTIONS: IFrameworkConfig = {
         ...Modulo.OPTIONS,
         options: {
             ...Modulo.OPTIONS.options,
-            add: { type: "string", multiple: true, },
-            list: { type: "string", default: undefined, },
-            remove: { type: "string", multiple: true, },
-            repository: { type: "string", default: undefined, },
-            reset: { type: "boolean", default: false, },
-            update: { type: "boolean", default: true, },
+            update: { type: "boolean", short: "u", default: false },
+            reset:  { type: "boolean", short: "r", default: false },
+            send:   { type: "boolean", short: "s", default: false },
+            yes:    { type: "boolean", short: "y", default: false },
         },
         strict: true,
     };
@@ -43,54 +49,39 @@ export class ModuloFramework<T extends IFrameworkConfig> extends Modulo<T> {
 
     /* INSTANCE */
     protected constructor(config: T) {
-        super (config);
+        super(config);
     }
 
+    /**
+     * Delega en la operación de framework indicada (`update`, `reset`, `send`) o abre el gestor interactivo.
+     *
+     * @param config - Opciones del módulo (`help`, `update`, `reset`, `send`, `yes`).
+     */
     protected async parseParams(config: IFramework): Promise<void> {
         if (config.help) {
             this.mostrarAyuda();
+        } else if (config.update) {
+            await actualizarTodo(this.root, {forzar: config.yes, reiniciar: false});
+        } else if (config.reset) {
+            await resetearTodo(this.root, {forzar: config.yes, reiniciar: false});
+        } else if (config.send) {
+            await enviarTodo(this.root, {forzar: config.yes, reiniciar: false});
         } else {
-            const {Framework} = await import(/* webpackChunkName: "mrpack/framework" */ "../clases/framework");
-            if (config.add!=undefined) {
-                await Framework.add(this.root, config.add);
-            }
-            if (config.remove!=undefined) {
-                await Framework.remove(this.root, config.remove);
-            }
-            if (config.reset) {
-                await Framework.reset(this.root);
-            } else if (config.list!=undefined) {
-                await Framework.list(config.list, config.repository);
-            } else if (config.update) {
-                await Framework.pull(this.root, true);
-            }
+            await gestionar(this.root, {reiniciar: false});
         }
     }
 
     protected mostrarAyuda(): void {
-        console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Descripción")}: Operaciones sobre los frameworks`);
-        console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Uso")}:         ${Colors.colorize([Colors.FgBlue], "yarn mrpack")} ${Colors.colorize([Colors.FgGreen], "deploy")} ${Colors.colorize([Colors.FgYellow], "[opciones]")}`);
+        console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Descripción")}: Gestión interactiva de frameworks`);
+        console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Uso")}:         ${Colors.colorize([Colors.FgBlue], "yarn mrpack")} ${Colors.colorize([Colors.FgGreen], "framework")} ${Colors.colorize([Colors.FgYellow], "[opciones]")}`);
         console.log("");
-        console.group();
-
-        console.log(`${Colors.colorize([Colors.FgYellow], "[opciones]")}:`);
-        console.group();
-        console.log(`${Colors.colorize([Colors.FgMagenta], "Opciones disponibles:")}`);
-        console.group();
-        console.log(`${Colors.colorize([Colors.FgYellow], "--add")}=${Colors.colorize([Colors.FgGreen], "<framework>")}:          Añade un framework`);
-        console.log(`                            ${Colors.colorize([Colors.FgWhite], "Se puede especificar múltiples veces")}`);
-        console.log(`${Colors.colorize([Colors.FgYellow], "--list")}=${Colors.colorize([Colors.FgGreen], "<tipo>")}:              Lista los frameworks disponibles para instalar`);
-        console.log(`                            ${Colors.colorize([Colors.FgWhite], "Se puede especificar múltiples veces")}`);
-        console.log(`${Colors.colorize([Colors.FgYellow], "--remove")}=${Colors.colorize([Colors.FgGreen], "<framework>")}:       Elimina un framework`);
-        console.log(`                            ${Colors.colorize([Colors.FgWhite], "Se puede especificar múltiples veces")}`);
-        console.log(`${Colors.colorize([Colors.FgYellow], "--repository")}=${Colors.colorize([Colors.FgGreen], "<repositorio>")}: Repositorio desde el que listar/añadir frameworks`);
-        console.log(`                            ${Colors.colorize([Colors.FgWhite], "Se puede especificar múltiples veces")}`);
-        console.log(`${Colors.colorize([Colors.FgYellow], "--reset")}:                    Resetea los frameworks (implica --update)`);
-        console.log(`${Colors.colorize([Colors.FgYellow], "--update")}:                   Actualiza los frameworks`);
-        console.groupEnd();
-        console.groupEnd();
+        console.log("Sin opciones abre el gestor interactivo con la tabla completa de paquetes.");
         console.log("");
-
-        console.groupEnd();
+        console.log(`  ${Colors.colorize([Colors.FgYellow], "-u")}, ${Colors.colorize([Colors.FgYellow], "--update")}   Muestra tabla de paquetes con update disponible (preseleccionados) para elegir cuáles actualizar`);
+        console.log(`  ${Colors.colorize([Colors.FgYellow], "-r")}, ${Colors.colorize([Colors.FgYellow], "--reset")}    Muestra tabla de paquetes instalados (preseleccionados) para elegir cuáles resetear`);
+        console.log(`  ${Colors.colorize([Colors.FgYellow], "-s")}, ${Colors.colorize([Colors.FgYellow], "--send")}     Muestra tabla de paquetes con cambios locales (preseleccionados) para elegir cuáles enviar`);
+        console.log(`  ${Colors.colorize([Colors.FgYellow], "-y")}, ${Colors.colorize([Colors.FgYellow], "--yes")}      Junto con -u/-r/-s, omite la tabla y aplica la acción sobre todos los paquetes sin interacción`);
+        console.log(`  ${Colors.colorize([Colors.FgYellow], "-h")}, ${Colors.colorize([Colors.FgYellow], "--help")}     Muestra esta ayuda`);
+        console.log("");
     }
 }

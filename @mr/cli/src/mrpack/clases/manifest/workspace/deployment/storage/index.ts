@@ -1,5 +1,12 @@
-import type {IManifestDeploymentStorage} from "@mr/cli/manifest/deployment/storage";
-import type {IManifestDeploymentStorageBuckets} from "@mr/cli/manifest/deployment/storage/buckets";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 4791d7af7c0fbc0bdc1e44acff32bbd3
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
+import type {IManifestDeploymentStorage} from "@mr/core-dev/manifest/deployment/storage";
+import type {IManifestDeploymentStorageBuckets} from "@mr/core-dev/manifest/deployment/storage/buckets";
 
 import type {IManifestDeploymentStorageLegacy, IManifestLegacy} from "../../legacy";
 import ManifestWorkspaceDeploymentStorageBucketsLoader from "./buckets";
@@ -15,6 +22,12 @@ class ManifestWorkspaceDeploymentStorageLoader {
         };
     }
 
+    /**
+     * Normaliza y valida la configuración de storage de un workspace.
+     *
+     * @param storage - Datos parciales de la configuración de storage (acepta formato legacy).
+     * @returns Configuración de storage completa y normalizada, o `undefined` si no se proporciona.
+     */
     public check(storage?: Partial<IManifestDeploymentStorage|IManifestDeploymentStorageLegacy>): IManifestDeploymentStorage|undefined {
         if (!storage) {
             return;
@@ -58,6 +71,12 @@ class ManifestWorkspaceDeploymentStorageLoader {
         return data;
     }
 
+    /**
+     * Migra la configuración de storage desde el formato legacy.
+     *
+     * @param config - Datos en formato legacy a migrar.
+     * @returns Configuración de storage migrada al formato actual.
+     */
     public fromLegacy(config: Partial<IManifestLegacy>): IManifestDeploymentStorage {
         if (!config.storage) {
             throw new Error(`ManifestDeployment: config.storage no definido para "${config.runtime}"`);

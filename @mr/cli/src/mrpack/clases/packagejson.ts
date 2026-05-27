@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 5786261d0513d3df34035202bf383a3d
+ */
+
 // export type IPackageJsonDependencyTypes = 'dependencies' | 'devDependencies' | 'peerDependencies' | 'optionalDependencies';
 
 export interface IPackageJsonAddress {

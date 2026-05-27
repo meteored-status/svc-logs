@@ -1,38 +1,11 @@
-export const enum ErrorCode {
-    NETWORK           = 1,
-    TIMEOUT           = 2,
-    AUTHENTICATION    = 3,
-    RESPONSE          = 4,
-    APPLICATION       = 5,
-    NO_DATA_TEMPORARY = 6,
-    NO_DATA_PERMANENT = 7,
-    NO_DATA           = 8
-}
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Mon, 25 May 2026 10:50:39 GMT
+ * Hash: 2cf689ef860377a82b21e46f32f10625
+ * Versión: 2026.5.25+2-josantoniojimnez
+ * Anterior: 2026.5.25+1-josantoniojimnez
+ */
 
-export interface IErrorInfo {
-    code: ErrorCode;
-    message: string;
-    extra?: any;
-}
+export {ErrorCode, type IRespuesta} from "@mr/core-network/client/http/interface";
 
-export interface IOK<T> {
-    expiracion: Date;
-    etag: string;
-    data: T;
-}
-
-export interface IRespuestaOK<T> {
-    ok: true;
-    expiracion: number;
-    data: T;
-    info?: IErrorInfo;
-}
-
-export interface IRespuestaKO<T=undefined> {
-    ok: false;
-    expiracion?: number;
-    data?: T;
-    info: IErrorInfo;
-}
-
-export type IRespuesta<T=undefined> = IRespuestaOK<T>|IRespuestaKO<T>;
+console.warn("*** DEPRECATED *** Utilice la dependencia '@mr/core-network/client/http/interface' en lugar de 'services-comun/modules/net/interface'");

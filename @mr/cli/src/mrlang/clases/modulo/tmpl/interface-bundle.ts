@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: d40f76493871d932773ace441b5f6671
+ */
+
 interface ITemplate {
     id: string;
     jerarquia: string[];

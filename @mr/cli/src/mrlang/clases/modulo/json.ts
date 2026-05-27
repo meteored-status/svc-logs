@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 6236346fe5af4a5d78aec92bd5893a3a
+ */
+
 import chokidar from "chokidar";
 
 import {Fecha} from "services-comun/modules/utiles/fecha";

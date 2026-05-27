@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 94887b7cd9c87cf7dac558f83bdd9b32
+ */
+
 export default `
 root = true
 

@@ -83,7 +83,7 @@ steps:
     #####
     # INSTALAR LAS DEPENDENCIAS DEL PROYECTO
     #####
-  - name: 'node:lts-alpine'
+  - name: 'node:24.14-alpine'
     entrypoint: 'yarn'
     args:
       - install

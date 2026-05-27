@@ -3,6 +3,17 @@ export interface ICoordenadas {
     lat: number;
 }
 
+export const enum Hemisferio {
+    NORTE = "north",
+    SUR = "south",
+}
+
+export function hemisferio(coordenadas: ICoordenadas): Hemisferio {
+    return coordenadas.lat >= 0 ?
+        Hemisferio.NORTE :
+        Hemisferio.SUR;
+}
+
 export interface IGeoPoint {
     "type": "Point",
     "coordinates": [number, number];

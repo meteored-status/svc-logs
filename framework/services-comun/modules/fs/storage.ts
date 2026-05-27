@@ -71,7 +71,6 @@ export class Storage implements IDocumento {
             return Promise.reject();
         }
         const storage = this.getStorage(config);
-
         let i = 0;
         for (let actual of await Promise.all(buckets.map((actual)=>storage.bucket(actual).file(file).get().catch(async ()=>null)))) {
             if (actual!=null) {

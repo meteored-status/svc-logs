@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: d4c42dc872f3def79a3cad2c3fca19d4
+ */
+
 import {type ITraduccionData, type TraduccionOrigen, TraduccionTipo} from "..";
 import {ITraduccionLiteralValues, TraduccionLiteral} from "../literal";
 import {type ITraduccionValues, type Traduccion, TraduccionLoader} from ".";

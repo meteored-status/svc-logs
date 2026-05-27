@@ -1,7 +1,7 @@
 import {Prioridad, type Window} from "./scheduler";
 
 export async function PromiseDelayed(delay: number = 0, priority?: Prioridad): Promise<void> {
-    if (delay>0 || priority==undefined) {
+    if (delay>0 || !priority) {
         return new Promise<void>((resolve: Function) => {
             setTimeout(() => {
                 resolve();

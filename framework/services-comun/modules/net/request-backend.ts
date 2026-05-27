@@ -1,13 +1,20 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Tue, 26 May 2026 09:10:16 GMT
+ * Hash: 36e0ac7ab0312268f2fe3b4a7a934790
+ * Versión: 2026.5.26+1-davidmartinezmoya
+ */
+
 import http, {IncomingMessage as IncomingMessageBase} from "node:http";
 import https from "node:https";
-// import opentelemetry from "@opentelemetry/api";
-import {RequestCacheDisk} from "./cache/disk";
-import {ErrorCode, IRespuesta} from "./interface";
+import {ErrorCode, type IRespuesta} from "@mr/core-network/client/http/interface";
+import {RequestError} from "@mr/core-network/client/http/error";
 
 import {RequestCache} from "./cache";
+import {RequestCacheDisk} from "./cache/disk";
 import {PromiseDelayed} from "../utiles/promise";
 import {error} from "../utiles/log";
-import {RequestError} from "./request/error";
+
 export interface IncomingMessage extends IncomingMessageBase {
 }
 
@@ -24,6 +31,11 @@ export interface IRequest {
 }
 
 export interface IRequestConfig extends Partial<IRequest> {
+    headers?: Record<string, string>;
+}
+
+export interface IRequestConfigCache extends IRequestConfig {
+    cache?: RequestCache;
 }
 
 export interface RequestResponse<T = any> {
@@ -92,6 +104,8 @@ export class BackendRequest {
             return await this.parseRespuestaBuffer(respuesta) as RequestResponse<T>;
         }
 
+        const extra = await respuesta.json().then(r => r.info?.extra).catch(() => undefined);
+
         // SI EL CÓDIGO NO ES 200 ENTONCES VA A SALTAR AQUÍ
         return Promise.reject(new RequestError({
             status: respuesta.status,
@@ -99,6 +113,7 @@ export class BackendRequest {
             headers: respuesta.headers,
             code: ErrorCode.NETWORK,
             message: respuesta.statusText,
+            extra
         }));
     }
 
@@ -143,6 +158,19 @@ export class BackendRequest {
                 case "text/plain":
                     init.body = String(post);
                     break;
+                case "multipart/form-data":
+                    init.body = post as unknown as FormData;
+                    headers.delete("Content-Type");
+                    break;
+            }
+        }
+
+        // Añadir cabeceras personalizadas desde cfg.headers
+        if (cfg.headers && typeof cfg.headers === 'object') {
+            for (const [key, value] of Object.entries(cfg.headers)) {
+                if (typeof value === 'string' && !headers.has(key)) {
+                    headers.set(key, value);
+                }
             }
         }
 
@@ -225,29 +253,53 @@ export class BackendRequest {
         }
     }
 
+    protected static async head(url: string, cfg: IRequestConfig = {}): Promise<RequestResponse<Buffer>> {
+        cfg.buffer = true;
+        if (PRODUCCION) {
+            return this.fetch<Buffer>(url, {method: "head"}, new Headers(), this.propagarContexto(cfg));
+        }
+
+        try {
+            return await this.fetch<Buffer>(url, {}, new Headers(), this.propagarContexto(cfg));
+        } catch (err) {
+            if (!url.startsWith("http://localhost:") || cfg.dominioAlternativo == undefined) {
+                return Promise.reject(err);
+            }
+
+            const partes = url.replace("http://localhost:", "").split("/");
+            partes.shift();
+            partes.unshift(cfg.dominioAlternativo);
+            return this.fetch<Buffer>(partes.join("/"), {}, new Headers(), this.propagarContexto(cfg));
+        }
+    }
+
     private static TMP: NodeJS.Dict<Promise<RequestResponse>> = {};
 
-    protected static async getCache<T>(url: string, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
+    public static async getCache<T>(url: string, cfg: IRequestConfigCache = {}): Promise<RequestResponse<T>> {
         return this.TMP[url] ??= this.getCacheEjecutar<T>(url, cfg);
     }
 
-    protected static async getCacheEjecutar<T>(url: string, cfg: IRequestConfig = {}): Promise<RequestResponse<T>> {
+    protected static async getCacheEjecutar<T>(url: string, {cache=this.CACHE, ...cfg}: IRequestConfigCache = {}): Promise<RequestResponse<T>> {
         setTimeout(() => {
             delete this.TMP[url];
         }, 10000);
-        if (cfg.auth != undefined) {
+        if (cfg.auth) {
             return this.get<T>(url, cfg);
         }
 
         try {
-            const salida = await this.CACHE.check(url);
-            return this.checkRespuesta<T>(JSON.parse(salida.data.toString()), salida.headers, url);
+            const salida = await cache.check(url);
+            return {
+                data: JSON.parse(salida.data.toString("utf-8")),
+                headers: salida.headers,
+                expires: salida.expires,
+            };
         } catch (err) {
             const salida = await this.get<T>(url, cfg);
             PromiseDelayed()
                 .then(async () => {
                     const data = Buffer.from(JSON.stringify(salida.data));
-                    await this.CACHE.save(url, {
+                    await cache.save(url, {
                         ...salida,
                         data,
                     }).catch(() => {

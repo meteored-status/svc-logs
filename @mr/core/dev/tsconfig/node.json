@@ -1,0 +1,32 @@
+{
+  "extends": "@tsconfig/node24/tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "allowUnusedLabels": false,
+    "importHelpers": true,
+    "incremental": true,
+    "isolatedModules": false,
+    "jsx": "react",
+    "types": ["node", "@mr/core-dev"],
+    "lib": [
+      "es2023",
+      "esnext.disposable",
+      "dom"
+    ],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strictNullChecks": true
+  },
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "output/*",
+    "output/**/*"
+  ]
+}

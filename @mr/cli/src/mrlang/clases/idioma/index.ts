@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 115d0794180378a62d69c855d7804e5d
+ */
+
 export type TIdiomas = Record<string, string[]|undefined>;
 
 export class Idiomas {

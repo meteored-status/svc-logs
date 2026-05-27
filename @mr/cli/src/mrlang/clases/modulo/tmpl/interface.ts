@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: c1493c5ba37aa3ad35cbb89325506adc
+ */
+
 import {ModuloJSON} from "../json";
 import {ITraduccionBase, TraduccionTipo} from "../traduccion";
 

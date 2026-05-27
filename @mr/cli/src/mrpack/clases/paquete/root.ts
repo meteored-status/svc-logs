@@ -1,19 +1,46 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 74f4e4a2242ce06f4c1466307e1527f8
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.15+35-josantoniojimnez
+ */
+
 import JSZip from "jszip";
 
 import {readDir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 
+import {incrementarVersion} from "../../utiles/version";
 import {Comando} from "../comando";
 import {type IPaqueteDirectory, PaqueteDirectory} from "./directory";
+import {type IUpdateTracker} from "./file";
 
+/**
+ * Representación serializable del directorio raíz de un paquete,
+ * incluyendo la versión publicada.
+ *
+ * @property version - Versión actualmente publicada del paquete.
+ */
 export interface IPaqueteDirectoryRoot extends IPaqueteDirectory {
     version: string;
 }
 
+/**
+ * Contenido de un ZIP de paquete descomprimido: el status parseado y los ficheros en memoria.
+ *
+ * @property status - `PaqueteDirectoryRoot` reconstruido del `status.json` del ZIP, o `undefined` si el ZIP no existe.
+ * @property files  - Mapa de rutas relativas a objetos `JSZipObject`.
+ */
 export interface PaqueteDirectoryRootFiles {
     status?: PaqueteDirectoryRoot;
     files: {[key: string]: JSZip.JSZipObject};
 }
 
+/**
+ * Directorio raíz de un paquete mrpack. Extiende `PaqueteDirectory` añadiendo
+ * el campo `version` y las operaciones de alto nivel: crear versión, actualizar,
+ * resetear, empaquetar y subir a GCS.
+ */
 export class PaqueteDirectoryRoot extends PaqueteDirectory {
     /* STATIC */
     public static override get DEFECTO(): IPaqueteDirectoryRoot {
@@ -68,43 +95,24 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
         return PaqueteDirectoryRoot.build(this.nombre, this.basedir, this.toJSON());
     }
 
-    private incrementarVersion(version: string, autor: string): string {
-        // los formatos son YYYY.MM.DD+INDEX
-        const partes = /^(\d{4}\.\d{1,2}\.\d{1,2})\+(\d+)(?:[+-](.*))?$/.exec(version);
-        let fecha: string;
-        let index: number;
-        if (partes == null) {
-            fecha = "2022.1.1";
-            index = 1;
-        } else {
-            fecha = partes[1];
-            index = parseInt(partes[2]);
-        }
 
-        const date = new Date();
-        const fechaActual = [
-            date.getUTCFullYear(),
-            date.getUTCMonth() + 1,
-            date.getUTCDate(),
-        ].join(".");
-
-        if (fecha==fechaActual) {
-            index++;
-        } else {
-            index = 1;
-        }
-
-        return `${fechaActual}+${index}-${autor.toLowerCase().replace(/\W/g, "")}`;
-    }
-
-    public async actualizarVersion(nuevo: PaqueteDirectoryRootFiles, antiguo: PaqueteDirectoryRootFiles): Promise<boolean> {
+    /**
+     * Aplica la nueva versión publicada (`nuevo`) sobre el árbol local.
+     * Hace un diff3 sobre la base `antiguo` y actualiza `this.version`, `this.autor` y `this.fecha`.
+     *
+     * @param nuevo    - Estado publicado que se quiere aplicar.
+     * @param antiguo  - Estado publicado anterior (base del diff3).
+     * @returns Resultado de la actualización: si hubo cambios, si hay conflictos y las entradas modificadas.
+     */
+    public async actualizarVersion(nuevo: PaqueteDirectoryRootFiles, antiguo: PaqueteDirectoryRootFiles): Promise<{actualizado: boolean; conflicto: boolean; entradas: {archivo: string; estado: "ok" | "error"}[]}> {
         await this.crearVersion("mr-cli");
 
-        if (nuevo.status==undefined) {
-            return false;
+        if (nuevo.status===undefined) {
+            return {actualizado: false, conflicto: false, entradas: []};
         }
 
-        await this.checkCambios(this.basedir, this, antiguo, nuevo, false);
+        const tracker: IUpdateTracker = {hayConflictos: false, entradas: []};
+        await this.checkCambios(this.basedir, this, antiguo, nuevo, false, tracker);
 
         const paquete = await nuevo.files["package.json"].async("text");
         await safeWrite(`${this.basedir}/package.json`, paquete, true);
@@ -113,21 +121,64 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
         this.fecha = nuevo.status.fecha;
         this.version = nuevo.status.version;
 
-        return true;
+        return {actualizado: true, conflicto: tracker.hayConflictos, entradas: tracker.entradas};
     }
 
+    /**
+     * Actualiza `this.version` con el autor real sin re-escanear el árbol de ficheros.
+     * Útil cuando ya se dispone de un status pre-calculado (p.e. desde `checkCambiosLocales`)
+     * y solo hay que fijar el autor definitivo antes de subir el paquete.
+     *
+     * @param versionBase - Versión ANTES de que `crearVersion` la incrementara (la del ZIP).
+     * @param autor       - Autor real con el que estampar la nueva versión.
+     */
+    public actualizarAutor(versionBase: string, autor: string): void {
+        this.version = incrementarVersion(versionBase, autor);
+    }
+
+    /**
+     * Re-escanea el árbol de ficheros en disco y, si hay cambios, incrementa la versión.
+     *
+     * @param autor - Autor que se estampa si la versión cambia.
+     * @returns `true` si la versión fue incrementada.
+     */
     public async crearVersion(autor: string): Promise<boolean> {
         const hash = this.hash;
         const nuevo = await super.update(this.basedir, autor, ["status.json"]);
 
-        if (hash!=nuevo) {
-            this.version = this.incrementarVersion(this.version, autor);
+        if (hash!==nuevo) {
+            this.version = incrementarVersion(this.version, autor);
             return true;
         }
 
         return false;
     }
 
+    /**
+     * Ejecuta la inyección de bloques de autoría en todos los `.ts` modificados.
+     * Se llama justo antes de empaquetar para dejar el bloque de autoría actualizado.
+     *
+     * @param autor - Nombre del autor a estampar.
+     */
+    public async prepararParaPush(autor: string): Promise<void> {
+        await this.inyectarAutorias(this.basedir, autor, this.version);
+    }
+
+    /**
+     * Devuelve la lista de rutas de ficheros del paquete que han cambiado desde el último `crearVersion`.
+     *
+     * @returns Array de rutas relativas al paquete.
+     */
+    public getArchivosCambiados(): string[] {
+        return this.listarCambios();
+    }
+
+    /**
+     * Descarta todos los cambios locales y restaura el árbol al estado de la versión publicada indicada.
+     *
+     * @param nuevo - Estado publicado al que se quiere volver.
+     * @returns `true` siempre (operación completada).
+     */
     public async resetearVersion(nuevo: PaqueteDirectoryRootFiles): Promise<boolean> {
         for (const file of await readDir(`${this.basedir}/${this.filename}`)) {
             await unlink(`${this.basedir}/${this.filename}/${file}`);
@@ -141,6 +192,11 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
         return true;
     }
 
+    /**
+     * Genera el archivo ZIP del paquete con `status.json` y todos los ficheros del árbol.
+     *
+     * @returns Buffer con el contenido ZIP comprimido con DEFLATE nivel 9.
+     */
     public async empaquetar(): Promise<Buffer> {
         const zip = new JSZip();
         zip.file("status.json", Buffer.from(JSON.stringify(this, null, 2)), {binary: true, compression: "DEFLATE", compressionOptions: {level: 9,}, createFolders: true})
@@ -150,20 +206,25 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
         return zip.generateAsync({type:"nodebuffer"});
     }
 
+    /**
+     * Sube el contenido del paquete al bucket GCS legado mediante `gsutil`.
+     * Primero elimina la carpeta remota y luego la re-sube completa.
+     *
+     */
     public async subirLegacy(): Promise<void> {
         {
-            const {status} = await Comando.spawn("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "rm", "-r", `gs://meteored-yarn-workspaces/${this.frameworkDir}`], {
+            const {status} = await Comando("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "rm", "-r", `gs://meteored-yarn-workspaces/${this.frameworkDir}`], {
                 cwd: this.basedir,
             });
-            if (status!=0) {
+            if (status!==0) {
                 return Promise.reject(new Error("Error borrando repositorio antiguo"));
             }
         }
         {
-            const {status} = await Comando.spawn("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "cp", "-r", `${this.basedir}/*`, `gs://meteored-yarn-workspaces/${this.frameworkDir}/`], {
+            const {status} = await Comando("gsutil", ["-o", "GSUtil:parallel_process_count=1", "-m", "cp", "-r", `${this.basedir}/*`, `gs://meteored-yarn-workspaces/${this.frameworkDir}/`], {
                 cwd: this.basedir,
             });
-            if (status!=0) {
+            if (status!==0) {
                 return Promise.reject(new Error("Error subiendo repositorio antiguo"));
             }
         }

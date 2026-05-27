@@ -1,7 +1,7 @@
 import path from "node:path";
 import type {Readable} from "node:stream";
-import fs, {existsSync, readFileSync, statSync, PathLike, PathOrFileDescriptor} from "node:fs";
-import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat, FileHandle} from "node:fs/promises";
+import fs, {existsSync, readFileSync, statSync, type PathLike, type PathOrFileDescriptor} from "node:fs";
+import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat, type FileHandle} from "node:fs/promises";
 
 import {error, warning} from "./log";
 import {md5} from "./hash";

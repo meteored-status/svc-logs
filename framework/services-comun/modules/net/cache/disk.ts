@@ -1,5 +1,8 @@
 import {dirname} from "node:path";
 
+import type {Conexion} from "@mr/core-network/server/http/conexion";
+import {TDevice} from "@mr/core-network/server/http/config/device";
+
 import {
     type INetCache,
     type INetCacheV1,
@@ -8,9 +11,7 @@ import {
     NetCache,
     RequestCache,
 } from "./index";
-import type {Conexion} from "../conexion";
 import type {RequestResponse} from "../request-backend";
-import {TDevice} from "../device";
 import {md5} from "../../utiles/hash";
 import {isDir, mkdir, readFileBuffer, readJSON, safeWrite} from "../../utiles/fs";
 
@@ -110,7 +111,7 @@ export class RequestCacheDisk extends RequestCache {
             return;
         }
 
-        const key = `files/tmp/netcache/${this.cacheKey(url)}`;
+        const key = `files/tmp/requestcache/${this.cacheKey(url)}`;
         const dir = dirname(key);
         if (!await isDir(dir)) {
             await mkdir(dir, true);

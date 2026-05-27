@@ -1,53 +1,10 @@
-// import {setTimeout} from 'node:timers/promises';
-//
-// export {setTimeout as PromiseDelayed};
-
 export async function PromiseDelayed(delay: number = 0): Promise<void> {
-    // if (delay>0) {
     return new Promise<void>((resolve: Function) => {
         setTimeout(() => {
             resolve();
         }, delay);
     });
-    // }
-    // return new Promise<void>((resolve: Function) => {
-    //     setImmediate(() => {
-    //         resolve();
-    //     });
-    // });
 }
-
-// deprecated => usar "postpone" de modules/decorators/metodo.ts
-// export function postponeMethod(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-//     const newProperty = `promisePostpone_${propertyKey}`;
-//
-//     target[newProperty] = descriptor.value;
-//
-//     if (descriptor.value.constructor.name == "AsyncFunction") {
-//         descriptor.value = async function (...args: any[]) {
-//             await PromiseDelayed();
-//             return target[newProperty].apply(this, args);
-//         };
-//     }
-// }
-
-// type PromiseFunction<T> = ()=>Promise<T>;
-// type PromiseProgress<T> = (resultado: T)=>void;
-// export async function PromiseChain<T>(listado: PromiseFunction<T>[], progress?: PromiseProgress<T>): Promise<T[]> {
-//     const salida:T[] = [];
-//
-//     for (let actual of listado) {
-//         const resultado = await actual();
-//         salida.push(resultado);
-//         if (progress) {
-//             setImmediate(()=>{
-//                 progress(resultado);
-//             });
-//         }
-//     }
-//
-//     return salida;
-// }
 
 type PromiseFunction<T> = (item: T)=>Promise<T>;
 export async function PromiseChain<T>(listado: T[], createPromise: PromiseFunction<T>): Promise<T[]> {
@@ -83,6 +40,10 @@ export async function PromiseChainWTB<T>(listado: PromiseFunctionWTB<T>[], delay
 export class PromiseTimeoutError extends Error {
     public constructor(public readonly ms: number) {
         super("Timed out");
+
+        Object.setPrototypeOf(this, new.target.prototype);
+
+        this.name = "PromiseTimeoutError"; // imprescindible al extender clases nativas en TypeScript
     }
 }
 

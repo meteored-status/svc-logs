@@ -1,3 +1,10 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 92ec4efb34aa477a5102fc5a452bf4ab
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
 import chokidar from "chokidar";
 import treeKill from "tree-kill";
@@ -8,12 +15,18 @@ import {Colors} from "../colors";
 import {IConfigServices} from "./service";
 import {IWorkspace, Workspace} from "../workspace";
 import {Log} from "../log";
+import {readJSON} from "services-comun/modules/utiles/fs";
+import {IPackageJson} from "../packagejson";
 
 export interface IService extends IWorkspace {
     pad: number;
     global: IConfigServices;
 }
 
+/**
+ * Workspace del generador de internacionalización (`i18n`).
+ * Lanza `mrlang generate --watch` y lo reinicia ante cambios en los ficheros `.json` de traducción.
+ */
 export class I18N extends Workspace {
     /* STATIC */
     private static TIMEOUT = 300000;
@@ -46,23 +59,16 @@ export class I18N extends Workspace {
         }).on("change", () => {
             this.cambio();
         });
-        // }
     }
 
-    // private stopWatcher(): void {
-    //     this.watcher?.close();
-    //     this.watcher = watch(`${this.dir}/package.json`, ()=>{
-    //         this.updatePackageFile();
-    //     });
-    // }
-
     public override cambio(): void {
-        this.runCompilar().then(() => {
-        }).catch((err) => {
-            Log.error({
-                type: Log.label_base,
-                label: this.label,
-            }, "Error reiniciando el compilador", err);
+        this.runCompilar()
+            .then(() => undefined)
+            .catch((err) => {
+                Log.error({
+                    type: Log.label_base,
+                    label: this.label,
+                }, "Error reiniciando el compilador", err);
         });
         for (const actual of this.hijos) {
             actual.cambio();
@@ -73,12 +79,12 @@ export class I18N extends Workspace {
         // if (os.platform()=="linux") {
         //     return;
         // }
-        if (this.timeout!=undefined) {
+        if (this.timeout!==undefined) {
             clearTimeout(this.timeout);
         }
         this.timeout = setTimeout(()=>{
             this.stopCompilar()
-                .then(() => {})
+                .then(() => undefined)
                 .catch((err) => {
                     Log.error({
                         type: Log.label_base,
@@ -88,17 +94,28 @@ export class I18N extends Workspace {
         }, I18N.TIMEOUT);
     }
 
+    /**
+     * Actualiza la configuración global de workspaces y re-ejecuta el generador si es necesario.
+     *
+     * @param global - Nueva configuración global leída de `config.workspaces.json`.
+     */
     public updateGlobal(global: IConfigServices): void {
         this.compilar = global.i18n;
 
-        this.run().then(()=>{}).catch((err)=>{
-            Log.error({
-                type: Log.label_base,
-                label: this.label,
-            }, "Error aplicando configuración global", err);
-        });
+        this.run()
+            .then(()=>undefined)
+            .catch((err)=>{
+                Log.error({
+                    type: Log.label_base,
+                    label: this.label,
+                }, "Error aplicando configuración global", err);
+            });
     }
 
+    /**
+     * Tarea principal del workspace i18n: inicia o detiene el generador de idiomas según la configuración.
+     *
+     */
     protected override async run(): Promise<void> {
         await super.run();
         await Promise.all([
@@ -117,7 +134,7 @@ export class I18N extends Workspace {
 
     private async checkCompilar(): Promise<boolean> {
         if (!this.compilar) {
-            if (this.compilador==undefined) {
+            if (this.compilador===undefined) {
                 Log.info({
                     type: Log.label_compilar,
                     label: this.label,
@@ -133,7 +150,7 @@ export class I18N extends Workspace {
 
         this.setTimeoutCompilador();
 
-        if (this.compilador!=undefined) {
+        if (this.compilador!==undefined) {
             return;
         }
 
@@ -142,7 +159,17 @@ export class I18N extends Workspace {
             label: this.label,
         }, `Iniciando generación de idiomas`);
 
-        this.compilador = spawn("yarn", ["run", "i18n", "run", "generate", "--watch"], {
+        // Cargamos el package.json
+        const paquete = await readJSON<IPackageJson>(`${this.dir}/package.json`).catch(()=>undefined);
+
+        const version = paquete?.scripts?.['generate']?.match(/-v2/) ? 'v2' : 'v1';
+
+        Log.info({
+            type: Log.label_compilar,
+            label: this.label,
+        }, `Usando versión ${version} del generador de idiomas`);
+
+        this.compilador = spawn("yarn", ["run", "i18n", "run", "generate", `-${version}`, "--watch"], {
             cwd: this.root,
             env: { ...process.env, FORCE_COLOR: "1" },
             stdio: "pipe",

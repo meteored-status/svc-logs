@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: bb6ecd82ec09edd8331fa09607bd2e0e
+ */
+
 import {ModuloJSON} from "../json";
 
 interface IParametros {

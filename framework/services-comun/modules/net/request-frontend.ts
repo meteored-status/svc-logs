@@ -1,5 +1,5 @@
-import {ErrorCode, IRespuesta} from "./interface";
-import {RequestError} from "./request/error";
+import {ErrorCode, type IRespuesta} from "@mr/core-network/client/http/interface";
+import {RequestError} from "@mr/core-network/client/http/error";
 
 export interface IRequest {
     auth?: string;

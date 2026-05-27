@@ -1,3 +1,10 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Tue, 26 May 2026 12:02:26 GMT
+ * Hash: ad667199f510b646125988bbd754f86d
+ * Versión: 2026.5.26+1-josantoniojimnez
+ */
+
 export default `
 .DS_Store
 .dev.vars
@@ -29,7 +36,10 @@ services-*/output
 tmp/
 tsconfig.tsbuildinfo
 vendor/
+**/.dev*.local
+**/.dev*.test
 **/.env*.local
+**/.env*.test
 **/coverage/**
 **/.vscode/**
 vscode.code-workspace

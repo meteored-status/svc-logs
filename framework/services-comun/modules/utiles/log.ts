@@ -1,3 +1,10 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Mon, 18 May 2026 10:42:05 GMT
+ * Hash: 25218fbf1372d6be8ba7c31b3dd66caf
+ * Versión: 2026.5.18+2-josantoniojimnez
+ */
+
 import os from "node:os";
 import cluster from "node:cluster";
 import tracer from "dd-trace";
@@ -5,6 +12,18 @@ import {formats} from "dd-trace/ext";
 
 const DATADOG = process.env["DATADOG"]=="true";
 const KUBERNETES = process.env["KUBERNETES"]=="true";
+
+/**
+ * Mapeo de niveles internos a `severity` de Cloud Logging. Cuando los logs se
+ * emiten como JSON, GKE/Cloud Logging usa el campo `severity` para clasificar
+ * la entrada (`INFO`, `WARNING`, `ERROR`, `DEBUG`).
+ */
+const SEVERITY_GCP: Record<string, string> = {
+    info: "INFO",
+    warn: "WARNING",
+    error: "ERROR",
+    debug: "DEBUG",
+};
 
 function generarEstatico(): string {
     const worker = cluster.worker?.id;
@@ -26,7 +45,78 @@ function generarEstatico(): string {
 
 const ESTATICO = generarEstatico();
 
+/**
+ * Serializa un valor cualquiera a string de forma segura. Trata especialmente
+ * los `Error` para preservar `message`, `name` y `stack`.
+ */
+function safeStringify(v: unknown): string {
+    if (typeof v === "string") {
+        return v;
+    }
+    if (v instanceof Error) {
+        try {
+            return JSON.stringify({name: v.name, message: v.message, stack: v.stack});
+        } catch {
+            return `${v.name}: ${v.message}`;
+        }
+    }
+    try {
+        return JSON.stringify(v);
+    } catch {
+        return String(v);
+    }
+}
+
+/**
+ * Construye un mensaje de log estructurado JSON compatible con Cloud Logging.
+ * Cuando hay un span de dd-trace activo, inyecta el contexto de traza para que
+ * Datadog y Cloud Logging puedan correlacionar el log con la traza.
+ *
+ * Si el primer argumento es un objeto plano (no `Error`), sus claves se
+ * promueven al nivel raíz del payload (excepto las reservadas), lo que permite
+ * llamar `info({event:"http.request", status:200, ...})` y obtener campos
+ * indexables en lugar de un string opaco.
+ */
+function buildPayload(level: string, txt: any[]): string {
+    const payload: Record<string, unknown> = {
+        timestamp: new Date().toISOString(),
+        severity: SEVERITY_GCP[level] ?? "INFO",
+    };
+
+    let head: unknown = txt[0];
+    if (head !== null && typeof head === "object" && !(head instanceof Error) && !Array.isArray(head)) {
+        for (const [k, v] of Object.entries(head as Record<string, unknown>)) {
+            if (k === "timestamp" || k === "severity") {
+                continue;
+            }
+            payload[k] = v;
+        }
+        if (txt.length > 1) {
+            payload["message"] = txt.slice(1).map(safeStringify).join(" ");
+        }
+    } else {
+        payload["message"] = txt.map(safeStringify).join(" ");
+    }
+
+    if (DATADOG) {
+        const span = tracer.scope().active();
+        if (span !== null) {
+            tracer.inject(span.context(), formats.LOG, payload);
+        }
+    }
+
+    return JSON.stringify(payload);
+}
+
+/**
+ * Devuelve los argumentos finales con los que llamar a `console.*` para `level`.
+ * En modo KUBERNETES se emite siempre JSON; en local se mantiene el prefijo
+ * legible `ESTATICO + args` para no degradar la experiencia de desarrollo.
+ */
 function trace(txt: any[], level: string): any[] {
+    if (KUBERNETES) {
+        return [buildPayload(level, txt)];
+    }
     if (DATADOG) {
         const span = tracer.scope().active();
         if (span!=null) {
@@ -61,7 +151,7 @@ export function warning(...txt: any): void {
 
 export function error(...txt: any): void {
     if (txt.length>0) {
-        console.error(...trace(txt, "warn"));
+        console.error(...trace(txt, "error"));
     } else if (!KUBERNETES) {
         console.error("");
     }
@@ -69,7 +159,11 @@ export function error(...txt: any): void {
 
 export function debug(...txt: any): void {
     if (txt.length>0) {
-        console.debug(ESTATICO, ...txt);
+        if (KUBERNETES) {
+            console.debug(...trace(txt, "debug"));
+        } else {
+            console.debug(ESTATICO, ...txt);
+        }
     } else if (!KUBERNETES) {
         console.debug("");
     }

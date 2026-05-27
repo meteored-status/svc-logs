@@ -3,11 +3,13 @@
   "description": "Componentes comunes de Status",
   "author": "José Antonio Jiménez",
   "devDependencies": {
-    "@types/node": "^24.10.9",
-    "@types/qs": "^6.14.0",
-    "qs": "^6.14.1",
+    "@mr/core-dev": "workspace:*",
+    "@mr/core-network": "workspace:*",
+    "@types/node": "^24.12.4",
+    "@types/qs": "^6.15.1",
+    "qs": "^6.15.2",
     "services-comun": "workspace:*",
     "tslib": "^2.8.1"
   },
-  "version": "2026.1.20+1-bixus"
+  "version": "2026.5.27+1-josantoniojimnez"
 }

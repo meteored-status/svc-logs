@@ -1,8 +1,16 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 27 May 2026 06:28:30 GMT
+ * Hash: 6da29c4d4633e087aae54b2b2276d931
+ * Versión: 2026.5.27+1-davidmartinezmoya
+ */
+
 import {TSendTaskType} from "./send-task";
 
 export interface IPendingSendTask {
     id: number;
     type: TSendTaskType;
+    schedule_at: number;
 }
 
 export class PendingSendTask {
@@ -22,6 +30,10 @@ export class PendingSendTask {
 
     public get type(): TSendTaskType {
         return this.data.type;
+    }
+
+    public get schedule_at(): number {
+        return this.data.schedule_at;
     }
 
     public raw(): IPendingSendTask {

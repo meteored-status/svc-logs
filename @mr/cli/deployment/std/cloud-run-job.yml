@@ -6,9 +6,12 @@ metadata:
     run.googleapis.com/launch-stage: BETA
 spec:
   template:
-#    metadata:
-#      annotations:
-#        run.googleapis.com/vpc-access-connector: projects/${PROJECT_ID}/locations/europe-west1/connectors/cloud-run
+    metadata:
+      annotations:
+        run.googleapis.com/network-interfaces: '[{"network":"servicios-1","subnetwork":"servicios-1"}]'
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+        run.googleapis.com/execution-environment: gen2
+    #        run.googleapis.com/vpc-access-connector: projects/${PROJECT_ID}/locations/europe-west1/connectors/cloud-run
     spec:
       taskCount: 1
       parallelism: 1
@@ -16,13 +19,13 @@ spec:
         spec:
           containers:
             - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
-              # Opcional: command y args si necesitas sobreescribir el ENTRYPOINT
-              # command: ["python", "script.py"]
               env:
                 - name: DATADOG
                   value: "false"
                 - name: ENTORNO
                   value: "${ENTORNO}"
+                - name: ZONA
+                  value: "${ZONA}"
               volumeMounts:
                 - name: temporal
                   mountPath: "/usr/src/app/files/tmp/"

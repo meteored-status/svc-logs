@@ -1,4 +1,10 @@
-import {JSONItem, JSONValorMap, JSONValorSet, JSONValue, JSONValuePlural, JSONValueSingular} from "../../data";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: e6ad92a3d477c257836d4685424ee462
+ */
+
+import {JSONItem, JSONValorSet, JSONValuePlural, JSONValueSingular} from "../../data";
 import {Definition} from "../definition";
 import {definitionModulePath, LANG_REGEXPS} from "./common";
 import {ModuloJSON} from "../json";
@@ -63,7 +69,7 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
                 block2.push('};');
 
                 if (item.params && item.params.length > 0) {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, ${langKey});`);
+                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, ${langKey}, ["${item.params.join("\", \"")}"]);`);
                     definition.addParamDefinition(paramDefinition, item.params);
                 } else {
                     block2.push(`const pluralValue${valueCount} = new PluralValue(values${valueCount}, ${langKey});`);
@@ -99,7 +105,7 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
     fileLines.push(`]);`);
 
     fileLines.push('');
-    fileLines.push(`export default translationSet`);
+    fileLines.push(`export default translationSet;`);
 
     return fileLines.join('\n');
 

@@ -146,8 +146,8 @@ export abstract class CacheBuilder implements ICacheBuilder {
 
     public async get<T>(sql: string, cfg?: Partial<ICacheDiskConfig>): Promise<Cache<T>> {
         const cache = this.sqls.get(sql);
-        if (cache!=undefined) {
-            if (cfg!=undefined) {
+        if (cache) {
+            if (cfg) {
                 cache.update(cfg);
             }
             return cache as Cache<T>;

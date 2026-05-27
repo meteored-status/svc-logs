@@ -1,6 +1,7 @@
-import {type INetCache, INetCacheV1, type IRouteGroupCache, NetCache} from "./index";
-import type {Conexion} from "../conexion";
-import {TDevice} from "../device";
+import type {Conexion} from "@mr/core-network/server/http/conexion";
+import {TDevice} from "@mr/core-network/server/http/config/device";
+
+import {type INetCache, INetCacheV1, type IRouteGroupCache, NetCache} from ".";
 import {md5} from "../../utiles/hash";
 
 export class NetCacheMemory extends NetCache {
