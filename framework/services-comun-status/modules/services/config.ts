@@ -1,5 +1,5 @@
-import {INetServiceBase} from "services-comun/modules/net/config/net";
-import {Service} from "services-comun/modules/net/service";
+import {INetServiceBase} from "@mr/core-network/server/http/config/net";
+import {Service} from "@mr/core-network/server/http/service";
 
 export enum EService {
     logs,

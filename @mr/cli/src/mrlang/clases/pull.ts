@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 993fa6df00c12df3491c8da99f17a6cf
+ */
+
 import {isDir, isFile, mkdir, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
 
 import {IdiomasLoader} from "./idioma/loader";

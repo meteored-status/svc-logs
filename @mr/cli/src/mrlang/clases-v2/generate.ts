@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: b88c3042a2990ce3ba5429011733282d
+ */
+
 import chokidar from "chokidar";
 
 import {isDir, mkdir, readDir, rmdir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
@@ -8,7 +14,7 @@ import generateLiteral from "./modulo/translation/literal";
 import generateMap from "./modulo/translation/map";
 import generateSet from "./modulo/translation/set";
 import {Definition} from "./modulo/definition";
-import {info} from "services-comun/modules/utiles/log";
+import {error, info} from "services-comun/modules/utiles/log";
 
 export class Generate {
     /* STATIC */
@@ -17,7 +23,7 @@ export class Generate {
         const jsondir = `${basedir}/i18n/.json`;
         const classdir = `${basedir}/i18n`;
         if (!await isDir(jsondir)) {
-            console.error("No existe el directorio", jsondir);
+            error("No existe el directorio", jsondir);
             return Promise.reject();
         }
 
@@ -34,7 +40,6 @@ export class Generate {
         await mkdir(langsDir, true);
         await mkdir(definitionsDir, true);
 
-        info(`Generating translations in ${langsDir}`);
         const modulos = await this.loadModule(jsondir, langsDir, definitionsDir, watch);
 
         for (const modulo of modulos) {
@@ -127,7 +132,8 @@ export class Generate {
         }
 
         await mkdir(definition.dir(), true)
-        await safeWrite(definition.path(), definition.content(), true);
+        await safeWrite(`${definition.dir()}/index.ts`, definition.index(), true);
+        await safeWrite(`${definition.dir()}/bundle.ts`, definition.bundle(), true);
     }
 
     /* INSTANCE */

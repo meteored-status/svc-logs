@@ -1,48 +1,58 @@
 import {Translation} from "./index";
 import {TParams, Value} from "./value/value";
-import {TranslationMapInterface} from "./interfaces/collection";
 
-export interface ITranslationMapKeys {
-    [key: string]: string|undefined;
-}
+type MapKey = string | number;
 
-export type ITranslationMapValues<K extends ITranslationMapKeys> = Record<keyof K, Value>;
+export type ITranslationMapValues<K extends MapKey> = Record<K, Value>;
 
-export type MapExport<K extends ITranslationMapKeys = ITranslationMapKeys, T extends TParams = {}> =
-    ((key: keyof K, params?: Partial<T>) => string) & {
-    size?: number;
-    map: () => TranslationMap<K, T>;
-    valor?: string;
-};
-
-
-export class TranslationMap<K extends ITranslationMapKeys=ITranslationMapKeys, T extends TParams={}> extends Translation<T>
-            implements TranslationMapInterface<K, T>{
+export class TranslationMap<K extends MapKey, T extends TParams={}> extends Translation<T> {
     /* STATIC */
 
     /* INSTANCE */
-    public constructor(protected readonly values_: ITranslationMapValues<K>) {
+    public constructor(protected readonly _values: ITranslationMapValues<K>) {
         super();
     }
 
-    public render(key: keyof K, params?: Partial<T>): string {
-        const value = this.values_[key];
-        return value.value(params);
+    /**
+     * Get a value from the map.
+     * If the key is not found, it returns the key itself as a string.
+     * @param key Key to get.
+     * @param params Parameter substitution.
+     */
+    public get(key: K, params?: Partial<T>): string {
+        const value = this._values[key];
+        return value?.value(params)??`${key}`;
+    }
+
+    /**
+     * Unsafe Get.
+     * Like #get metdhod but whitout type cheking.
+     * @param key Key to get.
+     * @param params Parameter substitution.
+     */
+    public uGet(key: string|number, params?: Partial<T>): string {
+        let validKey: K;
+        if (typeof key === 'number') {
+            validKey = `${key}` as K;
+        } else {
+            validKey = key as K;
+        }
+        return this.get(validKey, params);
     }
 
     public get size(): number{
-        return Object.keys(this.values_).length;
+        return Object.keys(this._values).length;
     }
 
     public values(params?: Partial<T>){
-        return Object.values(this.values_).map(v => v.value(params));
+        return Object.values(this._values).map(v => (v as Value).value(params));
     }
 
     public keys(){
-        return Object.keys(this.values_);
+        return Object.keys(this._values);
     }
 
-    public orderValues(order: string[],params?: Partial<T>): string[] {
-        return order.map( c => this.render(c, params));
+    public orderValues(order: K[], params?: Partial<T>): string[] {
+        return order.map(c => this.get(c, params));
     }
 }

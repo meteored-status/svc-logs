@@ -1,11 +1,17 @@
-import type {IManifestDeploymentCredenciales} from "../../../../../manifest/workspace/deployment/credenciales";
-import type {IManifestDeploymentKustomize} from "../../../../../manifest/workspace/deployment/kustomize";
-import type {IManifestDeploymentStorage} from "../../../../../manifest/workspace/deployment/storage";
-import {ManifestDeploymentKind, Runtime} from "../../../../../manifest/workspace/deployment";
-import type {IManifestBuildDatabase} from "../../../../../manifest/workspace/build/database";
-import type {IManifestBuildBundle} from "../../../../../manifest/workspace/build/bundle";
-import {BuildFW} from "../../../../../manifest/workspace/build";
-import type {IManifestDeploymentImagenEntorno} from "../../../../../manifest/workspace/deployment/imagen/entorno";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 4f22c677f44d748063d2d147096c2dfd
+ */
+
+import type {IManifestDeploymentCredenciales} from "@mr/core-dev/manifest/deployment/credenciales";
+import type {IManifestDeploymentKustomize} from "@mr/core-dev/manifest/deployment/kustomize";
+import type {IManifestDeploymentStorage} from "@mr/core-dev/manifest/deployment/storage";
+import {ManifestDeploymentKind, Runtime} from "@mr/core-dev/manifest/deployment";
+import type {IManifestBuildDatabase} from "@mr/core-dev/manifest/build/database";
+import type {IManifestBuildBundle} from "@mr/core-dev/manifest/build/bundle";
+import {BuildFW} from "@mr/core-dev/manifest/build";
+import type {IManifestDeploymentImagenEntorno} from "@mr/core-dev/manifest/deployment/imagen/entorno";
 
 export interface IManifestLegacyStorage {
     buckets: string[];

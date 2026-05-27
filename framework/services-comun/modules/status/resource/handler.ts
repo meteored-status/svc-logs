@@ -1,7 +1,15 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 22 May 2026 06:09:37 GMT
+ * Hash: 50f3a8e4b35aca23d975f06dd58646c8
+ * Versión: 2026.5.22+1-josantoniojimnez
+ */
+
+import type {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";
+import {RouteGroup} from "@mr/core-network/server/http/routes/group";
+
 import type {Configuracion} from "../../utiles/config";
 import type {IResourceGroup} from "./resource";
-import type {IRouteGroup} from "../../net/routes/group/block";
-import {RouteGroup} from "../../net/routes/group";
 
 export abstract class Status<T extends Configuracion> extends RouteGroup<T> {
     /* INSTANCE */

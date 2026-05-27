@@ -1,7 +1,14 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 4f94cfe452448a9974af28ecf342270d
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 import {
     ConfiguracionNet,
     type IConfiguracionNet,
-} from "services-comun/modules/net/config/config";
+} from "@mr/core-network/server/http/config/config";
 
 import {SERVICES} from "../services/config";
 

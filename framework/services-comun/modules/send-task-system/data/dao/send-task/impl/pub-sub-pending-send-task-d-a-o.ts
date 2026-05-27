@@ -1,3 +1,10 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 27 May 2026 06:28:30 GMT
+ * Hash: f26f01eb966232ff74bdf64702f0c700
+ * Versión: 2026.5.27+1-davidmartinezmoya
+ */
+
 import {AbstractPendingSendTaskDAO, Callback} from "../pending-send-task-d-a-o";
 import {ConfigDataQueue, PubSub} from "../../../../../messages/pubsub/v2";
 import {PendingSendTask} from "../../../model/pending-send-task";
@@ -12,7 +19,10 @@ export class PubSubPendingSendTaskDAO extends AbstractPendingSendTaskDAO {
 
     public override async save(pendingSendTask: PendingSendTask): Promise<PendingSendTask> {
         await this.client.sendMessage({
-            json: pendingSendTask.raw()
+            json: pendingSendTask.raw(),
+            attributes: {
+                'send-task-type': pendingSendTask.type.toString(),
+            }
         }, this.configDataQueue.topicName, {
             messageOrdering: false,
             batching: {
@@ -47,6 +57,7 @@ export class PubSubPendingSendTaskDAO extends AbstractPendingSendTaskDAO {
                 callback(new PendingSendTask({
                     id: parseInt(task['id'], 10),
                     type: parseInt(task['type']),
+                    schedule_at: parseInt(task['schedule_at'], 10),
                 }, accept));
             } else {
                 throw new Error('Unknown task type');

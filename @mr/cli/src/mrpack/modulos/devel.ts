@@ -1,6 +1,14 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 4fe31122e49860384009b0aedb61fd69
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 import {type IModulo, type IModuloConfig, Modulo} from "../modulo";
 import {Colors} from "../clases/colors";
 import type {IConfigEjecucion} from "../clases/devel";
+import {run} from "../clases/devel";
 
 export interface IDevelConfig extends IModuloConfig {
     options: IModuloConfig["options"] & {
@@ -13,6 +21,9 @@ export interface IDevelConfig extends IModuloConfig {
 export interface IDevel extends IModulo, IConfigEjecucion {
 }
 
+/**
+ * Módulo CLI `mrpack devel`: inicia la compilación y/o ejecución de los workspaces en modo desarrollo.
+ */
 export class ModuloDevel<T extends IDevelConfig> extends Modulo<T> {
     /* STATIC */
     protected static override OPTIONS: IDevelConfig = {
@@ -35,12 +46,16 @@ export class ModuloDevel<T extends IDevelConfig> extends Modulo<T> {
         super (config);
     }
 
+    /**
+     * Arranca el entorno de desarrollo o muestra la ayuda según los flags.
+     *
+     * @param config - Opciones del módulo (`help`, `compilar`, `ejecutar`, `forzar`).
+     */
     protected async parseParams(config: IDevel): Promise<void> {
         if (config.help) {
             this.mostrarAyuda();
         } else {
-            const {Devel} = await import(/* webpackChunkName: "mrpack/devel" */ "../clases/devel");
-            Devel.run(this.root, config);
+            run(this.root, config);
         }
     }
 

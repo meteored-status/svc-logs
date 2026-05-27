@@ -1,5 +1,5 @@
-import {Error} from "../net/error";
-import {RequestError} from "../net/request/error";
+import {HttpError} from "@mr/core-network/server/http/error";
+import {RequestError} from "@mr/core-network/client/http/error";
 import {PromiseDelayed} from "../utiles/promise";
 
 declare var PRODUCCION: boolean;
@@ -100,8 +100,8 @@ export function logRejection(a?: boolean|string, b?: boolean|string): Function {
             }
 
             return originalMethod.apply(this, args)
-                .catch(async (err: PromiseRejectedResult | Error | TypeError | RequestError)=>{
-                    if (err instanceof Error) {
+                .catch(async (err: PromiseRejectedResult | HttpError | TypeError | RequestError)=>{
+                    if (err instanceof HttpError) {
                         return Promise.reject(err);
                     }
 

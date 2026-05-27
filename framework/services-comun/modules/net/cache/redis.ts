@@ -1,9 +1,10 @@
-import {INetCache, INetCacheV1, IRouteGroupCache, NetCache} from "./index";
-import {Conexion} from "../conexion";
+import {Conexion} from "@mr/core-network/server/http/conexion";
+import {TDevice} from "@mr/core-network/server/http/config/device";
+
+import {INetCache, INetCacheV1, IRouteGroupCache, NetCache} from ".";
 import {IRedisOptions, Redis} from "../../database/redis";
 import {Configuracion} from "../../utiles/config";
 import {md5} from "../../utiles/hash";
-import {TDevice} from "../device";
 
 export class NetCacheRedis extends NetCache {
     /* STATIC */

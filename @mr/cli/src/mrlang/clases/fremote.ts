@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 3778ac9de55e01114308abdf1dc1c06e
+ */
+
 import {isFile} from "services-comun/modules/utiles/fs";
 import {readJSON} from "services-comun/modules/utiles/fs";
 

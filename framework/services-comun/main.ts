@@ -1,4 +1,3 @@
-/// <reference path="./modules/types.d.ts" />
 import emitter from "node:events";
 import http from "node:http";
 

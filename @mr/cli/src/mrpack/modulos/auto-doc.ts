@@ -1,17 +1,27 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 368314139e0823b96a7ec9c8efa6e50c
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
 import {IModulo, IModuloConfig, Modulo} from "../modulo";
-import type {IConfigEjecucion} from "../clases/devel";
 import {Colors} from "../clases/colors";
+import {run} from "../clases/auto-doc";
 
 export interface IAutoDocConfig extends IModuloConfig {
     options: IModuloConfig["options"] & {
-        env: { type: "string", },
+        env: { type: "string" };
     };
 }
 
-export interface IAutoDoc extends IModulo, IConfigEjecucion {
-    env: string;
+export interface IAutoDoc extends IModulo {
+    env?: string;
 }
 
+/**
+ * Módulo CLI `mrpack autodoc`: genera la documentación automática del proyecto.
+ */
 export class ModuloAutoDoc<T extends IAutoDocConfig> extends Modulo<T> {
     /* STATIC */
     protected static override OPTIONS: IAutoDocConfig = {
@@ -32,15 +42,19 @@ export class ModuloAutoDoc<T extends IAutoDocConfig> extends Modulo<T> {
         super (config);
     }
 
+    /**
+     * Ejecuta la generación de documentación o muestra la ayuda según los flags.
+     *
+     * @param config - Opciones del módulo (`help`, `env`).
+     */
     protected async parseParams(config: IAutoDoc): Promise<void> {
         if (config.help) {
             this.mostrarAyuda();
-            this.mostrarAyuda();
+        } else if (config.env !== undefined) {
+            const env: string = config.env;
+            run(this.root, { env });
         } else {
-            const {AutoDoc} = await import(/* webpackChunkName: "mrpack/auto-doc" */ "../clases/auto-doc");
-            AutoDoc.run(this.root, {
-                env: config.env,
-            });
+            this.mostrarAyuda();
         }
     }
 

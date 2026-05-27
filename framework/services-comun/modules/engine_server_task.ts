@@ -1,7 +1,14 @@
-import {error, info} from "./utiles/log";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 22 May 2026 10:14:33 GMT
+ * Hash: 9d9790efe6641042564798dffa58f5cb
+ * Versión: 2026.5.22+4-josantoniojimnez
+ */
 
-import {ConfiguracionNet} from "./net/config/config";
+import {ConfiguracionNet} from "@mr/core-network/server/http/config/config";
+
 import {EngineServer} from "./engine_server";
+import {error, info} from "./utiles/log";
 
 abstract class EngineServerTask<T extends ConfiguracionNet=ConfiguracionNet> extends EngineServer<T> {
     /* STATIC */

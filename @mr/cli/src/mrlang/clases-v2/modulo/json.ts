@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: ab3d4b36fb546f58a2a176b5e4ce2e13
+ */
+
 import {isFile, readJSON} from "services-comun/modules/utiles/fs";
 
 import {IModulo, type IModuloConfig as IModuloConfigBase, Modulo} from ".";
@@ -73,7 +79,7 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
 
         otherTranslations.forEach(translation => {
             if (translation.tipo == "map") {
-                imports.push(`${pascalCase(translation.id)}Record`);
+                imports.push(`${pascalCase(translation.id)}Keys`);
             }
 
             if (translation.params && translation.params.length > 0) {
@@ -82,11 +88,6 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
         });
 
         indexLines.push(`import {\n${imports.join(",\n    ")}\n} from "${"../".repeat(subDirsCount)}definitions${this.path()}/${this.id}";`);
-
-        indexLines.push('');
-
-        indexLines.push(`import {TranslationSet} from "services-comun/modules/traduccion/v2/translation-set";`);
-        indexLines.push(`import {MapExport, TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
         indexLines.push('');
 
         this.traducciones().forEach(translation => {
@@ -101,49 +102,37 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
             indexLines.push(`    public readonly ${translation.id}: string;`);
         });
 
-        const setTranslations = otherTranslations.filter(t => t.tipo == "set")
-        setTranslations.forEach( s => indexLines.push(`    public readonly ${s.id}: TranslationSet;`))
-
-        const mapTranslations = otherTranslations.filter(t => t.tipo == "map")
-        mapTranslations.forEach( s => {
-            const record = `${pascalCase(s.id)}Record`;
-            indexLines.push(`    public readonly ${s.id}: MapExport<${record}, ${record}>;`)
-        })
-
         indexLines.push('');
         indexLines.push(`    public constructor() {`);
         simpleTranslations.forEach(translation => {
             indexLines.push(`        this.${translation.id} = ${translation.id};`);
         });
-        setTranslations.forEach(translation => indexLines.push(`        this.${translation.id} = ${translation.id};`));
-        mapTranslations.forEach(translation => indexLines.push(`        this.${translation.id} = ${translation.id};`));
         indexLines.push(`    }`);
         indexLines.push('');
 
         otherTranslations.forEach(translation => {
-            const args: string[] = [];
+            if (translation.tipo == 'map' || translation.tipo == 'set') {
+                indexLines.push(`    public ${translation.id} = ${translation.id};`);
+            } else {
+                const args: string[] = [];
 
-            if (translation.tipo == "map") {
-                return;
-            } else if (translation.tipo == "set") {
-                return;
-            }
-
-            if (translation.params && translation.params.length > 0) {
-                args.push(`params: Partial<${pascalCase(translation.id)}Params>`);
-            }
-
-
-            indexLines.push(`    public ${translation.id}(${args.join(', ')}) {return ${translation.id}(${args.map(arg => {
-                if (arg.includes('key')) {
-                    return `key`;
-                } else if (arg.includes('idx')) {
-                    return `idx`;
-                } else if (arg.includes('params')) {
-                    return `params`;
+                if (translation.params && translation.params.length > 0) {
+                    args.push(`params: Partial<${pascalCase(translation.id)}Params>`);
                 }
-                return '';
-            }).join(', ')})};`);
+
+
+                indexLines.push(`    public ${translation.id}(${args.join(', ')}) {return ${translation.id}(${args.map(arg => {
+                    if (arg.includes('key')) {
+                        return `key`;
+                    } else if (arg.includes('idx')) {
+                        return `idx`;
+                    } else if (arg.includes('params')) {
+                        return `params`;
+                    }
+                    return '';
+                }).join(', ')})};`);
+
+            }
         });
 
         indexLines.push(`}`);
@@ -162,25 +151,26 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
         this.traducciones().forEach(translation => {
             if (translation.tipo == "literal" && (!translation.params || translation.params.length == 0)) {
                 indexLines.push(`    ${translation.id}: string;`);
+            } else if (translation.tipo == 'map') {
+                const args: string[] = [];
+
+                args.push(`${pascalCase(translation.id)}Keys`);
+
+                if (translation.params && translation.params.length > 0) {
+                    args.push(`Partial<${pascalCase(translation.id)}Params>`);
+                }
+
+                indexLines.push(`    ${translation.id}: TranslationMap<${args.join(', ')}>;`);
+            } else if (translation.tipo == 'set') {
+                indexLines.push(`    ${translation.id}: TranslationSet${translation.params && translation.params.length > 0 ? `<${pascalCase(translation.id)}Params>` : ''};`);
             } else {
                 const args: string[] = [];
-                if (translation.tipo == "map") {
-                    args.push(`${pascalCase(translation.id)}Keys`);
-                } else if (translation.tipo == "set") {
-                    args.push(``);
-                }
 
                 if (translation.params && translation.params.length > 0) {
                     args.push(`params: Partial<${pascalCase(translation.id)}Params>`);
                 }
 
-                if(translation.tipo == "set")
-                    indexLines.push(`    ${translation.id}: TranslationSet;`);
-                else if(translation.tipo == "map") {
-                    indexLines.push(`    ${translation.id}: MapExport<${pascalCase(translation.id)}Record, {}>`);
-                }
-                else
-                    indexLines.push(`    ${translation.id}: (${args.join(', ')}) => string;`);
+                indexLines.push(`    ${translation.id}: (${args.join(', ')}) => string;`);
             }
         });
         indexLines.push('}');

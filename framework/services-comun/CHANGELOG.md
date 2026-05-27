@@ -1,6 +1,47 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
+## 2026.5.18+next
+
+### Changed
+- [Jose] `modules/utiles/log.ts` — **logging estructurado JSON para Cloud Logging y Datadog**:
+  - Cuando `KUBERNETES=true` se emite siempre JSON (no solo cuando `DATADOG=true` y hay span activo).
+  - Cada entrada incluye `timestamp`, `severity` (`INFO`/`WARNING`/`ERROR`/`DEBUG` — formato Cloud Logging)
+    y `message`. Cuando hay span de `dd-trace` activo se inyecta el contexto de traza (`dd.trace_id`,
+    `dd.span_id`) para correlacionar logs con trazas.
+  - Si el primer argumento de `info/warning/error/debug` es un objeto plano, sus claves se promueven
+    al nivel raíz del payload, permitiendo p. ej. `info({event:"http.request", status:200, latency_ms:42})`
+    y obtener campos indexables en lugar de un string opaco.
+  - Los `Error` se serializan preservando `name`/`message`/`stack`.
+  - En desarrollo local se mantiene el formato legible previo (prefijo `ESTATICO + args`).
+  - **Bugfix**: `error()` ahora emite con nivel `error` (antes emitía con nivel `warn`, lo que producía
+    `severity: WARNING` en los logs estructurados).
+- [Jose] `modules/engine_server.ts` — `EngineServer.prebuild` deja de mutar
+  `Respuesta.SERVICE/POD/ZONA/VERSION` y pasa a inicializar el contexto de cabeceras
+  HTTP mediante `Respuesta.setContextoDefecto({service, pod, zona, version})`.
+  Esto elimina estado global mutable campo a campo en `@mr/core-network/server/http/respuesta`.
+
+---
+## 2026.5.5+1
+
+### Added
+- [Juan Carlos] Añadido soporte en `SparkPostManager` para campañas por listas de destinatarios:
+  - `createRecipientList`
+  - `addRecipientsToList`
+  - `sendToList`
+- [Juan Carlos] Añadidos métodos para gestión de listas en SparkPost:
+  - `getAllRecipientLists`
+  - `deleteRecipientList`
+- [Juan Carlos] Añadido método `getRecipientList` para consultar listas con sus destinatarios.
+
+### Changed
+- [Juan Carlos] Mejorada la carga de credenciales en `SparkPostManager.build` para soportar configuración separada de cliente (`client`) y administrador (`admin`).
+- [Juan Carlos] Separada la inicialización lazy de clientes (`getClient` y `getAdminClient`) para diferenciar operaciones de envío directo y operaciones administrativas.
+
+### Updated
+- [Juan Carlos] Añadida documentación TSDoc en `modules/email/managers/spark_post.ts`.
+
+---
 ## 2025.9.2+1
 
 ## Added

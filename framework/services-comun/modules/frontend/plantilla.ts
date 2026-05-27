@@ -4,10 +4,7 @@ import {ConfigCache} from "../cache/config";
 import {error} from "../utiles/log";
 import {logCall, logRejection} from "../decorators/metodo";
 
-export enum TDevice {
-    pc = "pc",
-    mv = "mv",
-}
+export {TDevice} from "./device";
 
 export interface IConfigPlantilla {
     extra?: TExtra;
@@ -26,9 +23,8 @@ interface ICacheData extends ICacheMetadata {
 }
 
 export abstract class Plantilla<T extends IConfigPlantilla = IConfigPlantilla> {
-    /* STATIC */
-
     /* INSTANCE */
+    private time: number;
     public contenido: string;
     public expiracion?: Date;
     public lastModified?: Date;
@@ -39,6 +35,7 @@ export abstract class Plantilla<T extends IConfigPlantilla = IConfigPlantilla> {
     protected readonly modificaciones: number[];
 
     protected constructor(protected readonly cache: ConfigCache, protected readonly config: T) {
+        this.time = Date.now();
         this.contenido = "";
         this.expiraciones = [];
         this.modificaciones = [];
@@ -46,17 +43,31 @@ export abstract class Plantilla<T extends IConfigPlantilla = IConfigPlantilla> {
         this.cacheAdapter = new CacheAdapterDisk(cache);
     }
 
-    protected async loadModulo<K extends Plantilla>(modulop: Promise<K>): Promise<K> {
+    protected async loadModulo<K extends Plantilla>(modulop: Promise<K>, finish: boolean = true): Promise<K> {
         const modulo = await modulop;
 
+        if (!finish) {
+            return modulo;
+        }
+
+        await this.finishModulo(modulo);
+
+        return modulo;
+    }
+
+    protected async finishModulo<K extends Plantilla>(modulo: K): Promise<K> {
         await modulo.render();
 
         this.addExpiracion(modulo.expiracion);
         this.addLastModified(modulo.lastModified);
         this.addCacheTags(modulo.cacheTags);
-        this.addSubcache(await modulo.getCacheControl());
+        await this.setSubcache(modulo);
 
         return modulo;
+    }
+
+    protected async setSubcache<K extends Plantilla>(modulo: K): Promise<void> {
+        this.addSubcache(await modulo.getCacheControl());
     }
 
     protected addLastModified(last?: Date): void {
@@ -127,7 +138,7 @@ export abstract class Plantilla<T extends IConfigPlantilla = IConfigPlantilla> {
         return plantilla(parametros);
     }
 
-    private async renderEjecutar({control, key}: ICacheGetOptions): Promise<void> {
+    protected async renderEjecutar(): Promise<void> {
         this.contenido = await this.renderizar();
         [
             this.expiracion,
@@ -136,10 +147,8 @@ export abstract class Plantilla<T extends IConfigPlantilla = IConfigPlantilla> {
             this.calcularExpiracion(),
             this.calcularLastModified(),
         ]);
-
-        this.aCache({control, key}).then(async () => {}).catch(async (err) => {
-            error(`Error guardando caché`, err);
-        });
+        // const time = Date.now()-this.time;
+        // console.log(this.constructor.name, time);
     }
 
     @logRejection()
@@ -150,7 +159,11 @@ export abstract class Plantilla<T extends IConfigPlantilla = IConfigPlantilla> {
         ]);
 
         await this.deCache({control, key}).catch(async ()=>{
-            await this.renderEjecutar({control, key});
+            await this.renderEjecutar();
+
+            this.aCache({control, key}).then(async () => undefined).catch(async (err) => {
+                error(`Error guardando caché`, err);
+            });
         });
     }
 

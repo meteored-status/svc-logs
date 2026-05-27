@@ -28,10 +28,7 @@ console.log(var2.value({
 const l1 = new Literal(var1);
 console.log(l1.render());
 
-const m1 = new TranslationMap<{
-    "0": string,
-    "1": string,
-}>({
+const m1 = new TranslationMap<"0" | "1">({
     "0": var1,
     "1": var2,
 })

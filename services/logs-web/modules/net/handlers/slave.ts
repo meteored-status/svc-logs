@@ -1,5 +1,5 @@
-import {RouteGroup} from "services-comun/modules/net/routes/group";
-import type {IRouteGroup} from "services-comun/modules/net/routes/group/block";
+import {RouteGroup} from "@mr/core-network/server/http/routes/group";
+import type {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";
 
 import type {Configuracion} from "../../utiles/config";
 import {type ILogErrorPOST, ingest as ingestError} from "../../data/error";

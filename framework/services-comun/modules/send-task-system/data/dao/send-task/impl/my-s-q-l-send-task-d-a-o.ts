@@ -1,3 +1,10 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 27 May 2026 06:28:30 GMT
+ * Hash: 7a0f28eff52eb3327934631b9c4007e3
+ * Versión: 2026.5.27+1-davidmartinezmoya
+ */
+
 import {AbstractSendTaskDAO} from "../send-task-d-a-o";
 import {MySQL} from "../../../../../database/mysql";
 import {SendTask, TSendTaskStatus, TSendTaskType} from "../../../model/send-task";
@@ -46,6 +53,27 @@ export class MySQLSendTaskDAO extends AbstractSendTaskDAO {
                 });
             }
         });
+    }
+
+    public async countScheduled(limitDate: Date, type: TSendTaskType): Promise<number> {
+        const sql = `
+            select count(distinct st.id) as total
+            from send_task st
+                inner join send_schedule ss on ss.send_task = st.id
+            where st.status = ?
+                and st.type = ?
+                and ss.send_date <= ?
+        `.replaceAll(`\n`, ' ').replaceAll(/\s+/g, ' ').trim();
+
+        const row = await this.db.selectOne<{ total: number }>(sql, [
+            TSendTaskStatus.ACTIVE,
+            type,
+            limitDate,
+        ], {
+            master: true, // Forzamos lectura en master para evitar problemas de replicación
+        });
+
+        return row.total;
     }
 
     private rowToSendTask(row: SendTaskRow): SendTask {

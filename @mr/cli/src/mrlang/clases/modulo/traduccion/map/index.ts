@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 834633cd3be4b89e5692899aee8c5e94
+ */
+
 import {type ITraduccion as ITraduccionBase, Traduccion, type TraduccionTipo} from "..";
 import type {Modulo} from "../..";
 import params from "./params";

@@ -4,6 +4,6 @@ export abstract class CustomError extends Error {
 
         Object.setPrototypeOf(this, new.target.prototype);
 
-        this.name = "CustomError"; // en subclases, es importante hacer esto
+        this.name = "CustomError";
     }
 }

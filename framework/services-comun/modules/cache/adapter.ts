@@ -7,7 +7,7 @@ export interface ICacheMetadata {
     extra?: TExtra;
 }
 
-export type TExtra = NodeJS.Dict<string|number|boolean>;
+export type TExtra = Record<string, string|number|boolean|undefined>;
 export type TExtraChecker = (extra?: TExtra)=>boolean;
 
 export interface ICacheAdapter<T extends ICacheMetadata> {

@@ -63,6 +63,7 @@ if [[ -f "GENERAR.txt" ]]; then
 
   lb cronjobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
   lb services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  lb jobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
   wait
 else
     echo "Omitiendo la subida de código a Storage"

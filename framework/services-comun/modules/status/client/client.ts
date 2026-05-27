@@ -1,4 +1,4 @@
-import {IRespuesta} from "../../net/interface";
+import {IRespuesta} from "@mr/core-network/client/http/interface";
 import {IComponent} from "../common/interface";
 
 export interface ISpec<T> {

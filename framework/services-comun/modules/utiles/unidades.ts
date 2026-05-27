@@ -6,6 +6,14 @@ export enum TVelocidad {
     BEAUFORT = 5,
 }
 
+export const VelocidadUnidad: Record<TVelocidad, string> = {
+    [TVelocidad.MPH]: "mph",
+    [TVelocidad.KMH]: "Km/h",
+    [TVelocidad.KNOTS]: "kt",
+    [TVelocidad.MPS]: "m/s",
+    [TVelocidad.BEAUFORT]: "beaufort",
+};
+
 const VELOCIDAD_MPH_KHM = 1.609346;
 const VELOCIDAD_MPH_KNOTS = 0.868977;
 const VELOCIDAD_KMH_KNOTS = 0.539957;
@@ -19,13 +27,11 @@ export enum TPrecipitacion {
     lm2 = 2
 }
 
-export enum TPresion {
-    mb      = 0,
-    inhg    = 1,
-    hpa     = 2,
-    mmhg    = 3,
-    kpa     = 4
-}
+export const PrecipitacionUnidad: Record<TPrecipitacion, string> = {
+    [TPrecipitacion.mm]: "mm",
+    [TPrecipitacion.in]: "in",
+    [TPrecipitacion.lm2]: "l/m²",
+};
 
 export function convertirPrecipitacion(value: number, from: TPrecipitacion, to: TPrecipitacion): number {
     switch (from) {
@@ -56,6 +62,93 @@ export function convertirPrecipitacion(value: number, from: TPrecipitacion, to: 
     }
     return value;
 }
+
+export function redondearPrecipitacion(value: number, unidad: TPrecipitacion): number {
+    switch (unidad) {
+        case TPrecipitacion.in:
+            if (value<1) {
+                return Math.round(value*1000)/1000;
+            }
+            if (value<10) {
+                return Math.round(value*100)/100;
+            }
+            if (value<1) {
+                return Math.round(value*10)/10;
+            }
+            return Math.round(value);
+        case TPrecipitacion.lm2:
+        default:
+            if (value<10) {
+                return Math.round(value*10)/10;
+            }
+            return Math.round(value);
+    }
+}
+
+export enum TNieve {
+    cm  = 0,
+    in  = 1,
+}
+
+export const NieveUnidad = (valor: number, unidad: TNieve)=> {
+    switch(unidad) {
+        case TNieve.in:
+            return `in`;
+        case TNieve.cm:
+        default:
+            if (valor<100) {
+                return `cm`;
+            }
+            return `m`;
+    }
+};
+
+export function convertirNieve(value: number, from: TNieve, to: TNieve): number {
+    switch (from) {
+        case TNieve.cm:
+            switch (to) {
+                case TNieve.in:
+                    return (value) / 2.54;
+            }
+            break;
+        case TNieve.in:
+            switch (to) {
+                case TNieve.cm:
+                    return value * 2.54;
+            }
+            break;
+    }
+    return value;
+}
+
+export function redondearNieve(value: number, unidad: TNieve): number {
+    switch (unidad) {
+        case TNieve.in:
+            if (value < 1) {
+                return Math.round(value * 10) / 10;
+            }
+            return Math.round(value);
+        case TNieve.cm:
+        default:
+            return Math.round(value);
+    }
+}
+
+export enum TPresion {
+    mb      = 0,
+    inhg    = 1,
+    hpa     = 2,
+    mmhg    = 3,
+    kpa     = 4
+}
+
+export const PresionUnidad: Record<TPresion, string> = {
+    [TPresion.mb]: "mb",
+    [TPresion.inhg]: "inHg",
+    [TPresion.hpa]: "hPa",
+    [TPresion.mmhg]: "mmHg",
+    [TPresion.kpa]: "kPa",
+};
 
 export function convertirPresion(value: number, from: TPresion, to: TPresion): number {
     switch (from) {
@@ -212,6 +305,11 @@ export enum TTemperatura {
     FAHRENHEIT = 2,
 }
 
+export const TemperaturaUnidad: Record<TTemperatura, string> = {
+    [TTemperatura.CENTIGRADOS]: "°C",
+    [TTemperatura.FAHRENHEIT]: "°F",
+};
+
 export function convertirTemperatura(value: number, from: TTemperatura, to: TTemperatura): number {
     switch (from) {
         case TTemperatura.CENTIGRADOS:
@@ -233,8 +331,17 @@ export function convertirTemperatura(value: number, from: TTemperatura, to: TTem
 
 export enum TDistancia {
     METROS = 0,
-    FEET = 1
+    FEET = 1,
+    KM = 2,
+    HFEET = 3,
 }
+
+export const DistanciaUnidad: Record<TDistancia, string> = {
+    [TDistancia.METROS]: "m",
+    [TDistancia.FEET]: "ft",
+    [TDistancia.KM]: "Km",
+    [TDistancia.HFEET]: "hft",
+};
 
 export function convertirDistancia(value: number, from: TDistancia, to: TDistancia): number {
     switch (from) {
@@ -242,12 +349,40 @@ export function convertirDistancia(value: number, from: TDistancia, to: TDistanc
             switch (to) {
                 case TDistancia.FEET:
                     return value * 3.28084;
+                case TDistancia.KM:
+                    return value / 1000;
+                case TDistancia.HFEET:
+                    return (value * 3.28084) / 1000;
             }
             break;
         case TDistancia.FEET:
             switch (to) {
                 case TDistancia.METROS:
                     return value / 3.28084;
+                case TDistancia.KM:
+                    return (value / 3.28084) / 1000;
+                case TDistancia.HFEET:
+                    return value / 100;
+            }
+            break;
+        case TDistancia.KM:
+            switch (to) {
+                case TDistancia.FEET:
+                    return (value / 1000) * 3.28084;
+                case TDistancia.METROS:
+                    return value / 1000;
+                case TDistancia.HFEET:
+                    return (value * 10) * 3.28084;
+            }
+            break;
+        case TDistancia.HFEET:
+            switch (to) {
+                case TDistancia.METROS:
+                    return (value / 3.28084) * 100;
+                case TDistancia.KM:
+                    return (value / 3.28084) / 10;
+                case TDistancia.FEET:
+                    return value * 100;
             }
             break;
     }

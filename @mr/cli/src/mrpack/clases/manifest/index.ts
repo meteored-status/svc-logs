@@ -1,14 +1,32 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 26d4042574f9c5d45cbf989eaeba6546
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
+import type {ManifestRoot} from "@mr/core-dev/manifest/root";
 import {readJSON, readJSONSync, safeWrite} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
-import type {ManifestRoot} from "../../../../manifest";
 import type {IPackageJsonLegacy} from "../packagejson";
 
 type ManifestDefault<T> = {default: T};
 type ManifestLoad<T, K extends ManifestRoot<T>> = new (manifest: T)=>K;
 
+/**
+ * Cargador base de manifests `mrpack.json`.
+ * Gestiona la lectura, normalización, persistencia y aplicación de variables de entorno
+ * para cualquier tipo de manifest del monorepo.
+ */
 export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
     /* STATIC */
+    /**
+     * Devuelve la ruta absoluta del fichero `mrpack.json` de un directorio.
+     *
+     * @param basedir - Directorio del workspace o raíz del monorepo.
+     * @returns Ruta absoluta al fichero `mrpack.json`.
+     */
     public static getFile(basedir: string): string {
         return `${basedir}/mrpack.json`;
     }
@@ -26,8 +44,25 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         this.guardando = false;
     }
 
+    /**
+     * Normaliza y valida un manifest parcial, completando los valores no presentes con los defaults.
+     * Implementado por cada loader concreto.
+     *
+     * @param manifest - Datos parciales leídos del `mrpack.json`.
+     * @param paquete  - Package.json legacy del workspace, usado en la normalización si es necesario.
+     * @returns Objeto de manifest completo y normalizado.
+     */
     public abstract check(manifest?: Partial<T>, paquete?: IPackageJsonLegacy): T;
 
+    /**
+     * Carga el manifest desde disco de forma asíncrona.
+     * Si el fichero no existe, inicializa con los valores por defecto y guarda.
+     * Si el contenido normalizado difiere del original, persiste los cambios.
+     *
+     * @param env     - Si `true`, aplica las variables de entorno al manifest tras cargarlo.
+     * @param paquete - Package.json legado del workspace, usado en la normalización.
+     * @returns La propia instancia del loader para encadenar llamadas.
+     */
     public async load(env: boolean = false, paquete?: IPackageJsonLegacy): Promise<ManifestLoader<T, K>> {
         const guardar = await readJSON<Partial<T>>(this.file)
             .then((manifest) => {
@@ -52,6 +87,13 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         return this;
     }
 
+    /**
+     * Carga el manifest desde disco de forma síncrona.
+     * Si el fichero no existe o falla la lectura, usa los valores por defecto.
+     *
+     * @param paquete - Package.json legado del workspace, usado en la normalización.
+     * @returns La propia instancia del loader para encadenar llamadas.
+     */
     public loadSync(paquete?: IPackageJsonLegacy): ManifestLoader<T, K> {
         const salida = readJSONSync<Partial<T>>(this.file);
         if (salida!=null) {
@@ -63,6 +105,11 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         return this;
     }
 
+    /**
+     * Persiste el manifest actual en disco como JSON indentado.
+     * Ignora llamadas concurrentes si ya hay una escritura en curso.
+     *
+     */
     public async save(): Promise<void> {
         if (this.guardando) {
             return;
@@ -79,6 +126,11 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
 
     public abstract applyENV(): void;
 
+    /**
+     * Serializa el manifest actual a su representación JSON bruta.
+     *
+     * @returns Objeto JSON del manifest.
+     */
     public toJSON(): T {
         return this.manifest.toJSON();
     }

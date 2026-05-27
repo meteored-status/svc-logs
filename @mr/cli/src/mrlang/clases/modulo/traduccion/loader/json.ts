@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: eac194bfd8a2bb9b4d88328f46e67e39
+ */
+
 import {readJSON} from "services-comun/modules/utiles/fs";
 
 import {type ITraduccionData, TraduccionOrigen, TraduccionTipo} from "..";

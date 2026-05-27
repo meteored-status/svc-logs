@@ -1,14 +1,31 @@
-import type {IManifestBuildBundleBase,} from "@mr/cli/manifest/build/bundle/base";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 993027944c710bee0a94d48cddc60892
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
+import type {IManifestBuildBundleBase,} from "@mr/core-dev/manifest/build/bundle/base";
 
 import type {IManifestLegacyBundleBase} from "../../legacy";
 import ManifestWorkspaceBuildComponentesLoader from "./componentes";
 
+/**
+ * Cargador base para la configuración de bundle de build.
+ * Normaliza las entradas, componentes, source maps y prefijos.
+ */
 export class ManifestWorkspaceBuildBundleBaseLoader {
     /* INSTANCE */
     public get default(): IManifestBuildBundleBase {
         return {};
     }
 
+    /**
+     * Normaliza y valida una configuración de bundle base.
+     *
+     * @param bundle - Datos parciales de la configuración de bundle.
+     * @returns Configuración de bundle normalizada, o `undefined` si el objeto resultante está vacío.
+     */
     public check(bundle?: Partial<IManifestBuildBundleBase>): IManifestBuildBundleBase|undefined {
         if (!bundle) {
             return;
@@ -35,6 +52,12 @@ export class ManifestWorkspaceBuildBundleBaseLoader {
         return data;
     }
 
+    /**
+     * Migra la configuración de bundle base desde el formato legacy.
+     *
+     * @param config - Datos en formato legacy a migrar.
+     * @returns Configuración de bundle migrada, o `undefined` si no hay datos relevantes.
+     */
     public fromLegacy(config: Partial<IManifestLegacyBundleBase>): IManifestBuildBundleBase|undefined {
         if (!config.source_map && !config.componentes && !config.entries && !config.prefix) {
             return;

@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: ae0f9cfca50d3daf4ec1a5a61f6752d7
+ */
+
 interface IParametros {
     lang?: string;
     langs: string[];

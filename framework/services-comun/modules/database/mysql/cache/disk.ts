@@ -16,7 +16,7 @@ export class DiskCache<T> extends Cache<T>{
     protected readonly md5: string;
     protected path: string;
 
-    public constructor(sql: string, {path="tmp", ...cfg}: Partial<ICacheDiskConfig>={}) {
+    public constructor(sql: string, {path="tmp/sql", ...cfg}: Partial<ICacheDiskConfig>={}) {
         super(sql, {
             cleanup: false,
             ...cfg,
@@ -106,6 +106,7 @@ class CacheBuilder extends CacheBuilderBase {
     /* INSTANCE */
     public constructor() {
         super();
+        // nah
     }
 
     protected async build<T>(namespace: string, cfg?: Partial<ICacheDiskConfig>): Promise<Cache<T>> {
@@ -127,9 +128,3 @@ class CacheBuilder extends CacheBuilderBase {
 }
 
 export default new CacheBuilder();
-
-
-
-// public async get2(cfg: ICacheConfigDefault) {
-//
-// }

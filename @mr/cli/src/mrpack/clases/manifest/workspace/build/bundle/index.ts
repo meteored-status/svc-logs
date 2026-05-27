@@ -1,5 +1,12 @@
-import type {IManifestBuildBundle} from "@mr/cli/manifest/build/bundle";
-import type {IManifestBuildBundleBase} from "@mr/cli/manifest/build/bundle/base";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 875a091a62c9ed85b1c368ed51253965
+ * Versión: 2026.5.27+1-josantoniojimnez
+ */
+
+import type {IManifestBuildBundle} from "@mr/core-dev/manifest/build/bundle";
+import type {IManifestBuildBundleBase} from "@mr/core-dev/manifest/build/bundle/base";
 
 import type {IManifestLegacyBundle} from "../../legacy";
 import {ManifestWorkspaceBuildBundleBaseLoader} from "./base";
@@ -12,6 +19,12 @@ class ManifestWorkspaceBuildBundleLoader extends ManifestWorkspaceBuildBundleBas
         };
     }
 
+    /**
+     * Normaliza y valida la configuración completa de bundle (base + sección `web`).
+     *
+     * @param bundle - Datos parciales de la configuración de bundle.
+     * @returns Configuración de bundle normalizada, o `undefined` si el objeto resultante está vacío.
+     */
     public override check(bundle?: Partial<IManifestBuildBundle>): IManifestBuildBundle|undefined {
         if (!bundle) {
             return;
@@ -36,6 +49,12 @@ class ManifestWorkspaceBuildBundleLoader extends ManifestWorkspaceBuildBundleBas
         return data;
     }
 
+    /**
+     * Migra la configuración de bundle desde el formato legacy, incluyendo entradas `web`.
+     *
+     * @param config - Datos en formato legacy a migrar.
+     * @returns Configuración de bundle migrada, o `undefined` si no hay datos relevantes.
+     */
     public override fromLegacy(config?: Partial<IManifestLegacyBundle>): IManifestBuildBundle|undefined {
         if (!config || Object.keys(config).length===0) {
             return;

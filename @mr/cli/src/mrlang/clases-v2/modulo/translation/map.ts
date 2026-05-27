@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 8991a60d3d13b8240a0dc9b34a8239c0
+ */
+
 import {JSONItem, JSONValorMap, JSONValuePlural, JSONValueSingular} from "../../data";
 import {Definition} from "../definition";
 import {definitionModulePath, LANG_REGEXPS} from "./common";
@@ -15,8 +21,8 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
     const paramDefinition = pascalCase(`${item.id}Params`);
     const keysDefinition = pascalCase(`${item.id}`);
 
-    imports.add(`import {MapExport, TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
-    imports.add(`import type {${keysDefinition}Record} from "${definitionModulePath(module)}";`);
+    imports.add(`import {TranslationMap} from "services-comun/modules/traduccion/v2/translation-map";`);
+    imports.add(`import type {${keysDefinition}Keys} from "${definitionModulePath(module)}";`);
 
     const keys: Record<string, string> = {};
 
@@ -37,7 +43,7 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
                 block.push(`const value${valueCount} = \`${singularValue.value}\`;`);
 
                 if (item.params && item.params.length > 0) {
-                    block.push(`const singularValue${valueCount} = new SingularValue<${paramDefinition}>(value${valueCount});`);
+                    block.push(`const singularValue${valueCount} = new SingularValue<${paramDefinition}>(value${valueCount}, ["${item.params.join("\", \"")}"]);`);
                     definition.addParamDefinition(paramDefinition, item.params);
                 } else {
                     block.push(`const singularValue${valueCount} = new SingularValue(value${valueCount});`);
@@ -57,12 +63,12 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
 
                 block2.push(`const values${valueCount}: Partial<Record<TPluralKey, string>> = {`);
                 Object.entries(pluralValue.value).forEach(([key, value]) => {
-                    block2.push(`    ${key}: "${value}",`);
+                    block2.push(`    "${key}": "${value}",`);
                 });
                 block2.push('};');
 
                 if (item.params && item.params.length > 0) {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, ${langKey});`);
+                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, ${langKey}, ["${item.params.join("\", \"")}"]);`);
                     definition.addParamDefinition(paramDefinition, item.params);
                 } else {
                     block2.push(`const pluralValue${valueCount} = new PluralValue(values${valueCount}, ${langKey});`);
@@ -86,7 +92,7 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
     });
     fileLines.push('');
 
-    let declarationLine = `const translationMap = new TranslationMap<${keysDefinition}Record`;
+    let declarationLine = `const translationMap = new TranslationMap<${keysDefinition}Keys`;
 
     if (item.params && item.params.length > 0) {
         declarationLine += `, ${paramDefinition}`;
@@ -95,22 +101,12 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
 
     fileLines.push(declarationLine);
     Object.entries(keys).forEach(([key, value]) => {
-        fileLines.push(`    ${key}: ${value},`);
+        fileLines.push(`    "${key}": ${value},`);
     });
     fileLines.push(`});`);
 
     fileLines.push('');
-    fileLines.push(`const translationFunction = Object.assign(
-        (key: keyof ${keysDefinition}Record, params?: Partial<${keysDefinition}Record>) => translationMap.render(key, params),
-        {
-            map: () => translationMap
-        }
-    ) as MapExport<${keysDefinition}Record, ${keysDefinition}Record>;`);
-
-
-
-    fileLines.push(`export default translationFunction`);
-
+    fileLines.push(`export default translationMap;`)
 
     return fileLines.join('\n');
 

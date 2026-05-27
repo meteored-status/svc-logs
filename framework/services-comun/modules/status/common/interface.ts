@@ -1,4 +1,4 @@
-import {TMetodo} from "../../net/conexion";
+import {TMetodo} from "@mr/core-network/server/http/conexion";
 
 export enum TStatus {
     OK = 3,

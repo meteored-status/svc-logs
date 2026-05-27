@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: 12f04e84451f8c07407d4e71ee98ea88
+ */
+
 import {Colors} from "../../mrpack/clases/colors";
 import type {IModulo, IModuloConfig} from "../../mrpack/modulo";
 import {Modulo} from "../modulo";

@@ -33,7 +33,7 @@ if [[ -f "GENERAR.txt" ]]; then
 
       BASE_IMAGE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .base // empty")
       if [[ -z "${BASE_IMAGE}" || "${BASE_IMAGE}" == "null" ]]; then
-        BASE_IMAGE="node:lts-alpine"
+        BASE_IMAGE="node:24.14-alpine"
       else
         BASE_IMAGE=$(echo "${BASE_IMAGE}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g")
       fi
@@ -120,11 +120,15 @@ if [[ -f "GENERAR.txt" ]]; then
   PID1=$!
   lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
   PID2=$!
+  lw jobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+  PID3=$!
   wait $PID1
   STATUS1=$?
   wait $PID2
   STATUS2=$?
-  if [[ $STATUS1 -ne 0 || $STATUS2 -ne 0 ]]; then
+  wait $PID3
+  STATUS3=$?
+  if [[ $STATUS1 -ne 0 || $STATUS2 -ne 0 || $STATUS3 -ne 0 ]]; then
     echo "Error generando contenedor"
     exit 1
   fi
@@ -179,11 +183,15 @@ else
       PID1=$!
       lw services | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
       PID2=$!
+      lw jobs | xargs -I '{}' -P 10 bash -c "parseWorkspace {}" &
+      PID3=$!
       wait $PID1
       STATUS1=$?
       wait $PID2
       STATUS2=$?
-      if [[ $STATUS1 -ne 0 || $STATUS2 -ne 0 ]]; then
+      wait $PID3
+      STATUS3=$?
+      if [[ $STATUS1 -ne 0 || $STATUS2 -ne 0 || $STATUS3 -ne 0 ]]; then
         echo "Error tageando contenedor"
         exit 1
       fi

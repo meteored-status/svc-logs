@@ -1,3 +1,9 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Fri, 15 May 2026 12:09:04 GMT
+ * Hash: e33481aa73fa06f93e7f911df98bb689
+ */
+
 import chokidar from "chokidar";
 
 import {Colors} from "services-comun/modules/utiles/colors";

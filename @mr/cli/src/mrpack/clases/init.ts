@@ -1,6 +1,17 @@
-import {BuildFW} from "@mr/cli/manifest/build";
-import {Manifest} from "@mr/cli/manifest";
-import {Runtime} from "@mr/cli/manifest/deployment";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 09:00:52 GMT
+ * Hash: 5bfe32ec0ce2f3b9be68429d9f900cdb
+ * Versión: 2026.5.27+1-josantoniojimnez
+ * Anterior: 2026.5.21+11-josantoniojimnez
+ */
+
+import {dump as yamlDump, load as yamlLoad} from "js-yaml";
+import {lstat, readlink, symlink} from "node:fs/promises";
+
+import {BuildFW} from "@mr/core-dev/manifest/build";
+import {Manifest} from "@mr/core-dev/manifest";
+import {Runtime} from "@mr/core-dev/manifest/deployment";
 import {
     isDir,
     isFile,
@@ -19,9 +30,11 @@ import type {IManifestLegacy} from "./manifest/workspace/legacy";
 import {type IPackageFW, PaqueteTipo} from "./paquete";
 import type {IPackageJson as IPackageJsonBase, IPackageJsonLegacy} from "./packagejson";
 import type {IConfigServices} from "./workspace/service";
-import {Framework} from "./framework";
+import {FrameworkUpdates, sanitizeFrameworkUpdates} from "./workspace/service";
+import {ManifestRootLoader} from "./manifest/root";
 import {ManifestWorkspaceLoader} from "./manifest/workspace";
-import {Yarn} from "./yarn";
+import {add, checkCliente as checkClienteFW, recompilarCliente} from "./framework";
+import {install} from "./yarn";
 
 import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
@@ -29,7 +42,37 @@ import DEVEL from "./init/devel";
 import DATADOG from "./init/datadog";
 import EDITORCONFIG from "./init/editorconfig";
 import IGNORE from "./init/ignore";
-import {ManifestRootLoader} from "./manifest/root";
+
+/**
+ * Estructura tipada del fichero `.yarnrc.yml`.
+ *
+ * @property approvedGitRepositories - Lista de repositorios git autorizados.
+ * @property checksumBehavior        - Comportamiento ante checksums incorrectos (`"throw"` o `false`).
+ * @property compressionLevel        - Nivel de compresión del caché (`mixed`, `normal`, etc.).
+ * @property enableGlobalCache       - Si `true`, usa la caché global de Yarn.
+ * @property enableHardenedMode      - Si `true`, activa el modo endurecido de Yarn.
+ * @property enableScripts           - Si `false`, deshabilita los scripts de instalación.
+ * @property enableStrictSsl         - Si `true`, fuerza la validación estricta de certificados SSL.
+ * @property npmMinimalAgeGate       - Edad mínima de un paquete npm para ser instalado (minutos).
+ * @property packageExtensions       - Extensiones de dependencias de paquetes de terceros.
+ * @property plugins                 - Plugins de Yarn activos.
+ * @property unsafeHttpWhitelist     - Lista de hosts permitidos por HTTP sin cifrar.
+ * @property yarnPath                - Ruta al ejecutable de Yarn.
+ */
+interface IYarnRC {
+    approvedGitRepositories?: string[];
+    checksumBehavior?: "throw"|false;
+    compressionLevel?: string;
+    enableGlobalCache?: boolean;
+    enableHardenedMode?: boolean;
+    enableStrictSsl?: boolean;
+    enableScripts?: boolean;
+    npmMinimalAgeGate?: number;
+    packageExtensions?: Record<string, {dependencies?: Record<string, string>}>;
+    plugins?: unknown[];
+    unsafeHttpWhitelist?: string[];
+    yarnPath?: string;
+}
 
 interface IConfiguracion {
     // openTelemetry: boolean;
@@ -45,747 +88,912 @@ interface IWorkspaces {
     workspaces: string[];
 }
 
-export class Init {
-    /* STATIC */
-    public static async init(basedir: string): Promise<boolean> {
-        console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Inicializando"));
-        console.group();
+export async function init(basedir: string): Promise<boolean> {
+    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Inicializando"));
+    console.group();
 
-        await this.checkCliente(basedir);
-        const workspaces = await this.initBase(basedir);
-        await this.deleteFiles(basedir);
-        await this.limpiarLegacy(basedir);
-        await this.corregirGITs(basedir);
+    await checkCliente(basedir);
+    const workspaces = await initBase(basedir);
+    await deleteFiles(basedir);
+    await limpiarLegacy(basedir);
+    await corregirGITs(basedir);
 
-        const config = await this.initWorkspaces(basedir, workspaces);
-        await this.initConfig(basedir, workspaces);
+    const config = await initWorkspaces(basedir, workspaces);
+    await initConfig(basedir, workspaces);
 
-        const cambio = await this.initYarnRC(basedir/*, config*/);
+    const cambio = await initYarnRC(basedir/*, config*/);
 
-        if (await isDir(`${basedir}/i18n`)) {
-            console.log(Colors.colorize([Colors.FgWhite], "Inicializando i18n"));
-            const {status, stderr} = await Comando.spawn("yarn", ["mrlang", "init"], {cwd: basedir});
-            if (status!=0) {
-                console.error(stderr);
-                console.groupEnd();
-                return Promise.reject(new Error("Error al inicializar i18n"));
-            }
-        }
+    await initGithub(basedir);
 
-        console.groupEnd();
-
-        if (cambio || config.cambio) {
-            await Yarn.install(basedir, {verbose:false});
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private static reduceConfig(configs: IConfiguracion[]): IConfiguracion {
-        return configs.reduce((prev, actual)=>{
-            return {
-                // openTelemetry: prev.openTelemetry || actual.openTelemetry,
-                cambio: prev.cambio || actual.cambio,
-            };
-        }, {
-            // openTelemetry: false,
-            cambio: false,
-        });
-    }
-
-    private static async isValid(dir: string): Promise<boolean> {
-        return await isDir(dir) && await isFile(`${dir}/package.json`)
-    }
-
-    protected static async checkCliente(basedir: string): Promise<void> {
-        console.log(Colors.colorize([Colors.FgWhite], "Comprobando cliente"));
-        console.group();
-
-        await this.autocorregir(basedir);
-
-        const hash = await Framework.checkCliente(basedir);
-        if (hash!=undefined) {
-            await Framework.recompilarCliente(basedir, hash);
-        }
-
-        console.groupEnd();
-    }
-
-    private static async initBase(basedir: string): Promise<IWorkspaces[]> {
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando proyecto"));
-        console.group();
-        const cronjobs: string[] = [];
-        const services: string[] = [];
-        const scripts: string[] = [];
-
-        const paquete = await readJSON<IPackageJsonBase>(`${basedir}/package.json`);
-        paquete.scripts = {
-            // "mrlang": "yarn workspace @mr/cli mrlang",
-            // "mrpack": "yarn workspace @mr/cli mrpack",
-            "doctor": "yarn dlx @yarnpkg/doctor",
-            "devel": "yarn mrpack devel -e",
-            "devel-f": "yarn mrpack devel -e -f",
-            "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
-            "packd": "yarn mrpack devel -c",
-            "packd-f": "yarn mrpack devel -c -f",
-            "g:packd": "TS_NODE_PROJECT=\"config/tsconfig.json\" yarn workspace @mr/cli rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"config/rspack.config.ts\"",
-            "update": "yarn mrpack update",
-        };
-        const bin = paquete.bin!=undefined;
-        paquete.bin ??= {};
-        paquete.bin["mrlang"] = "@mr/cli/bin/mrlang.js";
-        paquete.bin["mrpack"] = "@mr/cli/bin/mrpack.js";
-
-        if (await isDir(`${basedir}/framework`)) {
-            for (const actual of await readDir(`${basedir}/framework`)) {
-                if (await this.isValid(`${basedir}/framework/${actual}`)) {
-                    paquete.scripts[actual] = `yarn workspace ${actual}`;
-                } else {
-                    await unlink(`${basedir}/framework/${actual}`);
-                }
-            }
-        }
-
-        if (await isDir(`${basedir}/cronjobs`)) {
-            for (const actual of await readDir(`${basedir}/cronjobs`)) {
-                if (await this.isValid(`${basedir}/cronjobs/${actual}`)) {
-                    paquete.scripts[actual] = `yarn workspace ${actual}`;
-                    cronjobs.push(actual);
-                } else {
-                    await unlink(`${basedir}/cronjobs/${actual}`);
-                }
-            }
-        }
-
-        if (await isDir(`${basedir}/services`)) {
-            for (const actual of await readDir(`${basedir}/services`)) {
-                if (await this.isValid(`${basedir}/services/${actual}`)) {
-                    paquete.scripts[actual] = `yarn workspace ${actual}`;
-                    services.push(actual);
-                } else {
-                    await unlink(`${basedir}/services/${actual}`);
-                }
-            }
-        }
-
-        if (await isDir(`${basedir}/packages`)) {
-            for (const actual of await readDir(`${basedir}/packages`)) {
-                if (await this.isValid(`${basedir}/packages/${actual}`)) {
-                    paquete.scripts[actual] = `yarn workspace ${actual}`;
-                } else {
-                    await unlink(`${basedir}/packages/${actual}`);
-                }
-            }
-        }
-
-        if (await isDir(`${basedir}/scripts`)) {
-            for (const actual of await readDir(`${basedir}/scripts`)) {
-                if (await this.isValid(`${basedir}/scripts/${actual}`)) {
-                    paquete.scripts[actual] = `yarn workspace ${actual}`;
-                    scripts.push(actual);
-                } else {
-                    await unlink(`${basedir}/scripts/${actual}`);
-                }
-            }
-        }
-
-        if (await isDir(`${basedir}/i18n`)) {
-            paquete.scripts["i18n"] = "yarn workspace i18n";
-        }
-
-        paquete.workspaces = [
-            "@mr/cli",
-            "@mr/core/*",
-            "@mr/client/*",
-            "cronjobs/*",
-            "framework/*",
-            "i18n",
-            "packages/*",
-            "scripts/*",
-            "services/*",
-            "statics/*",
-        ];
-        if (paquete.dependencies!=undefined) {
-            delete paquete.dependencies;
-        }
-        if (paquete.devDependencies!=undefined) {
-            delete paquete.devDependencies;
-        }
-
-        paquete.resolutions??={};
-        delete paquete.resolutions["@elastic/elasticsearch"];
-        delete paquete.resolutions["@types/node"];
-        delete paquete.resolutions["mysql2"];
-        // paquete.resolutions["mysql2"] = "3.11.0";
-        if (Object.keys(paquete.resolutions).length == 0) {
-            delete paquete.resolutions;
-        }
-
-        await safeWrite(`${basedir}/.editorconfig`, EDITORCONFIG, true);
-        await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
-        await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
-        await safeWrite(`${basedir}/.node-version`, "lts-latest\n", true);
-        if (await isFile(`${basedir}/.sonarcloud.properties`)) {
-            await unlink(`${basedir}/.sonarcloud.properties`);
-        }
-        if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Compilar.run.xml`)) {
-            await unlink(`${basedir}/@mr/cli/.run/develop =_ Compilar.run.xml`);
-        }
-        if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Compilar (Todos).run.xml`)) {
-            await unlink(`${basedir}/@mr/cli/.run/develop =_ Compilar (Todos).run.xml`);
-        }
-        if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Ejecutar.run.xml`)) {
-            await unlink(`${basedir}/@mr/cli/.run/develop =_ Ejecutar.run.xml`);
-        }
-        await safeWrite(`${basedir}/static-analysis.datadog.yml`, DATADOG, true);
-        await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-
-        await this.checkRootManifest(basedir);
-
-        if (!bin) {
-            await Yarn.install(basedir, {verbose:false});
-        }
-
-        // todo inicializar el manifest de Root
-
-        console.groupEnd();
-
-        return [
-            {
-                dir: "cronjobs",
-                workspaces: cronjobs,
-            }, {
-                dir: "services",
-                workspaces: services,
-            }, {
-                dir: "scripts",
-                workspaces: scripts,
-            },
-        ];
-    }
-
-    private static async checkRootManifest(basedir: string): Promise<void> {
-        await new ManifestRootLoader(basedir).load();
-    }
-
-    private static async deleteFiles(basedir: string): Promise<void> {
-        console.log(Colors.colorize([Colors.FgWhite], "Revisando archivos innecesarios"));
-        console.group();
-        for (const file of ["update.sh", "run.sh"]) {
-            const item = `${basedir}/${file}`;
-            if (await isFile(item) || await isDir(item)) {
-                console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], file)}`);
-                await unlink(item);
-            }
-        }
-        for (const file of ["status.json"]) {
-            const item = `${basedir}/@mr/cli/${file}`;
-            if (await isFile(item) || await isDir(item)) {
-                console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `@mr/cli/${file}`)}`);
-                await unlink(item);
-            }
-        }
-        for (const actual of await readDir(`${basedir}/framework`)) {
-            for (const file of ["download.js", "status.json", "upload.js", "files"]) {
-                const item = `${basedir}/framework/${actual}/${file}`;
-                if (await isFile(item) || await isDir(item)) {
-                    console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `${actual}/${file}`)}`);
-                    await unlink(item);
-                }
-            }
-        }
-
-        console.groupEnd();
-    }
-
-    private static async corregirGITs(basedir: string): Promise<void> {
-        console.log(Colors.colorize([Colors.FgWhite], "Corrigiendo conflictos de GIT"));
-        console.group();
-
-        await this.corregirGIT(basedir, "services-comun", "/", "CHANGELOG.md", ["changelog.md"]);
-
-        console.groupEnd();
-    }
-
-    private static async corregirGIT(basedir: string, framework: string, subdir: string, bueno: string, malos: string[]): Promise<void> {
-        const dir = `${basedir}/framework/${framework}${subdir}`;
-        if (!await isDir(dir)) {
-            return;
-        }
-
-        let malo: string|undefined;
-        const files = await readDir(dir);
-        for (const file of malos) {
-            if (files.includes(file)) {
-                malo = file;
-                break;
-            }
-        }
-        if (malo==undefined) {
-            // nada que corregir
-            return;
-        }
-
-        console.log(`Corrigiendo ${Colors.colorize([Colors.FgYellow], `${framework}${subdir}${bueno}`)}`);
-
-        // desactivamos el case-sensitive de git temporalmente
-        {
-            const {status, stderr} = await Comando.spawn("git", ["config", "core.ignorecase", "false"], {cwd: basedir});
-            if (status != 0) {
-                console.error("Error corrigiendo", framework, stderr);
-                return;
-            }
-        }
-
-        // eliminamos del repositorio el archivo con el nombre tanto correcto como incorrecto
-        for (const file of [bueno, ...malos]) {
-            await Comando.spawn("git", ["rm", "-r", "--cached", `framework/${framework}${subdir}${file}`], {cwd: basedir});
-        }
-
-        {
-            const {status} = await Comando.spawn("git", ["commit", "-m", `"Corrigiendo archivos conflictivos"`], {cwd: basedir});
-            if (status != 0) {
-                // rehabilitamos el case-sensitive de git
-                await Comando.spawn("git", ["config", "core.ignorecase", "true"], {cwd: basedir});
-                return;
-            }
-        }
-
-        // renombramos el archivo incorrecto al correcto
-        await rename(`${dir}${malo}`, `${dir}${bueno}`);
-
-        // rehabilitamos el case-sensitive de git
-        await Comando.spawn("git", ["config", "core.ignorecase", "true"], {cwd: basedir});
-    }
-
-    private static async autocorregir(basedir: string): Promise<void> {
-        const paquete = await readJSON<IPackageFW>(`${basedir}/@mr/cli/package.json`);
-        if (paquete.config==undefined || paquete.config.bucket==undefined || paquete.config.tipo==undefined) {
-            console.log(Colors.colorize([Colors.FgYellow], "Autocorrigiendo posibles errores"));
-            paquete.config = {
-                bucket: "meteored-yarn-packages",
-                subible: true,
-                tipo: PaqueteTipo.root,
-            };
-            await safeWrite(`${basedir}/@mr/cli/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+    if (await isDir(`${basedir}/i18n`)) {
+        console.log(Colors.colorize([Colors.FgWhite], "Inicializando i18n"));
+        const {status, stderr} = await Comando("yarn", ["mrlang", "init"], {cwd: basedir});
+        if (status!=0) {
+            console.error(stderr);
+            console.groupEnd();
+            return Promise.reject(new Error("Error al inicializar i18n"));
         }
     }
 
-    private static async limpiarLegacy(basedir: string): Promise<void> {
-        console.log(Colors.colorize([Colors.FgWhite], "Limpiando frameworks legacy"));
-        console.group();
+    console.groupEnd();
 
-        await this.limpiarLegacyEjecutar(basedir, "services-comun", ["tools"]);
+    if (cambio || config.cambio) {
+        await install(basedir, {verbose:false});
 
-        console.groupEnd();
+        return true;
     }
 
-    private static async limpiarLegacyEjecutar(basedir: string, framework: string, items: string[]): Promise<void> {
-        for (const item of items) {
-            const dir = `${basedir}/framework/${framework}/${item}`;
-            if (await isFile(dir) || await isDir(dir)) {
-                console.log(`Limpiando ${Colors.colorize([Colors.FgYellow], `${framework}/${item}`)}`);
-                await unlink(dir);
-            }
-        }
+    return false;
+}
+
+async function checkFiles(config: Manifest, basedir: string): Promise<void> {
+    if (config.deploy.runtime===Runtime.node && config.build.framework!==BuildFW.nextjs) {
+        await Promise.all([
+            safeWrite(`${basedir}/app.js`, APP({type: config.deploy.type}), true),
+            safeWrite(`${basedir}/devel.js`, DEVEL, true),
+        ]);
     }
 
-    private static async loadConfig(basedir: string): Promise<{paquete: IPackageJson, config: Manifest}> {
-        const paquete = await readJSON<IPackageJson>(`${basedir}/package.json`);
-        let config: ManifestWorkspaceLoader;
-        if (paquete.config!=undefined) {
-            config = new ManifestWorkspaceLoader(basedir).fromLegacy(paquete.config, paquete);
-            await config.save();
-            delete paquete.config;
-            await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-        } else {
-            if ("servicio" in paquete) {
-                config = await new ManifestWorkspaceLoader(basedir).load(false, paquete as IPackageJsonLegacy);
-                delete paquete.servicio;
-                await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-            } else {
-                config = await new ManifestWorkspaceLoader(basedir).load();
-            }
-        }
-
-        return {paquete, config: config.manifest};
+    if (await isFile(`${basedir}/init.js`)) {
+        console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/init.js`));
+        await unlink(`${basedir}/init.js`);
     }
 
-    private static checkScripts(config: Manifest, scripts: Record<string, string>): void {
-        switch(config.build.framework) {
-            case BuildFW.meteored:
-                switch(config.deploy.runtime) {
-                    case Runtime.cfworker:
-                        scripts["packd"] = `yarn tsc --noemit --watch`;
-                        scripts["devel"] = "wrangler dev --remote --env test";
-                        break;
-                    case Runtime.node:
-                        scripts["packd"] = `yarn g:packd`;
-                        if (!config.deploy.cronjob) {
-                            scripts["devel"] = "yarn g:devel";
-                        } else {
-                            scripts["devel"] = "yarn node --no-warnings devel.js";
-                        }
-                        break;
-                    default:
-                        scripts["packd"] = `yarn g:packd`;
-                        break;
-                }
-                break;
-
-            case BuildFW.nextjs:
-                scripts["dev"] ??= "yarn run next dev -- -p 8080";
-                break;
-        }
+    if (await isFile(`${basedir}/output/.foreverignore`)) {
+        console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/.foreverignore`));
+        await unlink(`${basedir}/output/.foreverignore`);
+    }
+    if (await isFile(`${basedir}/output/devel.js`)) {
+        console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/devel.js`));
+        await unlink(`${basedir}/output/devel.js`);
+    }
+    if (await isFile(`${basedir}/output/devel.js.map`)) {
+        console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/devel.js.map`));
+        await unlink(`${basedir}/output/devel.js.map`);
+    }
+    if (await isFile(`${basedir}/pack.js`)) {
+        console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/pack.js`));
+        await unlink(`${basedir}/pack.js`);
     }
 
-    private static checkDependencies(config: Manifest, dependencies: Record<string, string>, devDependencies: Record<string, string>, defecto: Record<string, string>): void {
-        // let openTelemetry = false;
-        if (devDependencies["tslib"]!=undefined) {
-            dependencies["tslib"] = devDependencies["tslib"];
-            delete devDependencies["tslib"];
-        } else if (dependencies["tslib"]==undefined) {
-            dependencies["tslib"] = "*";
-        }
-
-        if (config.build.framework!=BuildFW.nextjs) {
-            dependencies["source-map-support"] ??= defecto["source-map-support"]??"*";
-
-            for (const [lib, version] of Object.entries(defecto)) {
-                if (dependencies[lib] != undefined) {
-                    dependencies[lib] = version;
-                }
-                if (devDependencies[lib] != undefined) {
-                    devDependencies[lib] = version;
-                }
-            }
-            if (!config.deploy.cronjob) {
-                // dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"] ??= defecto["@google-cloud/opentelemetry-cloud-trace-exporter"]??"*";
-                // dependencies["@opentelemetry/api"] ??= defecto["@opentelemetry/api"]??"*";
-                // dependencies["@opentelemetry/core"] ??= defecto["@opentelemetry/core"]??"*";
-                // dependencies["@opentelemetry/instrumentation"] ??= defecto["@opentelemetry/instrumentation"]??"*";
-                // dependencies["@opentelemetry/instrumentation-http"] ??= defecto["@opentelemetry/instrumentation-http"]??"*";
-                // dependencies["@opentelemetry/resources"] ??= defecto["@opentelemetry/resources"]??"*";
-                // dependencies["@opentelemetry/sdk-trace-base"] ??= defecto["@opentelemetry/sdk-trace-base"]??"*";
-                // dependencies["@opentelemetry/sdk-trace-node"] ??= defecto["@opentelemetry/sdk-trace-node"]??"*";
-                // dependencies["@opentelemetry/semantic-conventions"] ??= defecto["@opentelemetry/semantic-conventions"]??"*";
-                dependencies["chokidar"] ??= defecto["chokidar"]??"*";
-                dependencies["hexoid"] ??= defecto["hexoid"]??"*";
-                dependencies["formidable"] ??= defecto["formidable"]??"*";
-
-                if (dependencies["@google-cloud/trace-agent"] != undefined) {
-                    delete dependencies["@google-cloud/trace-agent"];
-                }
-                if (dependencies["@opentelemetry/context-async-hooks"] != undefined) {
-                    delete dependencies["@opentelemetry/context-async-hooks"];
-                }
-                if (devDependencies["formidable"] != undefined) {
-                    delete devDependencies["formidable"];
-                }
-
-                // openTelemetry = true;
-            }
-
-            if (devDependencies["source-map-support"] != undefined) {
-                delete devDependencies["source-map-support"];
-            }
-        }
-        if (dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"]!=undefined) {
-            delete dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"];
-        }
-        if (dependencies["@opentelemetry/api"]!=undefined) {
-            delete dependencies["@opentelemetry/api"];
-        }
-        if (dependencies["@opentelemetry/core"]!=undefined) {
-            delete dependencies["@opentelemetry/core"];
-        }
-        if (dependencies["@opentelemetry/instrumentation"]!=undefined) {
-            delete dependencies["@opentelemetry/instrumentation"];
-        }
-        if (dependencies["@opentelemetry/instrumentation-http"]!=undefined) {
-            delete dependencies["@opentelemetry/instrumentation-http"];
-        }
-        if (dependencies["@opentelemetry/resources"]!=undefined) {
-            delete dependencies["@opentelemetry/resources"];
-        }
-        if (dependencies["@opentelemetry/sdk-trace-base"]!=undefined) {
-            delete dependencies["@opentelemetry/sdk-trace-base"];
-        }
-        if (dependencies["@opentelemetry/sdk-trace-node"]!=undefined) {
-            delete dependencies["@opentelemetry/sdk-trace-node"];
-        }
-        if (dependencies["@opentelemetry/semantic-conventions"]!=undefined) {
-            delete dependencies["@opentelemetry/semantic-conventions"];
-        }
-        dependencies["dd-trace"] ??= defecto["dd-trace"]??"*";
-
-        // return openTelemetry;
-    }
-
-    public static async checkFiles(config: Manifest, basedir: string): Promise<void> {
-        if (config.deploy.runtime==Runtime.node && config.build.framework!=BuildFW.nextjs) {
-            await Promise.all([
-                safeWrite(`${basedir}/app.js`, APP({type: config.deploy.type}), true),
-                safeWrite(`${basedir}/devel.js`, DEVEL, true),
-            ]);
-        }
-
-        if (await isFile(`${basedir}/init.js`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/init.js`));
-            await unlink(`${basedir}/init.js`);
-        }
-
-        if (await isFile(`${basedir}/output/.foreverignore`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/.foreverignore`));
-            await unlink(`${basedir}/output/.foreverignore`);
-        }
-        if (await isFile(`${basedir}/output/devel.js`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/devel.js`));
-            await unlink(`${basedir}/output/devel.js`);
-        }
-        if (await isFile(`${basedir}/output/devel.js.map`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/output/devel.js.map`));
-            await unlink(`${basedir}/output/devel.js.map`);
-        }
-        if (await isFile(`${basedir}/pack.js`)) {
-            console.log(Colors.colorize([Colors.FgYellow], `Eliminando ${basedir}/pack.js`));
-            await unlink(`${basedir}/pack.js`);
-        }
-
-        if (await isFile(`${basedir}/Dockerfile`)) {
-            let contenido = await readFileString(`${basedir}/Dockerfile`);
-            let cambio = false;
-            if (contenido.includes("ARG ws") && !contenido.includes("ARG RUTA")) {
-                contenido = contenido.replace("ARG ws", "ARG RUTA\nARG WS");
-                contenido = contenido.replaceAll("/services/", "/${RUTA}/")
-                contenido = contenido.replaceAll("${ws}", "${WS}")
-                cambio = true;
-            }
-            if (!contenido.includes("COPY ./${RUTA}/${WS}/mrpack.json")) {
-                contenido = contenido.replace("COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}", "COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}\nCOPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}");
-                cambio = true;
-            }
-            if (contenido.includes("COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}")) {
-                contenido = contenido.replace("COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}\n", "");
-                cambio = true;
-            }
-            if (cambio) {
-                console.log(Colors.colorize([Colors.FgYellow], `Corrigiendo ${basedir}/Dockerfile`));
-                await safeWrite(`${basedir}/Dockerfile`, contenido, true);
-            }
-        }
-    }
-
-    private static async initWorkspace(basedir: string, dependenciesDefecto: Record<string, string>): Promise<IConfiguracion> {
-        const salida: IConfiguracion = {
-            // openTelemetry: false,
-            cambio: false,
-        };
-
-        const {paquete, config} = await this.loadConfig(basedir);
-        const hash = md5(JSON.stringify(paquete));
-        if (config.enabled) {
-            paquete.version = "0000.00.00-000";
-            this.checkScripts(config, paquete.scripts ??= {});
-
-            if (config.deploy.runtime==Runtime.node) {
-                this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
-                // salida.openTelemetry = this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
-                if (Object.keys(paquete.dependencies).length==0) {
-                    delete paquete.dependencies;
-                }
-                if (Object.keys(paquete.devDependencies).length==0) {
-                    delete paquete.devDependencies;
-                }
-            }
-
-            await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
-        }
-
-        await this.checkFiles(config, `${basedir}`);
-
-        salida.cambio = hash!=md5(JSON.stringify(paquete));
-
-        return salida;
-    }
-
-    private static async initWorkspaces(basedir: string, workspaces: IWorkspaces[]): Promise<IConfiguracion> {
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando workspaces"));
-        console.group();
-
-        const {devDependencies: paquetePropio={}} = await readJSON<IPackageJsonBase>(`${basedir}/framework/services-comun/package.json`);
-
-        const promesas: Promise<IConfiguracion>[] = [];
-        for (const carpeta of workspaces) {
-            for (const workspace of carpeta.workspaces) {
-                promesas.push(this.initWorkspace(`${basedir}/${carpeta.dir}/${workspace}`, paquetePropio));
-            }
-        }
-
-        const config = this.reduceConfig(await Promise.all(promesas));
-
-        console.groupEnd();
-        return config;
-    }
-
-    private static async initConfig(basedir: string, workspaces: IWorkspaces[]): Promise<void> {
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración personal de workspaces"));
-        console.group();
-
-        function sort(a: string, b: string): number {
-            return a.localeCompare(b);
-        }
-
-        const file = `${basedir}/config.workspaces.json`;
-        const salida: IConfigServices = {
-            devel: {
-                available: [],
-                disabled: [],
-            },
-            packd: {
-                available: [],
-                disabled: [],
-            },
-            i18n: true,
-            services: {},
-        };
-
-        const proyectos: string[] = [];
-        for (const carpeta of workspaces) {
-            proyectos.push(...carpeta.workspaces);
-        }
-
-        if (await isFile(file)) {
-            try {
-                const config = await readJSON<IConfigServices>(file);
-                salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
-                salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
-                salida.i18n = config.i18n??true;
-                salida.services = config.services??{};
-            } catch (e) {
-
-            }
-        }
-        for (const actual of proyectos) {
-            if (!salida.devel.disabled.includes(actual)) {
-                salida.devel.available.push(actual);
-            }
-            if (!salida.packd.disabled.includes(actual)) {
-                salida.packd.available.push(actual);
-            }
-        }
-
-        salida.devel.available.sort(sort);
-        salida.devel.available.push("");
-        salida.devel.disabled.sort(sort);
-        salida.devel.disabled.push("");
-        salida.packd.available.sort(sort);
-        salida.packd.available.push("");
-        salida.packd.disabled.sort(sort);
-        salida.packd.disabled.push("");
-
-        await safeWrite(file, JSON.stringify(salida, null, 2), true);
-
-        console.groupEnd();
-    }
-
-    private static async initYarnRC(basedir: string/*, config: IConfiguracion*/): Promise<boolean> {
-        // if (!config.openTelemetry) {
-        //     return;
-        // }
-        console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración de YARN"));
-        console.group();
-
-        const file = await readFileString(`${basedir}/.yarnrc.yml`);
-        const lineas = file.split("\n");
-        const anteriores: string[] = [];
-        let corrientes: string[] = [];
-        const posteriores: string[] = [];
-
-        let paso: number = 0;
-        for (const linea of lineas) {
-            if (linea=="packageExtensions:") {
-                paso = 1;
-            } else if (linea=="plugins:" || linea.startsWith("yarnPath:")) {
-                paso = 2;
-            }
-            switch(paso) {
-                case 0:
-                    anteriores.push(linea.trimEnd());
-                    break;
-                case 1:
-                    corrientes.push(linea.trimEnd());
-                    break;
-                case 2:
-                    posteriores.push(linea.trimEnd());
-                    break;
-            }
-        }
-
+    if (await isFile(`${basedir}/Dockerfile`)) {
+        let contenido = await readFileString(`${basedir}/Dockerfile`);
         let cambio = false;
-        // let nuevo = false;
-        corrientes = corrientes.filter(actual=>actual.length>0);
-        if (corrientes.length==0) {
-            corrientes.push("packageExtensions:");
-            // nuevo = true;
-        }
-
-        const libs: Record<string, string> = {};
-        const exlibs = [
-            "@google-cloud/opentelemetry-cloud-trace-exporter",
-            "@google-cloud/opentelemetry-resource-util",
-            "@inquirer/core",
-            "mysql2"
-        ];
-
-        // if (config.openTelemetry) {
-        //     libs["@google-cloud/opentelemetry-cloud-trace-exporter"] = "@opentelemetry/semantic-conventions";
-        //     libs["@google-cloud/opentelemetry-resource-util"] = "@opentelemetry/api";
-        // }
-
-        for (const lib of Object.keys(libs).sort()) {
-            if (!corrientes.includes(`  "${lib}@*":`)) {
-                const dep = libs[lib];
-                corrientes.push(`  "${lib}@*":`);
-                corrientes.push(`    dependencies:`);
-                corrientes.push(`      "${dep}": "*"`);
-                cambio = true;
-            }
-        }
-
-        for (const cadena of exlibs) {
-            const idx = corrientes.indexOf(`  ${cadena}@*:`);
-            if (idx >= 0) {
-                corrientes.splice(idx, 3);
-                cambio = true;
-            } else {
-                const idx = corrientes.indexOf(`  "${cadena}@*":`);
-                if (idx >= 0) {
-                    corrientes.splice(idx, 3);
-                    cambio = true;
-                }
-            }
-        }
-
-        corrientes = corrientes.filter(actual=>actual.length>0);
-        if (corrientes.length==1) {
-            corrientes = [];
+        if (contenido.includes("ARG ws") && !contenido.includes("ARG RUTA")) {
+            contenido = contenido.replace("ARG ws", "ARG RUTA\nARG WS");
+            contenido = contenido.replaceAll("/services/", "/${RUTA}/")
+            contenido = contenido.replaceAll("${ws}", "${WS}")
             cambio = true;
         }
-
-        if (cambio) {
-            if (corrientes.length>0) {
-                corrientes.push("");
-            }
-            await safeWrite(`${basedir}/.yarnrc.yml`, [...anteriores, ...corrientes, ...posteriores].join("\n"), true);
+        if (!contenido.includes("COPY ./${RUTA}/${WS}/mrpack.json")) {
+            contenido = contenido.replace("COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}", "COPY ./${RUTA}/${WS}/mrpack.json ./${RUTA}/${WS}\nCOPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}");
+            cambio = true;
         }
+        if (contenido.includes("COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}")) {
+            contenido = contenido.replace("COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}\n", "");
+            cambio = true;
+        }
+        if (!contenido.includes("COPY ./yarn.lock ./\nENV NODE_ENV=production")) {
+            contenido = contenido.replace("COPY ./yarn.lock ./", "COPY ./yarn.lock ./\nENV NODE_ENV=production");
+            cambio = true;
+        }
+        if (!contenido.includes("RUN apk add --no-cache tzdata")) {
+            contenido = contenido.replaceAll("WORKDIR /usr/src/app\n", "WORKDIR /usr/src/app\nRUN apk add --no-cache tzdata\n");
+            cambio = true;
+        }
+        if (cambio) {
+            console.log(Colors.colorize([Colors.FgYellow], `Corrigiendo ${basedir}/Dockerfile`));
+            await safeWrite(`${basedir}/Dockerfile`, contenido, true);
+        }
+    }
+}
 
-        console.groupEnd();
+function reduceConfig(configs: IConfiguracion[]): IConfiguracion {
+    return configs.reduce((prev, actual)=>{
+        return {
+            // openTelemetry: prev.openTelemetry || actual.openTelemetry,
+            cambio: prev.cambio || actual.cambio,
+        };
+    }, {
+        // openTelemetry: false,
+        cambio: false,
+    });
+}
 
-        return cambio;
+async function isValid(dir: string): Promise<boolean> {
+    return await isDir(dir) && await isFile(`${dir}/package.json`)
+}
+
+async function checkCliente(basedir: string): Promise<void> {
+    console.log(Colors.colorize([Colors.FgWhite], `Comprobando cliente`));
+    console.group();
+
+    await autocorregir(basedir);
+
+    const hash = await checkClienteFW(basedir);
+    await add(basedir, [
+        "@mr/core/dev",
+        "@mr/core/i18n",
+        "@mr/core/network",
+    ]);
+    if (hash!=undefined) {
+        await recompilarCliente(basedir, hash);
     }
 
-    /* INSTANCE */
+    console.groupEnd();
+}
+
+async function initBase(basedir: string): Promise<IWorkspaces[]> {
+    console.log(Colors.colorize([Colors.FgWhite], "Inicializando proyecto"));
+    console.group();
+    const cronjobs: string[] = [];
+    const jobs: string[] = [];
+    const services: string[] = [];
+    const scripts: string[] = [];
+
+    const paquete = await readJSON<IPackageJsonBase>(`${basedir}/package.json`);
+    paquete.scripts = {
+        // "mrlang": "yarn workspace @mr/cli mrlang",
+        // "mrpack": "yarn workspace @mr/cli mrpack",
+        "doctor": "yarn dlx @yarnpkg/doctor",
+        "devel": "yarn mrpack devel -e",
+        "devel-f": "yarn mrpack devel -e -f",
+        "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
+        "packd": "yarn mrpack devel -c",
+        "packd-f": "yarn mrpack devel -c -f",
+        "g:packd": "yarn workspace @mr/core-dev rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"bundler/rspack/rspack.config.ts\"",
+        "update": "yarn mrpack update",
+        "patch": "yarn workspace @mr/core-dev mrpack:patch",
+        "patch:apply": "yarn workspace @mr/core-dev mrpack:patch:apply"
+    };
+    const bin = paquete.bin!=undefined;
+    paquete.bin ??= {};
+    paquete.bin["mrlang"] = "@mr/cli/bin/mrlang.js";
+    paquete.bin["mrpack"] = "@mr/cli/bin/mrpack.js";
+
+    if (await isDir(`${basedir}/framework`)) {
+        for (const actual of await readDir(`${basedir}/framework`)) {
+            if (await isValid(`${basedir}/framework/${actual}`)) {
+                paquete.scripts[actual] = `yarn workspace ${actual}`;
+            } else {
+                await unlink(`${basedir}/framework/${actual}`);
+            }
+        }
+    }
+
+    if (await isDir(`${basedir}/cronjobs`)) {
+        for (const actual of await readDir(`${basedir}/cronjobs`)) {
+            if (await isValid(`${basedir}/cronjobs/${actual}`)) {
+                paquete.scripts[actual] = `yarn workspace ${actual}`;
+                cronjobs.push(actual);
+            } else {
+                await unlink(`${basedir}/cronjobs/${actual}`);
+            }
+        }
+    }
+
+    if (await isDir(`${basedir}/jobs`)) {
+        for (const actual of await readDir(`${basedir}/jobs`)) {
+            if (await isValid(`${basedir}/jobs/${actual}`)) {
+                paquete.scripts[actual] = `yarn workspace ${actual}`;
+                jobs.push(actual);
+            } else {
+                await unlink(`${basedir}/jobs/${actual}`);
+            }
+        }
+    }
+
+    if (await isDir(`${basedir}/services`)) {
+        for (const actual of await readDir(`${basedir}/services`)) {
+            if (await isValid(`${basedir}/services/${actual}`)) {
+                paquete.scripts[actual] = `yarn workspace ${actual}`;
+                services.push(actual);
+            } else {
+                await unlink(`${basedir}/services/${actual}`);
+            }
+        }
+    }
+
+    if (await isDir(`${basedir}/packages`)) {
+        for (const actual of await readDir(`${basedir}/packages`)) {
+            if (await isValid(`${basedir}/packages/${actual}`)) {
+                paquete.scripts[actual] = `yarn workspace ${actual}`;
+            } else {
+                await unlink(`${basedir}/packages/${actual}`);
+            }
+        }
+    }
+
+    if (await isDir(`${basedir}/scripts`)) {
+        for (const actual of await readDir(`${basedir}/scripts`)) {
+            if (await isValid(`${basedir}/scripts/${actual}`)) {
+                paquete.scripts[actual] = `yarn workspace ${actual}`;
+                scripts.push(actual);
+            } else {
+                await unlink(`${basedir}/scripts/${actual}`);
+            }
+        }
+    }
+
+    if (await isDir(`${basedir}/i18n`)) {
+        paquete.scripts["i18n"] = "yarn workspace i18n";
+    }
+
+    paquete.workspaces = [
+        "@mr/cli",
+        "@mr/core/*",
+        "@mr/user/*",
+        "cronjobs/*",
+        "framework/*",
+        "i18n",
+        "jobs/*",
+        "packages/*",
+        "scripts/*",
+        "services/*",
+        "statics/*",
+    ];
+    if (paquete.dependencies!=undefined) {
+        delete paquete.dependencies;
+    }
+    if (paquete.devDependencies!=undefined) {
+        delete paquete.devDependencies;
+    }
+
+    paquete.resolutions??={};
+    delete paquete.resolutions["@elastic/elasticsearch"];
+    delete paquete.resolutions["@types/node"];
+    delete paquete.resolutions["mysql2"];
+// paquete.resolutions["mysql2"] = "3.11.0";
+    if (Object.keys(paquete.resolutions).length == 0) {
+        delete paquete.resolutions;
+    }
+
+    await safeWrite(`${basedir}/.editorconfig`, EDITORCONFIG, true);
+    await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
+    await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
+    await safeWrite(`${basedir}/.node-version`, "lts-latest\n", true);
+    if (await isFile(`${basedir}/.sonarcloud.properties`)) {
+        await unlink(`${basedir}/.sonarcloud.properties`);
+    }
+    if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Compilar.run.xml`)) {
+        await unlink(`${basedir}/@mr/cli/.run/develop =_ Compilar.run.xml`);
+    }
+    if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Compilar (Todos).run.xml`)) {
+        await unlink(`${basedir}/@mr/cli/.run/develop =_ Compilar (Todos).run.xml`);
+    }
+    if (await isFile(`${basedir}/@mr/cli/.run/develop =_ Ejecutar.run.xml`)) {
+        await unlink(`${basedir}/@mr/cli/.run/develop =_ Ejecutar.run.xml`);
+    }
+    await safeWrite(`${basedir}/static-analysis.datadog.yml`, DATADOG, true);
+    await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+
+    await checkRootManifest(basedir);
+
+    if (!bin) {
+        await install(basedir, {verbose:false});
+    }
+
+// todo inicializar el manifest de Root
+
+    console.groupEnd();
+
+    return [
+        {
+            dir: "cronjobs",
+            workspaces: cronjobs,
+        }, {
+            dir: "jobs",
+            workspaces: jobs,
+        },{
+            dir: "services",
+            workspaces: services,
+        }, {
+            dir: "scripts",
+            workspaces: scripts,
+        },
+    ];
+}
+
+async function checkRootManifest(basedir: string): Promise<void> {
+    await new ManifestRootLoader(basedir).load();
+}
+
+async function deleteFiles(basedir: string): Promise<void> {
+    console.log(Colors.colorize([Colors.FgWhite], "Revisando archivos innecesarios"));
+    console.group();
+    for (const file of ["update.sh", "run.sh"]) {
+        const item = `${basedir}/${file}`;
+        if (await isFile(item) || await isDir(item)) {
+            console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], file)}`);
+            await unlink(item);
+        }
+    }
+    for (const file of ["status.json"]) {
+        const item = `${basedir}/@mr/cli/${file}`;
+        if (await isFile(item) || await isDir(item)) {
+            console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `@mr/cli/${file}`)}`);
+            await unlink(item);
+        }
+    }
+    for (const actual of await readDir(`${basedir}/framework`)) {
+        for (const file of ["download.js", "status.json", "upload.js", "files"]) {
+            const item = `${basedir}/framework/${actual}/${file}`;
+            if (await isFile(item) || await isDir(item)) {
+                console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `${actual}/${file}`)}`);
+                await unlink(item);
+            }
+        }
+    }
+
+    console.groupEnd();
+}
+
+async function corregirGITs(basedir: string): Promise<void> {
+    console.log(Colors.colorize([Colors.FgWhite], "Corrigiendo conflictos de GIT"));
+    console.group();
+
+    await corregirGIT(basedir, "services-comun", "/", "CHANGELOG.md", ["changelog.md"]);
+
+    console.groupEnd();
+}
+
+async function corregirGIT(basedir: string, framework: string, subdir: string, bueno: string, malos: string[]): Promise<void> {
+    const dir = `${basedir}/framework/${framework}${subdir}`;
+    if (!await isDir(dir)) {
+        return;
+    }
+
+    let malo: string|undefined;
+    const files = await readDir(dir);
+    for (const file of malos) {
+        if (files.includes(file)) {
+            malo = file;
+            break;
+        }
+    }
+    if (!malo) {
+        // nada que corregir
+        return;
+    }
+
+    console.log(`Corrigiendo ${Colors.colorize([Colors.FgYellow], `${framework}${subdir}${bueno}`)}`);
+
+// desactivamos el case-sensitive de git temporalmente
+    {
+        const {status, stderr} = await Comando("git", ["config", "core.ignorecase", "false"], {cwd: basedir});
+        if (status !== 0) {
+            console.error("Error corrigiendo", framework, stderr);
+            return;
+        }
+    }
+
+// eliminamos del repositorio el archivo con el nombre tanto correcto como incorrecto
+    for (const file of [bueno, ...malos]) {
+        await Comando("git", ["rm", "-r", "--cached", `framework/${framework}${subdir}${file}`], {cwd: basedir});
+    }
+
+    {
+        const {status} = await Comando("git", ["commit", "-m", `"Corrigiendo archivos conflictivos"`], {cwd: basedir});
+        if (status !== 0) {
+            // rehabilitamos el case-sensitive de git
+            await Comando("git", ["config", "core.ignorecase", "true"], {cwd: basedir});
+            return;
+        }
+    }
+
+// renombramos el archivo incorrecto al correcto
+    await rename(`${dir}${malo}`, `${dir}${bueno}`);
+
+// rehabilitamos el case-sensitive de git
+    await Comando("git", ["config", "core.ignorecase", "true"], {cwd: basedir});
+}
+
+async function autocorregir(basedir: string): Promise<void> {
+    const paquete = await readJSON<IPackageFW>(`${basedir}/@mr/cli/package.json`);
+    if (paquete.config===undefined || paquete.config.bucket===undefined || paquete.config.tipo===undefined) {
+        console.log(Colors.colorize([Colors.FgYellow], "Autocorrigiendo posibles errores"));
+        paquete.config = {
+            bucket: "meteored-yarn-packages",
+            subible: true,
+            tipo: PaqueteTipo.root,
+        };
+        await safeWrite(`${basedir}/@mr/cli/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+    }
+}
+
+async function limpiarLegacy(basedir: string): Promise<void> {
+    console.log(Colors.colorize([Colors.FgWhite], "Limpiando frameworks legacy"));
+    console.group();
+
+    await limpiarLegacyEjecutar(basedir, "services-comun", ["tools"]);
+
+    console.groupEnd();
+}
+
+async function limpiarLegacyEjecutar(basedir: string, framework: string, items: string[]): Promise<void> {
+    for (const item of items) {
+        const dir = `${basedir}/framework/${framework}/${item}`;
+        if (await isFile(dir) || await isDir(dir)) {
+            console.log(`Limpiando ${Colors.colorize([Colors.FgYellow], `${framework}/${item}`)}`);
+            await unlink(dir);
+        }
+    }
+}
+
+async function loadConfig(basedir: string): Promise<{paquete: IPackageJson, config: Manifest}> {
+    const paquete = await readJSON<IPackageJson>(`${basedir}/package.json`);
+    let config: ManifestWorkspaceLoader;
+    if (paquete.config!==undefined) {
+        config = new ManifestWorkspaceLoader(basedir).fromLegacy(paquete.config, paquete);
+        await config.save();
+        delete paquete.config;
+        await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+    } else if ("servicio" in paquete) {
+        config = await new ManifestWorkspaceLoader(basedir).load(false, paquete as IPackageJsonLegacy);
+        delete paquete.servicio;
+        await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+    } else {
+        config = await new ManifestWorkspaceLoader(basedir).load();
+    }
+
+    return {paquete, config: config.manifest};
+}
+
+function checkScripts(config: Manifest, scripts: Record<string, string>): void {
+    switch(config.build.framework) {
+        case BuildFW.meteored:
+            switch(config.deploy.runtime) {
+                case Runtime.cfworker:
+                    scripts["packd"] = `yarn tsc --noemit --watch`;
+                    scripts["devel"] = "wrangler dev --remote --env test";
+                    break;
+                case Runtime.node:
+                    scripts["packd"] = `yarn g:packd`;
+                    if (!config.deploy.cronjob) {
+                        scripts["devel"] = "yarn g:devel";
+                    } else {
+                        scripts["devel"] = "yarn node --no-warnings devel.js";
+                    }
+                    break;
+                default:
+                    scripts["packd"] = `yarn g:packd`;
+                    break;
+            }
+            break;
+
+        case BuildFW.nextjs:
+            scripts["dev"] ??= "yarn run next dev -- -p 8080";
+            break;
+    }
+}
+
+function checkDependencies(config: Manifest, dependencies: Record<string, string>, devDependencies: Record<string, string>, optionalDependencies: Record<string, string>, defecto: Record<string, string>): void {
+    // let openTelemetry = false;
+    if (devDependencies["tslib"]!=undefined) {
+        dependencies["tslib"] = devDependencies["tslib"];
+        delete devDependencies["tslib"];
+    } else if (dependencies["tslib"]==undefined) {
+        dependencies["tslib"] = "*";
+    }
+    if (devDependencies["@mr/core-dev"]===undefined) {
+        devDependencies["@mr/core-dev"] = "workspace:*";
+    }
+    if (devDependencies["@mr/core-i18n"]===undefined) {
+        devDependencies["@mr/core-i18n"] = "workspace:*";
+    }
+    if (devDependencies["@mr/core-network"]===undefined) {
+        devDependencies["@mr/core-network"] = "workspace:*";
+    }
+    if (dependencies["@mr/core-network"]!==undefined) {
+        delete dependencies["@mr/core-network"];
+    }
+
+    if (config.build.framework!=BuildFW.nextjs) {
+        dependencies["source-map-support"] ??= defecto["source-map-support"]??"*";
+
+        for (const [lib, version] of Object.entries(defecto)) {
+            if (dependencies[lib] != undefined) {
+                dependencies[lib] = version;
+            }
+            if (devDependencies[lib] != undefined) {
+                devDependencies[lib] = version;
+            }
+        }
+        if (!config.deploy.cronjob) {
+            dependencies["chokidar"] ??= defecto["chokidar"]??"*";
+            dependencies["hexoid"] ??= defecto["hexoid"]??"*";
+            dependencies["formidable"] ??= defecto["formidable"]??"*";
+            dependencies["ws"] ??= defecto["ws"]??"*";
+            optionalDependencies["bufferutil"] ??= defecto["bufferutil"]??"*";
+
+            if (dependencies["@google-cloud/trace-agent"] != undefined) {
+                delete dependencies["@google-cloud/trace-agent"];
+            }
+            if (dependencies["@opentelemetry/context-async-hooks"] != undefined) {
+                delete dependencies["@opentelemetry/context-async-hooks"];
+            }
+            if (devDependencies["formidable"] != undefined) {
+                delete devDependencies["formidable"];
+            }
+
+            // openTelemetry = true;
+        }
+
+        if (devDependencies["source-map-support"] != undefined) {
+            delete devDependencies["source-map-support"];
+        }
+    }
+    if (dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"]!=undefined) {
+        delete dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"];
+    }
+    if (dependencies["@opentelemetry/api"]!=undefined) {
+        delete dependencies["@opentelemetry/api"];
+    }
+    if (dependencies["@opentelemetry/core"]!=undefined) {
+        delete dependencies["@opentelemetry/core"];
+    }
+    if (dependencies["@opentelemetry/instrumentation"]!=undefined) {
+        delete dependencies["@opentelemetry/instrumentation"];
+    }
+    if (dependencies["@opentelemetry/instrumentation-http"]!=undefined) {
+        delete dependencies["@opentelemetry/instrumentation-http"];
+    }
+    if (dependencies["@opentelemetry/resources"]!=undefined) {
+        delete dependencies["@opentelemetry/resources"];
+    }
+    if (dependencies["@opentelemetry/sdk-trace-base"]!=undefined) {
+        delete dependencies["@opentelemetry/sdk-trace-base"];
+    }
+    if (dependencies["@opentelemetry/sdk-trace-node"]!=undefined) {
+        delete dependencies["@opentelemetry/sdk-trace-node"];
+    }
+    if (dependencies["@opentelemetry/semantic-conventions"]!=undefined) {
+        delete dependencies["@opentelemetry/semantic-conventions"];
+    }
+    dependencies["dd-trace"] ??= defecto["dd-trace"]??"*";
+
+// return openTelemetry;
+}
+
+/**
+ * Traduce el nombre npm de un paquete `@mr/*` a su ruta absoluta dentro del monorepo.
+ *
+ * - `@mr/core-X` → `{root}/@mr/core/X`
+ * - `@mr/user-X` → `{root}/@mr/user/X`
+ * - `@mr/cli`    → `{root}/@mr/cli`
+ *
+ * @param root   - Raíz absoluta del monorepo.
+ * @param nombre - Nombre npm del paquete (p.ej. `@mr/core-dev`).
+ * @returns Ruta absoluta del directorio del paquete, o `undefined` si no corresponde a un paquete `@mr/*`.
+ */
+function mrNombreADir(root: string, nombre: string): string | undefined {
+    const coreMatch = nombre.match(/^@mr\/core-(.+)$/);
+    if (coreMatch) return `${root}/@mr/core/${coreMatch[1]}`;
+    const userMatch = nombre.match(/^@mr\/user-(.+)$/);
+    if (userMatch) return `${root}/@mr/user/${userMatch[1]}`;
+    if (nombre === "@mr/cli") return `${root}/@mr/cli`;
+    return undefined;
+}
+
+/**
+ * Compara dos rangos de versión npm y devuelve el más reciente.
+ * Soporta prefijos `^`, `~`, `>=`, etc. Si alguno es `*`, prefiere el otro.
+ *
+ * @param a - Primer rango de versión.
+ * @param b - Segundo rango de versión.
+ * @returns El rango de versión más reciente entre `a` y `b`.
+ */
+function versionMasReciente(a: string, b: string): string {
+    if (a === "*") return b;
+    if (b === "*") return a;
+    const parsear = (v: string): number[] =>
+        v.replace(/^[^0-9]*/, "").split(/[-+]/)[0].split(".").map(n => parseInt(n, 10) || 0);
+    const [aMaj, aMin = 0, aPat = 0] = parsear(a);
+    const [bMaj, bMin = 0, bPat = 0] = parsear(b);
+    if (bMaj !== aMaj) return bMaj > aMaj ? b : a;
+    if (bMin !== aMin) return bMin > aMin ? b : a;
+    return bPat > aPat ? b : a;
+}
+
+/**
+ * Opciones de `resolverDepsTransitivas`.
+ *
+ * @property visitados - Conjunto de nombres de paquete ya procesados (evita ciclos).
+ * @property campo     - Campo del `package.json` a recopilar (`dependencies` u `optionalDependencies`).
+ */
+interface IResolverDepsTransitivasConfig {
+    visitados?: Set<string>;
+    campo?: "dependencies" | "optionalDependencies";
+}
+
+/**
+ * Resuelve de forma recursiva las dependencias del campo indicado de todos los paquetes
+ * `@mr/*` declarados como `devDependencies`, sin referencias circulares.
+ *
+ * @param root    - Raíz absoluta del monorepo.
+ * @param devDeps - Mapa de devDependencies del paquete a analizar.
+ * @param config  - Opciones: conjunto de nombres ya procesados y campo a recopilar.
+ * @returns Mapa de dependencias acumuladas.
+ */
+async function resolverDepsTransitivas(root: string, devDeps: Record<string, string>, config: IResolverDepsTransitivasConfig = {}): Promise<Record<string, string>> {
+    const {visitados = new Set<string>(), campo = "dependencies"} = config;
+    const resultado: Record<string, string> = {};
+
+    for (const nombre of Object.keys(devDeps)) {
+        if (!nombre.startsWith("@mr/")) continue;
+        if (visitados.has(nombre)) continue;
+        visitados.add(nombre);
+
+        const dir = mrNombreADir(root, nombre);
+        if (dir === undefined) continue;
+
+        const pkg = await readJSON<IPackageJsonBase>(`${dir}/package.json`).catch(() => undefined);
+        if (pkg === undefined) continue;
+
+        for (const [dep, version] of Object.entries(pkg[campo] ?? {})) {
+            if (dep.startsWith("@mr/")) continue;
+            if (version.startsWith("workspace:")) continue;
+            resultado[dep] = resultado[dep] !== undefined
+                ? versionMasReciente(resultado[dep], version)
+                : version;
+        }
+
+        const transitivas = await resolverDepsTransitivas(root, pkg.devDependencies ?? {}, {visitados, campo});
+        for (const [dep, version] of Object.entries(transitivas)) {
+            resultado[dep] = resultado[dep] !== undefined
+                ? versionMasReciente(resultado[dep], version)
+                : version;
+        }
+    }
+
+    return resultado;
+}
+
+async function initWorkspace(basedir: string, monorepoRoot: string, dependenciesDefecto: Record<string, string>): Promise<IConfiguracion> {
+    const salida: IConfiguracion = {
+        // openTelemetry: false,
+        cambio: false,
+    };
+
+    const {paquete, config} = await loadConfig(basedir);
+    const hash = md5(JSON.stringify(paquete));
+    if (config.enabled) {
+        paquete.version = "0000.00.00-000";
+        checkScripts(config, paquete.scripts ??= {});
+
+        if (config.deploy.runtime==Runtime.node) {
+            checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, paquete.optionalDependencies??={}, dependenciesDefecto);
+            // salida.openTelemetry = this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
+
+            const devDeps = paquete.devDependencies ?? {};
+
+            // Propagar dependencies y optionalDependencies en paralelo (mismo árbol, doble lectura evitada)
+            const [transitivas, transitivasOpt] = await Promise.all([
+                resolverDepsTransitivas(monorepoRoot, devDeps, {visitados: new Set(), campo: "dependencies"}),
+                resolverDepsTransitivas(monorepoRoot, devDeps, {visitados: new Set(), campo: "optionalDependencies"}),
+            ]);
+            for (const [dep, version] of Object.entries(transitivas)) {
+                const deps = paquete.dependencies ??= {};
+                deps[dep] = deps[dep] !== undefined ? versionMasReciente(deps[dep], version) : version;
+            }
+            // bufferutil debe estar solo en optionalDependencies, nunca en dependencies
+            delete (paquete.dependencies ?? {})["bufferutil"];
+
+            for (const [dep, version] of Object.entries(transitivasOpt)) {
+                const optDeps = paquete.optionalDependencies ??= {};
+                optDeps[dep] = optDeps[dep] !== undefined ? versionMasReciente(optDeps[dep], version) : version;
+            }
+
+            if (Object.keys(paquete.dependencies).length===0) {
+                delete paquete.dependencies;
+            }
+            if (Object.keys(paquete.devDependencies).length===0) {
+                delete paquete.devDependencies;
+            }
+            if (Object.keys(paquete.optionalDependencies ?? {}).length===0) {
+                delete paquete.optionalDependencies;
+            }
+        }
+
+        await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
+    }
+
+    await checkFiles(config, `${basedir}`);
+
+    salida.cambio = hash!==md5(JSON.stringify(paquete));
+
+    return salida;
+}
+
+async function initWorkspaces(basedir: string, workspaces: IWorkspaces[]): Promise<IConfiguracion> {
+    console.log(Colors.colorize([Colors.FgWhite], "Inicializando workspaces"));
+    console.group();
+
+    const {devDependencies: paquetePropio={}} = await readJSON<IPackageJsonBase>(`${basedir}/framework/services-comun/package.json`);
+
+    const promesas: Promise<IConfiguracion>[] = [];
+    for (const carpeta of workspaces) {
+        for (const workspace of carpeta.workspaces) {
+            promesas.push(initWorkspace(`${basedir}/${carpeta.dir}/${workspace}`, basedir, paquetePropio));
+        }
+    }
+
+    const config = reduceConfig(await Promise.all(promesas));
+
+    console.groupEnd();
+    return config;
+}
+
+async function initConfig(basedir: string, workspaces: IWorkspaces[]): Promise<void> {
+    console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración personal de workspaces"));
+    console.group();
+
+    function sort(a: string, b: string): number {
+        return a.localeCompare(b);
+    }
+
+    const file = `${basedir}/config.workspaces.json`;
+    const salida: IConfigServices = {
+        devel: {
+            available: [],
+            disabled: [],
+        },
+        packd: {
+            available: [],
+            disabled: [],
+        },
+        i18n: true,
+        services: {},
+        framework: {
+            updates: FrameworkUpdates.all,
+        },
+    };
+
+    const proyectos: string[] = [];
+    for (const carpeta of workspaces) {
+        proyectos.push(...carpeta.workspaces);
+    }
+
+    if (await isFile(file)) {
+        try {
+            const config = await readJSON<IConfigServices>(file);
+            salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
+            salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
+            salida.i18n = config.i18n??true;
+            salida.services = config.services??{};
+            salida.framework = {
+                updates: sanitizeFrameworkUpdates(config.framework?.updates),
+            };
+        } catch (e) {
+            // no hacemos nada
+        }
+    }
+    for (const actual of proyectos) {
+        if (!salida.devel.disabled.includes(actual)) {
+            salida.devel.available.push(actual);
+        }
+        if (!salida.packd.disabled.includes(actual)) {
+            salida.packd.available.push(actual);
+        }
+    }
+
+    salida.devel.available.sort(sort);
+    salida.devel.available.push("");
+    salida.devel.disabled.sort(sort);
+    salida.devel.disabled.push("");
+    salida.packd.available.sort(sort);
+    salida.packd.available.push("");
+    salida.packd.disabled.sort(sort);
+    salida.packd.disabled.push("");
+
+    await safeWrite(file, JSON.stringify(salida, null, 2), true);
+
+    console.groupEnd();
+}
+
+/**
+ * Verifica que `{basedir}/.github` sea un symlink apuntando a `@mr/core/dev/.github`.
+ * Si existe pero no es un symlink correcto (directorio, fichero o symlink a otro destino),
+ * lo elimina y crea el symlink. Si no existe, lo crea directamente.
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ */
+async function initGithub(basedir: string): Promise<void> {
+    const githubPath = `${basedir}/.github`;
+    const destino = "@mr/core/dev/.github";
+
+    const stat = await lstat(githubPath).catch(() => undefined);
+
+    if (stat !== undefined) {
+        if (stat.isSymbolicLink()) {
+            const actual = await readlink(githubPath).catch(() => undefined);
+            if (actual === destino) return; // ya está correcto
+        }
+        // Es un directorio, fichero o symlink incorrecto — eliminar
+        console.log(Colors.colorize([Colors.FgYellow], "Corrigiendo .github/ → symlink a @mr/core/dev/.github"));
+        await unlink(githubPath);
+    }
+
+    await symlink(destino, githubPath);
+}
+
+async function initYarnRC(basedir: string): Promise<boolean> {
+    console.log(Colors.colorize([Colors.FgWhite], "Inicializando configuración de YARN"));
+    console.group();
+
+    const filePath = `${basedir}/.yarnrc.yml`;
+    const config = yamlLoad(await readFileString(filePath)) as IYarnRC;
+
+    let cambio = false;
+
+    // Asegurar campos requeridos
+    if (config.approvedGitRepositories === undefined || config.approvedGitRepositories.length > 0) {
+        config.approvedGitRepositories = [];
+    }
+    if (config.enableHardenedMode !== true) {
+        config.enableHardenedMode = true;
+        cambio = true;
+    }
+    if (config.checksumBehavior !== "throw") {
+        config.checksumBehavior = "throw";
+        cambio = true;
+    }
+    if (config.enableStrictSsl !== true) {
+        config.enableStrictSsl = true;
+        cambio = true;
+    }
+    if (config.npmMinimalAgeGate !== 1440) {
+        config.npmMinimalAgeGate = 1440;
+        cambio = true;
+    }
+    if (!config.unsafeHttpWhitelist || config.unsafeHttpWhitelist.length > 0) {
+        config.unsafeHttpWhitelist = [];
+        cambio = true;
+    }
+
+    // Librerías a añadir en packageExtensions (vacío por ahora)
+    const libs: Record<string, string> = {};
+    // Librerías obsoletas a eliminar de packageExtensions
+    const exlibs = [
+        "@google-cloud/opentelemetry-cloud-trace-exporter",
+        "@google-cloud/opentelemetry-resource-util",
+        "@inquirer/core",
+        "mysql2",
+    ];
+
+    const extensions = {...(config.packageExtensions ?? {})};
+
+    for (const [lib, dep] of Object.entries(libs).sort()) {
+        const key = `${lib}@*`;
+        if (extensions[key] === undefined) {
+            extensions[key] = {dependencies: {[dep]: "*"}};
+            cambio = true;
+        }
+    }
+
+    for (const lib of exlibs) {
+        const key = `${lib}@*`;
+        if (key in extensions) {
+            delete extensions[key];
+            cambio = true;
+        }
+    }
+
+    if (Object.keys(extensions).length > 0) {
+        config.packageExtensions = extensions;
+    } else {
+        if (config.packageExtensions !== undefined) cambio = true;
+        delete config.packageExtensions;
+    }
+
+    if (cambio) {
+        const yaml = yamlDump(config, {lineWidth: -1, sortKeys: true})
+            .replace(/^([a-zA-Z])/gm, "\n$1")
+            .replace(/^\n/, "");
+        await safeWrite(filePath, yaml, true);
+    }
+
+    console.groupEnd();
+
+    return cambio;
 }

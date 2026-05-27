@@ -1,11 +1,11 @@
 import os from "node:os";
 
-import {type IManifest, Manifest} from "@mr/cli/manifest";
+import {type IManifest, Manifest} from "@mr/core-dev/manifest";
+import {ManifestDeploymentKind, Target} from "@mr/core-dev/manifest/deployment";
 
 import {md5} from "./hash";
 import {random} from "./random";
 import {readJSON} from "./fs";
-import {ManifestDeploymentKind, Target} from "@mr/cli/manifest/deployment";
 
 export type IPodInfo = Readonly<{
     filesdir: string;

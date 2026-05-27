@@ -1,3 +1,10 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 27 May 2026 06:28:30 GMT
+ * Hash: 91435ce47cde4567e163f81d4ac9b58a
+ * Versión: 2026.5.27+1-davidmartinezmoya
+ */
+
 import moment from "moment-timezone";
 import {SendTask, TSendTaskType} from "../data/model/send-task";
 import {error, info} from "../../utiles/log";
@@ -6,6 +13,11 @@ import {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {Periodicity} from "../data/model/periodicity";
 import {SendSchedule} from "../data/model/send-schedule";
 import {PromiseDelayed} from "../../utiles/promise";
+
+type Retry = {
+    sendTask: SendTask;
+    scheduleAt: number;
+}
 
 export class GeneratorController {
     /* STATIC */
@@ -30,7 +42,7 @@ export class GeneratorController {
 
         let scheduledSendTasks;
 
-        let errorQueue: SendTask[] = [];
+        let errorQueue: Retry[] = [];
 
         while (scheduledSendTasks = await sendTaskPagination.next()) {
             info(`Procesando página ${sendTaskPagination.page - 1} (${scheduledSendTasks.length} send-tasks)`);
@@ -78,14 +90,19 @@ export class GeneratorController {
 
             // Crear envíos pendientes
             await Promise.all(scheduledSendTasks.map(async sendTask => {
+                const scheduleAt = sendSchedulesBySendTask[sendTask.id!].sendDate.getTime()||Date.now();
                 await this.factory.pendingSendTask.save(new PendingSendTask({
                     id: sendTask.id!,
-                    type: sendTask.type
+                    type: sendTask.type,
+                    schedule_at: scheduleAt,
                 })).then(() => {
                     okQueue.push(sendTask);
                 }).catch(err => {
                     error(err);
-                    errorQueue.push(sendTask);
+                    errorQueue.push({
+                        sendTask,
+                        scheduleAt
+                    });
                 })
             }));
 
@@ -127,16 +144,18 @@ export class GeneratorController {
         }
     }
 
-    private async processErrorQueue(errorQueue: SendTask[], tries: number = 1): Promise<void> {
+    private async processErrorQueue(errorQueue: Retry[], tries: number = 1): Promise<void> {
         info(`Reintentando envío de ${errorQueue.length} send-tasks fallidas (intento ${tries})`);
-        let newErrorQueue: SendTask[] = [];
+        let newErrorQueue: Retry[] = [];
 
-        await Promise.all(errorQueue.map(async sendTask => {
+        await Promise.all(errorQueue.map(async retry => {
+            const {sendTask, scheduleAt} = retry;
             await this.factory.pendingSendTask.save(new PendingSendTask({
                 id: sendTask.id!,
-                type: sendTask.type
+                type: sendTask.type,
+                schedule_at: scheduleAt,
             })).catch(() => {
-                newErrorQueue.push(sendTask);
+                newErrorQueue.push(retry);
             })
         }));
 
