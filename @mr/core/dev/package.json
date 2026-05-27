@@ -29,10 +29,12 @@
     "./manifest/build/bundle/componentes": "./manifest/build/bundle/componentes.ts",
     "./manifest/build/database": "./manifest/build/database.ts",
     "./manifest/deployment": "./manifest/deployment/index.ts",
+    "./manifest/deployment/annotations": "./manifest/deployment/annotations.ts",
     "./manifest/deployment/credenciales": "./manifest/deployment/credenciales.ts",
     "./manifest/deployment/imagen": "./manifest/deployment/imagen/index.ts",
     "./manifest/deployment/imagen/entorno": "./manifest/deployment/imagen/entorno.ts",
     "./manifest/deployment/kustomize": "./manifest/deployment/kustomize/index.ts",
+    "./manifest/deployment/lambda": "./manifest/deployment/lambda/index.ts",
     "./manifest/deployment/storage": "./manifest/deployment/storage/index.ts",
     "./manifest/deployment/storage/buckets": "./manifest/deployment/storage/buckets.ts",
     "./manifest/development": "./manifest/development.ts"

@@ -42,6 +42,9 @@
             "test": [
                 "meteored-status:europe-southwest1:status-master-1"
             ]
+        },
+        "lambda": {
+            "ingress": "internal-and-cloud-load-balancing"
         }
     },
     "devel": {

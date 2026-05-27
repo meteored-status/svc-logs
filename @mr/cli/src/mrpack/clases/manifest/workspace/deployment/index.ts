@@ -16,6 +16,7 @@ import {type IManifestDeploymentLegacy, type IManifestLegacy, RuntimeLegacy} fro
 import ManifestWorkspaceDeploymentCredencialesLoader from "./credenciales";
 import ManifestWorkspaceDeploymentImagenLoader from "./imagen";
 import ManifestWorkspaceDeploymentKustomizeLoader from "./kustomize";
+import ManifestWorkspaceDeploymentLambdaLoader from "./lambda";
 import ManifestWorkspaceDeploymentStorageLoader from "./storage";
 
 type IManifestDeploymentUpdate1 = Exclude<IManifestDeployment, "kustomize"> & {
@@ -111,19 +112,26 @@ class ManifestWorkspaceDeploymentLoader {
                         }));
                     }
                 }
-                if (data.target==Target.lambda && "cloudsql" in deploy) {
-                    if (typeof deploy.cloudsql === "string") {
-                        data.cloudsql = {
-                            produccion: [deploy.cloudsql],
-                            test: [deploy.cloudsql],
-                        };
-                    } else if (Array.isArray(deploy.cloudsql)) {
-                        data.cloudsql = {
-                            produccion: deploy.cloudsql,
-                            test: deploy.cloudsql,
-                        };
+                if (data.target==Target.lambda) {
+                    if ("cloudsql" in deploy) {
+                        if (typeof deploy.cloudsql === "string") {
+                            data.cloudsql = {
+                                produccion: [deploy.cloudsql],
+                                test: [deploy.cloudsql],
+                            };
+                        } else if (Array.isArray(deploy.cloudsql)) {
+                            data.cloudsql = {
+                                produccion: deploy.cloudsql,
+                                test: deploy.cloudsql,
+                            };
+                        } else {
+                            data.cloudsql = deploy.cloudsql;
+                        }
+                    }
+                    if ("lambda" in deploy) {
+                        data.lambda = ManifestWorkspaceDeploymentLambdaLoader.check(data.lambda);
                     } else {
-                        data.cloudsql = deploy.cloudsql;
+                        data.lambda = ManifestWorkspaceDeploymentLambdaLoader.default;
                     }
                 }
                 if (data.type===ManifestDeploymentKind.CRONJOB) {
