@@ -11,12 +11,13 @@ de cada workspace para determinar su configuración.
 ```
 Manifest  (manifest/index.ts)
 ├── deploy: ManifestDeployment  (deployment/index.ts)
-│   ├── annotations: ManifestDeploymentAnnotations  (deployment/annotations/index.ts)
+│   ├── annotations: ManifestDeploymentAnnotations  (deployment/annotations.ts)
 │   ├── credenciales: ManifestDeploymentCredenciales[]  (deployment/credenciales.ts)
 │   ├── imagen: ManifestDeploymentImagen  (deployment/imagen/index.ts)
 │   │   ├── produccion: ManifestDeploymentImagenEntorno  (deployment/imagen/entorno.ts)
 │   │   └── test:       ManifestDeploymentImagenEntorno
 │   ├── kustomize: ManifestDeploymentKustomize[]  (deployment/kustomize/index.ts)
+│   ├── lambda: ManifestDeploymentLambda  (deployment/lambda/index.ts)
 │   └── storage: ManifestDeploymentStorage  (deployment/storage/index.ts)
 │       └── buckets: ManifestDeploymentStorageBuckets  (deployment/storage/buckets.ts)
 ├── devel: ManifestDevelopment  (development.ts)
@@ -90,6 +91,7 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
 | `schedule` | `string` | — | CRONJOB | Expresión cron. |
 | `storage` | `IManifestDeploymentStorage` | — | BROWSER | Subida de assets a GCS. |
 | `annotations` | `IManifestDeploymentAnnotations` | — | SERVICE/CRONJOB/JOB | Anotaciones adicionales para recursos generados (K8s/Cloud Run). |
+| `lambda` | `IManifestDeploymentLambda` | — | SERVICE/CRONJOB/JOB + lambda | Configuración de red de Cloud Run (egress/ingress). |
 
 #### `ManifestDeploymentKind`
 
@@ -176,6 +178,49 @@ Ejemplo:
             "service": {
                 "run.googleapis.com/ingress": "all"
             }
+        }
+    }
+}
+```
+
+---
+
+### `IManifestDeploymentLambda`
+
+Configuración de red de Cloud Run para despliegues con `target: "lambda"`.
+
+| Campo | Tipo | Obligatorio | Descripción |
+|-------|------|:-----------:|-------------|
+| `ingress` | `Ingress` | ✅ | Tráfico entrante permitido. Por defecto `"internal-and-cloud-load-balancing"`. |
+| `egress` | `Egress` | — | Tráfico saliente. Solo aplica cuando `vpc` es `true`. |
+| `vpc` | `boolean` | ✅ | Si `true`, el servicio se conecta a la VPC del proyecto. Por defecto `false`. |
+
+#### `Ingress`
+
+| Valor | Descripción |
+|-------|-------------|
+| `"all"` | Permite todo el tráfico entrante (público). |
+| `"internal-and-cloud-load-balancing"` | Solo tráfico interno y load balancer. |
+
+#### `Egress`
+
+| Valor | Descripción |
+|-------|-------------|
+| `"all-traffic"` | Todo el tráfico sale por VPC. |
+| `"private-ranges-only"` | Solo tráfico a rangos privados sale por VPC. |
+
+Ejemplo:
+
+```json
+{
+    "deploy": {
+        "type": "service",
+        "runtime": "node",
+        "target": "lambda",
+        "lambda": {
+            "ingress": "all",
+            "egress": "private-ranges-only",
+            "vpc": true
         }
     }
 }

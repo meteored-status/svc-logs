@@ -129,23 +129,27 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     # Comprobar que exista la entrada deploy.lambda.egress
     LAMBDA=$(configw "${RUTA}" '.deploy.lambda // empty')
     if [[ -n "${LAMBDA}" ]]; then
-      EGRESS=$(configw "${RUTA}" '.deploy.lambda.egress // empty')
-      if [[ -n "${EGRESS}" ]]; then
-        yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/vpc-access-egress\" = ${EGRESS}" "${CLOUD_RUN_YAML}" -i
+      VPC=$(configw "${RUTA}" '.deploy.lambda.vpc // empty')
+
+      if [[ "${VPC}" == "true" ]]; then
+        EGRESS=$(configw "${RUTA}" '.deploy.lambda.egress // empty')
+        if [[ -n "${EGRESS}" ]]; then
+          yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/vpc-access-egress\" = ${EGRESS}" "${CLOUD_RUN_YAML}" -i
+        fi
+
+        NETWORK=$(configl ".labels[\"network\"] // empty")
+        if [[ -n "${NETWORK}" ]]; then
+          SUBNETWORK=$(configl ".labels[\"subnetwork\"] // empty")
+          if [[ -n "${SUBNETWORK}" ]]; then
+            yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/network-interfaces\" = '[{\"network\":\"${NETWORK}\",\"subnetwork\":\"${SUBNETWORK}\"}]'" "${CLOUD_RUN_YAML}" -i
+          fi
+        fi
       fi
 
       if [[ "${TYPE}" == "service" ]]; then
         INGRESS=$(configw "${RUTA}" '.deploy.lambda.ingress // empty')
         if [[ -n "${INGRESS}" ]]; then
           yq eval ".spec.metadata.annotations.\"run.googleapis.com/ingress\" = ${INGRESS}" "${CLOUD_RUN_YAML}" -i
-        fi
-      fi
-
-      NETWORK=$(configl ".labels[\"network\"] // empty")
-      if [[ -n "${NETWORK}" ]]; then
-        SUBNETWORK=$(configl ".labels[\"subnetwork\"] // empty")
-        if [[ -n "${SUBNETWORK}" ]]; then
-          yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/network-interfaces\" = '[{\"network\":\"${NETWORK}\",\"subnetwork\":\"${SUBNETWORK}\"}]'" "${CLOUD_RUN_YAML}" -i
         fi
       fi
     fi
