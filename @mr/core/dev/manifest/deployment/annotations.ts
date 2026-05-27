@@ -1,8 +1,9 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Thu, 21 May 2026 10:53:23 GMT
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 27 May 2026 11:12:48 GMT
  * Hash: a876821fa31a3745c26d263354036fe7
- * Versión: 2026.5.21+3-juancmartinez
+ * Versión: 2026.5.27+2-josantoniojimnez
+ * Anterior: 2026.5.21+3-juancmartinez
  */
 
 /**

@@ -44,7 +44,8 @@
             ]
         },
         "lambda": {
-            "ingress": "internal-and-cloud-load-balancing"
+            "ingress": "internal-and-cloud-load-balancing",
+            "vpc": false
         }
     },
     "devel": {
