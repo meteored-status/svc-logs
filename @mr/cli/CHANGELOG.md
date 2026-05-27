@@ -2,6 +2,35 @@
 
 ---
 
+## 2026.5.27+3
+
+### Changed
+
+- `clases/manifest/workspace/deployment/lambda/index.ts` — `ManifestWorkspaceDeploymentLambdaLoader`
+  actualizado para inicializar y validar la nueva propiedad `vpc`:
+  - `default` incluye `vpc: false`.
+  - `check()` copia el valor booleano `lambda.vpc ?? false` al resultado normalizado.
+
+---
+
+## 2026.5.27+2
+
+### Added
+
+- `clases/manifest/workspace/deployment/lambda/index.ts` — nuevo loader
+  `ManifestWorkspaceDeploymentLambdaLoader` que valida y normaliza la sección `deploy.lambda`
+  del `mrpack.json`. Aplica el default `ingress: "internal-and-cloud-load-balancing"` cuando
+  el campo no está presente, y descarta valores de `egress`/`ingress` fuera del enum permitido.
+
+### Changed
+
+- `clases/manifest/workspace/deployment/index.ts` — cuando `deploy.target` es `"lambda"`,
+  `check()` ahora hidrata `data.lambda` mediante `ManifestWorkspaceDeploymentLambdaLoader`:
+  - Si el manifest incluye `lambda`, se valida y normaliza con `check(data.lambda)`.
+  - Si no lo incluye, se aplica el valor por defecto con `.default`.
+
+---
+
 ## 2026.5.26+1
 
 ### Changed

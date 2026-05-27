@@ -2,6 +2,66 @@
 
 ---
 
+## 2026.5.27+2
+
+### Added
+
+- `manifest/deployment/lambda/index.ts` — nueva propiedad `vpc: boolean` en
+  `IManifestDeploymentLambda` y `ManifestDeploymentLambda`. Cuando es `true`, el servicio
+  Cloud Run se conecta a la VPC del proyecto; la anotación `vpc-access-egress` y la
+  configuración de `network-interfaces` solo se aplican si este flag está activo.
+  Por defecto su valor es `false`.
+
+### Changed
+
+- `manifest/deployment/lambda/index.ts` — añadidos bloques JSDoc a los tipos `Egress`,
+  `Ingress` e `IManifestDeploymentLambda`, y corregido el JSDoc de la clase
+  `ManifestDeploymentLambda` (antes referenciaba incorrectamente `deploy.annotations`).
+
+- `manifest/deployment/index.ts` — añadida la propiedad `lambda` al bloque `@property` del
+  JSDoc de `IManifestDeployment`.
+
+- `manifest/README.md` — tabla `IManifestDeploymentLambda` actualizada con la fila `vpc` y
+  el ejemplo JSON ampliado con `"vpc": true`.
+
+---
+
+## 2026.5.27+1
+
+### Added
+
+- `manifest/deployment/lambda/index.ts` — nuevo módulo con el modelo `ManifestDeploymentLambda`
+  y los tipos auxiliares `Egress` / `Ingress` (type + const namespace).
+  Permite configurar el tráfico entrante (`ingress`) y saliente (`egress`) de un servicio
+  Cloud Run al desplegar con `target: "lambda"`.
+
+  ```ts
+  export type Egress = "all-traffic" | "private-ranges-only";
+  export type Ingress = "all" | "internal-and-cloud-load-balancing";
+
+  export interface IManifestDeploymentLambda {
+      egress?: Egress;
+      ingress: Ingress;
+  }
+  ```
+
+### Changed
+
+- `manifest/deployment/index.ts` — añadido el campo `lambda?: IManifestDeploymentLambda` a
+  `IManifestDeployment` y `ManifestDeployment`. El constructor hidrata el campo usando
+  `ManifestDeploymentLambda.build(...)` cuando está presente, y `toJSON()` lo serializa de vuelta.
+
+- `manifest/deployment/annotations.ts` — el módulo pasa de
+  `manifest/deployment/annotations/index.ts` a `manifest/deployment/annotations.ts`
+  (directorio eliminado). El comportamiento es idéntico; la ruta de import ha sido actualizada
+  en `deployment/index.ts`.
+
+- `manifest/README.md` — árbol de modelos actualizado con la nueva ruta de `annotations.ts`,
+  la entrada `lambda` en el árbol y en la tabla de `IManifestDeployment`, y la nueva sección
+  `IManifestDeploymentLambda` con tablas de `Ingress` / `Egress` y ejemplo JSON.
+
+---
+
 ## 2026.5.22+1
 
 ### Added

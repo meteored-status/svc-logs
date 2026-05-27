@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 0e2aa840916b262bd5de0a387f1b6ad4
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+8-juancmartinez
+ * Fecha: Wed, 27 May 2026 11:12:48 GMT
+ * Hash: be3be04b8b4063e88574f7b0fbdfd65c
+ * Versión: 2026.5.27+2-josantoniojimnez
+ * Anterior: 2026.5.27+1-josantoniojimnez
  */
 
 import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/core-dev/manifest/deployment";
@@ -112,7 +112,7 @@ class ManifestWorkspaceDeploymentLoader {
                         }));
                     }
                 }
-                if (data.target==Target.lambda) {
+                if (data.target===Target.lambda) {
                     if ("cloudsql" in deploy) {
                         if (typeof deploy.cloudsql === "string") {
                             data.cloudsql = {

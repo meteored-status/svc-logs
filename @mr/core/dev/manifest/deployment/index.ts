@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 11:13:49 GMT
- * Hash: dbbdb35e4d13d68b98f87f4ebb9fbbba
- * Versión: 2026.5.21+5-josantoniojimnez
- * Anterior: 2026.5.21+3-juancmartinez
+ * Fecha: Wed, 27 May 2026 11:12:48 GMT
+ * Hash: 01b78b10db9db08fb50564dc30dfda52
+ * Versión: 2026.5.27+2-josantoniojimnez
+ * Anterior: 2026.5.21+5-josantoniojimnez
  */
 
 import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations.ts";
@@ -104,6 +104,7 @@ interface IManifestDeploymentBuckets {
  * @property schedule - Solo `CRONJOB`. Expresión cron de planificación.
  * @property storage - Solo `BROWSER`. Configuración de subida de assets a GCS.
  * @property annotations - Solo `SERVICE`/`CRONJOB`/`JOB`. Anotaciones a añadir a los recursos Kubernetes y Cloud Run generados.
+ * @property lambda - Solo `SERVICE`/`CRONJOB`/`JOB` + `target: lambda`. Configuración de red de Cloud Run (ingress, egress, VPC).
  */
 export interface IManifestDeployment {
     enabled: boolean;
