@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 11:12:48 GMT
- * Hash: 174a9cb2f8746777b16bda6480ac1b06
- * Versión: 2026.5.27+2-josantoniojimnez
+ * Fecha: Wed, 27 May 2026 11:32:46 GMT
+ * Hash: 7f37486bd1669b122e31d6aa5d084700
+ * Versión: 2026.5.27+5-josantoniojimnez
+ * Anterior: 2026.5.27+4-josantoniojimnez
  */
 
 import {Egress, Ingress, IManifestDeploymentLambda} from "@mr/core-dev/manifest/deployment/lambda";
@@ -22,6 +23,7 @@ class ManifestWorkspaceDeploymentLambdaLoader {
      */
     public get default(): IManifestDeploymentLambda {
         return {
+            egress: undefined,
             ingress: Ingress.internal,
             vpc: false,
         };
@@ -43,17 +45,20 @@ class ManifestWorkspaceDeploymentLambdaLoader {
             return data;
         }
 
-        if (lambda.egress) {
-            if (lambda.egress===Egress.all || lambda.egress===Egress.private) {
-                data.egress = lambda.egress;
-            }
-        }
         if (lambda.ingress) {
             if (lambda.ingress===Ingress.all || lambda.ingress===Ingress.internal) {
                 data.ingress = lambda.ingress;
             }
         }
         data.vpc = lambda.vpc ?? false;
+
+        if (data.vpc) {
+            if (lambda.egress && (lambda.egress===Egress.all || lambda.egress===Egress.private)) {
+                data.egress = lambda.egress;
+            } else {
+                data.egress = Egress.private;
+            }
+        }
 
         return data;
     }

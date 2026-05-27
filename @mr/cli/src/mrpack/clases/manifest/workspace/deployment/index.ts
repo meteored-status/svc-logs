@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 11:12:48 GMT
- * Hash: be3be04b8b4063e88574f7b0fbdfd65c
- * Versión: 2026.5.27+2-josantoniojimnez
- * Anterior: 2026.5.27+1-josantoniojimnez
+ * Fecha: Wed, 27 May 2026 11:38:09 GMT
+ * Hash: c231c0dca3d6fc036c6bf48be32ac83e
+ * Versión: 2026.5.27+6-josantoniojimnez
+ * Anterior: 2026.5.27+2-josantoniojimnez
  */
 
 import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/core-dev/manifest/deployment";
@@ -129,7 +129,7 @@ class ManifestWorkspaceDeploymentLoader {
                         }
                     }
                     if ("lambda" in deploy) {
-                        data.lambda = ManifestWorkspaceDeploymentLambdaLoader.check(data.lambda);
+                        data.lambda = ManifestWorkspaceDeploymentLambdaLoader.check(deploy.lambda);
                     } else {
                         data.lambda = ManifestWorkspaceDeploymentLambdaLoader.default;
                     }
