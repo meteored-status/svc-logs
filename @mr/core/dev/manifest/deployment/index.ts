@@ -6,11 +6,12 @@
  * Anterior: 2026.5.21+3-juancmartinez
  */
 
+import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations.ts";
 import {type IManifestDeploymentCredenciales, ManifestDeploymentCredenciales} from "./credenciales.ts";
 import {type IManifestDeploymentImagen, ManifestDeploymentImagen} from "./imagen/index.ts";
 import {type IManifestDeploymentKustomize, ManifestDeploymentKustomize} from "./kustomize/index.ts";
+import {type IManifestDeploymentLambda, ManifestDeploymentLambda} from "./lambda/index.ts";
 import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage/index.ts";
-import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations/index.ts";
 
 /**
  * Entorno de ejecución del artefacto desplegado.
@@ -119,6 +120,7 @@ export interface IManifestDeployment {
     schedule?: string;
     storage?: IManifestDeploymentStorage;
     annotations?: IManifestDeploymentAnnotations;
+    lambda?: IManifestDeploymentLambda;
 }
 
 /**
@@ -148,6 +150,7 @@ export class ManifestDeployment implements IManifestDeployment {
     public schedule?: string;
     public storage?: ManifestDeploymentStorage;
     public annotations?: ManifestDeploymentAnnotations;
+    public lambda?: ManifestDeploymentLambda;
 
     /**
      * `true` cuando el tipo de despliegue es `CRONJOB` o `JOB`.
@@ -172,6 +175,7 @@ export class ManifestDeployment implements IManifestDeployment {
         this.schedule = deploy.schedule;
         this.storage = ManifestDeploymentStorage.build(deploy.storage);
         this.annotations = deploy.annotations ? ManifestDeploymentAnnotations.build(deploy.annotations) : undefined;
+        this.lambda = deploy.lambda ? ManifestDeploymentLambda.build(deploy.lambda) : undefined;
     }
 
     public toJSON(): IManifestDeployment {
@@ -194,6 +198,7 @@ export class ManifestDeployment implements IManifestDeployment {
             schedule: this.schedule,
             storage: this.storage?.toJSON(),
             annotations: this.annotations?.toJSON(),
+            lambda: this.lambda?.toJSON(),
         };
     }
 }
