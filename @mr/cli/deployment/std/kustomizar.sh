@@ -170,6 +170,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     VOLUMES_JSON='[]'
     MOUNTS_JSON='[]'
     CREDENTIALS=$(configw "${RUTA}" '.deploy.credenciales // []')
+    echo "${CREDENTIALS}"
     if [[ "$CREDENTIALS" != "[]" ]]; then
       COUNTER=0
 
@@ -255,7 +256,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         echo "gcloud scheduler jobs delete ${KUSTOMIZER}-${SERVICIO}-${ZONA}-scheduler-trigger --location=${REGION} --quiet" >> "${LAMBDA_SCRIPT}"
       fi
     fi
-#        cat "${CLOUD_RUN_YAML}"
+        cat "${CLOUD_RUN_YAML}"
+        echo "" >> "${LAMBDA_SCRIPT}"
 #        cat "${LAMBDA_SCRIPT}"
   }
   export -f parseWorkspaceLambdaZona

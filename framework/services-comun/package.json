@@ -7,7 +7,7 @@
     "tools": "yarn workspace services-comun webpack --config tools/src/webpack.config.cjs"
   },
   "devDependencies": {
-    "@elastic/elasticsearch": "^9.4.1",
+    "@elastic/elasticsearch": "^9.4.2",
     "@google-cloud/common": "^6.0.0",
     "@google-cloud/eventarc-publishing": "^4.2.2",
     "@google-cloud/pubsub": "^5.3.0",
@@ -35,7 +35,7 @@
     "isbot": "^5.1.40",
     "make-plural": "^8.1.0",
     "moment-timezone": "^0.6.2",
-    "mysql2": "^3.22.3",
+    "mysql2": "^3.22.4",
     "node-ical": "^0.26.1",
     "pg": "^8.21.0",
     "pidusage": "^4.0.1",
