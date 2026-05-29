@@ -165,7 +165,6 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
     fi
 
-    gcloud secrets list --project="${PROJECT_ID}" --format="value(name)"
     VOLUMES_JSON='[]'
     MOUNTS_JSON='[]'
     CREDENTIALS=$(configw "${RUTA}" '.deploy.credenciales // []')
@@ -255,7 +254,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
     fi
 #    cat "${CLOUD_RUN_YAML}"
-    echo "" > "${LAMBDA_SCRIPT}"
+#    echo "" > "${LAMBDA_SCRIPT}"
 #    cat "${LAMBDA_SCRIPT}"
   }
   export -f parseWorkspaceLambdaZona
