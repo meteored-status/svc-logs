@@ -44,8 +44,8 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@rspack/cli": "^2.0.4",
-    "@rspack/core": "^2.0.4",
+    "@rspack/cli": "^2.0.5",
+    "@rspack/core": "^2.0.5",
     "@tsconfig/node24": "^24.0.4",
     "@tsconfig/recommended": "^1.0.13",
     "@types/node": "^24.12.4",

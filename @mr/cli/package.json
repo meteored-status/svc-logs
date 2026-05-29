@@ -26,15 +26,15 @@
     "dotenv": "^17.4.2",
     "js-yaml": "^4.1.1",
     "jszip": "^3.10.1",
-    "mysql2": "^3.22.3",
+    "mysql2": "^3.22.4",
     "source-map-support": "^0.5.21",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
     "@mr/core-i18n": "workspace:*",
-    "@rspack/cli": "^2.0.4",
-    "@rspack/core": "^2.0.4",
+    "@rspack/cli": "^2.0.5",
+    "@rspack/core": "^2.0.5",
     "@types/diff3": "^0.0.2",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.12.4",

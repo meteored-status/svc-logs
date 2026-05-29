@@ -14,7 +14,7 @@
     "devel": "yarn g:devel"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "^9.4.1",
+    "@elastic/elasticsearch": "^9.4.2",
     "chokidar": "^5.0.0",
     "dd-trace": "^5.104.0",
     "formidable": "^3.5.4",
