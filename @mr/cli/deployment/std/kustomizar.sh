@@ -147,10 +147,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
 
       if [[ "${TYPE}" == "service" ]]; then
-        INGRESS=$(configw "${RUTA}" '.deploy.lambda.ingress // empty')
-        if [[ -n "${INGRESS}" ]]; then
-          yq eval ".spec.metadata.annotations.\"run.googleapis.com/ingress\" = ${INGRESS}" "${CLOUD_RUN_YAML}" -i
-        fi
+        INGRESS=$(configw "${RUTA}" '.deploy.lambda.ingress // "internal-and-cloud-load-balancing"')
+        yq eval ".spec.metadata.annotations.\"run.googleapis.com/ingress\" = \"${INGRESS}\"" "${CLOUD_RUN_YAML}" -i
       fi
     fi
 
@@ -167,10 +165,10 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
     fi
 
+    gcloud secrets list --project="${PROJECT_ID}" --format="value(name)"
     VOLUMES_JSON='[]'
     MOUNTS_JSON='[]'
     CREDENTIALS=$(configw "${RUTA}" '.deploy.credenciales // []')
-    echo "${CREDENTIALS}"
     if [[ "$CREDENTIALS" != "[]" ]]; then
       COUNTER=0
 
@@ -256,9 +254,9 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         echo "gcloud scheduler jobs delete ${KUSTOMIZER}-${SERVICIO}-${ZONA}-scheduler-trigger --location=${REGION} --quiet" >> "${LAMBDA_SCRIPT}"
       fi
     fi
-        cat "${CLOUD_RUN_YAML}"
-        echo "" >> "${LAMBDA_SCRIPT}"
-#        cat "${LAMBDA_SCRIPT}"
+#    cat "${CLOUD_RUN_YAML}"
+    echo "" > "${LAMBDA_SCRIPT}"
+#    cat "${LAMBDA_SCRIPT}"
   }
   export -f parseWorkspaceLambdaZona
 
