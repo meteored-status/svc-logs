@@ -148,7 +148,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
       if [[ "${TYPE}" == "service" ]]; then
         INGRESS=$(configw "${RUTA}" '.deploy.lambda.ingress // "internal-and-cloud-load-balancing"')
-        yq eval ".spec.metadata.annotations.\"run.googleapis.com/ingress\" = \"${INGRESS}\"" "${CLOUD_RUN_YAML}" -i
+        yq eval ".metadata.annotations.\"run.googleapis.com/ingress\" = \"${INGRESS}\"" "${CLOUD_RUN_YAML}" -i
       fi
     fi
 
@@ -254,7 +254,6 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
     fi
 #    cat "${CLOUD_RUN_YAML}"
-    gsutil cp "${CLOUD_RUN_YAML}" "gs://mrs-resources/${CLOUD_RUN_YAML}"
 #    echo "" > "${LAMBDA_SCRIPT}"
 #    cat "${LAMBDA_SCRIPT}"
   }
