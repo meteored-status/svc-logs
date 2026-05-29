@@ -129,9 +129,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@elastic/elasticsearch@npm:^9.4.1":
-  version: 9.4.1
-  resolution: "@elastic/elasticsearch@npm:9.4.1"
+"@elastic/elasticsearch@npm:^9.4.2":
+  version: 9.4.2
+  resolution: "@elastic/elasticsearch@npm:9.4.2"
   dependencies:
     "@elastic/transport": "npm:^9.3.5"
     tslib: "npm:^2.4.0"
@@ -140,7 +140,7 @@ __metadata:
   peerDependenciesMeta:
     apache-arrow:
       optional: true
-  checksum: 10/c972d131af968716b416a02408530a56e762ad42285a45b25b4b87c7d0e576a2bf7de015335c96e8524056e90e9efe9005e5e3fcf845d15fd4136fa9c2608871
+  checksum: 10/063d0b5e0653d5b719a0df9d6de10799e020115a80e1379993eae21b49ff1ea2714c3fc21f58ad59c7946868a946a4af48b0ea161867970e05d71d82adad35bd
   languageName: node
   linkType: hard
 
@@ -891,8 +891,8 @@ __metadata:
     "@inquirer/prompts": "npm:^8.5.0"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
-    "@rspack/cli": "npm:^2.0.4"
-    "@rspack/core": "npm:^2.0.4"
+    "@rspack/cli": "npm:^2.0.5"
+    "@rspack/core": "npm:^2.0.5"
     "@types/diff3": "npm:^0.0.2"
     "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:^24.12.4"
@@ -903,7 +903,7 @@ __metadata:
     dotenv: "npm:^17.4.2"
     js-yaml: "npm:^4.1.1"
     jszip: "npm:^3.10.1"
-    mysql2: "npm:^3.22.3"
+    mysql2: "npm:^3.22.4"
     services-comun: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tree-kill: "npm:^1.2.2"
@@ -920,8 +920,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mr/core-dev@workspace:@mr/core/dev"
   dependencies:
-    "@rspack/cli": "npm:^2.0.4"
-    "@rspack/core": "npm:^2.0.4"
+    "@rspack/cli": "npm:^2.0.5"
+    "@rspack/core": "npm:^2.0.5"
     "@tsconfig/node24": "npm:^24.0.4"
     "@tsconfig/recommended": "npm:^1.0.13"
     "@types/node": "npm:^24.12.4"
@@ -1534,51 +1534,51 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rspack/binding-darwin-arm64@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-darwin-arm64@npm:2.0.4"
+"@rspack/binding-darwin-arm64@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-darwin-arm64@npm:2.0.5"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rspack/binding-darwin-x64@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-darwin-x64@npm:2.0.4"
+"@rspack/binding-darwin-x64@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-darwin-x64@npm:2.0.5"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-arm64-gnu@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-linux-arm64-gnu@npm:2.0.4"
+"@rspack/binding-linux-arm64-gnu@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-linux-arm64-gnu@npm:2.0.5"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-arm64-musl@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-linux-arm64-musl@npm:2.0.4"
+"@rspack/binding-linux-arm64-musl@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-linux-arm64-musl@npm:2.0.5"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-x64-gnu@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-linux-x64-gnu@npm:2.0.4"
+"@rspack/binding-linux-x64-gnu@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-linux-x64-gnu@npm:2.0.5"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-x64-musl@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-linux-x64-musl@npm:2.0.4"
+"@rspack/binding-linux-x64-musl@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-linux-x64-musl@npm:2.0.5"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@rspack/binding-wasm32-wasi@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-wasm32-wasi@npm:2.0.4"
+"@rspack/binding-wasm32-wasi@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-wasm32-wasi@npm:2.0.5"
   dependencies:
     "@emnapi/core": "npm:1.10.0"
     "@emnapi/runtime": "npm:1.10.0"
@@ -1587,41 +1587,41 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-arm64-msvc@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-win32-arm64-msvc@npm:2.0.4"
+"@rspack/binding-win32-arm64-msvc@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-win32-arm64-msvc@npm:2.0.5"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-ia32-msvc@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-win32-ia32-msvc@npm:2.0.4"
+"@rspack/binding-win32-ia32-msvc@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-win32-ia32-msvc@npm:2.0.5"
   conditions: os=win32 & cpu=ia32
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-x64-msvc@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding-win32-x64-msvc@npm:2.0.4"
+"@rspack/binding-win32-x64-msvc@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding-win32-x64-msvc@npm:2.0.5"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@rspack/binding@npm:2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/binding@npm:2.0.4"
+"@rspack/binding@npm:2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/binding@npm:2.0.5"
   dependencies:
-    "@rspack/binding-darwin-arm64": "npm:2.0.4"
-    "@rspack/binding-darwin-x64": "npm:2.0.4"
-    "@rspack/binding-linux-arm64-gnu": "npm:2.0.4"
-    "@rspack/binding-linux-arm64-musl": "npm:2.0.4"
-    "@rspack/binding-linux-x64-gnu": "npm:2.0.4"
-    "@rspack/binding-linux-x64-musl": "npm:2.0.4"
-    "@rspack/binding-wasm32-wasi": "npm:2.0.4"
-    "@rspack/binding-win32-arm64-msvc": "npm:2.0.4"
-    "@rspack/binding-win32-ia32-msvc": "npm:2.0.4"
-    "@rspack/binding-win32-x64-msvc": "npm:2.0.4"
+    "@rspack/binding-darwin-arm64": "npm:2.0.5"
+    "@rspack/binding-darwin-x64": "npm:2.0.5"
+    "@rspack/binding-linux-arm64-gnu": "npm:2.0.5"
+    "@rspack/binding-linux-arm64-musl": "npm:2.0.5"
+    "@rspack/binding-linux-x64-gnu": "npm:2.0.5"
+    "@rspack/binding-linux-x64-musl": "npm:2.0.5"
+    "@rspack/binding-wasm32-wasi": "npm:2.0.5"
+    "@rspack/binding-win32-arm64-msvc": "npm:2.0.5"
+    "@rspack/binding-win32-ia32-msvc": "npm:2.0.5"
+    "@rspack/binding-win32-x64-msvc": "npm:2.0.5"
   dependenciesMeta:
     "@rspack/binding-darwin-arm64":
       optional: true
@@ -1643,13 +1643,13 @@ __metadata:
       optional: true
     "@rspack/binding-win32-x64-msvc":
       optional: true
-  checksum: 10/55832bec03a4c94d6c60a16ebb6484e9c32a6e88cf820874f9873293787d1cbb95ee4276acf5dbf5b6bf6e63d6c9f8e3023efd40f8c2526a52324927b41a9316
+  checksum: 10/95b4fa9daf1935e2ca3d1bd08b12c7f26ef0fffb09d7764bcb11fed1d4ecedc4dd79cbfbb37519121e81c06b97ade27f2d7a33ed0ed51e3b7d650b37b8b33c9e
   languageName: node
   linkType: hard
 
-"@rspack/cli@npm:^2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/cli@npm:2.0.4"
+"@rspack/cli@npm:^2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/cli@npm:2.0.5"
   peerDependencies:
     "@rspack/core": ^2.0.0-0
     "@rspack/dev-server": ^2.0.0-0
@@ -1657,25 +1657,25 @@ __metadata:
     "@rspack/dev-server":
       optional: true
   bin:
-    rspack: bin/rspack.js
-  checksum: 10/a883bfd8107457a7a2afa1add396078de5c2d3075117e58406bd9971cb083d7bc7152bee4617d0530bdacaa186c685c6dc5958aec06f060f91ac6ac2f75ddd10
+    rspack: ./bin/rspack.js
+  checksum: 10/26f9ff2a8478c7115737abac52861abaf7bc8489abf111c9060fe13d8379ce00f7318c3cd6d134449ae05f23a7b7e3c5829974f7afb21339c492dc590b2475cd
   languageName: node
   linkType: hard
 
-"@rspack/core@npm:^2.0.4":
-  version: 2.0.4
-  resolution: "@rspack/core@npm:2.0.4"
+"@rspack/core@npm:^2.0.5":
+  version: 2.0.5
+  resolution: "@rspack/core@npm:2.0.5"
   dependencies:
-    "@rspack/binding": "npm:2.0.4"
+    "@rspack/binding": "npm:2.0.5"
   peerDependencies:
     "@module-federation/runtime-tools": ^0.24.1 || ^2.0.0
-    "@swc/helpers": ">=0.5.1"
+    "@swc/helpers": ^0.5.23
   peerDependenciesMeta:
     "@module-federation/runtime-tools":
       optional: true
     "@swc/helpers":
       optional: true
-  checksum: 10/49249480a403259e5ee862cbd4694920da1b6ca5aba82146b31e4868430954eccb8a81e93fa730514dd3a39b65aa3fd52dbf0583bce1213086e6aec1a23ff9d1
+  checksum: 10/b955a12bd04e1e3bef954f8a3cfd48c7302d114fee4d13dc7c6f46645bb18d377a4df7f86520bbf44519ed7bb315bd119e98768bfd7d851b1329ba9ee51ce1ac
   languageName: node
   linkType: hard
 
@@ -3967,7 +3967,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-services@workspace:packages/logs-services"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.4.1"
+    "@elastic/elasticsearch": "npm:^9.4.2"
     "@types/node": "npm:^24.12.4"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
@@ -4024,7 +4024,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs-web@workspace:services/logs-web"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.4.1"
+    "@elastic/elasticsearch": "npm:^9.4.2"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
     "@mr/core-network": "workspace:*"
@@ -4036,7 +4036,7 @@ __metadata:
     hexoid: "npm:^2.0.0"
     logs-services: "workspace:*"
     logs-status-base: "workspace:*"
-    mysql2: "npm:^3.22.3"
+    mysql2: "npm:^3.22.4"
     qs: "npm:^6.15.2"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
@@ -4053,7 +4053,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logs@workspace:services/logs"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.4.1"
+    "@elastic/elasticsearch": "npm:^9.4.2"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
     "@mr/core-network": "workspace:*"
@@ -4272,9 +4272,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mysql2@npm:^3.22.3":
-  version: 3.22.3
-  resolution: "mysql2@npm:3.22.3"
+"mysql2@npm:^3.22.4":
+  version: 3.22.4
+  resolution: "mysql2@npm:3.22.4"
   dependencies:
     aws-ssl-profiles: "npm:^1.1.2"
     denque: "npm:^2.1.0"
@@ -4286,7 +4286,7 @@ __metadata:
     sql-escaper: "npm:^1.3.3"
   peerDependencies:
     "@types/node": ">= 8"
-  checksum: 10/96f58dd1f5615af3ebd4e52464f1ef159e63fa36bb4853121fb000f49b1159bf901710ef0cb1d8758856254e557cdac3b3a63c40dddbfcaa015d0c959c9d8ae2
+  checksum: 10/4f81e5251348982b54153592dec6338ea48e534dc512478a49c02964640b84c890ecf1bac84547b96d1824ea0b20c27ef861323be425873caa4a5e370d9fda58
   languageName: node
   linkType: hard
 
@@ -5636,7 +5636,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "services-comun@workspace:framework/services-comun"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.4.1"
+    "@elastic/elasticsearch": "npm:^9.4.2"
     "@google-cloud/common": "npm:^6.0.0"
     "@google-cloud/eventarc-publishing": "npm:^4.2.2"
     "@google-cloud/pubsub": "npm:^5.3.0"
@@ -5664,7 +5664,7 @@ __metadata:
     isbot: "npm:^5.1.40"
     make-plural: "npm:^8.1.0"
     moment-timezone: "npm:^0.6.2"
-    mysql2: "npm:^3.22.3"
+    mysql2: "npm:^3.22.4"
     node-ical: "npm:^0.26.1"
     pg: "npm:^8.21.0"
     pidusage: "npm:^4.0.1"
@@ -6415,7 +6415,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workers-base@workspace:packages/workers-base"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.4.1"
+    "@elastic/elasticsearch": "npm:^9.4.2"
     "@types/node": "npm:^24.12.4"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
@@ -6428,7 +6428,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workers-slave@workspace:services/workers-slave"
   dependencies:
-    "@elastic/elasticsearch": "npm:^9.4.1"
+    "@elastic/elasticsearch": "npm:^9.4.2"
     "@google-cloud/storage": "npm:^7.19.0"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
@@ -6439,7 +6439,7 @@ __metadata:
     dd-trace: "npm:^5.104.0"
     formidable: "npm:^3.5.4"
     hexoid: "npm:^2.0.0"
-    mysql2: "npm:^3.22.3"
+    mysql2: "npm:^3.22.4"
     qs: "npm:^6.15.2"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
