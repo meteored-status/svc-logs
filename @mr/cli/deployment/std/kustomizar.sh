@@ -254,6 +254,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
     fi
 #    cat "${CLOUD_RUN_YAML}"
+    gsutil cp "${CLOUD_RUN_YAML}" "gs://mrs-resources/${CLOUD_RUN_YAML}"
 #    echo "" > "${LAMBDA_SCRIPT}"
 #    cat "${LAMBDA_SCRIPT}"
   }
