@@ -1,7 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: a1450cbd553b8899d416760d8491689d
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 3034520d73183a5438527a595dba4436
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {pascalCase} from "../util/case";
@@ -54,6 +56,10 @@ export class Definition {
 
     public index(): string {
         const lines: string[] = [];
+
+        // Básicos
+        lines.push(`/* NO EDITAR - Archivo generado automáticamente por mrlang */`);
+        lines.push('');
 
         // Importamos utilidades
         lines.push(`import {getLang} from "services-comun/modules/traduccion/v2/util/lang";`);
@@ -110,7 +116,7 @@ export class Definition {
         lines.push('');
 
         // Imports
-        lines.push(`import {${pascalCase(this._name)}} from "./index";`);
+        lines.push(`import {${pascalCase(this._name)}} from ".";`);
         lines.push('');
 
         this._langs.map(lang => lang.replace('-', '')).forEach(lang => {

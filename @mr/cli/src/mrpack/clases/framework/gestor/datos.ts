@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: f7d845e61d89a81317379b3874f4cfd2
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 07:20:01 GMT
+ * Hash: c2a3c554c45002c679dff3e9af9b99f4
+ * Versión: 2026.6.25+7-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
  */
 
 import {Storage} from "@google-cloud/storage";
@@ -112,9 +113,21 @@ export async function listarNombresGCS(subdir: string, config: IListarNombresGCS
 
 async function procesarNombresPaquetes(tipo: "core" | "user", gcsPrefix: string, shortNamePrefix: string, npmPrefix: string, paqueteTipo: PaqueteTipo, basedir: string, bucket: string, soloInstalados: boolean, infos: IPaqueteGestion[]): Promise<void> {
     const localBase = `${basedir}/${gcsPrefix}`;
-    const names = soloInstalados
-        ? (await isDir(localBase) ? await readDir(localBase) : [])
-        : await listarNombresGCS(gcsPrefix, {bucket});
+    let names: string[];
+    if (soloInstalados) {
+        names = await isDir(localBase) ? await readDir(localBase) : [];
+    } else {
+        const gcsNames = await listarNombresGCS(gcsPrefix, {bucket});
+        const localRawNames = await isDir(localBase) ? await readDir(localBase) : [];
+        const gcsShortNames = new Set(gcsNames.map(n => n.startsWith(shortNamePrefix) ? n.slice(shortNamePrefix.length) : n));
+        names = [...gcsNames];
+        for (const localName of localRawNames) {
+            const localShortName = localName.startsWith(shortNamePrefix) ? localName.slice(shortNamePrefix.length) : localName;
+            if (!gcsShortNames.has(localShortName)) {
+                names.push(localName);
+            }
+        }
+    }
 
     for (const gcsName of names) {
         const shortName = gcsName.startsWith(shortNamePrefix) ? gcsName.slice(shortNamePrefix.length) : gcsName;

@@ -1,16 +1,18 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 5bfe32ec0ce2f3b9be68429d9f900cdb
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+11-josantoniojimnez
+ * Fecha: Fri, 03 Jul 2026 07:12:34 GMT
+ * Hash: 246e3b2e480ae9aeaa1ec119c4afc73d
+ * Versión: 2026.7.3+1-josantoniojimnez
+ * Anterior: 2026.7.2+5-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-ads.git
  */
 
 import {dump as yamlDump, load as yamlLoad} from "js-yaml";
 import {lstat, readlink, symlink} from "node:fs/promises";
+import {resolve} from "node:path";
 
-import {BuildFW} from "@mr/core-dev/manifest/build";
-import {Manifest} from "@mr/core-dev/manifest";
+import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
+import type {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 import {
     isDir,
@@ -79,6 +81,17 @@ interface IConfiguracion {
     cambio: boolean;
 }
 
+function sanitizePatch(value: unknown): string|undefined {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+    const patch = value.trim().toUpperCase();
+    if (!/^R\d+$/.test(patch)) {
+        return undefined;
+    }
+    return patch;
+}
+
 export interface IPackageJson extends IPackageJsonBase {
     config?: IManifestLegacy;
 }
@@ -104,6 +117,7 @@ export async function init(basedir: string): Promise<boolean> {
     const cambio = await initYarnRC(basedir/*, config*/);
 
     await initGithub(basedir);
+    await initAgents(basedir);
 
     if (await isDir(`${basedir}/i18n`)) {
         console.log(Colors.colorize([Colors.FgWhite], "Inicializando i18n"));
@@ -173,7 +187,7 @@ async function checkFiles(config: Manifest, basedir: string): Promise<void> {
             contenido = contenido.replace("COPY ./${RUTA}/${WS}/init.js ./${RUTA}/${WS}\n", "");
             cambio = true;
         }
-        if (!contenido.includes("COPY ./yarn.lock ./\nENV NODE_ENV=production")) {
+        if (config.deploy.runtime===Runtime.node && !contenido.includes("COPY ./yarn.lock ./\nENV NODE_ENV=production")) {
             contenido = contenido.replace("COPY ./yarn.lock ./", "COPY ./yarn.lock ./\nENV NODE_ENV=production");
             cambio = true;
         }
@@ -241,9 +255,10 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
         "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
         "packd": "yarn mrpack devel -c",
         "packd-f": "yarn mrpack devel -c -f",
-        "g:packd": "yarn workspace @mr/core-dev rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"bundler/rspack/rspack.config.ts\"",
+        "g:rspack": "yarn workspace @mr/core-dev rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"bundler/rspack/rspack.config.ts\"",
+        "g:esbuild": "yarn workspace @mr/core-dev node bundler/esbuild/esbuild.config.mjs --env entorno=desarrollo --env dir=\"$INIT_CWD\"",
+        "g:nextjs": "cd \"$INIT_CWD\" && yarn run next dev -p ${NEXTJS_PORT:-8080}",
         "update": "yarn mrpack update",
-        "patch": "yarn workspace @mr/core-dev mrpack:patch",
         "patch:apply": "yarn workspace @mr/core-dev mrpack:patch:apply"
     };
     const bin = paquete.bin!=undefined;
@@ -331,6 +346,7 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
         "scripts/*",
         "services/*",
         "statics/*",
+        "tests/*"
     ];
     if (paquete.dependencies!=undefined) {
         delete paquete.dependencies;
@@ -343,6 +359,8 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
     delete paquete.resolutions["@elastic/elasticsearch"];
     delete paquete.resolutions["@types/node"];
     delete paquete.resolutions["mysql2"];
+    delete paquete.resolutions["gaxios"];
+    delete paquete.resolutions["node-fetch"];
 // paquete.resolutions["mysql2"] = "3.11.0";
     if (Object.keys(paquete.resolutions).length == 0) {
         delete paquete.resolutions;
@@ -408,7 +426,7 @@ async function deleteFiles(basedir: string): Promise<void> {
             await unlink(item);
         }
     }
-    for (const file of ["status.json"]) {
+    for (const file of ["status.json", "bin/mrdev.js"]) {
         const item = `${basedir}/@mr/cli/${file}`;
         if (await isFile(item) || await isDir(item)) {
             console.log(`Eliminando ${Colors.colorize([Colors.FgYellow], `@mr/cli/${file}`)}`);
@@ -535,35 +553,91 @@ async function loadConfig(basedir: string): Promise<{paquete: IPackageJson, conf
     } else {
         config = await new ManifestWorkspaceLoader(basedir).load();
     }
+    const bundlerNormalizado = getBundlerNormalizado(config.manifest, paquete.dependencies);
+    if (config.manifest.build.bundler!==bundlerNormalizado) {
+        config.manifest.build.bundler = bundlerNormalizado;
+        await config.save();
+    }
 
     return {paquete, config: config.manifest};
 }
 
-function checkScripts(config: Manifest, scripts: Record<string, string>): void {
-    switch(config.build.framework) {
-        case BuildFW.meteored:
-            switch(config.deploy.runtime) {
-                case Runtime.cfworker:
-                    scripts["packd"] = `yarn tsc --noemit --watch`;
-                    scripts["devel"] = "wrangler dev --remote --env test";
-                    break;
-                case Runtime.node:
-                    scripts["packd"] = `yarn g:packd`;
-                    if (!config.deploy.cronjob) {
-                        scripts["devel"] = "yarn g:devel";
-                    } else {
-                        scripts["devel"] = "yarn node --no-warnings devel.js";
-                    }
-                    break;
-                default:
-                    scripts["packd"] = `yarn g:packd`;
-                    break;
+function getBundlerCoherente(config: Manifest, dependencies?: Record<string, string>): BuildBundler {
+    switch (config.deploy.runtime) {
+        case Runtime.browser:
+            return BuildBundler.rspack;
+        case Runtime.cfworker:
+        case Runtime.php:
+            return BuildBundler.none;
+        case Runtime.node:
+        default:
+            if (config.build.framework===BuildFW.nextjs) {
+                return BuildBundler.none;
             }
-            break;
+            if (config.build.bundle.toJSON()?.componentes!=undefined && Object.keys(config.build.bundle.toJSON()?.componentes ?? {}).length>0) {
+                return BuildBundler.rspack;
+            }
+            if (dependencies?.["reflect-metadata"]!=undefined) {
+                // esbuild no genera decoratorMetadata; rspack (swc-loader) sí lo soporta.
+                return BuildBundler.rspack;
+            }
+            return BuildBundler.esbuild;
+    }
+}
 
-        case BuildFW.nextjs:
-            scripts["dev"] ??= "yarn run next dev -- -p 8080";
-            break;
+function getBundlerNormalizado(config: Manifest, dependencies?: Record<string, string>): BuildBundler {
+    const bundlerEsperado = getBundlerCoherente(config, dependencies);
+    if (bundlerEsperado===BuildBundler.esbuild && config.build.bundler===BuildBundler.rspack) {
+        return BuildBundler.rspack;
+    }
+    return bundlerEsperado;
+}
+
+function checkScripts(config: Manifest, scripts: Record<string, string>, dependencies?: Record<string, string>): void {
+    const getNextJSPort = (script: string|undefined): string => {
+        if (script==undefined) {
+            return "8080";
+        }
+        const actual = script.match(/(?:^|\s)NEXTJS_PORT=(\d+)(?=\s|$)/);
+        if (actual!=undefined) {
+            return actual[1];
+        }
+        const legacy = script.match(/next\s+dev\b.*?(?:-p|--port)[=\s]+(\d+)/);
+        if (legacy!=undefined) {
+            return legacy[1];
+        }
+        return "8080";
+    };
+    config.build.bundler = getBundlerNormalizado(config, dependencies);
+    switch(config.deploy.runtime) {
+        case Runtime.cfworker:
+            scripts["packd"] = `yarn tsc --noemit --watch`;
+            // scripts["devel"] = "wrangler dev --remote --env test";
+            scripts["devel"] = "wrangler dev -e test --ip local.tiempo.com --port 3500 --local-protocol https --https-cert-path ./files/fullchain.pem --https-key-path ./files/privkey.pem";
+            return;
+        case Runtime.node:
+            if (config.build.framework===BuildFW.nextjs) {
+                const nextJSPort = getNextJSPort(scripts["dev"]);
+                scripts["dev"] = `NEXTJS_PORT=${nextJSPort} yarn g:nextjs`;
+                delete scripts["packd"];
+                return;
+            }
+            scripts["packd"] = config.build.bundler===BuildBundler.esbuild ? "yarn g:esbuild" : "yarn g:rspack";
+            if (!config.deploy.cronjob) {
+                scripts["devel"] = "yarn g:devel";
+            } else {
+                scripts["devel"] = "yarn node --no-warnings devel.js";
+            }
+            return;
+        default:
+            if (config.build.bundler===BuildBundler.esbuild) {
+                scripts["packd"] = "yarn g:esbuild";
+            } else if (config.build.bundler===BuildBundler.rspack) {
+                scripts["packd"] = "yarn g:rspack";
+            } else {
+                delete scripts["packd"];
+            }
+            return;
     }
 }
 
@@ -759,7 +833,7 @@ async function initWorkspace(basedir: string, monorepoRoot: string, dependencies
     const hash = md5(JSON.stringify(paquete));
     if (config.enabled) {
         paquete.version = "0000.00.00-000";
-        checkScripts(config, paquete.scripts ??= {});
+        checkScripts(config, paquete.scripts ??= {}, paquete.dependencies);
 
         if (config.deploy.runtime==Runtime.node) {
             checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, paquete.optionalDependencies??={}, dependenciesDefecto);
@@ -849,31 +923,48 @@ async function initConfig(basedir: string, workspaces: IWorkspaces[]): Promise<v
         },
     };
 
-    const proyectos: string[] = [];
-    for (const carpeta of workspaces) {
-        proyectos.push(...carpeta.workspaces);
+    interface IProyecto {
+        nombre: string;
+        compilable: boolean;
+        ejecutable: boolean;
     }
+
+    const proyectos: IProyecto[] = [];
+    for (const carpeta of workspaces) {
+        for (const nombre of carpeta.workspaces) {
+            const {manifest} = new ManifestWorkspaceLoader(`${basedir}/${carpeta.dir}/${nombre}`).loadSync();
+            proyectos.push({
+                nombre,
+                compilable: manifest.deploy.runtime !== Runtime.php,
+                ejecutable: manifest.deploy.runtime === Runtime.node,
+            });
+        }
+    }
+
+    const ejecutables = new Set(proyectos.filter(p => p.ejecutable).map(p => p.nombre));
+    const compilables = new Set(proyectos.filter(p => p.compilable).map(p => p.nombre));
 
     if (await isFile(file)) {
         try {
             const config = await readJSON<IConfigServices>(file);
-            salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
-            salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual=>proyectos.includes(actual))??[]);
+            salida.devel.disabled.push(...config?.devel?.disabled?.filter(actual => ejecutables.has(actual)) ?? []);
+            salida.packd.disabled.push(...config?.packd?.disabled?.filter(actual => compilables.has(actual)) ?? []);
             salida.i18n = config.i18n??true;
             salida.services = config.services??{};
             salida.framework = {
                 updates: sanitizeFrameworkUpdates(config.framework?.updates),
             };
+            salida.patch = sanitizePatch(config.patch);
         } catch (e) {
             // no hacemos nada
         }
     }
-    for (const actual of proyectos) {
-        if (!salida.devel.disabled.includes(actual)) {
-            salida.devel.available.push(actual);
+    for (const proyecto of proyectos) {
+        if (proyecto.ejecutable && !salida.devel.disabled.includes(proyecto.nombre)) {
+            salida.devel.available.push(proyecto.nombre);
         }
-        if (!salida.packd.disabled.includes(actual)) {
-            salida.packd.available.push(actual);
+        if (proyecto.compilable && !salida.packd.disabled.includes(proyecto.nombre)) {
+            salida.packd.available.push(proyecto.nombre);
         }
     }
 
@@ -892,29 +983,79 @@ async function initConfig(basedir: string, workspaces: IWorkspaces[]): Promise<v
 }
 
 /**
- * Verifica que `{basedir}/.github` sea un symlink apuntando a `@mr/core/dev/.github`.
- * Si existe pero no es un symlink correcto (directorio, fichero o symlink a otro destino),
- * lo elimina y crea el symlink. Si no existe, lo crea directamente.
+ * Verifica que `{basedir}/.github` sea un symlink (Unix) o junction (Windows)
+ * apuntando a `@mr/core/dev/.github`.
+ * Si existe pero no apunta al destino correcto (directorio real, fichero u otro
+ * enlace), lo elimina y crea el enlace correcto. Si no existe, lo crea.
+ *
+ * En Windows se usa una *junction* porque no requiere permisos de administrador
+ * ni tener activado el Developer Mode, al contrario que los symlinks de directorio.
+ * Las junctions requieren ruta absoluta como destino.
  *
  * @param basedir - Raíz absoluta del monorepo.
  */
 async function initGithub(basedir: string): Promise<void> {
     const githubPath = `${basedir}/.github`;
-    const destino = "@mr/core/dev/.github";
+    const destinoRelativo = "@mr/core/dev/.github";
+    const isWindows = process.platform === "win32";
+
+    // Las junctions de Windows requieren ruta absoluta como destino.
+    // En Unix el symlink relativo es suficiente y más portable.
+    const destinoEfectivo = isWindows
+        ? resolve(basedir, destinoRelativo)
+        : destinoRelativo;
 
     const stat = await lstat(githubPath).catch(() => undefined);
 
     if (stat !== undefined) {
-        if (stat.isSymbolicLink()) {
-            const actual = await readlink(githubPath).catch(() => undefined);
-            if (actual === destino) return; // ya está correcto
-        }
-        // Es un directorio, fichero o symlink incorrecto — eliminar
+        // readlink funciona tanto para symlinks Unix como para junctions Windows.
+        // lstat().isSymbolicLink() devuelve false en Windows para junctions,
+        // por eso se usa readlink como detector universal de enlace.
+        const actual = await readlink(githubPath).catch(() => undefined);
+        if (actual === destinoEfectivo) return; // ya está correcto
+
+        // Es un directorio real, fichero o enlace incorrecto — eliminar
         console.log(Colors.colorize([Colors.FgYellow], "Corrigiendo .github/ → symlink a @mr/core/dev/.github"));
         await unlink(githubPath);
     }
 
-    await symlink(destino, githubPath);
+    // junction en Windows (no requiere permisos especiales)
+    // symlink relativo estándar en Linux/macOS
+    await symlink(destinoEfectivo, githubPath, isWindows ? "junction" : undefined);
+}
+
+/**
+ * Verifica que `{basedir}/AGENTS.md` sea un symlink apuntando a
+ * `@mr/core/dev/AGENTS.md`.
+ *
+ * Si existe pero no apunta al destino correcto (fichero real u otro enlace),
+ * lo elimina y crea el enlace correcto. Si no existe, lo crea.
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ */
+async function initAgents(basedir: string): Promise<void> {
+    const agentsPath = `${basedir}/AGENTS.md`;
+    const destinoRelativo = "@mr/core/dev/AGENTS.md";
+    const isWindows = process.platform === "win32";
+
+    // En Windows forzamos ruta absoluta para evitar variaciones de resolución.
+    const destinoEfectivo = isWindows
+        ? resolve(basedir, destinoRelativo)
+        : destinoRelativo;
+
+    const stat = await lstat(agentsPath).catch(() => undefined);
+
+    if (stat !== undefined) {
+        const actual = await readlink(agentsPath).catch(() => undefined);
+        if (actual === destinoEfectivo) {
+            return;
+        }
+
+        console.log(Colors.colorize([Colors.FgYellow], "Corrigiendo AGENTS.md -> symlink a @mr/core/dev/AGENTS.md"));
+        await unlink(agentsPath);
+    }
+
+    await symlink(destinoEfectivo, agentsPath);
 }
 
 async function initYarnRC(basedir: string): Promise<boolean> {

@@ -1,4 +1,4 @@
-import {EngineServer} from "services-comun/modules/engine_server";
+import {Engine as EngineServer} from "@mr/core-workload/engine/server";
 
 import type {Configuracion} from "./utiles/config";
 

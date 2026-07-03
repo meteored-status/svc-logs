@@ -1,6 +1,13 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Wed, 17 Jun 2026 12:19:18 GMT
+ * Hash: cf5f668ec4f5269fec770ede22d0238b
+ * Versión: 2026.6.17+6-juancmartinez
+ */
+
 import {SingularValue} from "./value/singular-value";
 import {PluralValue} from "./value/plural-value";
-import {es} from "make-plural/cardinals";
+import pluralBuilder from "./util/plural-function-builder";
 import {Literal} from "./literal";
 import {TranslationMap} from "./translation-map";
 
@@ -18,7 +25,7 @@ const var2 = new PluralValue<{
     hola: string;
 }>({
     one: '{{hola}}',
-}, es);
+}, pluralBuilder('es'));
 
 console.log(var2.value({
     hola: "2"

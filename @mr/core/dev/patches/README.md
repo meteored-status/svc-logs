@@ -13,12 +13,6 @@ Agente de parches de migracion para aplicar arreglos mecanicos tras `yarn mrpack
 > yarn run patch:apply
 > ```
 >
-> Para comprobar si hay cambios pendientes sin escribir en disco (útil antes de aplicar):
->
-> ```bash
-> yarn run patch
-> ```
->
 > El flujo completo recomendado tras una actualización de dependencias es:
 >
 > ```bash
@@ -30,7 +24,6 @@ Agente de parches de migracion para aplicar arreglos mecanicos tras `yarn mrpack
 >
 > | Shorthand | Comando completo |
 > |-----------|-----------------|
-> | `yarn run patch` | `yarn workspace @mr/core-dev mrpack:patch` |
 > | `yarn run patch:apply` | `yarn workspace @mr/core-dev mrpack:patch:apply` |
 
 ---
@@ -49,32 +42,13 @@ transparente al desarrollador:
 
 ## Comandos disponibles
 
-### `yarn run patch`
-
-Analiza el monorepo en modo lectura. **No escribe nada en disco.** Sale con codigo 1
-si hay archivos pendientes de parche, lo que permite usarlo como gate en CI.
-
-```bash
-yarn run patch
-```
-
-Salida tipica cuando hay incidencias (exit code 1):
-
-```
-framework/services-comun/modules/net/conexion.ts: R001-deprecated-conexion-import x1
-mrpack-patch: hay 1 archivo(s) pendientes (R001-deprecated-conexion-import=1)
-```
-
-Salida cuando todo esta limpio (exit code 0):
-
-```
-mrpack-patch: sin cambios
-```
-
 ### `yarn run patch:apply`
 
 Aplica todas las reglas activas sobre el workspace. Reescribe en disco los archivos
 que contengan incidencias detectadas.
+
+Desde `2026.6.3+2`, el comando usa el cursor opcional `patch` de `config.workspaces.json`
+para aplicar solo reglas posteriores al último patch ejecutado.
 
 ```bash
 yarn run patch:apply
@@ -93,10 +67,25 @@ Si ningun archivo requiere cambios:
 mrpack-patch: sin cambios
 ```
 
+Si `config.workspaces.json` contiene:
+
+```json
+{
+  "patch": "R012"
+}
+```
+
+`patch:apply` evaluará únicamente `R013+`. Al finalizar (haya o no cambios), actualiza
+`patch` al último ID procesado. Si no hay patches nuevos, finaliza directamente con:
+
+```
+mrpack-patch: no hay patches nuevos (ultimo: RXXX)
+```
+
 Para ver el detalle de todos los archivos escaneados añadir `--verbose`:
 
 ```bash
-node @mr/core/dev/patches/index.mjs --check --verbose
+node @mr/core/dev/patches/index.mjs --verbose
 ```
 
 ---
@@ -110,15 +99,17 @@ yarn mrpack update
 yarn run patch:apply
 ```
 
-En CI, para bloquear merges con migraciones pendientes:
-
-```bash
-yarn run patch
-```
+En CI, ejecutar `yarn run patch:apply` como parte del flujo de actualización
+cuando corresponda.
 
 ---
 
 ## Reglas incluidas
+
+### Reglas de fichero (`RULES`)
+
+Se ejecutan sobre cada fichero individualmente. El cursor `config.workspaces.json.patch`
+registra cuál fue la última regla aplicada para evitar reprocesar lo mismo.
 
 | ID | Modulo deprecado | Target |
 |----|-----------------|--------|
@@ -137,6 +128,36 @@ yarn run patch
 | `R013` | `services-comun/modules/net/checkers` | `@mr/core-network/server/http/checkers` |
 | `R014` | `forwardIncommingConnection` *(breaking change)* | `forwardIncomingConnection` |
 | `R015` | `services-comun/modules/net/request/parser/json` | `@mr/core-network/client/http/parser/json` |
+| `R016` | `services-comun/modules/frontend/device` | `@mr/core-templates/device` |
+| `R017` | `services-comun-meteored/modules/portal/meteored/seccion/*` | `@mr/user-mr-domain/section/*` |
+| `R018` | `services-comun-meteored/modules/portal/meteored/*` | `@mr/user-mr-domain/*` |
+| `R019` | `services-comun-meteored/modules/portal/meteored/config/*` | `@mr/user-mr-domain/config/*` |
+| `R020` | `services-comun-meteored/modules/portal/idiomas` | `@mr/user-mr-domain/idiomas` |
+| `R021` | `services-comun/cluster` | `@mr/core-workload/cluster` |
+| `R022` | `services-comun/main` | `@mr/core-workload` |
+| `R023` | `import {EngineBase} from "services-comun/modules/engine_base"` | `import {Engine as EngineBase} from "@mr/core-workload/engine"` |
+| `R024` | `import {EngineServer} from "services-comun/modules/engine_server"` | `import {Engine as EngineServer} from "@mr/core-workload/engine/server"` |
+| `R025` | `import {ConfiguracionNet, IConfiguracionNet} from "@mr/core-network/server/http/config/config"` | `import {ConfiguracionNet, type IConfiguracionNet} from "@mr/core-workload/config/net"` |
+| `R026` | `import {...} from "services-comun/modules/utiles/config"` | split a `@mr/core-utils/config` + `@mr/core-workload/config/google` + `@mr/core-workload/config/google/storage` + `@mr/core-workload/config/pod` + `@mr/core-workload/config` (incluye renames `IConfigGenerico`/`ConfigGenerico`) |
+| `R027` | `services-comun/modules/utiles/pod` | `@mr/core-workload/config/pod` |
+| `R028` | `services-comun-meteored/modules/portal/tiempo/dominios/*` | `@mr/user-tiempo-domain/sites/*` |
+| `R029` | `services-comun-meteored/modules/portal/tiempo/loader` | `@mr/user-tiempo-domain/loader` |
+| `R030` | `services-comun-meteored/modules/portal/tiempo` | `@mr/user-tiempo-domain` *(preserva `TPlataforma` en el path original; si coexiste con otros símbolos, divide en dos sentencias)* |
+| `R031` | `import {DominioTiempo} from "@mr/user-tiempo-domain"` *(breaking)* | `import {Dominio as DominioTiempo} from "@mr/user-tiempo-domain"` |
+| `R032` | `import Foo from "@mr/user-tiempo-domain"` *(breaking: default export eliminado)* | `import {Dominio as Foo} from "@mr/user-tiempo-domain"` *(también maneja `import type` y mixto `Foo, {Bar}`)* |
+| `R033` | `import {DominioTiempoList} from "@mr/user-tiempo-domain/loader"` *(breaking)* | `import {DominioList as DominioTiempoList} from "@mr/user-tiempo-domain/loader"` |
+
+> **Orden de evaluación:** subpaths deben ir **antes** que sus paths padre en `RULES` para
+> evitar matches parciales (p.ej. R017/R019 antes que R018).
+
+### Reglas de workspace (`WORKSPACE_RULES`)
+
+Se ejecutan **siempre que haya algún patch de fichero pendiente** (`activeRules.length > 0`).
+No usan el cursor: son idempotentes por diseño y no modifican ficheros `.ts`.
+
+| ID | Descripción |
+|----|-------------|
+| `WS001` | Escanea todos los `.ts` de cada workspace, detecta imports `@mr/*` ausentes en `package.json` y los añade en `devDependencies` con `"workspace:*"`. |
 
 ---
 
@@ -159,6 +180,28 @@ export const miRegla = createSimpleRule({
     skipIfContains: ["services-comun/modules/X/subpath"],
 });
 ```
+
+### Regla de renombrado de especificador (breaking change de nombre de export)
+
+Cuando un export cambia de nombre dentro del mismo módulo (sin cambiar el path):
+
+```js
+// @mr/core/dev/patches/rules/mi-regla-rename.mjs
+import {createSpecifierRenameRule} from "../rule-factory.mjs";
+
+export const miReglaRename = createSpecifierRenameRule({
+    id: "R031-mi-regla-rename",
+    summary: "OldName -> NewName as OldName en imports de @mr/mi-paquete",
+    module: "@mr/mi-paquete",       // path (o subpath) del módulo a vigilar
+    detect: "OldName",              // substring rápido para filtrar líneas
+    regex: /(?<! as )\bOldName\b/g, // lookbehind evita re-aplicar si ya está migrado
+    replacement: "NewName as OldName",
+});
+```
+
+Internamente usa `collapseMultilineImports` antes de procesar, por lo que funciona
+con imports multilinea. El lookbehind `(?<! as )` garantiza idempotencia: si ya
+existe `{NewName as OldName}` la regla no lo toca.
 
 ### Regla split (un source → varios targets)
 
@@ -190,9 +233,37 @@ Formato: `RXXX-descripcion-kebab`.
 `XXX` no tiene límite de dígitos: R999 → R1000 → R1001...
 El orden de evaluación lo controla `RULES`, no el número.
 
+---
+
+### Regla de workspace (opera sobre `package.json`)
+
+Para lógica que necesita inspeccionar múltiples ficheros de un workspace y modificar
+su `package.json` (u otros ficheros no-`.ts`):
+
+```js
+// @mr/core/dev/patches/rules/mi-regla-ws.mjs
+import fs from "node:fs/promises";
+import {createWorkspaceRule} from "../rule-factory.mjs";
+
+export const miReglaWs = createWorkspaceRule({
+    id: "WS002-mi-regla-workspace",
+    summary: "Descripción corta de lo que hace",
+    async run(rootDir) {
+        // rootDir: ruta absoluta a la raíz del monorepo
+        let changed = 0;
+        // ... leer ficheros, actualizar package.json, etc.
+        return {changed};
+    },
+});
+```
+
+Registrar en `WORKSPACE_RULES` dentro de `index.mjs` (no en `RULES`).
+
+Las workspace-rules **no usan el cursor** y se ejecutan siempre que haya patches de
+fichero pendientes (`activeRules.length > 0`). Deben ser idempotentes.
+
 ### Probar antes de aplicar
 
 ```bash
-yarn run patch
 yarn run patch:apply
 ```

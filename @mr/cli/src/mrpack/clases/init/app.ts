@@ -1,7 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 52ddccfda198bc57b4199b67a8bcb669
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 61b53b65ca69fa3b955c01a068889104
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {ManifestDeploymentKind} from "@mr/core-dev/manifest/deployment";
@@ -38,6 +40,7 @@ require("source-map-support").install();
 
 process.env.CLIENTE ??= "";
 process.env.ENTORNO ??= "desarrollo";
+process.env.SIDECAR ??= "true";
 process.env.ZONA ??= "desarrollo";
 
 if (process.env["DATADOG"]==="true") {

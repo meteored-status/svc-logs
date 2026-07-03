@@ -11,6 +11,7 @@
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "devDependencies": {
     "@elastic/elasticsearch": "^9.4.2",
+    "@mr/core-workload": "workspace:*",
     "@types/node": "^24.12.4",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",

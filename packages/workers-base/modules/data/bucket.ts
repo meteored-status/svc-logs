@@ -1,4 +1,4 @@
-import {Google} from "services-comun/modules/utiles/config";
+import {Google} from "@mr/core-workload/config/google";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {Storage} from "services-comun/modules/fs/storage";
 import db from "services-comun/modules/utiles/mysql";

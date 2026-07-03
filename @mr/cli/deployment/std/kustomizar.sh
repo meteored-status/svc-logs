@@ -66,7 +66,12 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 #        NOMBRE="${WORKSPACE}"
 #      fi
 
-      bash "kustomizar/build.sh" "${PROJECT_ID}" "${KUSTOMIZER}" "${SERVICIO}" "${ENTORNO}" "${CLUSTER}" "${VERSION}" "${CLIENTE}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
+      ARCH=$(configw "${RUTA}" '.deploy.arch // empty | select(type == "array") | join(",")')
+      if [[ -z "$ARCH" || "$ARCH" == "" ]]; then
+        ARCH="linux/amd64"
+      fi
+
+      bash "kustomizar/build.sh" "${PROJECT_ID}" "${KUSTOMIZER}" "${SERVICIO}" "${ENTORNO}" "${CLUSTER}" "${VERSION}" "${CLIENTE}" "${ARCH}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
       echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
 
     elif [[ -d "${ENTORNOS}" ]]; then
@@ -120,6 +125,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       | sed "s/\${VERSION}/${VERSION}/g" \
       | sed "s/\${ENTORNO}/${_ENTORNO}/g" \
       | sed "s/\${ZONA}/${ZONA}/g" \
+      | sed "s/\${REGION}/${REGION}/g" \
       > "${CLOUD_RUN_YAML}"
     CLOUDSQL=$(configw "${RUTA}" ".deploy.cloudsql.${_ENTORNO} // empty | if type==\"array\" and length > 0 then join(\",\") else empty end")
     if [[ -n "${CLOUDSQL}" ]]; then
@@ -132,23 +138,24 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       VPC=$(configw "${RUTA}" '.deploy.lambda.vpc // empty')
 
       if [[ "${VPC}" == "true" ]]; then
-        EGRESS=$(configw "${RUTA}" '.deploy.lambda.egress // empty')
-        if [[ -n "${EGRESS}" ]]; then
-          yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/vpc-access-egress\" = ${EGRESS}" "${CLOUD_RUN_YAML}" -i
-        fi
+        EGRESS=$(configw "${RUTA}" '.deploy.lambda.egress // "private-ranges-only"')
+        VPC_ACCESS_EGRESS=$(printf '%s' "${EGRESS}" | jq -Rr @json)
+        yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/vpc-access-egress\" = ${VPC_ACCESS_EGRESS}" "${CLOUD_RUN_YAML}" -i
 
         NETWORK=$(configl ".labels[\"network\"] // empty")
         if [[ -n "${NETWORK}" ]]; then
           SUBNETWORK=$(configl ".labels[\"subnetwork\"] // empty")
           if [[ -n "${SUBNETWORK}" ]]; then
-            yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/network-interfaces\" = '[{\"network\":\"${NETWORK}\",\"subnetwork\":\"${SUBNETWORK}\"}]'" "${CLOUD_RUN_YAML}" -i
+            NETWORK_INTERFACES=$(jq -cn --arg network "${NETWORK}" --arg subnetwork "${SUBNETWORK}" '[{network: $network, subnetwork: $subnetwork}]' | jq -Rr @json)
+            yq eval ".spec.template.metadata.annotations.\"run.googleapis.com/network-interfaces\" = ${NETWORK_INTERFACES}" "${CLOUD_RUN_YAML}" -i
           fi
         fi
       fi
 
       if [[ "${TYPE}" == "service" ]]; then
         INGRESS=$(configw "${RUTA}" '.deploy.lambda.ingress // "internal-and-cloud-load-balancing"')
-        yq eval ".metadata.annotations.\"run.googleapis.com/ingress\" = \"${INGRESS}\"" "${CLOUD_RUN_YAML}" -i
+        CLOUD_RUN_INGRESS=$(printf '%s' "${INGRESS}" | jq -Rr @json)
+        yq eval ".metadata.annotations.\"run.googleapis.com/ingress\" = ${CLOUD_RUN_INGRESS}" "${CLOUD_RUN_YAML}" -i
       fi
     fi
 
@@ -173,8 +180,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
       # Cargamos todos los secretos disponibles
       SECRETS=$(gcloud secrets list --project="${PROJECT_ID}" --format="value(name)")
-      echo "Se han encontrado los siguientes secretos en el proyecto '${PROJECT_ID}':"
-      echo "$SECRETS"
+#      echo "Se han encontrado los siguientes secretos en el proyecto '${PROJECT_ID}':"
+#      echo "$SECRETS"
 
       while IFS= read -r item; do
         [[ -z "$item" ]] && continue
@@ -235,17 +242,17 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           --location=${REGION} \
           --schedule=\"${SCHEDULE}\" \
           --time-zone=\"Etc/UTC\" \
-          --uri=\"https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/${KUSTOMIZER}-${SERVICIO}-${ZONA}:run\" \
+          --uri=\"https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/${KUSTOMIZER}-${SERVICIO}:run\" \
           --http-method=POST \
           --oauth-service-account-email=scheduler-invoker@${PROJECT_ID}.iam.gserviceaccount.com \
           --headers=\"Content-Type=application/json,User-Agent=Google-Cloud-Scheduler\"" >> "${LAMBDA_SCRIPT}"
-        elif [[ "$EXISTE" != "$SCHEDULE" ]]; then
-          echo "echo \"Actualizando programación para ${KUSTOMIZER}-${SERVICIO}-${ZONA} (${SCHEDULE})\"" >> "${LAMBDA_SCRIPT}"
-          echo "gcloud scheduler jobs update http ${KUSTOMIZER}-${SERVICIO}-${ZONA}-scheduler-trigger \
-            --location=${REGION} \
-            --schedule=\"${SCHEDULE}\" \
-            --time-zone=\"Etc/UTC\"" >> "${LAMBDA_SCRIPT}"
-        fi
+      elif [[ "$EXISTE" != "$SCHEDULE" ]]; then
+        echo "echo \"Actualizando programación para ${KUSTOMIZER}-${SERVICIO}-${ZONA} (${SCHEDULE})\"" >> "${LAMBDA_SCRIPT}"
+        echo "gcloud scheduler jobs update http ${KUSTOMIZER}-${SERVICIO}-${ZONA}-scheduler-trigger \
+          --location=${REGION} \
+          --schedule=\"${SCHEDULE}\" \
+          --time-zone=\"Etc/UTC\"" >> "${LAMBDA_SCRIPT}"
+      fi
     elif [[ "${SUBTYPE}" == "job" ]]; then
       EXISTE=$(gcloud scheduler jobs describe "${KUSTOMIZER}-${SERVICIO}-${ZONA}-scheduler-trigger" --location=${REGION} --format="value(schedule)" 2>/dev/null)
       if [[ -n "$EXISTE" ]]; then

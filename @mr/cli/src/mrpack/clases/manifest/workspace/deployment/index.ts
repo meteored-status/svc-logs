@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 11:38:09 GMT
- * Hash: c231c0dca3d6fc036c6bf48be32ac83e
- * Versión: 2026.5.27+6-josantoniojimnez
- * Anterior: 2026.5.27+2-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: a5bd3c06b89029ffaceee44fadc9e058
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/core-dev/manifest/deployment";
@@ -233,15 +233,11 @@ class ManifestWorkspaceDeploymentLoader {
                     credenciales = ManifestWorkspaceDeploymentCredencialesLoader.fromLegacy(config);
                     kustomize = names.map(name=>ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config, name));
                     break;
-                case RuntimeLegacy.browser:
-                    type = ManifestDeploymentKind.BROWSER;
-                    storage = ManifestWorkspaceDeploymentStorageLoader.fromLegacy(config);
-                    break;
                 case RuntimeLegacy.cfworker:
                     type = ManifestDeploymentKind.WORKER;
                     break;
                 default:
-                    throw new Error(`ManifestDeployment: framework no soportado "${config.framework}"`);
+                    throw new Error(`ManifestDeployment: framework no soportado "${config.runtime}"`);
             }
         }
         let runtime: Runtime;

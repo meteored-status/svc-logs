@@ -1,0 +1,130 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "develop => Ejecutar (Active Workspaces)",
+      "type": "shell",
+      "command": "yarn mrpack devel -e",
+      "options": {
+        "cwd": "${workspaceFolder}/.."
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "develop => Ejecutar (Todos)",
+      "type": "shell",
+      "command": "yarn mrpack devel -e -f",
+      "options": {
+        "cwd": "${workspaceFolder}/.."
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "develop => Compilar (Active Workspaces)",
+      "type": "shell",
+      "command": "yarn mrpack devel -c",
+      "options": {
+        "cwd": "${workspaceFolder}/.."
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "develop => Compilar (Todos)",
+      "type": "shell",
+      "command": "yarn mrpack devel -c -f",
+      "options": {
+        "cwd": "${workspaceFolder}/.."
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cli => Actualizar",
+      "type": "shell",
+      "command": "yarn mrpack update",
+      "options": {
+        "cwd": "${workspaceFolder}/..",
+        "env": {
+          "NODE_NO_WARNINGS": "1"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cli => PUSH",
+      "type": "shell",
+      "command": "yarn mrpack framework --send",
+      "options": {
+        "cwd": "${workspaceFolder}/..",
+        "env": {
+          "NODE_NO_WARNINGS": "1"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cli => Regenerar (Watch @mr/cli)",
+      "type": "shell",
+      "command": "yarn workspace @mr/cli run compile --watch",
+      "options": {
+        "cwd": "${workspaceFolder}/.."
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cli => Aplicar Patches",
+      "type": "shell",
+      "command": "yarn workspace @mr/core-dev mrpack:patch:apply",
+      "options": {
+        "cwd": "${workspaceFolder}/.."
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

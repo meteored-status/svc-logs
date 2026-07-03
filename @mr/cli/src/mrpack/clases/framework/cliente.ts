@@ -1,15 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: f8c1b42796829afe0d950752362e4c1e
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+4-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 6dcca89484bfdde79c3f1e21c2c9ecb9
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {spawn} from "node:child_process";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-import {isFile, md5Dir, mkdir, readFileString, safeWrite} from "services-comun/modules/utiles/fs";
+import {isFile, md5Dir, mkdir, readDir, readFileString, safeWrite} from "services-comun/modules/utiles/fs";
 
 import {Colors} from "../colors";
 import {Comando} from "../comando";
@@ -27,10 +27,200 @@ interface IRecompilarClienteConfig {
     skipInstall?: boolean;
 }
 
-export async function add(basedir: string, frameworks: string[]): Promise<boolean> {
+// ─── Helpers de dependencias @mr/* ────────────────────────────────────────────
+
+/**
+ * Convierte un nombre npm `@mr/*` al formato argumento de {@link add}.
+ *
+ * - `@mr/core-dev`       → `@mr/core/dev`
+ * - `@mr/user-mr-domain` → `@mr/user/mr-domain`
+ * - Cualquier otro       → `undefined`
+ *
+ * @param npmName - Nombre npm del paquete.
+ */
+function mrNpmAArg(npmName: string): string | undefined {
+    const coreMatch = npmName.match(/^@mr\/core-(.+)$/);
+    if (coreMatch !== null) {
+        return `@mr/core/${coreMatch[1]}`;
+    }
+    const userMatch = npmName.match(/^@mr\/user-(.+)$/);
+    if (userMatch !== null) {
+        return `@mr/user/${userMatch[1]}`;
+    }
+    return undefined;
+}
+
+/**
+ * Lee el `package.json` de un framework ya instalado y devuelve la lista de sus
+ * `devDependencies` de tipo `@mr/*` convertidas al formato argumento de {@link add}
+ * (`@mr/core/X`, `@mr/user/X`).
+ *
+ * @param localDir - Directorio raíz del framework.
+ */
+export async function leerDepsMrFramework(localDir: string): Promise<string[]> {
+    const raw = await readFileString(`${localDir}/package.json`).catch(() => "{}");
+    let pkg: {devDependencies?: Record<string, string>};
+    try {
+        pkg = JSON.parse(raw);
+    } catch {
+        return [];
+    }
+    const resultado: string[] = [];
+    for (const nombre of Object.keys(pkg.devDependencies ?? {})) {
+        const arg = mrNpmAArg(nombre);
+        if (arg !== undefined) {
+            resultado.push(arg);
+        }
+    }
+    return resultado;
+}
+
+// ─── Helpers de workspaces del monorepo ───────────────────────────────────────
+
+/**
+ * Expande los patrones de workspaces del `package.json` raíz y devuelve los
+ * directorios absolutos que contienen un `package.json`.
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ */
+async function encontrarDirsWorkspace(basedir: string): Promise<string[]> {
+    const raw = await readFileString(`${basedir}/package.json`).catch(() => "{}");
+    let pkg: {workspaces?: string[]};
+    try {
+        pkg = JSON.parse(raw);
+    } catch {
+        return [];
+    }
+
+    const dirs: string[] = [];
+    for (const pattern of pkg.workspaces ?? []) {
+        if (pattern.endsWith("/*")) {
+            const parent = `${basedir}/${pattern.slice(0, -2)}`;
+            const entries = await readDir(parent).catch(() => [] as string[]);
+            for (const entry of entries) {
+                const dir = `${parent}/${entry}`;
+                if (await isFile(`${dir}/package.json`)) {
+                    dirs.push(dir);
+                }
+            }
+        } else {
+            const dir = `${basedir}/${pattern}`;
+            if (await isFile(`${dir}/package.json`)) {
+                dirs.push(dir);
+            }
+        }
+    }
+    return dirs;
+}
+
+/**
+ * Devuelve los directorios de workspaces del monorepo que declaran `npmName`
+ * en `dependencies`, `devDependencies` o `peerDependencies`, excluyendo el
+ * propio paquete.
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ * @param npmName - Nombre npm del paquete a buscar (p.ej. `@mr/core-network`).
+ */
+export async function encontrarWorkspacesConDep(basedir: string, npmName: string): Promise<string[]> {
+    const dirs = await encontrarDirsWorkspace(basedir);
+    const resultado: string[] = [];
+
+    await Promise.all(dirs.map(async dir => {
+        const raw = await readFileString(`${dir}/package.json`).catch(() => "{}");
+        let pkg: {
+            name?: string;
+            dependencies?: Record<string, string>;
+            devDependencies?: Record<string, string>;
+            peerDependencies?: Record<string, string>;
+        };
+        try {
+            pkg = JSON.parse(raw);
+        } catch {
+            return;
+        }
+        if (pkg.name === npmName) {
+            return;
+        }
+        const todas = {
+            ...(pkg.dependencies ?? {}),
+            ...(pkg.devDependencies ?? {}),
+            ...(pkg.peerDependencies ?? {}),
+        };
+        if (todas[npmName] !== undefined) {
+            resultado.push(dir);
+        }
+    }));
+
+    return resultado;
+}
+
+/**
+ * Elimina `npmNames` de las `devDependencies` de los workspaces consumidores
+ * del monorepo (`services/`, `cronjobs/`, `jobs/`, `packages/`).
+ *
+ * @param basedir  - Raíz absoluta del monorepo.
+ * @param npmNames - Nombres npm de los paquetes a eliminar de `devDependencies`.
+ */
+export async function limpiarDevDepsConsumidores(basedir: string, npmNames: string[]): Promise<void> {
+    if (npmNames.length === 0) {
+        return;
+    }
+    const aNombres = new Set(npmNames);
+    const patronesCons = ["services", "cronjobs", "jobs", "packages"];
+    const dirsCons: string[] = [];
+
+    for (const patron of patronesCons) {
+        const parent = `${basedir}/${patron}`;
+        const entries = await readDir(parent).catch(() => [] as string[]);
+        for (const entry of entries) {
+            const dir = `${parent}/${entry}`;
+            if (await isFile(`${dir}/package.json`)) {
+                dirsCons.push(dir);
+            }
+        }
+    }
+
+    await Promise.all(dirsCons.map(async dir => {
+        const pkgPath = `${dir}/package.json`;
+        const raw = await readFileString(pkgPath).catch(() => null);
+        if (raw === null) {
+            return;
+        }
+        let pkg: {devDependencies?: Record<string, string>};
+        try {
+            pkg = JSON.parse(raw);
+        } catch {
+            return;
+        }
+
+        let cambiado = false;
+        for (const nombre of aNombres) {
+            if (pkg.devDependencies?.[nombre] !== undefined) {
+                delete pkg.devDependencies![nombre];
+                cambiado = true;
+            }
+        }
+        if (!cambiado) {
+            return;
+        }
+        if (Object.keys(pkg.devDependencies ?? {}).length === 0) {
+            delete pkg.devDependencies;
+        }
+        await safeWrite(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+    }));
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+export async function add(basedir: string, frameworks: string[], visitados: Set<string> = new Set()): Promise<boolean> {
     let cambio = false;
 
     for (const fw of frameworks) {
+        if (visitados.has(fw)) {
+            continue;
+        }
+        visitados.add(fw);
+
         let tipo: PaqueteTipo;
         let npmName: string;
         let localDir: string;
@@ -67,6 +257,16 @@ export async function add(basedir: string, frameworks: string[]): Promise<boolea
         }, null, 2)}\n`);
         if (await pullPackage(localDir, true)) {
             cambio = true;
+        }
+
+        // Resolver dependencias @mr/* declaradas en el framework recién instalado.
+        const depsFw = await leerDepsMrFramework(localDir);
+        const faltantes = depsFw.filter(d => !visitados.has(d));
+        if (faltantes.length > 0) {
+            console.log(`  → Verificando dependencias de ${npmName}: ${faltantes.join(", ")}`);
+            if (await add(basedir, faltantes, visitados)) {
+                cambio = true;
+            }
         }
     }
 
@@ -125,6 +325,7 @@ export async function recompilarCliente(basedir: string, hash: string, config: I
     console.log("");
     const child = spawn("yarn", ["mrpack", ...process.argv.slice(2)], {
         stdio: "inherit",
+        shell: process.platform === "win32",
     });
     const promesa = new Deferred<number>();
     child.on("exit", (code) => {
@@ -135,13 +336,28 @@ export async function recompilarCliente(basedir: string, hash: string, config: I
 }
 
 export async function getAutor(): Promise<string> {
-    const {status, stdout} = await Comando("git", ["config", "user.name"]);
-    if (status != 0) {
-        console.log(Colors.colorize([Colors.FgRed], "No se puede obtener el usuario de git"));
-        console.groupEnd();
-        return Promise.reject();
+    const local = await Comando("git", ["config", "user.name"]).catch(() => undefined);
+    const autorLocal = local?.stdout.trim() ?? "";
+    if (local?.status === 0 && autorLocal.length > 0) {
+        return autorLocal;
     }
-    return stdout.trim();
+
+    const global = await Comando("git", ["config", "--global", "user.name"]).catch(() => undefined);
+    const autorGlobal = global?.stdout.trim() ?? "";
+    if (global?.status === 0 && autorGlobal.length > 0) {
+        return autorGlobal;
+    }
+
+    const autorEnv = (process.env["GIT_AUTHOR_NAME"] ?? process.env["USERNAME"] ?? "").trim();
+    if (autorEnv.length > 0) {
+        return autorEnv;
+    }
+
+    console.log(Colors.colorize([Colors.FgRed], "No se puede obtener el usuario de git"));
+    console.log(Colors.colorize([Colors.FgYellow], "Configura user.name y reintenta:"));
+    console.log(Colors.colorize([Colors.FgCyan], "git config --global user.name \"Tu Nombre\""));
+    console.groupEnd();
+    return Promise.reject(new Error("No se puede obtener el usuario de git"));
 }
 
 /**

@@ -1,7 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 9cf760a3bb6b755671c8fb983165eb07
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 5ece799febb455673f02bd9aec95c27f
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {readDir, unlink} from "services-comun/modules/utiles/fs";
@@ -9,7 +11,7 @@ import {readDir, unlink} from "services-comun/modules/utiles/fs";
 import {Colors} from "../../../mrpack/clases/colors";
 import type {Idiomas, TIdiomas} from "../idioma";
 import {IdiomasLoader} from "../idioma/loader";
-import {type IModuloConfig as IModuloConfigBase, type IPackageConfig, Modulo} from "./";
+import {type IModuloConfig as IModuloConfigBase, type IPackageConfig, Modulo} from ".";
 import {ModuloJSON} from "./json";
 import type {Traduccion} from "./traduccion/loader";
 import {TraduccionLoaderMySQL} from "./traduccion/loader/mysql";

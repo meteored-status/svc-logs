@@ -52,6 +52,7 @@
         "enabled": true
     },
     "build": {
+        "bundler": "esbuild",
         "framework": "meteored"
     }
 }

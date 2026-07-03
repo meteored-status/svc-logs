@@ -1,7 +1,15 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: b0dc8761c83495d005429ef402a8c227
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
 import type {Conexion} from "@mr/core-network/server/http/conexion";
+import type {Configuracion} from "@mr/core-workload/config";
+import type {IPodInfo} from "@mr/core-workload/config/pod";
 import {TDevice} from "@mr/core-network/server/http/config/device";
 
-import type {Configuracion, IPodInfo} from "../../utiles/config";
 import {type INetCache, type INetCacheV1, type IRequestCache, type IRouteGroupCache, NetCache, RequestCache} from ".";
 import {type IValkeyOptions, ValKey} from "../../database/valkey";
 import {md5} from "../../utiles/hash";

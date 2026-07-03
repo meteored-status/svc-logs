@@ -1,4 +1,11 @@
-import {ConfigGenerico, type IConfigGenerico} from "../../utiles/config";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: f5a2ebbd8bef26b0764a90bf9399acb7
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
+import {Configuracion as ConfigGenerico, type IConfiguracion as IConfigGenerico} from "@mr/core-workload/config";
 
 export interface IStatusConfig extends IConfigGenerico {
     enabled: boolean;

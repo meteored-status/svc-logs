@@ -1,7 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 4f22c677f44d748063d2d147096c2dfd
+ * Fecha: Wed, 01 Jul 2026 07:11:52 GMT
+ * Hash: e649fa8ea15ae3c745ea426557c479db
+ * Versión: 2026.7.1+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/alpred/tiempo-web-estaticos.git
  */
 
 import type {IManifestDeploymentCredenciales} from "@mr/core-dev/manifest/deployment/credenciales";
@@ -10,7 +13,7 @@ import type {IManifestDeploymentStorage} from "@mr/core-dev/manifest/deployment/
 import {ManifestDeploymentKind, Runtime} from "@mr/core-dev/manifest/deployment";
 import type {IManifestBuildDatabase} from "@mr/core-dev/manifest/build/database";
 import type {IManifestBuildBundle} from "@mr/core-dev/manifest/build/bundle";
-import {BuildFW} from "@mr/core-dev/manifest/build";
+import type {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 import type {IManifestDeploymentImagenEntorno} from "@mr/core-dev/manifest/deployment/imagen/entorno";
 
 export interface IManifestLegacyStorage {
@@ -76,6 +79,7 @@ export interface IManifestLegacy {
 export interface IManifestBuildLegacy {
     deps?: string[];
     framework: BuildFW;
+    bundler?: BuildBundler;
     database?: string;
     bundle?: IManifestBuildBundle;
 }

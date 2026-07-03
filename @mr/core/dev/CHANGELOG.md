@@ -2,6 +2,207 @@
 
 ---
 
+## 2026.6.26
+
+### Added
+
+- `patches/rules/breaking-user-tiempo-domain-default-import.mjs` — nueva regla **R032**
+  que migra los imports por defecto de `@mr/user-tiempo-domain` (cuyo `export default`
+  fue eliminado) al export nombrado `Dominio`. Cubre tres variantes:
+
+  | Entrada | Salida |
+  |---------|--------|
+  | `import Foo from "@mr/user-tiempo-domain"` | `import {Dominio as Foo} from "@mr/user-tiempo-domain"` |
+  | `import type Foo from "@mr/user-tiempo-domain"` | `import type {Dominio as Foo} from "@mr/user-tiempo-domain"` |
+  | `import Foo, {Bar} from "@mr/user-tiempo-domain"` | `import {Dominio as Foo, Bar} from "@mr/user-tiempo-domain"` |
+
+  Imports ya nombrados (`{Dominio as Foo}`), subpaths (`@mr/user-tiempo-domain/sites/…`)
+  y otros módulos no se modifican.
+
+- `patches/rules/breaking-dominio-tiempo-list-rename.mjs` — nueva regla **R033** que
+  renombra el especificador `DominioTiempoList` en imports de `@mr/user-tiempo-domain/loader`:
+
+  ```ts
+  // antes
+  import {DominioTiempoList} from "@mr/user-tiempo-domain/loader";
+  import {type DominioTiempoList} from "@mr/user-tiempo-domain/loader";
+
+  // después
+  import {DominioList as DominioTiempoList} from "@mr/user-tiempo-domain/loader";
+  import {type DominioList as DominioTiempoList} from "@mr/user-tiempo-domain/loader";
+  ```
+
+  Usa `createSpecifierRenameRule` con lookbehind `(?<! as )` para garantizar idempotencia.
+
+- `patches/rule-factory.mjs` — nueva función exportada **`createSpecifierRenameRule({id, summary, module, detect, regex, replacement})`**.
+  Factoría para el patrón "renombrar un especificador dentro de imports de un módulo concreto".
+  Aplica `collapseMultilineImports` automáticamente antes de procesar, gestiona el
+  conteo de reemplazos y es idempotente si la regex incluye el lookbehind adecuado.
+
+- `patches/rule-factory.mjs` — nueva constante exportada **`SKIP_DIRS`** (`Set<string>`):
+  el conjunto de directorios ignorados por el runner (`.git`, `node_modules`, `output`, etc.).
+  Antes estaba duplicado en `index.mjs` y en `sync-mr-devdeps.mjs`; ahora ambos lo
+  importan de la misma fuente.
+
+### Changed
+
+- `patches/rules/breaking-dominio-tiempo-rename.mjs` (**R031**) — simplificado usando
+  `createSpecifierRenameRule`. El fichero pasa de ~35 líneas con implementación manual
+  a una llamada declarativa de 10 líneas. Comportamiento idéntico.
+
+- `patches/index.mjs` — elimina la definición local de `SKIP_DIRS` e importa la
+  constante desde `rule-factory.mjs`.
+
+- `patches/rules/sync-mr-devdeps.mjs` — elimina la definición local de `SKIP_DIRS`
+  y la regexp `MODULE_LINE_RE`; ahora importa `{isModuleLine, SKIP_DIRS}` desde
+  `rule-factory.mjs`. El filtrado de líneas de comentario mejora ligeramente
+  (evita contar `// import @mr/foo` como import real).
+
+
+### Added
+
+- `patches/rules/deprecated-engine-server-import.mjs` — nueva regla **R024** que migra
+  imports de `services-comun/modules/engine_server`:
+
+  ```ts
+  import {EngineServer} from "services-comun/modules/engine_server";
+  ```
+
+  a:
+
+  ```ts
+  import {Engine as EngineServer} from "@mr/core-workload/engine/server";
+  ```
+
+  La regla usa `createLineRegexRule`, mantiene `import type` si existiese y evita
+  auto-aplicarse sobre `@mr/core/dev/patches/*`.
+
+- `patches/index.mjs` — registrada la regla **R024** en `RULES`.
+
+- `patches/README.md` y `patches/CODEMAP.md` — tablas de reglas y orden de ejecución
+  actualizados para incluir **R024**.
+
+## 2026.6.15+1
+
+### Added
+
+- `/.github/git-commit-instructions.md` (canónico en `@mr/core/dev/.github/git-commit-instructions.md`) —
+  nuevo archivo de instrucciones para commits que indica usar español (España)
+  al generar mensajes de commit.
+
+## 2026.6.10+2
+
+### Added
+
+- `patches/rules/sync-mr-devdeps.mjs` — nueva **regla de workspace WS001**.
+  Escanea todos los ficheros `.ts` de cada workspace del monorepo, extrae los
+  paquetes `@mr/<scope>` que se importan y, si alguno no está declarado en
+  `dependencies`, `devDependencies`, `peerDependencies` u `optionalDependencies`
+  del `package.json` del workspace, lo añade en `devDependencies` con
+  `"workspace:*"`. El resultado de `devDependencies` queda ordenado
+  alfabéticamente. La regla es idempotente y no usa el cursor de patch.
+
+- `patches/rule-factory.mjs` — nueva función exportada `createWorkspaceRule({id, summary, run})`.
+  Devuelve un objeto `{id, summary, type: "workspace", run}` para reglas que
+  operan a nivel de workspace en lugar de a nivel de fichero individual.
+
+- `patches/index.mjs` — nuevo array `WORKSPACE_RULES`. Tras el bucle de ficheros,
+  se ejecutan todas las workspace-rules siempre que `activeRules.length > 0`
+  (es decir, cuando hay algún patch pendiente). El informe final distingue
+  cambios de ficheros (`R0xx`) y cambios de workspace (`WS001`):
+
+  ```
+  mrpack-patch: actualizados 3 archivo(s) (R020=3) + workspace (WS001=2)
+  ```
+
+- `patches/rules/deprecated-portal-idiomas-import.mjs` — nueva regla **R020** que
+  migra imports de `services-comun-meteored/modules/portal/idiomas` a
+  `@mr/user-mr-domain/idiomas`. Se ubica antes de R018 en `RULES` para evitar
+  que el patrón genérico `/meteored/*` la capture primero.
+
+- `patches/README.md` — tabla de reglas actualizada con R016-R020; nueva subsección
+  **"Reglas de workspace (`WORKSPACE_RULES`)"** con la tabla de WS001; nueva
+  subsección **"Regla de workspace (opera sobre `package.json`)"** con ejemplo
+  de uso de `createWorkspaceRule`.
+
+---
+
+## 2026.6.10+1
+
+### Added
+
+- `patches/rules/deprecated-frontend-device-import.mjs` — nueva regla **R016** que
+  migra imports de `services-comun/modules/frontend/device` a
+  `@mr/core-templates/device`.
+
+- `patches/rules/deprecated-portal-seccion-import.mjs` — nueva regla **R017** que
+  migra imports de `services-comun-meteored/modules/portal/meteored/seccion/*` a
+  `@mr/user-mr-domain/section/*`.
+
+- `patches/rules/deprecated-portal-meteored-import.mjs` — nueva regla **R018** que
+  migra imports de `services-comun-meteored/modules/portal/meteored/*` a
+  `@mr/user-mr-domain/*` (patrón genérico, aplicado después de R017 y R019).
+
+- `patches/rules/deprecated-portal-config-import.mjs` — nueva regla **R019** que
+  migra imports de `services-comun-meteored/modules/portal/meteored/config/*` a
+  `@mr/user-mr-domain/config/*`.
+
+- `patches/index.mjs` — registradas las reglas R016, R017, R018 y R019.
+
+---
+
+## 2026.6.3+4
+
+### Changed
+
+- `README.md` — sección **"Parches de migración"** actualizada: añadida nota de que
+  `yarn run patch:apply` se ejecuta automáticamente después de instalar, actualizar o
+  resetear frameworks mediante `yarn mrpack framework` o `yarn mrpack update`, por lo
+  que normalmente no es necesario invocarlo a mano.
+
+---
+
+## 2026.6.3+3
+
+### Changed
+
+- `package.json` — `mrpack:patch:apply` simplificado de
+  `node patches/index.mjs --write` a `node patches/index.mjs`.
+
+- `patches/index.mjs` — eliminado el modo dual `--write/--check`; el script
+  funciona siempre en modo apply incremental (cursor `config.workspaces.json.patch`).
+  Se mantiene `--verbose` como opción opcional de salida detallada.
+
+- `patches/README.md` — actualizado el ejemplo de uso de `--verbose` sin `--check`.
+
+---
+
+## 2026.6.3+2
+
+### Changed
+
+- `patches/index.mjs` — `yarn run patch:apply` pasa a usar el campo opcional
+  `patch` de `config.workspaces.json` como cursor de migración:
+  - Solo ejecuta reglas posteriores al ID indicado (ej.: `R012` => aplica `R013+`).
+  - Si no hay reglas nuevas, finaliza sin escanear (`mrpack-patch: no hay patches nuevos`).
+  - Tras ejecutar en modo `--write`, actualiza `config.workspaces.json.patch` al último
+    patch procesado, incluso cuando no hubo cambios en archivos.
+
+- `patches/README.md` — documentado el flujo incremental por cursor `patch`.
+
+---
+
+## 2026.6.3+1
+
+### Changed
+
+- `/.github/copilot-instructions.md` (canónico en `@mr/core/dev/.github/copilot-instructions.md`) —
+  añadida la sección **"Frameworks del monorepo"** para dejar explícito que `@mr/cli`,
+  `@mr/core/*`, `@mr/user/*` y `framework/*` se tratan como frameworks y se gestionan
+  mediante `yarn mrpack framework` / `yarn mrpack framework --send`.
+
+---
+
 ## 2026.5.27+2
 
 ### Added

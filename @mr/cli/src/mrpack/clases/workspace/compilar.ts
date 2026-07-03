@@ -1,14 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 5749b91687449f3b6e4be9ade75a335f
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+1-josantoniojimnez
+ * Fecha: Wed, 01 Jul 2026 07:11:52 GMT
+ * Hash: 7507bd79e6678002509bdc28d3118d67
+ * Versión: 2026.7.1+1-josantoniojimnez
+ * Anterior: 2026.6.30+4-alexcg
+ * Proyecto: https://github.com/alpred/tiempo-web-estaticos.git
  */
 
 import path from "node:path";
 
-import {BuildFW} from "@mr/core-dev/manifest/build";
+import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 import {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 import {
@@ -178,13 +179,17 @@ export class Compilar {
     private async packMeteored(env: string, manifest: ManifestRoot): Promise<void> {
         switch(this.config.deploy.runtime) {
             case Runtime.browser: {
-                    await this.webpack(env);
+                    await this.rspack(env);
                     await this.checkVersionBrowser();
                 }
                 break;
             case Runtime.node: {
                     const customDockerfile = await isFile(`${this.dir}/Dockerfile`);
-                    await this.webpack(env);
+                    if (this.config.build.bundler===BuildBundler.rspack) {
+                        await this.rspack(env);
+                    } else {
+                        await this.esbuild(env);
+                    }
                     const checks: string[] = [
                         `${this.basedir}/.yarnrc.yml`,
                     ];
@@ -233,8 +238,18 @@ export class Compilar {
         }
     }
 
-    private async webpack(env: string): Promise<void> {
+    private async rspack(env: string): Promise<void> {
         const {status, stdout, stderr} = await Comando("yarn", ["workspace", "@mr/core-dev", "rspack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `bundler/rspack/rspack.config.ts`], {cwd: this.basedir, colores: false});
+        if (status != 0) {
+            console.error(this.name, "[KO   ]", "Error compilando:");
+            console.error(stdout);
+            console.error(stderr);
+            return Promise.reject();
+        }
+    }
+
+    private async esbuild(env: string): Promise<void> {
+        const {status, stdout, stderr} = await Comando("yarn", ["workspace", "@mr/core-dev", "node", "bundler/esbuild/esbuild.config.mjs", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`], {cwd: this.basedir, colores: false});
         if (status != 0) {
             console.error(this.name, "[KO   ]", "Error compilando:");
             console.error(stdout);
@@ -255,7 +270,7 @@ export class Compilar {
 
         {
             // todo falta añadir la fecha del commit (this.fecha)
-            const {status, stderr} = await Comando("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {NODE_OPTIONS: '--max_old_space_size=8192', ZONA: nodeEnv}, colores: false});
+            const {status, stderr} = await Comando("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {NODE_OPTIONS: '--max_old_space_size=10240', ZONA: nodeEnv}, colores: false});
             if (status != 0) {
                 console.error(this.name, "[KO   ]", "Error compilando:");
                 console.error(stderr);

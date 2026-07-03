@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 92ec4efb34aa477a5102fc5a452bf4ab
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 7b2a95ebde13cb139d9788a42686796e
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
@@ -173,7 +174,7 @@ export class I18N extends Workspace {
             cwd: this.root,
             env: { ...process.env, FORCE_COLOR: "1" },
             stdio: "pipe",
-            shell: false,
+            shell: process.platform === "win32",
         });
 
         const deferred = new Deferred<void>();

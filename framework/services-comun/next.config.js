@@ -42,15 +42,15 @@ module.exports = function (buildDirs) {
         },
         // trailingSlash: true,
         webpack: (config, { dev, isServer, webpack }) => {
-            if (isServer && dev && !ok) {
-                ok = true;
-                const {TsCheckerRspackPlugin} = require('ts-checker-rspack-plugin');
-                config.plugins.push(new TsCheckerRspackPlugin({
-                    typescript: {
-                        configFile: `tsconfig.json`,
-                    },
-                }));
-            }
+            // if (isServer && dev && !ok) {
+            //     ok = true;
+            //     const {TsCheckerRspackPlugin} = require('ts-checker-rspack-plugin');
+            //     config.plugins.push(new TsCheckerRspackPlugin({
+            //         typescript: {
+            //             configFile: `tsconfig.json`,
+            //         },
+            //     }));
+            // }
 
             const entorno = dev?"desarrollo":(process.env.ENV??"test");
             const desarrollo = dev;

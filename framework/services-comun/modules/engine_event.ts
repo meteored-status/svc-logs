@@ -1,7 +1,15 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: dc7eb5552f981de0f007a2e6aefb9b6a
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
 import chokidar from "chokidar";
 
-import {Configuracion} from "./utiles/config";
-import {EngineBase} from "./engine_base";
+import type {Configuracion} from "@mr/core-workload/config";
+import {Engine as EngineBase} from "@mr/core-workload/engine";
+
 import {isDir, mkdir, safeWrite} from "./utiles/fs";
 import {info} from "./utiles/log";
 import {PromiseDelayed} from "./utiles/promise";
@@ -14,7 +22,7 @@ export abstract class EngineEvent<T extends Configuracion=Configuracion> extends
     //     super(configuracion, inicio);
     // }
 
-    protected override init(): void {
+    protected override async init(): Promise<void> {
         PromiseDelayed().then(async () => {
             await this.waitEventReady();
             await this.launchEventLive();

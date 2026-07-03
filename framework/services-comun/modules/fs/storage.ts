@@ -1,9 +1,17 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: 6548fb7cdb5319aed55c89c0657b1754
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
 import fs from "node:fs";
 import {Readable} from "node:stream";
 import {type File, Storage as StorageBase} from "@google-cloud/storage";
 import {Metadata} from "@google-cloud/common";
 
-import {Google} from "../utiles/config";
+import type {Google} from "@mr/core-workload/config/google";
+
 import {IFile} from "./file";
 import {buffer2stream, pipeline} from "../utiles/stream";
 import {error} from "../utiles/log";

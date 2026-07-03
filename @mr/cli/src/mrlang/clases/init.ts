@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 12:17:59 GMT
- * Hash: 317fbdd36c9becfee9c312622e273c4f
- * Versión: 2026.5.18+4-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: d8fc14a5c43f6d7914bd1302a76a0fba
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {isDir, mkdir, readDir, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
@@ -86,7 +87,6 @@ export class Init {
                 "push": "yarn workspace @mr/cli mrlang push",
             },
             devDependencies: {
-                "make-plural": devDependencies["make-plural"]??"^7.4.0",
                 "services-comun": "workspace:*",
                 "tslib": devDependencies["tslib"]??"^2.7.0",
             },

@@ -1,0 +1,48 @@
+# AGENTS.md
+
+> **Nota sobre este archivo:** la copia canónica vive en `@mr/core/dev/AGENTS.md` y en la raíz del proyecto se expone mediante el enlace simbólico `AGENTS.md`.
+
+## Contexto rapido del monorepo
+- `web-www` es un monorepo Yarn 4 (`packageManager: yarn@4.16.0`) con workspaces en `@mr/*`, `framework/*`, `packages/*`, `services/*`, `jobs/*`, `cronjobs/*`.
+- La orquestacion de desarrollo/build no se hace con scripts ad-hoc por servicio: se centraliza en `mrpack` (`@mr/cli/bin/mrpack.js`).
+- Capas principales: `@mr/core/*` (infra compartida), `framework/services-comun` (runtime legacy comun), `services/*` (apps desplegables), `packages/*` (librerias funcionales).
+
+## Arquitectura y limites entre componentes
+- Los servicios Node arrancan con el patron `Main.ejecutar(Engine, Configuracion)` (ejemplo: `services/www-frontend/main.ts`, `services/www-estaticos/main.ts`).
+- El ciclo de vida real (carga config, sidecar Istio, master/worker, shutdown cronjob) vive en `framework/services-comun/main.ts`.
+- HTTP/WebSocket compartido vive en `@mr/core/network`:
+  - HTTP: router declarativo por `Routes` + `RouteGroup` (`@mr/core/network/server/http/README.md`).
+  - WebSocket: `createWSServer()` singleton + `IWSHandler` tipado + streaming (`@mr/core/network/server/websocket/README.md`).
+- Integracion entre ambos: si un `RouteGroup` devuelve handlers WS en `getWSHandlers()`, el servidor WebSocket se inicia/expande automaticamente.
+
+## Flujos de trabajo criticos
+- Desarrollo (ejecutar habilitados en `config.workspaces.json`): `yarn run devel`
+- Compilacion watch (habilitados): `yarn run packd`
+- Forzar todos los workspaces (incluye deshabilitados): `yarn run devel-f` / `yarn run packd-f`
+- Actualizacion de stack del monorepo: `yarn run update`
+- Tras update, aplicar migraciones automatizadas SIEMPRE: `yarn run patch:apply`.
+- Ejecutar scripts de un workspace desde raiz: `yarn run www-frontend <script>` (atajo de `yarn workspace www-frontend <script>`).
+- No hay script raiz `test` descubierto; para validar cambios, usa compilacion/watch del workspace afectado y comandos `mrpack`.
+
+## Convenciones no obvias (importantes para agentes)
+- Fuente canonica de convenciones AI: `.github/copilot-instructions.md` (ojo: `.github/` es symlink a `@mr/core/dev/.github/` y `AGENTS.md` en raíz es symlink a `@mr/core/dev/AGENTS.md`).
+- Mantener `CODEMAP.md` en la misma tarea cuando haya cambios significativos (modulos, API publica, rutas, flujos o reorganizacion). Si no existe, crearlo y enlazarlo desde el `README.md` mas cercano.
+- TypeScript estricto; evitar `any` explicito salvo necesidad real.
+- Imports en 3 bloques con una linea en blanco: (1) node/publico, (2) otros workspaces, (3) local relativo; usar `type` en imports solo-tipo.
+- Entre workspaces usa imports por nombre de paquete (`@mr/core-network/...`, `services-comun/...`), no rutas relativas cruzadas.
+- Logging: usar `info`/`error` de `services-comun/modules/utiles/log`; evitar `console.log`.
+- Promesas diferidas: usar `Deferred<T>` de `services-comun/modules/utiles/promise`.
+- Propiedades de instancia se inicializan en constructor (no en declaracion), `if/else/for/while` siempre con llaves, y sin dobles lineas en blanco en `.ts/.js`.
+
+## Integraciones externas y operacion
+- Datadog esta integrado desde bootstrap (`services/*/app.js`) y en WebSocket se propaga traza cliente-servidor via `_datadog`.
+- TLS/SNI HTTP espera certificados en `files/ssl/<dominio>/` + fallback en `files/ssl/` (ver `@mr/core/network/server/http/README.md`).
+- `framework/services-comun/main.ts` comprueba sidecar en `http://localhost:15020/healthz/ready` y usa `/quitquitquit` al cerrar cronjobs.
+- `mrpack framework` opera paquetes compartidos contra GCS (updates/reset/send) y guarda logs en `tmp/log/*.pull.md`.
+
+## Archivos que un agente debe leer primero
+- `README.md` (scripts raiz y flujo update+patch)
+- `.github/copilot-instructions.md` (reglas de estilo obligatorias)
+- `@mr/cli/README.md` (modulos `mrpack`, especialmente `devel`, `update`, `framework`)
+- `@mr/core/dev/README.md` (tsconfig base, manifest, patches)
+- `@mr/core/network/server/http/README.md` y `@mr/core/network/server/websocket/README.md` (patrones de red y contrato runtime)

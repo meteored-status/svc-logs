@@ -1,17 +1,20 @@
 {
   "name": "@mr/core-utils",
-  "version": "2026.5.26+2-josantoniojimnez",
+  "version": "2026.6.17+1-josantoniojimnez",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {
     "subible": true,
     "tipo": "core"
   },
+  "exports": {
+    "./config": "./src/config.ts"
+  },
   "dependencies": {
     "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
-    "@types/node": "^24.12.4"
+    "@types/node": "^24.13.2"
   }
 }

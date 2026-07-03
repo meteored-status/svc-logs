@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 0ff3d71d35dfe973b00ec4f3517ab25f
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 07480e957c933c5afc4cfaacef688277
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {parseArgs, ParseArgsConfig} from "node:util";
@@ -50,7 +51,7 @@ export abstract class Modulo<T extends IModuloConfig> {
     public readonly root: string;
 
     protected constructor(protected config: T) {
-        this.root = process.cwd();
+        this.root = process.env["MRPACK_ROOT"] ?? process.cwd();
     }
 
     /**

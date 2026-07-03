@@ -15,6 +15,7 @@ y el **modelo de manifiesto** (`mrpack.json`) que describe cómo se compila y de
 | [tsconfig · Browser](#tsconfig--browser) | `@mr/core-dev/tsconfig.json` (condición `browser`) | Configuración TypeScript para bundles de navegador |
 | [Manifest](#manifest-mrpackjson) | `@mr/core-dev/manifest` | Modelo de datos del archivo `mrpack.json` |
 | [Bundler rspack](#bundler-rspack) | `bundler/rspack/rspack.config.ts` | Configuración rspack compartida por todos los workspaces |
+| [Bundler esbuild](#bundler-esbuild) | `bundler/esbuild/esbuild.config.mjs` | Configuración esbuild compartida por todos los workspaces |
 | [Parches de migración](#parches-de-migración-mrpackpatch) | — | Autofix de imports deprecados; se aplica tras `yarn mrpack update` |
 
 ---
@@ -130,6 +131,7 @@ Configuración base para bundles de navegador. Extiende `@tsconfig/recommended` 
 **Entradas:** `@mr/core-dev/manifest` y subpaths
 **Ficheros:** `manifest/`
 **Documentación completa:** [`manifest/README.md`](./manifest/README.md)
+**Código fuente:** [`manifest/CODEMAP.md`](./manifest/CODEMAP.md) — mapa de clases, interfaces y jerarquía de composición
 
 El modelo de datos que describe cómo se compila y despliega cada workspace del monorepo.
 Cada workspace que produce una build debe incluir un archivo `mrpack.json` en su raíz.
@@ -147,7 +149,7 @@ const manifest = new Manifest(JSON.parse(fs.readFileSync("mrpack.json", "utf8"))
 |--------|-----------|
 | `@mr/core-dev/manifest` | `Manifest`, `IManifest` |
 | `@mr/core-dev/manifest/root` | `ManifestRoot<T>` — clase base abstracta |
-| `@mr/core-dev/manifest/build` | `ManifestBuild`, `IManifestBuild`, `BuildFW` |
+| `@mr/core-dev/manifest/build` | `ManifestBuild`, `IManifestBuild`, `BuildFW`, `BuildBundler` |
 | `@mr/core-dev/manifest/build/bundle` | `ManifestBuildBundle`, `IManifestBuildBundle` |
 | `@mr/core-dev/manifest/build/bundle/base` | `ManifestBuildBundleBase`, `IManifestBuildBundleBase` |
 | `@mr/core-dev/manifest/build/bundle/componentes` | `ManifestBuildComponentes`, `ManifestBuildComponentesCSS` |
@@ -168,6 +170,7 @@ const manifest = new Manifest(JSON.parse(fs.readFileSync("mrpack.json", "utf8"))
 
 **Ficheros:** `bundler/rspack/`
 **Documentación completa:** [`bundler/rspack/README.md`](./bundler/rspack/README.md)
+**Código fuente:** [`bundler/rspack/CODEMAP.md`](./bundler/rspack/CODEMAP.md) — entry point, ensamblador, todos los módulos (entry/output/devtool/module/plugins/externals/optimization/target) y flujo completo
 
 Módulo que genera la configuración de rspack para todos los workspaces del monorepo.
 Cada workspace solo necesita un `rspack.config.ts` que re-exporte la función de entrada:
@@ -209,10 +212,28 @@ rspack.config.ts
 
 ---
 
-## Parches de migración (`mrpack:patch`)
+## Bundler esbuild
+
+**Ficheros:** `bundler/esbuild/`
+**Documentación completa:** [`bundler/esbuild/README.md`](./bundler/esbuild/README.md)
+**Código fuente:** [`bundler/esbuild/CODEMAP.md`](./bundler/esbuild/CODEMAP.md) — entry point, parseo de `--env`, normalización de `mrpack.json` y flujo build/watch
+
+Módulo que genera la configuración de esbuild para workspaces del monorepo.
+Versión Node-only:
+
+- solo compila cuando `deploy.runtime === "node"`,
+- no compila workspaces `build.framework === "nextjs"`,
+- build única `app -> main.ts`,
+- inyección de globales (`DESARROLLO`, `TEST`, `PRODUCCION`, `ENTORNO`, `NEXTJS`, `DATABASE`),
+- watch en desarrollo y build única en `test/produccion`.
+
+---
+
+## Parches de migración (`mrpack:patch:apply`)
 
 **Ficheros:** `patches/`
 **Documentación completa:** [`patches/README.md`](./patches/README.md)
+**Código fuente:** [`patches/CODEMAP.md`](./patches/CODEMAP.md) — runner, factorías, tabla de reglas R001–R020 y WS001
 
 > **Para agentes de IA:** cuando se te indique **"aplica los parches"**, ejecuta:
 >
@@ -221,19 +242,21 @@ rspack.config.ts
 > ```
 
 El sistema de parches automatiza cambios repetitivos sobre todo el monorepo (sustitución
-de imports deprecados, wrappers legacy, etc.). Se activa habitualmente tras
-`yarn mrpack update`.
+de imports deprecados, wrappers legacy, etc.).
+
+`yarn run patch:apply` se ejecuta **automáticamente** después de instalar, actualizar
+o resetear frameworks mediante `yarn mrpack framework` o `yarn mrpack update`, por lo
+que normalmente no es necesario invocarlo a mano. La salida se muestra en consola en
+tiempo real durante su ejecución.
 
 | Comando | Descripción |
 |---------|-------------|
-| `yarn run patch` | Analiza sin escribir en disco (exit 1 si hay pendientes) |
-| `yarn run patch:apply` | Aplica todos los parches activos |
+| `yarn run patch:apply` | Aplica todos los parches activos (incremental desde el último aplicado) |
 
 Los shorthands del `package.json` raíz mapean a:
 
 | Shorthand | Comando completo |
 |-----------|-----------------|
-| `yarn run patch` | `yarn workspace @mr/core-dev mrpack:patch` |
 | `yarn run patch:apply` | `yarn workspace @mr/core-dev mrpack:patch:apply` |
 
 ---
@@ -241,4 +264,3 @@ Los shorthands del `package.json` raíz mapean a:
 ## Changelog
 
 Consulta [`CHANGELOG.md`](./CHANGELOG.md) para el historial de cambios del paquete.
-

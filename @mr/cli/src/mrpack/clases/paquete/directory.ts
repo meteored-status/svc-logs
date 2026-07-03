@@ -1,9 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 7b62a0acf7b47082d6c9c69ba27061aa
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+6-josantoniojimnez
+ * Fecha: Fri, 26 Jun 2026 10:04:43 GMT
+ * Hash: b2b0d59f7b1c99ebd19812d1b92e94cb
+ * Versión: 2026.6.26+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 import JSZip from "jszip";
@@ -306,6 +307,45 @@ export class PaqueteDirectory extends PaqueteFile {
     }
 
     /**
+     * Corrige recursivamente el campo `autor` de todos los nodos (ficheros y subdirectorios)
+     * cuyo `hashCambio === true`. Necesario cuando el árbol fue escaneado con un autor
+     * provisional (p.ej. `"check"`) y hay que sellarlo con el autor real antes de empaquetarlo.
+     *
+     * @param autor - Nombre del autor real a estampar.
+     */
+    public corregirAutoresHashCambio(autor: string): void {
+        if (this.hashCambio) {
+            this.autor = autor;
+        }
+        for (const key of Object.keys(this.archivos)) {
+            if (this.archivos[key].hashCambio) {
+                this.archivos[key].autor = autor;
+            }
+        }
+        for (const key of Object.keys(this.directorios)) {
+            this.directorios[key].corregirAutoresHashCambio(autor);
+        }
+    }
+
+    /**
+     * Devuelve la lista de rutas relativas de TODOS los ficheros del subárbol,
+     * independientemente de si han cambiado o no. Útil para detectar ficheros
+     * que han sido eliminados del disco (y que `checkTipos` habría quitado del árbol).
+     *
+     * @returns Array de rutas relativas al paquete.
+     */
+    public listarRutas(): string[] {
+        const rutas: string[] = [];
+        for (const key of Object.keys(this.archivos)) {
+            rutas.push(this.archivos[key].filename);
+        }
+        for (const key of Object.keys(this.directorios)) {
+            rutas.push(...this.directorios[key].listarRutas());
+        }
+        return rutas;
+    }
+
+    /**
      * Devuelve la lista de rutas de ficheros cuyos hashes han cambiado desde el último `update`.
      *
      * @returns Array de rutas relativas al paquete.
@@ -325,19 +365,19 @@ export class PaqueteDirectory extends PaqueteFile {
     }
 
     /**
-     * Inyecta bloques de autoría en todos los ficheros `.ts` del subárbol que hayan cambiado.
-     * Tras la inyección recalcula el hash del directorio si algún hijo lo modificó.
+     * Inyecta recursivamente los bloques de autoría en todos los ficheros `.ts` modificados.
      *
      * @param basedir  - Raíz absoluta del monorepo.
      * @param autor    - Nombre del autor a estampar.
      * @param version  - Versión del paquete a registrar en cada bloque.
+     * @param proyecto - URL del repositorio git del proyecto (sin credenciales).
      */
-    public async inyectarAutorias(basedir: string, autor: string, version: string): Promise<void> {
+    public async inyectarAutorias(basedir: string, autor: string, version: string, proyecto: string): Promise<void> {
         let cambio = false;
 
         for (const key of Object.keys(this.archivos)) {
             const hashAnterior = this.archivos[key].hash;
-            await this.archivos[key].inyectarAutoria(basedir, autor, version);
+            await this.archivos[key].inyectarAutoria(basedir, autor, version, proyecto);
             if (this.archivos[key].hash !== hashAnterior) {
                 cambio = true;
             }
@@ -345,7 +385,7 @@ export class PaqueteDirectory extends PaqueteFile {
 
         for (const key of Object.keys(this.directorios)) {
             const hashAnterior = this.directorios[key].hash;
-            await this.directorios[key].inyectarAutorias(basedir, autor, version);
+            await this.directorios[key].inyectarAutorias(basedir, autor, version, proyecto);
             if (this.directorios[key].hash !== hashAnterior) {
                 cambio = true;
             }

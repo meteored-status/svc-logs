@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 9043d9de53d5242c8bdf61fc7bfd698e
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 3a4f08e9c728e901e9598d2acaefd896
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {Storage} from "@google-cloud/storage";
@@ -19,6 +20,55 @@ import {type PaqueteDirectoryRootFiles, PaqueteDirectoryRoot} from "./root";
  * Se instancia una vez por `Paquete` y se accede mediante composición.
  */
 export class PaqueteStorage {
+    /* STATIC */
+
+    /**
+     * Promesa compartida entre todas las instancias para evitar abrir múltiples
+     * procesos de `gcloud auth application-default login` en paralelo.
+     * Se limpia al finalizar (éxito o error) para que una sesión futura pueda
+     * re-autenticarse si fuera necesario.
+     */
+    private static _loginPromise: Promise<boolean> | undefined;
+
+    /**
+     * Devuelve `true` si el error corresponde a un fallo de autenticación o autorización
+     * de GCS que puede resolverse volviendo a ejecutar `gcloud auth application-default login`.
+     *
+     * Patrones conocidos:
+     * - `"storage.objects.get"` — IAM denegado (credenciales válidas, sin permisos suficientes).
+     * - `"invalid_grant"`       — token de refresco expirado o revocado (HTTP 400).
+     * - `"UNAUTHENTICATED"`     — error gRPC de autenticación.
+     * - `"default credentials"` — ADC no configuradas en el sistema.
+     * - `"PERMISSION_DENIED"`   — permiso denegado (gRPC / HTTP 403).
+     *
+     * @param err - Error lanzado por la librería de GCS.
+     */
+    private static esErrorDeAuth(err: Error): boolean {
+        const m = err.message;
+        return (
+            m.includes("storage.objects.get") ||
+            m.includes("invalid_grant") ||
+            m.includes("UNAUTHENTICATED") ||
+            m.includes("default credentials") ||
+            m.includes("PERMISSION_DENIED")
+        );
+    }
+
+    /**
+     * Lanza `gcloud auth application-default login` una única vez aunque varias
+     * operaciones GCS fallen simultáneamente por falta de credenciales.
+     *
+     * @returns `true` si el login terminó con éxito.
+     */
+    private static login(): Promise<boolean> {
+        PaqueteStorage._loginPromise ??= Comando("gcloud", ["auth", "application-default", "login"])
+            .then(({status}) => status === 0)
+            .finally(() => {
+                PaqueteStorage._loginPromise = undefined;
+            });
+        return PaqueteStorage._loginPromise;
+    }
+
     /* INSTANCE */
     private readonly storage: Storage;
     private _latestCache: Promise<string | undefined> | undefined;
@@ -57,9 +107,8 @@ export class PaqueteStorage {
             return await this._descargarLista();
         } catch (err) {
             if (err instanceof Error) {
-                if (!login && err.message.includes("storage.objects.get")) {
-                    const {status} = await Comando("gcloud", ["auth", "application-default", "login"]);
-                    if (status == 0) {
+                if (!login && PaqueteStorage.esErrorDeAuth(err)) {
+                    if (await PaqueteStorage.login()) {
                         return this._fetchListaConLogin(true);
                     }
                 } else if (err.message.includes("No such object")) {
@@ -98,11 +147,17 @@ export class PaqueteStorage {
 
     /**
      * Descarga y parsea un ZIP de paquete desde GCS. Devuelve `{files:{}}` si no existe.
+     * Si la descarga falla por credenciales insuficientes, lanza `gcloud auth
+     * application-default login` (compartido con otras operaciones paralelas) y reintenta.
      *
      * @param nombreZip - Nombre del ZIP sin extensión (p.ej. `stable-2026.5.1+1`).
      * @returns Contenido del ZIP parseado, o `{files:{}}` si el objeto no existe en GCS.
      */
     public async getZIP(nombreZip: string): Promise<PaqueteDirectoryRootFiles> {
+        return this._getZIPConLogin(nombreZip, false);
+    }
+
+    private async _getZIPConLogin(nombreZip: string, login: boolean): Promise<PaqueteDirectoryRootFiles> {
         const ruta = `${this.repo}/${nombreZip}.zip`;
         try {
             const file = this.storage.bucket(this.bucket).file(ruta);
@@ -113,7 +168,11 @@ export class PaqueteStorage {
             return PaqueteDirectoryRoot.buildBuffer(this.nombre, this.basedir, buffer);
         } catch (err) {
             if (err instanceof Error) {
-                if (err.message.includes("No such object")) {
+                if (!login && PaqueteStorage.esErrorDeAuth(err)) {
+                    if (await PaqueteStorage.login()) {
+                        return this._getZIPConLogin(nombreZip, true);
+                    }
+                } else if (err.message.includes("No such object")) {
                     return {files: {}};
                 }
                 return Promise.reject(new Error(err.message));
@@ -137,4 +196,3 @@ export class PaqueteStorage {
         await pipeline(buffer2stream(data), stream);
     }
 }
-

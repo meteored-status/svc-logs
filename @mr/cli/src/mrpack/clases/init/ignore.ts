@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 26 May 2026 12:02:26 GMT
- * Hash: ad667199f510b646125988bbd754f86d
- * Versión: 2026.5.26+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: f7c3b605fd465bf66b08a131be490ed8
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 export default `
@@ -41,6 +42,5 @@ vendor/
 **/.env*.local
 **/.env*.test
 **/coverage/**
-**/.vscode/**
 vscode.code-workspace
 `.trimStart();

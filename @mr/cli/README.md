@@ -7,6 +7,8 @@ CLI del monorepo `web-www`. Proporciona dos ejecutables:
 | `mrpack` | Gestión del ciclo de vida del proyecto (compilación, despliegue, frameworks…) |
 | `mrlang` | Utilidades de internacionalización |
 
+> **Código fuente:** ver [`src/mrpack/CODEMAP.md`](src/mrpack/CODEMAP.md) para el mapa completo de clases, funciones exportadas y grafo de dependencias del módulo `mrpack`.
+
 ---
 
 ## `mrpack`
@@ -21,6 +23,7 @@ yarn mrpack <modulo> [opciones]
 |--------|-------------|
 | [`devel`](#devel) | Compila y/o ejecuta los workspaces en modo desarrollo (con watch) |
 | [`deploy`](#deploy) | Compila todos los workspaces para un entorno de producción o test |
+| [`config`](#config) | Gestión interactiva de `config.workspaces.json` |
 | [`framework`](#framework) | Operaciones sobre los frameworks compartidos (añadir, actualizar, resetear, enviar…) |
 | [`init`](#init) | Inicializa la configuración del proyecto |
 | [`update`](#update) | Actualiza las librerías del proyecto |
@@ -36,7 +39,7 @@ yarn mrpack <modulo> [opciones]
 ### `devel`
 
 Inicia la compilación y/o ejecución de los workspaces habilitados en modo desarrollo.
-Activa el modo **watch** de rspack: recompila automáticamente al detectar cambios.
+Activa el modo **watch** del bundler configurado (`rspack` o `esbuild`): recompila automáticamente al detectar cambios.
 
 ```
 yarn mrpack devel [opciones] [adicional]
@@ -47,6 +50,12 @@ yarn mrpack devel [opciones] [adicional]
 | `-c` / `--compilar` | Compila los workspaces habilitados |
 | `-e` / `--ejecutar` | Ejecuta los workspaces habilitados |
 | `-f` / `--forzar` | Fuerza la operación en **todos** los workspaces (incluso los deshabilitados) |
+
+> **Patches automáticos:** al arrancar con `-c`, `mrpack devel` ejecuta siempre
+> `yarn run patch:apply` antes de iniciar los compiladores, independientemente de si
+> se han actualizado frameworks o no. Si no hay patches pendientes el comando finaliza
+> de inmediato. Consulta [`@mr/core/dev/patches/README.md`](../@mr/core/dev/patches/README.md)
+> para la documentación completa del sistema de parches.
 
 #### `config.workspaces.json`
 
@@ -80,6 +89,52 @@ Ejemplo de `config.workspaces.json`:
 }
 ```
 
+#### Timeout de pausa del compilador
+
+Para los frameworks `meteored` y `nextjs`, el compilador se pausa automáticamente
+tras **5 minutos de inactividad** para liberar recursos. Se reactiva en el siguiente
+cambio de fichero.
+
+#### Edición manual de `mrpack.json` durante `devel`
+
+El watcher de cada workspace **solo observa** los cambios de `mrpack.json` mientras
+`mrpack devel` está en marcha: recarga el manifest en memoria (de forma síncrona y sin
+tocar disco) para decidir si debe reiniciar el compilador (p. ej. si cambia el bundler
+coherente) o aplicar cambios de habilitación/ejecución, pero **no escribe** ni normaliza
+`mrpack.json` ni sincroniza `package.json` (`scripts.dev`, `scripts.packd`, etc.) en este
+ciclo. Esa normalización/escritura solo ocurre en la fase de primera lectura: al arrancar
+el proceso (construcción inicial del workspace) y en `yarn mrpack init`.
+
+Además, si al guardar el fichero queda momentáneamente con un JSON sintácticamente
+inválido (habitual mientras se edita a mano), **no se resetea ni se sobrescribe** con los
+valores por defecto: el error se registra en el log y se conserva la configuración previa
+hasta que el fichero vuelva a ser JSON válido. Solo se regenera con los valores por
+defecto cuando el fichero no existe.
+
+#### Log de compilación (`output/compilar.md`)
+
+En modo `-c`, la salida del compilador de cada workspace se persiste en
+`<workspace>/output/compilar.md` además de mostrarse por consola.
+
+- Al arrancar el compilador se crea (o rota) el fichero:
+  si ya existe `compilar-old.md` se elimina, `compilar.md` se renombra a `compilar-old.md`
+  y se abre un nuevo `compilar.md` con la fecha/hora local de inicio.
+- Cada evento de salida del compilador genera un bloque Markdown independiente:
+  ```
+  **HH:MM:SS**
+  ` `` `
+  …líneas de salida…
+  ` `` `
+  - [`archivo.ts:línea:col`](ruta/relativa)
+
+  ---
+  ```
+- Las referencias a ficheros de código detectadas en la salida (`*.ts`, `*.scss`, etc.)
+  aparecen como **enlaces** al final del bloque en el `.md` (rutas relativas al directorio
+  `output/`) y como **rutas absolutas clicables** (`archivo:línea:columna`) en el stdout de la consola.
+  Los duplicados se eliminan y el listado se ordena por nombre/fila/columna.
+- Todas las marcas temporales usan la **hora local** del sistema (no UTC).
+
 #### Ejemplos
 
 ```bash
@@ -89,13 +144,14 @@ yarn mrpack devel -c
 # Compilar y ejecutar todos los workspaces
 yarn mrpack devel -c -e -f
 
-# Solo ejecutar los workspaces habilitados (sin recompilar)
 yarn mrpack devel -e
 ```
 
 ---
 
 ### `deploy`
+
+> Fichero: `services/www-frontend/mrpack.json`
 
 Compila todos los workspaces para un entorno de producción o test.
 No activa watch; produce los bundles finales optimizados.
@@ -117,6 +173,60 @@ yarn mrpack deploy --env=produccion
 # Compilar para test/staging
 yarn mrpack deploy --env=test
 ```
+
+---
+
+### `config`
+
+Gestor interactivo de `config.workspaces.json`. Sin opciones abre un menú TUI.
+
+```
+yarn mrpack config
+```
+
+#### Gestionar workspaces
+
+Submenú con tres acciones:
+
+| Acción | Clave | Descripción |
+|--------|-------|-------------|
+| **Compilar** | `packd` | Lista de checkboxes. Marcado → workspace se compila (`packd.available`); desmarcado → se omite (`packd.disabled`). |
+| **Ejecutar** | `devel` | Ídem para la ejecución en desarrollo (`devel.available` / `devel.disabled`). |
+| **Generar i18n** | `i18n` | Selector ON/OFF para `config.i18n`. Solo disponible si el directorio `i18n` existe. |
+
+**Reglas de visibilidad** (las mismas que aplica `mrpack init`):
+
+| Workspace | Aparece en Compilar | Aparece en Ejecutar |
+|-----------|--------------------|--------------------|
+| `deploy.runtime = "php"` | ✗ | ✗ |
+| `deploy.runtime = "browser"` o `"cfworker"` | ✓ | ✗ |
+| `deploy.runtime = "node"` (`build.framework = "meteored"` o `"nextjs"`) | ✓ | ✓ |
+
+Los workspaces que no cumplen la condición de cada lista se excluyen de la UI y se limpian de `available`/`disabled` al guardar.
+
+#### Gestionar frameworks
+
+Submenú con dos acciones:
+
+**Autoupdates** — selector de radio para `framework.updates`:
+
+| Valor | Comportamiento |
+|-------|----------------|
+| `all` *(por defecto)* | Todos los paquetes con update quedan preseleccionados al arrancar `devel -c` |
+| `daily` | Solo se preselecciona si la versión instalada tiene **≥ 1 día** de antigüedad |
+| `weekly` | Igual que `daily` pero con umbral de **7 días** |
+
+**Sistema de Patches** — muestra el valor actual de `config.patch` y permite eliminarlo para que `patch:apply` reaaplique todos los patches desde el inicio en el próximo arranque.
+
+#### Navegación
+
+| Tecla | Efecto |
+|-------|--------|
+| `↑` / `↓` | Navegar entre opciones |
+| `Intro` | Confirmar / seleccionar |
+| `Esc` / `←` | Cancelar / volver al menú anterior |
+| `Espacio` | Alternar checkbox o confirmar radio |
+| `a` / `n` | Marcar todos / desmarcar todos (en listas de checkboxes) |
 
 ---
 
@@ -142,10 +252,44 @@ ya instalados.
 
 > **Nota:** al arrancar el modo de desarrollo (`yarn mrpack devel -c`) también se comprueba si
 > hay actualizaciones de frameworks. Si las hay, aparece la misma tabla interactiva en modo
-> `--update` con un **timeout de 5 segundos**: si no se interactúa, se confirma la selección
+> `--update`, mostrando **únicamente** los paquetes con update disponible (el resto no aparece
+> en la tabla), con un **timeout de 5 segundos**: si no se interactúa, se confirma la selección
 > automáticamente. La preselección de cada paquete depende de la propiedad `framework.updates`
 > de `config.workspaces.json` (ver sección [`devel`](#devel)); con `"all"` (por defecto) todos
 > los paquetes con update quedan preseleccionados en `actualizar`.
+
+> **Patches automáticos:** tras instalar, actualizar o resetear cualquier framework,
+> `mrpack framework` ejecuta automáticamente `yarn run patch:apply` con la salida visible
+> en consola, **antes** de recompilar `@mr/cli`. Si no hay patches nuevos, el comando
+> finaliza de inmediato sin escanear el monorepo.
+
+> **Resolución automática de dependencias al instalar:** cuando se instala un framework,
+> `mrpack` lee sus `devDependencies` de tipo `@mr/*` y, si alguna no está presente
+> localmente, la descarga e instala. El proceso es recursivo: cada framework instalado
+> por dependencia pasa por el mismo control, garantizando que el árbol completo de
+> dependencias queda satisfecho antes de ejecutar `yarn install`.
+
+> **Validación de dependencias al desinstalar:** antes de eliminar un framework se
+> comprueba si otro framework instalado (que no se vaya a desinstalar en la misma
+> operación) depende de él. Si existe algún bloqueador, la desinstalación se cancela con
+> un aviso `⚠`. La validación es iterativa: si bloquear un framework libera o bloquea
+> a otros en cadena, se repiten los pases hasta que el conjunto sea estable. Solo los
+> frameworks que superan la validación se desinstalan; para ellos, `mrpack` elimina
+> previamente sus entradas de `devDependencies` en los workspaces consumidores
+> (`services/`, `cronjobs/`, `jobs/`, `packages/`) y a continuación ejecuta
+> `yarn install` para reflejar los cambios.
+
+> **Log HTML automático al enviar:** cuando se publica una versión (`--send`), `mrpack`
+> genera un fichero HTML con el detalle del push (autor, versiones, ficheros creados /
+> eliminados / modificados y diff unificado de cada fichero cambiado) y lo sube al mismo
+> bucket de GCS en la ruta `logs/{framework}/{YYYY-MM-DD}/{datetime}_{version}_{autor}.html`.
+> Este log está diseñado para ser legible en Chrome y procesable por agentes de IA.
+
+> **Check preventivo de autoría al enviar:** cuando hay acciones `enviar` o
+> `actualizar+enviar`, `mrpack` valida el autor git al inicio (antes de instalaciones,
+> updates o reseteos). La resolución se hace en este orden: `git config user.name`
+> (local), `git config --global user.name` y, como último recurso,
+> `GIT_AUTHOR_NAME`/`USERNAME`.
 
 #### Modos de tabla
 
@@ -153,8 +297,8 @@ Cada flag abre una vista restringida de la tabla con solo las columnas y paquete
 
 | Modo | Paquetes mostrados | Acciones disponibles | Preselección |
 |------|--------------------|---------------------|--------------|
-| Sin flag (completo) | Todos | `nada`, `instalar/actualizar`, `desinstalar`, `resetear`, `enviar` | `actualizar` si hay update remoto; `nada` en otro caso |
-| `--update` | Todos | `nada`, `actualizar` | `actualizar` para los que tienen update |
+| Sin flag (completo) | Todos | `nada`, `instalar/actualizar`, `desinstalar`, `resetear`, `enviar` | `nada` siempre |
+| `--update` | Solo con update disponible | `nada`, `actualizar` | `actualizar` para los que corresponda según `framework.updates` |
 | `--reset` | Solo instalados | `nada`, `resetear` | `resetear` |
 | `--send` | Solo con cambios locales | `nada`, `enviar` / `actualizar+enviar` | `enviar` o `actualizar+enviar` según corresponda |
 
@@ -227,6 +371,7 @@ fichero un bloque de autoría con los siguientes campos:
  * Hash: <md5-del-cuerpo>
  * Versión: <YYYY.MM.DD+N-autor>
  * Anterior: <versión-publicada-anteriormente>  ← solo si existía una versión previa
+ * Proyecto: <url-repositorio-git>              ← solo si hay remoto `origin` configurado
  */
 ```
 
@@ -237,6 +382,24 @@ fichero un bloque de autoría con los siguientes campos:
 | `Hash` | MD5 del cuerpo del fichero sin el bloque de autoría (sirve para verificar integridad) |
 | `Versión` | Número de versión del paquete en que se publicó este cambio (formato completo `YYYY.MM.DD+N-autor`) |
 | `Anterior` | Versión que figuraba en `Versión` en la publicación anterior del mismo fichero; permite trazar el historial directamente en el fuente |
+| `Proyecto` | URL del repositorio git remoto (`origin`) desde el que se realizó el `send`, con credenciales eliminadas. Indica en qué proyecto se introdujo el cambio. Se omite si el repositorio no tiene remoto configurado. |
+
+#### Visor de diff
+
+Al pulsar `d` sobre un paquete instalado con cambios locales o update disponible, se abre
+un visor de diff interactivo. El título del panel muestra el nombre del fichero y, cuando
+está disponible, el nombre del autor del cambio en `·  por <nombre>` (extraído del
+`status.json` del ZIP, no del bloque de autoría del fichero):
+
+- **Diff local** (`enviar`): autor del ZIP base, es decir, quien publicó la versión actualmente
+  instalada.
+- **Diff remoto** (`actualizar`): autor del ZIP remoto, quien introdujo el cambio entrante.
+- **Diff side-by-side** (`ambos`): se muestra el autor del lado remoto (el cambio del update).
+
+La fuente de autoría es `status.json`, por lo que cubre **todos los tipos de fichero**,
+no solo `.ts`. El `status.json` incluye también el campo `proyecto` con la URL del
+repositorio desde el que se realizó el `send` (sin credenciales), lo que permite saber
+en qué proyecto se introdujo cada cambio.
 
 #### Verificación de versión antes de enviar
 
@@ -272,13 +435,27 @@ clickables a los ficheros afectados:
 | Estado | Archivo |
 |---|---|
 | OK | [`src/index.ts`](../../@mr/core/dev/src/index.ts) |
-| OK | [`package.json`](../../@mr/core/dev/package.json) |
+| OK | [`package.json`](../core/dev/package.json) |
 | Error | [`src/conflicto.ts`](../../@mr/core/dev/src/conflicto.ts) |
 
 ## Salida del proceso
 
 <salida adicional del proceso>
 ```
+
+Si `applyUpdate` lanza una excepción (por ejemplo, un fallo al descargar el paquete o al
+aplicar el merge), no hay ficheros afectados (`entradas` queda vacío), pero el log se
+escribe igualmente e incluye una sección `## Error` con el mensaje/stack de la excepción,
+justo antes de `## Salida del proceso`:
+
+```markdown
+## Error
+
+<mensaje o stack de la excepción>
+```
+
+En este caso se imprime también un aviso `⚠` con la ruta al log, y en el flujo
+`actualizar+enviar` el envío (`push`) se omite para ese paquete.
 
 Si hay conflictos de merge en algún fichero, la línea de progreso del paquete muestra
 `[CONFLICTO]` (en morado) en lugar de `[OK       ]`. Una vez terminadas todas las
@@ -361,12 +538,42 @@ necesarios para que el monorepo funcione correctamente.
 
 Entre otras acciones:
 - Descarga automáticamente los paquetes `@mr/core/*` ausentes.
+- Crea (o corrige) el enlace `.github` → `@mr/core/dev/.github`. En **Linux/macOS** se
+  crea un symlink relativo estándar; en **Windows** se usa una *junction* de directorio,
+  que no requiere permisos de administrador ni Developer Mode.
+- Crea (o corrige) el enlace `AGENTS.md` → `@mr/core/dev/AGENTS.md`.
 - Por cada workspace en `services/`, `packages/`, `jobs/` y `cronjobs/`, propaga de forma
   recursiva las `dependencies` **y** `optionalDependencies` de producción de todos sus
   `devDependencies` de tipo `@mr/*` (incluidas las dependencias transitivas), resolviendo
   conflictos de versión eligiendo siempre la más reciente.
 - `bufferutil` se elimina de `dependencies` si estuviera presente (por propagación transitiva
   o por declaración previa), ya que este módulo nativo solo debe aparecer en `optionalDependencies`.
+- Elimina artefactos legacy en `@mr/cli` si existen (`status.json` y `bin/mrdev.js`).
+- Gestiona el campo `resolutions` del `package.json` raíz: elimina entradas obsoletas
+  (`@elastic/elasticsearch`, `@types/node`, `mysql2`, `gaxios`, `node-fetch`) y
+  borra el campo si queda vacío.
+- En la autocorrección de `Dockerfile` por workspace, solo inserta `ENV NODE_ENV=production`
+  (junto a `COPY ./yarn.lock ./`) cuando `deploy.runtime = "node"`.
+- Normaliza `build.bundler` en `mrpack.json` según runtime/framework:
+  `browser -> rspack`, `php/cfworker -> none`, `node+nextjs -> none`, `node+componentes -> rspack`.
+  En los casos `node` donde el valor por defecto es `esbuild`, si el usuario establece
+  manualmente `rspack` se respeta (no se corrige automáticamente).
+  Excepción: si el workspace declara `reflect-metadata` en `dependencies`, se fuerza
+  `rspack` aunque el runtime/framework apunte a `esbuild` o el manifest lo indique
+  explícitamente, ya que esbuild no emite `decoratorMetadata` (necesario para que
+  `reflect-metadata` funcione en tiempo de ejecución) mientras que rspack sí lo soporta
+  vía `builtin:swc-loader`.
+- En workspaces `node+nextjs`, normaliza `scripts.dev` a `NEXTJS_PORT=<puerto> yarn g:nextjs`
+  preservando el puerto legacy detectado en el script anterior: `NEXTJS_PORT=<n>` o
+  cualquier invocación que contenga `next dev` seguido de `-p <n>` / `--port <n>` /
+  `--port=<n>` (con o sin `yarn`/`yarn run` delante, y con posibles flags adicionales antes
+  o después del puerto). Si no encuentra puerto previo, usa `8080` por defecto. El script
+  raíz `g:nextjs` ejecuta `next dev` en `$INIT_CWD` con `-p ${NEXTJS_PORT:-8080}`.
+
+  > **Nota:** La resolución `node-fetch` (shim de compatibilidad para Node.js 24.0–24.17)
+  > fue necesaria durante el desarrollo pero quedó obsoleta con Node.js **24.18**, que
+  > corrige el comportamiento de streams que rompía `node-fetch@2.x`.
+
 - Regenera el `.yarnrc.yml` con claves ordenadas alfabéticamente y una línea en blanco entre
   cada campo de nivel raíz. Garantiza la presencia de las siguientes opciones de seguridad:
 
@@ -392,12 +599,9 @@ Inicializa la configuración del proyecto y actualiza las librerías (`yarn inst
 yarn mrpack update
 ```
 
-> **Tras ejecutar `yarn mrpack update`** se recomienda aplicar los parches de migración
-> para corregir imports deprecados de forma automática:
->
-> ```bash
-> yarn run patch:apply
-> ```
+> **Patches automáticos:** `yarn mrpack update` aplica automáticamente `yarn run patch:apply`
+> después de actualizar los frameworks. No es necesario ejecutarlo a mano salvo que se
+> quiera relanzar de forma explícita.
 >
 > Consulta [`@mr/core/dev/patches/README.md`](../@mr/core/dev/patches/README.md) para
 > la documentación completa del sistema de parches.
@@ -429,6 +633,7 @@ yarn mrpack autodoc --env=<entorno>
 | Solo ejecutar (sin recompilar) | `yarn mrpack devel -e` |
 | Build de producción | `yarn mrpack deploy --env=produccion` |
 | Build de test/staging | `yarn mrpack deploy --env=test` |
+| **Gestión de config.workspaces.json** | `yarn mrpack config` |
 | Gestor interactivo de frameworks | `yarn mrpack framework` |
 | Elegir qué frameworks actualizar | `yarn mrpack framework --update` |
 | Actualizar frameworks sin interacción | `yarn mrpack framework --update --yes` |
@@ -439,7 +644,6 @@ yarn mrpack autodoc --env=<entorno>
 | Instalar nuevo framework | `yarn mrpack framework` → acción `instalar` |
 | Actualizar librerías | `yarn mrpack update` |
 | **Aplicar parches de migración** | `yarn run patch:apply` |
-| Comprobar parches pendientes (CI) | `yarn run patch` |
 | Inicializar proyecto | `yarn mrpack init` |
 
 ---
@@ -464,9 +668,12 @@ El módulo de gestión de frameworks está dividido en tres ficheros bajo `src/m
 
 | Fichero | Responsabilidad |
 |---------|-----------------|
-| `cliente.ts` | Operaciones de cliente: `add`, `remove`, `checkCliente`, `recompilarCliente(basedir, hash, reiniciar?)`, `getAutor`, `getClienteHash`, `getClienteMD5`, `pullPackage` |
-| `gestor.ts` | Todo el ciclo de vida de paquetes: `gestionar(basedir, reiniciar?)`, `actualizarTodo(basedir, forzar?, reiniciar?)`, `enviarTodo(basedir, forzar?, reiniciar?)`, `resetearTodo(basedir, forzar?, reiniciar?)`; `GestorTabla`, `construirInfoPaquetes`, `ejecutarAcciones(basedir, infos, acciones, reiniciar?)`; `const enum Accion`, `type GestorModo`, `IPaqueteGestion` |
+| `cliente.ts` | Operaciones de cliente: `add(basedir, frameworks, visitados?)`, `remove`, `checkCliente`, `recompilarCliente`, `getAutor`, `getClienteHash`, `getClienteMD5`, `pullPackage`; helpers de dependencias: `leerDepsMrFramework(localDir)`, `encontrarWorkspacesConDep(basedir, npmName)`, `limpiarDevDepsConsumidores(basedir, npmNames)` |
+| `gestor.ts` | Todo el ciclo de vida de paquetes: `gestionar`, `actualizarTodo`, `enviarTodo`, `resetearTodo`; `GestorTabla`, `construirInfoPaquetes`, `ejecutarAcciones`; `const enum Accion`, `type GestorModo`, `IPaqueteGestion` |
 | `index.ts` | Barrel que re-exporta todo lo anterior |
+
+Además, `src/mrpack/clases/patches.ts` expone la función compartida `aplicarPatches(basedir)`
+usada tanto por el gestor de frameworks como por el comando `update`.
 
 ### `GestorTabla`
 
@@ -481,10 +688,15 @@ La tabla interactiva soporta cuatro modos configurables en el constructor:
 
 | Valor | Acciones disponibles | Preselección | Atajos de teclado |
 |-------|---------------------|--------------|-------------------|
-| `"todos"` | `nada`, `instalar/actualizar`, `desinstalar`, `resetear`, `enviar` | `actualizar` si hay update | `n`, `a`, `r`, `e` |
+| `"todos"` | `nada`, `instalar/actualizar`, `desinstalar`, `resetear`, `enviar` | `nada` siempre | `n`, `a`, `r`, `e` |
 | `"update"` | `nada`, `actualizar` | `actualizar` si hay update | `n`, `a` |
 | `"reset"` | `nada`, `resetear` | `resetear` | `n`, `r` |
 | `"send"` | `nada`, `enviar` / `actualizar+enviar` | `enviar` o `actualizar+enviar` | `n`, `e` |
+
+> `actualizarTodo`, `enviarTodo` y `resetearTodo` filtran `infos` antes de construir la tabla,
+> de modo que en modo interactivo solo se muestran los paquetes relevantes para la operación
+> (con update disponible, con cambios locales, o instalados, respectivamente). Las acciones
+> elegidas se remapean después al array completo de paquetes para aplicarlas con `ejecutarAcciones`.
 
 El método `run(autoConfirmMs?)` acepta un timeout de auto-confirmación en milisegundos:
 - Sin parámetro → espera indefinidamente (modo `gestionar`).
@@ -496,11 +708,16 @@ Los **slots** de acciones se pre-calculan en el constructor para evitar allocaci
 
 Función interna que aplica un array de acciones sobre los paquetes cargados. Características:
 - **Despacho O(n)**: un único bucle `switch` en lugar de 6 pases `filter+map`.
-- **`getAutor()` único**: el nombre del autor git se obtiene una sola vez, solo si hay algún paquete que enviar.
-- **Paralelización total**: instalaciones+actualizaciones, resets, desinstalaciones y envíos corren con `Promise.all`.
+- **`getAutor()` preventivo y único**: cuando hay algún paquete a enviar, el autor git se valida una sola vez al inicio para fallar rápido antes de ejecutar acciones costosas.
+- **Fallback de autor git**: `getAutor()` resuelve en cascada con config local, global y variables de entorno (`GIT_AUTHOR_NAME`/`USERNAME`), y muestra instrucciones de configuración si no encuentra valor.
+- **Paralelización total**: instalaciones+actualizaciones, resets y envíos corren con `Promise.all`.
+- **Resolución de dependencias al instalar, actualizar o resetear**: tras el bloque paralelo de instalaciones/actualizaciones y tras los resets, se recopilan las `devDependencies` `@mr/*` de todos los paquetes afectados (`aInstalar`, `aActualizar`, `aResetear`) y se llama a `add()` para instalar las que falten. `add()` es recursiva: aplica el mismo proceso a cada framework instalado por dependencia, garantizando el árbol completo antes del `yarn install`.
+- **Validación de dependencias al desinstalar**: antes de eliminar un framework se construye el mapa inverso de dependencias entre todos los frameworks instalados. Se calcula iterativamente el subconjunto que puede desinstalarse (aquellos cuyos dependientes también se van a desinstalar o no existen). Los frameworks bloqueados reciben un aviso `⚠` y no se eliminan. Para los que pasan la validación, se limpian sus entradas de `devDependencies` en los workspaces consumidores (`services/`, `cronjobs/`, `jobs/`, `packages/`) y luego se eliminan sus directorios.
+- **`yarn install` solo si hubo cambios reales**: `necesitaInstall` se computa sobre las instalaciones, actualizaciones y reseteos reales. Para desinstalaciones, solo se activa si al menos un framework fue efectivamente eliminado.
 - **Consola reciclada en resets**: `setupConsolaParaUpdate` se invoca antes del bloque de reset, igual que en instalaciones, actualizaciones y envíos, de modo que cada paquete actualiza su propia línea en lugar de crear líneas nuevas.
 - **Estado `[CONFLICTO]`**: cuando el merge 3-way produce conflictos, la línea de progreso muestra `[CONFLICTO]` en morado en lugar de `[ERROR    ]`.
 - **Avisos diferidos**: los mensajes de conflicto/error ya no se imprimen dentro del `Promise.all` (lo que descolocaba las líneas de progreso). Se acumulan en un array `avisos[]` y se muestran todos juntos al finalizar todas las acciones.
+- **`patch:apply` automático antes de recompilar**: tras cada `yarn install` (flujo principal y flujo de resolución de conflictos), `aplicarPatches(basedir)` ejecuta `yarn run patch:apply` con `stdio: "inherit"` (salida en tiempo real), garantizando que cualquier cambio introducido por los patches quede incorporado antes de la recompilación de `@mr/cli`.
 - **Parámetro `reiniciar`** (`true` por defecto): controla si se permite el reinicio automático del proceso tras recompilar `@mr/cli`. Se pasa `false` desde `mrpack framework` para evitar el bucle de reinicio infinito cuando el CLI se actualiza con conflictos.
 
 Los imports externos (`from "./framework"`) resuelven automáticamente a `framework/index.ts`.
@@ -514,3 +731,119 @@ Regenera el `.yarnrc.yml` del monorepo usando `js-yaml`:
 - Serializa con `yamlDump({ sortKeys: true, lineWidth: -1 })` y añade una línea en blanco
   entre cada clave de nivel raíz para mejorar la legibilidad.
 
+---
+
+## Compilación del paquete
+
+Los ejecutables de `@mr/cli` se generan con **[esbuild](https://esbuild.github.io/)**
+a partir del código TypeScript en `src/`. El resultado son dos ficheros en `bin/min/`:
+
+| Fichero | Origen |
+|---------|--------|
+| `bin/min/mrpack-run.js` | `src/mrpack/main.ts` |
+| `bin/min/mrlang-run.js` | `src/mrlang/main.ts` |
+
+### Scripts disponibles
+
+| Script | Descripción |
+|--------|-------------|
+| `yarn workspace @mr/cli run compile` | Build de producción: esbuild (minificado) + `tsc --noEmit` en paralelo. Falla si hay errores de tipos. |
+| `yarn workspace @mr/cli run compile:watch` | Watch: esbuild reconstruye en ~50 ms al guardar; `tsc --watch` muestra errores de tipos en tiempo real. |
+| `yarn workspace @mr/cli run compile:rspack` | Fallback al bundler anterior (rspack). |
+
+> **Nota de rendimiento:** esbuild tarda ~70 ms en bundlear; el tiempo total del script
+> `compile` (~0.85 s) lo determina `tsc --noEmit`, que corre en paralelo.
+
+### Características del bundle
+
+- **Target:** `node24` — aprovecha las APIs nativas de Node 24 sin transpilación innecesaria.
+- **Externals:** solo las `dependencies` de `package.json` se marcan como externas (no se
+  bundlean). Los workspace devDeps (`services-comun`, `@mr/core-*`…) se bundlean inline
+  porque son TypeScript puro sin compilar. `typescript` se excluye explícitamente para
+  evitar incluir sus 9 MB de fuente.
+- **Sin code splitting:** cada ejecutable es un único fichero CJS autocontenido, sin chunks
+  intermedios. Tamaño resultante: `mrpack-run.js` ~169 kB, `mrlang-run.js` ~85 kB.
+- **Source maps:** ficheros `.js.map` adyacentes; `source-map-support` los carga
+  automáticamente al arrancar.
+
+---
+
+## Integración con IDEs (JetBrains / VS Code)
+
+Para facilitar la ejecución y depuración de las herramientas del monorepo (`mrpack` y `mrlang`), este paquete incluye configuraciones de ejecución compartidas que se sincronizan entre todos los proyectos:
+
+### JetBrains (PhpStorm, WebStorm, etc.)
+* **Ubicación**: `.run/`
+* Al abrir cualquier proyecto que incorpore este CLI, el IDE importará automáticamente las configuraciones de la barra de herramientas superior (ej. `develop => Ejecutar`, `develop => Compilar`, `cli => Actualizar`, etc.).
+
+### VS Code
+* **Ubicación**: `.vscode/`
+* Cuando se abre un espacio de trabajo multi-root (como `vscode.code-workspace`), VS Code cargará automáticamente:
+  * **Tareas (`tasks.json`)**: accesibles con `Cmd+Shift+B` o a través del menú de tareas, permitiendo lanzar comandos `mrpack devel` o `mrpack update` directamente en la terminal integrada.
+  * **Lanzadores (`launch.json`)**: accesibles con `Cmd+Shift+D` para iniciar depuración con breakpoints de `mrpack` o conectarse (*Attach*) a puertos de inspección de Node.js.
+
+---
+
+## Troubleshooting
+
+### `No se puede obtener el usuario de git`
+
+Al intentar enviar un framework (`enviar` / `actualizar+enviar`), `mrpack` necesita el nombre
+del autor para sellar el bloque de autoría de cada fichero. Si no puede resolver el nombre,
+muestra este error y aborta la operación.
+
+**Causa más habitual:** git no tiene configurado `user.name` ni a nivel de repositorio ni
+a nivel global.
+
+**Solución:**
+
+```bash
+git config --global user.name "Tu Nombre"
+```
+
+O bien, si solo quieres configurarlo para este repositorio:
+
+```bash
+git config user.name "Tu Nombre"
+```
+
+El orden de resolución que sigue `mrpack` es:
+1. `git config user.name` (configuración local del repositorio)
+2. `git config --global user.name` (configuración global)
+3. Variable de entorno `GIT_AUTHOR_NAME` o `USERNAME`
+
+---
+
+### `Error: spawn yarn ENOENT` (Windows)
+
+En Windows, `yarn` se instala como wrapper `.cmd` y Node no lo encuentra sin shell.
+Esta corrección ya está incluida desde la versión `2026.6.12+2`; si sigues viendo el error,
+verifica que la versión del CLI está actualizada con:
+
+```powershell
+yarn mrpack framework --send
+```
+
+---
+
+### Enlace simbólico `.github` falla con `EPERM` (Windows)
+
+Los symlinks de directorio en Windows requieren privilegios de administrador o el
+modo desarrollador activado. `mrpack init` crea automáticamente una **junction** en su
+lugar (que no necesita permisos especiales). Si el error persiste, comprueba que estás
+ejecutando con la versión `2026.6.12+2` o superior.
+
+---
+
+### Cambios en frameworks no detectados / credenciales de GCS caducadas (Windows)
+
+Si `mrpack framework --send` no muestra tus cambios locales, puede que el token de
+Application Default Credentials haya caducado. Ejecuta:
+
+```bash
+gcloud auth application-default login
+```
+
+`mrpack` intentará relanzar este comando automáticamente cuando detecte el error
+(`invalid_grant`, `UNAUTHENTICATED`, etc.), pero si el proceso falla o no hay terminal
+interactiva disponible, es necesario ejecutarlo manualmente.

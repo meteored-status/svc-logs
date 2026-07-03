@@ -1,4 +1,11 @@
-import {Translation} from "./index";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 13:19:31 GMT
+ * Hash: 3d47c0a43b67732c5537ac0ee7d9835c
+ * Versión: 2026.6.17+7-josantoniojimnez
+ */
+
+import {Translation} from ".";
 import {TParams, Value} from "./value/value";
 
 type MapKey = string | number;

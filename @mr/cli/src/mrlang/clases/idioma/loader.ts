@@ -1,7 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: e33481aa73fa06f93e7f911df98bb689
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 3426114f08019b8341d0124d3161f4f7
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import chokidar from "chokidar";
@@ -9,7 +11,7 @@ import chokidar from "chokidar";
 import {Colors} from "services-comun/modules/utiles/colors";
 import {isFile, readJSON} from "services-comun/modules/utiles/fs";
 
-import {Idiomas, type TIdiomas} from "./";
+import {Idiomas, type TIdiomas} from ".";
 import db from "../../mysql";
 
 interface IIdiomaMySQL {

@@ -1,14 +1,16 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 982ac47a6fffe64da6b2ac995cb93671
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 11:42:00 GMT
+ * Hash: aa4b477f0809cb54240657d82eea8903
+ * Versión: 2026.6.25+10-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
  */
 
 import {readJSON} from "services-comun/modules/utiles/fs";
 import {Colors} from "./clases/colors";
 import {IPackageJson} from "./clases/packagejson";
 import {type IModulo, type IModuloConfig, Modulo} from "./modulo";
+import {ModuloConfig} from "./modulos/config";
 import {ModuloDevel} from "./modulos/devel";
 import {ModuloDeploy} from "./modulos/deploy";
 import {ModuloInit} from "./modulos/init";
@@ -41,6 +43,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
 
     private static readonly MODULOS = [
         "autodoc",
+        "config",
         "devel",
         "deploy",
         "framework",
@@ -107,6 +110,9 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
             case "autodoc":
                 ModuloAutoDoc.run();
                 break;
+            case "config":
+                ModuloConfig.run();
+                break;
             case "devel":
                 ModuloDevel.run();
                 break;
@@ -136,6 +142,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
                 console.log(`${Colors.colorize([Colors.FgMagenta], "Módulos disponibles:")}`);
                 console.group();
                     console.log(`${Colors.colorize([Colors.FgBlue], "autodoc")}:   Genera la documentación automática del proyecto`);
+                    console.log(`${Colors.colorize([Colors.FgBlue], "config")}:    Gestiona la configuración del proyecto (config.workspaces.json)`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "devel")}:     Inicia el entorno de desarrollo`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "deploy")}:    Compila el proyecto en modo producción`);
                     console.log(`${Colors.colorize([Colors.FgBlue], "framework")}: Operaciones sobre los frameworks`);

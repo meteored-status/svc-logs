@@ -1,20 +1,36 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: d1c64f87540799131d84cb6481601ef7
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.25+1-josantoniojimnez
+ * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
+ * Hash: eb347f7504f5bf5d94a5379eb61330c4
+ * Versión: 2026.7.3+2-josantoniojimnez
+ * Anterior: 2026.7.2+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {confirm} from "@inquirer/prompts";
 
-import {isDir, readDir, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
+import {isDir, isFile, readDir, readFileString, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
 
 import {compararVersiones, maquetarVersion} from "../../utiles/version";
 import {Colors} from "../colors";
 import type {IPackageJson} from "../packagejson";
-import {PaqueteDirectoryRoot, type PaqueteDirectoryRootFiles} from "./root";
+import {getProyectoUrl, PaqueteDirectoryRoot, type PaqueteDirectoryRootFiles} from "./root";
 import {PaqueteStorage} from "./storage";
+import {type IEntradaActualizacion, stripAutoria} from "./file";
+import {type IArchivoConDiff, type IPushLogData, subirLogHtmlPush} from "./push-log";
+
+/**
+ * Elimina el bloque de autoría de un fichero `.ts` y devuelve también cuántas
+ * líneas se eliminaron, para que el visor de diff pueda mostrar números de línea correctos.
+ */
+function stripAutoriaConOffset(texto: string): {texto: string; offset: number} {
+    const stripped = stripAutoria(texto);
+    if (stripped.length === texto.length) {
+        return {texto: stripped, offset: 0};
+    }
+    const quitado = texto.slice(0, texto.length - stripped.length);
+    return {texto: stripped, offset: (quitado.match(/\n/g) ?? []).length};
+}
 
 /**
  * Categoría de un paquete dentro del monorepo.
@@ -35,6 +51,47 @@ interface IPaqueteCFG {
     bucket: string;
     subible: boolean;
     tipo: PaqueteTipo;
+}
+
+/**
+ * Estado de un fichero en el listado de cambios del gestor de frameworks.
+ *
+ * - `Cambiado`  — el fichero existe en ambos lados pero con contenido diferente.
+ * - `Nuevo`     — el fichero no existía antes (creado localmente o traído por el remoto).
+ * - `Eliminado` — el fichero ha sido borrado.
+ */
+export const enum EstadoArchivo {
+    Cambiado  = "cambiado",
+    Nuevo     = "nuevo",
+    Eliminado = "eliminado",
+}
+
+/**
+ * Origen del cambio de un fichero en el listado combinado.
+ *
+ * - `Local`  — solo hay cambio en el lado local.
+ * - `Remoto` — solo hay cambio en el lado remoto.
+ * - `Ambos`  — hay cambio en los dos lados simultáneamente.
+ */
+export const enum OrigenArchivo {
+    Local  = "local",
+    Remoto = "remoto",
+    Ambos  = "ambos",
+}
+
+/**
+ * Fichero con estado de cambio para la vista de diff del gestor de frameworks.
+ *
+ * @property archivo   - Ruta relativa al directorio raíz del paquete.
+ * @property estado    - Estado del fichero (`EstadoArchivo`).
+ * @property origen    - Origen del cambio (`OrigenArchivo`).
+ * @property conflicto - `true` cuando `origen === Ambos` y los estados son contradictorios (uno crea y el otro borra el mismo fichero).
+ */
+export interface IArchivoCambiado {
+    archivo: string;
+    estado: EstadoArchivo;
+    origen: OrigenArchivo;
+    conflicto?: boolean;
 }
 
 /**
@@ -75,11 +132,13 @@ interface IConsola {
  * @property status      - Clone del status local con los hashes actualizados.
  * @property hayCambios  - Resultado de `calcularHashCambiado`.
  * @property versionBase - Versión del ZIP descargado (antes del incremento de autor).
+ * @property antiguo     - Contenido del ZIP de la versión anterior, para calcular diffs sin re-descargar.
  */
 interface ISnapshotPrevio {
     status: PaqueteDirectoryRoot;
     hayCambios: boolean;
     versionBase: string;
+    antiguo: PaqueteDirectoryRootFiles;
 }
 
 /**
@@ -179,7 +238,9 @@ export class Paquete {
     protected consolaAvanzada: boolean;
     private consolaEscribiendo: boolean;
     public readonly logs: string[];
+    public error: string | undefined;
     private _snapshot: ISnapshotPrevio | undefined;
+    private _pushLogData: IPushLogData | undefined;
 
     protected constructor(protected readonly basedir: string, protected paquete: Partial<IPackageFW>) {
         this.nombre = paquete.name!;
@@ -225,7 +286,9 @@ export class Paquete {
         this.consolaAvanzada = false;
         this.consolaEscribiendo = false;
         this.logs = [];
+        this.error = undefined;
         this._snapshot = undefined;
+        this._pushLogData = undefined;
     }
 
     /**
@@ -430,16 +493,19 @@ export class Paquete {
 
         let status: PaqueteDirectoryRoot;
         let hayCambios: boolean;
+        let antiguo: PaqueteDirectoryRootFiles;
 
         if (this._snapshot !== undefined) {
             ({hayCambios} = this._snapshot);
             status = this._snapshot.status;
+            antiguo = this._snapshot.antiguo;
             if (hayCambios) {
                 status.actualizarAutor(this._snapshot.versionBase, autor);
             }
             this._snapshot = undefined;
         } else {
             const actual = await this.getPaqueteAntiguo();
+            antiguo = actual;
             if (actual.status !== undefined) {
                 status = actual.status;
             } else {
@@ -472,6 +538,10 @@ export class Paquete {
         });
 
         if (!Paquete.SIMULAR) {
+            const versionAnterior = this.version;
+            if (hayCambios) {
+                this._pushLogData = await this.capturarDatosPush(autor, status.version, versionAnterior, this.logs.slice(), antiguo);
+            }
             this.version = status.version;
             await status.prepararParaPush(autor);
             this.paquete.version = this.version;
@@ -564,6 +634,208 @@ export class Paquete {
     }
 
     /**
+     * Devuelve la lista de ficheros que han cambiado desde el último push, enriquecida
+     * con el estado de cada fichero (`"cambiado"`, `"nuevo"` o `"eliminado"`).
+     * Reutiliza el snapshot pre-calculado por {@link checkCambiosLocales} si está disponible.
+     *
+     * @returns Lista de `IArchivoCambiado`, o `null` si el paquete nunca fue publicado en GCS.
+     */
+    public async getArchivosCambiados(): Promise<IArchivoCambiado[] | null> {
+        if (!this.config.subible || !this.basedir) {
+            return [];
+        }
+        const antiguo = await this.getPaqueteAntiguo();
+        if (antiguo.status === undefined) {
+            return null;
+        }
+        let archivos: string[];
+        if (this._snapshot !== undefined) {
+            archivos = this._snapshot.status.getArchivosCambiados();
+        } else {
+            const statusClone = antiguo.status.clone();
+            await this.calcularHashCambiado(statusClone, "check");
+            archivos = statusClone.getArchivosCambiados();
+        }
+
+        // checkTipos() elimina del árbol los ficheros que ya no existen en disco antes de
+        // que update() pueda marcarlos como cambiados. Los recuperamos comparando el status
+        // original con lo que hay en disco.
+        const archivosSet = new Set(archivos);
+        const eliminadosExtra = (await Promise.all(
+            antiguo.status.listarRutas()
+                .filter(p => !archivosSet.has(p))
+                .map(async p => (await isFile(`${this.basedir}/${p}`)) ? null : p),
+        )).filter((p): p is string => p !== null);
+        archivos = [...archivos, ...eliminadosExtra];
+
+        return Promise.all(archivos.map(async (archivo) => {
+            const enZip   = antiguo.files[archivo] !== undefined;
+            const enDisco = await isFile(`${this.basedir}/${archivo}`);
+            const estado  = !enDisco ? EstadoArchivo.Eliminado
+                : !enZip  ? EstadoArchivo.Nuevo
+                : EstadoArchivo.Cambiado;
+            return {archivo, estado, origen: OrigenArchivo.Local};
+        }));
+    }
+
+    /**
+     * Obtiene el contenido original (último ZIP publicado en GCS) y el contenido
+     * actual en disco del fichero indicado, para calcular un diff visual.
+     *
+     * @param relativePath - Ruta relativa al directorio raíz del paquete (p.ej. `src/index.ts`).
+     * @returns `{original, nuevo}` o `null` si no se puede obtener el contenido.
+     */
+    public async getDiffFichero(relativePath: string): Promise<{original: string; nuevo: string; offsetOriginal: number; offsetNuevo: number; autor: string} | null> {
+        if (!this.basedir) {
+            return null;
+        }
+        const antiguo = await this.getPaqueteAntiguo();
+        const zipFile = antiguo.files[relativePath];
+        const esTs    = relativePath.endsWith(".ts");
+        const rawOriginal = zipFile !== undefined
+            ? await zipFile.async("text").catch(() => "")
+            : "";
+        const rawNuevo = await readFileString(`${this.basedir}/${relativePath}`).catch(() => null);
+        if (rawNuevo === null) {
+            return null;
+        }
+        const autor = antiguo.status?.getAutorArchivo(relativePath) ?? "";
+        if (!esTs) {
+            return {original: rawOriginal, nuevo: rawNuevo, offsetOriginal: 0, offsetNuevo: 0, autor};
+        }
+        const {texto: original, offset: offsetOriginal} = stripAutoriaConOffset(rawOriginal);
+        const {texto: nuevo,    offset: offsetNuevo}    = stripAutoriaConOffset(rawNuevo);
+        return {original, nuevo, offsetOriginal, offsetNuevo, autor};
+    }
+
+    /**
+     * Obtiene el contenido del fichero local actual y el contenido del mismo fichero
+     * en la versión remota indicada, para calcular un diff de la actualización pendiente.
+     *
+     * @param relativePath - Ruta relativa al directorio raíz del paquete.
+     * @param latest       - Versión remota a consultar.
+     * @returns `{original, nuevo}` o `null` si no está disponible.
+     */
+    public async getDiffFicheroDesdeRemoto(relativePath: string, latest: string): Promise<{original: string; nuevo: string; offsetOriginal: number; offsetNuevo: number; autor: string} | null> {
+        if (!this.basedir) {
+            return null;
+        }
+        const remoto   = await this.getPaqueteNuevo(latest);
+        const zipFile  = remoto.files[relativePath];
+        const esTs     = relativePath.endsWith(".ts");
+        const rawLocal = await readFileString(`${this.basedir}/${relativePath}`).catch(() => "");
+        const rawRemoto = zipFile !== undefined
+            ? await zipFile.async("text").catch(() => "")
+            : "";
+        const autor = remoto.status?.getAutorArchivo(relativePath) ?? "";
+        if (!esTs) {
+            return {original: rawLocal, nuevo: rawRemoto, offsetOriginal: 0, offsetNuevo: 0, autor};
+        }
+        const {texto: original, offset: offsetOriginal} = stripAutoriaConOffset(rawLocal);
+        const {texto: nuevo,    offset: offsetNuevo}    = stripAutoriaConOffset(rawRemoto);
+        return {original, nuevo, offsetOriginal, offsetNuevo, autor};
+    }
+
+    /**
+     * Devuelve la lista de ficheros que serían modificados por la actualización a la
+     * versión indicada, enriquecida con el estado de cada fichero.
+     *
+     * @param latest - Versión remota a analizar.
+     * @returns Lista de `IArchivoCambiado`, o `null` si no se puede acceder al ZIP remoto.
+     */
+    public async getArchivosModificadosPorUpdate(latest: string): Promise<IArchivoCambiado[] | null> {
+        if (!this.basedir) {
+            return null;
+        }
+        const remoto = await this.getPaqueteNuevo(latest);
+        if (remoto.status === undefined) {
+            return null;
+        }
+        const clone = remoto.status.clone();
+        await clone.update(this.basedir, "check");
+        const archivos = clone.getArchivosCambiados();
+
+        // Igual que en getArchivosCambiados: checkTipos() elimina los ficheros del ZIP remoto
+        // que no existen en disco antes de poder detectarlos. Los recuperamos aquí.
+        const archivosSet = new Set(archivos);
+        const nuevosExtra = (await Promise.all(
+            remoto.status.listarRutas()
+                .filter(p => !archivosSet.has(p))
+                .map(async p => (await isFile(`${this.basedir}/${p}`)) ? null : p),
+        )).filter((p): p is string => p !== null);
+        const todosArchivos = [...archivos, ...nuevosExtra];
+
+        return Promise.all(todosArchivos.map(async (archivo) => {
+            const enRemoto = remoto.files[archivo] !== undefined;
+            const enDisco  = await isFile(`${this.basedir}/${archivo}`);
+            const estado   = enRemoto && !enDisco ? EstadoArchivo.Nuevo
+                : !enRemoto && enDisco ? EstadoArchivo.Eliminado
+                : EstadoArchivo.Cambiado;
+            return {archivo, estado, origen: OrigenArchivo.Remoto};
+        }));
+    }
+
+    /**
+     * Devuelve la lista combinada de ficheros con cambios locales Y remotos para el caso
+     * en que un framework tiene ambos pendientes a la vez. Cada fichero indica su origen:
+     * `"local"` si solo hay cambio local, `"remoto"` si solo remoto, `"ambos"` si hay cambio en los dos.
+     * Los ficheros con `"ambos"` aparecen primero, luego los locales, luego los remotos.
+     *
+     * @param latest - Versión remota a analizar.
+     * @returns Lista combinada de `IArchivoCambiado`, o `null` si no hay datos disponibles.
+     */
+    public async getArchivosCambiadosCombinados(latest: string): Promise<IArchivoCambiado[] | null> {
+        const [locales, remotos] = await Promise.all([
+            this.getArchivosCambiados(),
+            this.getArchivosModificadosPorUpdate(latest),
+        ]);
+        if (locales === null && remotos === null) {
+            return null;
+        }
+        const localMap  = new Map((locales  ?? []).map(a => [a.archivo, a]));
+        const remotoMap = new Map((remotos  ?? []).map(a => [a.archivo, a]));
+        const resultado: IArchivoCambiado[] = [];
+        for (const [archivo, item] of localMap) {
+            const remotoItem = remotoMap.get(archivo);
+            if (remotoItem !== undefined) {
+                // Caso: local crea un fichero nuevo y remote no lo tiene → falso conflicto.
+                // El update no borra ficheros locales que no estaban en el ZIP base, así que
+                // este fichero simplemente no es conocido por el remoto. Mostrarlo como local-only.
+                if (item.estado === EstadoArchivo.Nuevo && remotoItem.estado === EstadoArchivo.Eliminado) {
+                    resultado.push({...item, origen: OrigenArchivo.Local});
+                    continue;
+                }
+                // Caso: ambos lados lo eliminaron → no hay diff que ver.
+                if (item.estado === EstadoArchivo.Eliminado && remotoItem.estado === EstadoArchivo.Eliminado) {
+                    resultado.push({archivo, estado: EstadoArchivo.Eliminado, origen: OrigenArchivo.Ambos});
+                    continue;
+                }
+                // Caso conflicto real:
+                //   1) El usuario lo borró y el remoto lo trae.
+                //   2) Ambos crearon el mismo fichero nuevo de forma independiente con distinto contenido
+                //      (si fueran iguales, el fichero no aparecería en la lista remota).
+                const conflicto = (item.estado === EstadoArchivo.Eliminado && remotoItem.estado === EstadoArchivo.Nuevo)
+                    || (item.estado === EstadoArchivo.Nuevo && remotoItem.estado === EstadoArchivo.Cambiado);
+                resultado.push({archivo, estado: EstadoArchivo.Cambiado, origen: OrigenArchivo.Ambos, conflicto: conflicto || undefined});
+            } else {
+                resultado.push({...item, origen: OrigenArchivo.Local});
+            }
+        }
+        for (const [archivo, item] of remotoMap) {
+            if (!localMap.has(archivo)) {
+                resultado.push({...item, origen: OrigenArchivo.Remoto});
+            }
+        }
+        const ORDEN: Record<string, number> = {
+            [OrigenArchivo.Ambos]:  0,
+            [OrigenArchivo.Local]:  1,
+            [OrigenArchivo.Remoto]: 2,
+        };
+        resultado.sort((a, b) => ORDEN[a.origen] - ORDEN[b.origen] || a.archivo.localeCompare(b.archivo));
+        return resultado;
+    }
+
+    /**
      * Comprueba si los ficheros locales del paquete difieren del último estado publicado en GCS.
      * Devuelve `true` si no existe ZIP publicado (paquete nuevo o nunca enviado).
      *
@@ -581,7 +853,7 @@ export class Paquete {
         const versionBase = antiguo.status.version;
         const statusClone = antiguo.status.clone();
         const hayCambios = await this.calcularHashCambiado(statusClone, "check");
-        this._snapshot = {status: statusClone, hayCambios, versionBase};
+        this._snapshot = {status: statusClone, hayCambios, versionBase, antiguo};
         return hayCambios;
     }
 
@@ -606,7 +878,7 @@ export class Paquete {
      * @returns Objeto con `cambio` (si el paquete fue actualizado), `conflictos` (si el merge 3-way
      *          produjo secciones en conflicto) y `entradas` (ficheros afectados).
      */
-    public async applyUpdate(latest: string): Promise<{cambio: boolean; conflictos: boolean; entradas: {archivo: string; estado: "ok" | "error"}[]}> {
+    public async applyUpdate(latest: string): Promise<{cambio: boolean; conflictos: boolean; entradas: IEntradaActualizacion[]}> {
         try {
             this.consola({
                 estado: ConsolaEstado.PENDING,
@@ -661,7 +933,10 @@ export class Paquete {
                 mensaje: "Error durante la actualización",
             });
             if (err instanceof Error) {
+                this.error = err.stack ?? err.message;
                 this.logs.push(err.message);
+            } else {
+                this.error = String(err);
             }
             return {cambio: false, conflictos: false, entradas: []};
         }
@@ -703,6 +978,78 @@ export class Paquete {
             paquetes[i].consolaAvanzada = true;
             console.log("");
         }
+    }
+
+    /**
+     * Recopila el estado y el contenido de cada fichero cambiado en este push para
+     * generar el log HTML. Se llama justo antes de actualizar `this.version` y subir
+     * el ZIP, de modo que `antiguo.files` aún contiene la versión anterior.
+     *
+     * @param autor          - Autor del push.
+     * @param nuevaVersion   - Nueva versión que se va a publicar.
+     * @param versionAnterior - Versión actualmente publicada.
+     * @param archivos        - Rutas de los ficheros detectados como cambiados.
+     * @param antiguo         - Contenido del ZIP de la versión anterior.
+     */
+    private async capturarDatosPush(autor: string, nuevaVersion: string, versionAnterior: string, archivos: string[], antiguo: PaqueteDirectoryRootFiles): Promise<IPushLogData> {
+        const fecha = new Date();
+        const [proyecto, archivosConDiff] = await Promise.all([
+            getProyectoUrl(this.basedir),
+            Promise.all(archivos.map(async (archivo): Promise<IArchivoConDiff> => {
+                const enZip   = antiguo.files[archivo] !== undefined;
+                const enDisco = await isFile(`${this.basedir}/${archivo}`);
+                const esTs    = archivo.endsWith(".ts");
+
+                let estado: IArchivoConDiff["estado"];
+                let contenidoOriginal = "";
+                let contenidoNuevo   = "";
+
+                if (!enDisco) {
+                    estado = "eliminado";
+                    if (enZip) {
+                        const raw = await antiguo.files[archivo].async("text").catch(() => "");
+                        contenidoOriginal = esTs ? stripAutoria(raw) : raw;
+                    }
+                } else if (!enZip) {
+                    estado = "nuevo";
+                    const raw = await readFileString(`${this.basedir}/${archivo}`).catch(() => "");
+                    contenidoNuevo = esTs ? stripAutoria(raw) : raw;
+                } else {
+                    estado = "cambiado";
+                    const [rawOld, rawNew] = await Promise.all([
+                        antiguo.files[archivo].async("text").catch(() => ""),
+                        readFileString(`${this.basedir}/${archivo}`).catch(() => ""),
+                    ]);
+                    contenidoOriginal = esTs ? stripAutoria(rawOld) : rawOld;
+                    contenidoNuevo   = esTs ? stripAutoria(rawNew)  : rawNew;
+                }
+
+                return {archivo, estado, contenidoOriginal, contenidoNuevo};
+            })),
+        ]);
+
+        return {
+            autor,
+            version: nuevaVersion,
+            versionAnterior,
+            npmName: this.nombre,
+            proyecto,
+            fecha,
+            archivos: archivosConDiff,
+        };
+    }
+
+    /**
+     * Genera el log HTML del último push y lo sube al bucket GCS.
+     * No hace nada si no hay datos de push pendientes de subir.
+     */
+    public async subirLogHtml(): Promise<void> {
+        if (this._pushLogData === undefined) {
+            return;
+        }
+        const data = this._pushLogData;
+        this._pushLogData = undefined;
+        await subirLogHtmlPush(this.config.bucket, data);
     }
 
     private anticuado(remota: string): boolean {

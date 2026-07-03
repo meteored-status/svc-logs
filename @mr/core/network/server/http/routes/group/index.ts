@@ -1,11 +1,12 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: 8a10665db22f9ffc44111b20bbcf4128
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: d8f34b4107db350e2c07b3e2409b844c
+ * Versión: 2026.6.17+1-josantoniojimnez
+ * Anterior: 2026.5.18+2-josantoniojimnez
  */
 
-import type {Configuracion} from "services-comun/modules/utiles/config";
+import type {Configuracion} from "@mr/core-utils/config";
 import {ErrorCode, type IErrorInfo, type IOK, type IRespuestaKO, type IRespuestaOK} from "@mr/core-network/client/http/interface";
 import type {IWSHandler} from "@mr/core-network/server/websocket/handler";
 import type {NetCache} from "services-comun/modules/net/cache";

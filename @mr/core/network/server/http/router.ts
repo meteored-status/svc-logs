@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: 790a35b2d61f4c5a3c74f15a83304e37
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Editor: Juanmi
+ * Fecha: Mon, 29 Jun 2026 09:44:53 GMT
+ * Hash: d298e7445502db871ca01832a422c64a
+ * Versión: 2026.6.29+1-juanmi
+ * Anterior: 2026.5.18+2-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
  */
 
 import {error} from "services-comun/modules/utiles/log";
@@ -70,7 +72,7 @@ export async function route(handlers: Routes, conexion: Conexion): Promise<void>
         const allowed = handlers.collectAllowedMethods(conexion);
         if (allowed.size > 0 && !allowed.has(conexion.metodo)) {
             conexion.addCustomHeader("Allow", [...allowed].sort().join(", "));
-            await conexion.error(405, "Method Not Allowed");
+            await conexion.error(405, `Method ${conexion.metodo} Not Allowed`);
             return;
         }
     } catch (err) {

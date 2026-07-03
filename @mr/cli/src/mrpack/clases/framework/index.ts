@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: e04416d9b43b2a45f1a59d2e8a905163
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: e372c7286d8ca0d210e1689508226562
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
-export {add, checkCliente, getAutor, getClienteHash, getClienteMD5, pullPackage, recompilarCliente, remove} from "./cliente";
+export {add, checkCliente, encontrarWorkspacesConDep, getAutor, getClienteHash, getClienteMD5, leerDepsMrFramework, limpiarDevDepsConsumidores, pullPackage, recompilarCliente, remove} from "./cliente";
 export {actualizarTodo, enviarTodo, gestionar, resetearTodo} from "./gestor";

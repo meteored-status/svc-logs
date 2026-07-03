@@ -6,9 +6,10 @@
     "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
     "packd": "yarn mrpack devel -c",
     "packd-f": "yarn mrpack devel -c -f",
-    "g:packd": "yarn workspace @mr/core-dev rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"bundler/rspack/rspack.config.ts\"",
+    "g:rspack": "yarn workspace @mr/core-dev rspack --env entorno=desarrollo --env dir=\"$INIT_CWD\" --config \"bundler/rspack/rspack.config.ts\"",
+    "g:esbuild": "yarn workspace @mr/core-dev node bundler/esbuild/esbuild.config.mjs --env entorno=desarrollo --env dir=\"$INIT_CWD\"",
+    "g:nextjs": "cd \"$INIT_CWD\" && yarn run next dev -p ${NEXTJS_PORT:-8080}",
     "update": "yarn mrpack update",
-    "patch": "yarn workspace @mr/core-dev mrpack:patch",
     "patch:apply": "yarn workspace @mr/core-dev mrpack:patch:apply",
     "services-comun": "yarn workspace services-comun",
     "services-comun-status": "yarn workspace services-comun-status",
@@ -32,7 +33,8 @@
     "packages/*",
     "scripts/*",
     "services/*",
-    "statics/*"
+    "statics/*",
+    "tests/*"
   ],
   "packageManager": "yarn@4.15.0",
   "bin": {

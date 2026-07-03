@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 47c849f69d7f08f28c82854ac14abe9d
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+11-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 11:42:00 GMT
+ * Hash: 73b1019f73b35174cce9c05a250a6129
+ * Versión: 2026.6.25+10-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
  */
 
 import chokidar from "chokidar";
@@ -13,6 +13,7 @@ import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 import {actualizarTodo} from "./framework";
 import {init} from "./init";
+import {aplicarPatches} from "./patches";
 import {I18N} from "./workspace/i18n";
 import {IConfigServices, sanitizeFrameworkUpdates, Service} from "./workspace/service";
 import {Log} from "./log";
@@ -53,6 +54,9 @@ export function run(basedir: string, config: IConfigEjecucion): void {
                 if (cambios.reduce((a, b)=>a || b, false)) {
                     await install(basedir, {verbose:false});
                 }
+
+                await aplicarPatches(basedir);
+                console.log("");
             }
             await ejecutar(config, basedir);
         })
@@ -144,7 +148,8 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
         dependencias.push(i18n);
     }
 
-    const workspaces: Promise<Service>[] = [];
+    // Fase 1: crear todas las instancias de Service (sin iniciar aún)
+    const serviciosCreados: {nombre: string, service: Service}[] = [];
 
     for (const group of groups) {
         for (const workspace of workspacesList[group]) {
@@ -158,17 +163,27 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
                 forzar: ejecucion.forzar,
                 global: config_global,
             });
-
-            workspaces.push(devel.init().then(() => {
-                for (const dependencia of dependencias) {
-                    dependencia.addHijo(devel);
-                }
-                return devel;
-            }));
+            serviciosCreados.push({nombre: workspace, service: devel});
         }
     }
 
-    const services = await Promise.all(workspaces);
+    // Fase 2: registrar dependencias de compilación (build.deps) antes de iniciar
+    const serviciosPorNombre = new Map<string, Service>(
+        serviciosCreados.map(({nombre, service}) => [nombre, service]),
+    );
+    await Promise.all(serviciosCreados.map(({service}) => service.inicializarDeps(serviciosPorNombre)));
+
+    // Fase 3: iniciar todos los servicios y conectar hijos de frameworks
+    const services = await Promise.all(
+        serviciosCreados.map(({service}) =>
+            service.init().then(() => {
+                for (const dependencia of dependencias) {
+                    dependencia.addHijo(service);
+                }
+                return service;
+            }),
+        ),
+    );
 
     chokidar.watch(`${basedir}/config.workspaces.json`, {
         persistent: true,

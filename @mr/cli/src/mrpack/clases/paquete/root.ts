@@ -1,9 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 74f4e4a2242ce06f4c1466307e1527f8
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.15+35-josantoniojimnez
+ * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
+ * Hash: fd38d2d40014ef866bf278d467b0d89c
+ * Versión: 2026.7.3+2-josantoniojimnez
+ * Anterior: 2026.6.26+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import JSZip from "jszip";
@@ -13,16 +14,18 @@ import {readDir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 import {incrementarVersion} from "../../utiles/version";
 import {Comando} from "../comando";
 import {type IPaqueteDirectory, PaqueteDirectory} from "./directory";
-import {type IUpdateTracker} from "./file";
+import {type IEntradaActualizacion, type IUpdateTracker} from "./file";
 
 /**
  * Representación serializable del directorio raíz de un paquete,
  * incluyendo la versión publicada.
  *
- * @property version - Versión actualmente publicada del paquete.
+ * @property version  - Versión actualmente publicada del paquete.
+ * @property proyecto - URL del repositorio git desde el que se subió el paquete (sin credenciales).
  */
 export interface IPaqueteDirectoryRoot extends IPaqueteDirectory {
     version: string;
+    proyecto?: string;
 }
 
 /**
@@ -34,6 +37,23 @@ export interface IPaqueteDirectoryRoot extends IPaqueteDirectory {
 export interface PaqueteDirectoryRootFiles {
     status?: PaqueteDirectoryRoot;
     files: {[key: string]: JSZip.JSZipObject};
+}
+
+/**
+ * Obtiene la URL del repositorio git remoto `origin` desde `basedir` y elimina
+ * cualquier credencial embebida en la URL (p. ej. `https://TOKEN@github.com/…`
+ * se convierte en `https://github.com/…`).
+ *
+ * @param basedir - Directorio de trabajo desde el que se invoca git.
+ * @returns URL saneada, o cadena vacía si git no puede resolver el remoto.
+ */
+export async function getProyectoUrl(basedir: string): Promise<string> {
+    const result = await Comando("git", ["remote", "get-url", "origin"], {cwd: basedir}).catch(() => undefined);
+    if (result === undefined || result.status !== 0) {
+        return "";
+    }
+    // Elimina credenciales embebidas: https://token@host → https://host
+    return result.stdout.trim().replace(/^(https?:\/\/)[^@]+@/, "$1");
 }
 
 /**
@@ -71,24 +91,29 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
     /* INSTANCE */
     public readonly frameworkName: string;
     public version: string;
+    public proyecto: string;
 
     protected constructor(public readonly frameworkDir: string, protected readonly basedir: string, data: IPaqueteDirectoryRoot) {
         super("", "", data);
 
         this.frameworkName = frameworkDir.replaceAll("/", "-");
         this.version = data.version;
+        this.proyecto = data.proyecto ?? "";
     }
 
     public override toJSON(): IPaqueteDirectoryRoot {
         const padre = super.toJSON();
-
-        return {
+        const resultado: IPaqueteDirectoryRoot = {
             autor: padre.autor,
             fecha: padre.fecha,
             hash: padre.hash,
             hijos: padre.hijos,
             version: this.version,
         };
+        if (this.proyecto.length > 0) {
+            resultado.proyecto = this.proyecto;
+        }
+        return resultado;
     }
 
     public override clone(): PaqueteDirectoryRoot {
@@ -104,7 +129,7 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
      * @param antiguo  - Estado publicado anterior (base del diff3).
      * @returns Resultado de la actualización: si hubo cambios, si hay conflictos y las entradas modificadas.
      */
-    public async actualizarVersion(nuevo: PaqueteDirectoryRootFiles, antiguo: PaqueteDirectoryRootFiles): Promise<{actualizado: boolean; conflicto: boolean; entradas: {archivo: string; estado: "ok" | "error"}[]}> {
+    public async actualizarVersion(nuevo: PaqueteDirectoryRootFiles, antiguo: PaqueteDirectoryRootFiles): Promise<{actualizado: boolean; conflicto: boolean; entradas: IEntradaActualizacion[]}> {
         await this.crearVersion("mr-cli");
 
         if (nuevo.status===undefined) {
@@ -128,12 +153,15 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
      * Actualiza `this.version` con el autor real sin re-escanear el árbol de ficheros.
      * Útil cuando ya se dispone de un status pre-calculado (p.e. desde `checkCambiosLocales`)
      * y solo hay que fijar el autor definitivo antes de subir el paquete.
+     * También corrige los campos `autor` de todos los nodos que se escanearon con el autor
+     * provisional `"check"`, sellándolos con el autor real antes de empaquetar.
      *
      * @param versionBase - Versión ANTES de que `crearVersion` la incrementara (la del ZIP).
      * @param autor       - Autor real con el que estampar la nueva versión.
      */
     public actualizarAutor(versionBase: string, autor: string): void {
         this.version = incrementarVersion(versionBase, autor);
+        this.corregirAutoresHashCambio(autor);
     }
 
     /**
@@ -157,11 +185,14 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
     /**
      * Ejecuta la inyección de bloques de autoría en todos los `.ts` modificados.
      * Se llama justo antes de empaquetar para dejar el bloque de autoría actualizado.
+     * También fija `this.proyecto` para que quede registrado en el `status.json` del ZIP.
      *
      * @param autor - Nombre del autor a estampar.
      */
     public async prepararParaPush(autor: string): Promise<void> {
-        await this.inyectarAutorias(this.basedir, autor, this.version);
+        const proyecto = await getProyectoUrl(this.basedir);
+        this.proyecto = proyecto;
+        await this.inyectarAutorias(this.basedir, autor, this.version, proyecto);
     }
 
     /**
@@ -171,6 +202,27 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
      */
     public getArchivosCambiados(): string[] {
         return this.listarCambios();
+    }
+
+    /**
+     * Busca en el árbol la entrada correspondiente a la ruta relativa indicada
+     * y devuelve el nombre del autor registrado en el `status.json`, o `undefined`
+     * si el fichero no está en el árbol.
+     * Funciona para todos los tipos de fichero, no solo `.ts`.
+     *
+     * @param relativePath - Ruta relativa al directorio raíz del paquete (p.ej. `src/index.ts`).
+     * @returns Nombre del autor o `undefined` si el fichero no existe en el status.
+     */
+    public getAutorArchivo(relativePath: string): string | undefined {
+        const partes = relativePath.split("/");
+        let dir: PaqueteDirectory = this;
+        for (let i = 0; i < partes.length - 1; i++) {
+            const siguiente = dir.directorios[partes[i]];
+            if (siguiente === undefined) { return undefined; }
+            dir = siguiente;
+        }
+        const ultimo = partes[partes.length - 1];
+        return dir.archivos[ultimo]?.autor;
     }
 
     /**

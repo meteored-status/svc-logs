@@ -1,7 +1,78 @@
 # [Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
-## 2026.5.18+next
+
+## 2026.7.3+1
+
+### Changed
+- [Juan Carlos] `modules/database/transaction/transaction.ts` — migrada la función decoradora `transactional` desde la firma legacy de TypeScript (`target/propertyKey/descriptor`) a la firma moderna con `ClassMethodDecoratorContext`, manteniendo la misma lógica de control transaccional (`BEGIN`/`JOIN`/`COMMIT`/`ROLLBACK`/`LEAVE`) y alineando la compilación con el modelo actual de decoradores.
+
+---
+
+## 2026.7.2+1
+
+### Removed
+- [José] `package.json` — eliminada la dependencia `diff3`/`@types/diff3` (patcheada temporalmente
+  a raíz de un bug en `diff3@0.0.4`). Quedó huérfana tras trasladarse `merge3` a
+  `@mr/cli/src/mrpack/utiles/merge.ts`, que ahora usa `node-diff3` en su lugar; no había ningún
+  import de `diff3` en `services-comun`.
+
+---
+## 2026.6.29+1
+
+### Changed
+- [Juan Carlos] `modules/database/redis/index.ts` — `IRedisCluster.primary` ahora acepta `IRedis | IRedis[]` y `Redis` normaliza la configuracion a una lista de primarios para soportar 1 o mas nodos de escritura.
+- [Juan Carlos] `modules/database/redis/index.ts` — las operaciones de escritura y lock (`set`, `bulkSet`, `aquireLock`, `releaseLock`) pasan de usar un unico `primary` a ejecutar sobre todos los clientes de `cluster.primaries` con `Promise.all`.
+- [Juan Carlos] `modules/database/redis/index.ts` — `RedisCluster` sustituye `_primaryClient` por `_primaryClients`, expone el getter `primaries` y actualiza la creacion/conexion para inicializar todos los primarios declarados.
+- [Juan Carlos] `modules/database/redis/index.ts` — ajustado el cierre de conexiones en `asyncDispose` y `disconnectPrimaries` para distinguir cuando `read` comparte instancia con el primer `primary`, evitando dobles `quit()` y limpiando correctamente el estado interno.
+- [Juan Carlos] `modules/database/redis/index.ts` — la clase `Redis` pasa de implementar `Disposable` a `AsyncDisposable`, reemplazando `[Symbol.dispose](): void` por `async [Symbol.asyncDispose](): Promise<void>` para awaitar correctamente la resolución del clúster antes de liberar recursos.
+- [Juan Carlos] `modules/database/redis/index.ts` — la clase interna `RedisCluster` pasa igualmente de `Disposable` a `AsyncDisposable`, sustituyendo el encadenamiento `.then()` en `[Symbol.dispose]` por `await` explícito en `[Symbol.asyncDispose]`, garantizando que los clientes primario y de lectura se cierran con `await client.quit()` antes de registrar el log de desconexión.
+
+---
+## 2026.6.17+6
+
+### Added
+- `modules/traduccion/v2/util/plural-function-builder.ts` — nuevo helper `pluralBuilder(lang)` para construir funciones de pluralizacion a partir de `Intl.PluralRules`, con fallback de locale abreviado y fallback final a `en-US`.
+
+### Changed
+- `modules/traduccion/v2/value/plural-value.ts` — anadido el tipo exportado `TPluralFunction` y tipado del constructor de `PluralValue` actualizado para reutilizarlo.
+- `modules/traduccion/v2/example.ts` — el ejemplo de uso de `PluralValue` deja de importar `make-plural/cardinals` y pasa a usar `pluralBuilder("es")`.
+
+### Removed
+- `package.json` — eliminada la dependencia `make-plural`, ya no necesaria tras migrar la construccion de reglas de plural al runtime de `Intl`.
+
+---
+## 2026.6.17+1
+
+### Changed
+- [Juan Carlos] `modules/database/redis/index.ts` — eliminado el uso de `PromiseTimeout` en operaciones de acceso (`get`, `set`, `searchKeys`, `aquireLock`, `releaseLock`) para evitar timeouts artificiales de capa aplicación sobre promesas de cliente.
+- [Juan Carlos] `modules/database/redis/index.ts` — los timeouts pasan a controlarse en la construcción de `createClient`, configurando `socket.connectTimeout` (con `clientTimeout`) y `commandOptions.timeout` (con `timeout`) con fallback a defaults de `RedisCluster`.
+- [Juan Carlos] `modules/database/redis/index.ts` — simplificada la creación del clúster Redis: `Redis` delega la gestión de defaults de timeout en `RedisCluster`, que ahora centraliza `MAX_REDIS_GET_CLIENT_MS` y `MAX_REDIS_GET_MS`.
+
+---
+## 2026.6.16+1
+
+### Added
+- [Juan Carlos] `modules/database/postgresql/index.ts` — nueva interfaz exportada `IPostgreSQLConnectionOptions` con las propiedades opcionales `max`, `idleTimeoutMillis` y `connectionTimeoutMillis` para configurar el pool de conexiones de `pg`.
+- [Juan Carlos] `modules/database/postgresql/index.ts` — `IPostgreSQLBuild` expone el nuevo campo `options?: IPostgreSQLConnectionOptions`, que se propaga desde `PostgreSQL.build()` hasta el constructor, permitiendo personalizar el pool sin modificar las credenciales JSON.
+- [Juan Carlos] `modules/database/postgresql/index.ts` — `IPostgreSQLCommon` ahora extiende `IPostgreSQLConnectionOptions`, unificando las propiedades compartidas de conexión y las del pool en una sola jerarquía.
+- [Juan Carlos] `modules/database/alloydb/index.ts` — nueva interfaz `IAlloyDBConnectionOptions` que extiende `IPostgreSQLConnectionOptions`, preparando la subclase para opciones específicas de AlloyDB en el futuro. El campo `options` se propaga a través de `AlloyDB.build()` y el constructor hacia `PostgreSQL`.
+
+### Changed
+- [Juan Carlos] `modules/database/postgresql/index.ts` — `PostgreSQL` pasa de `Disposable` a `AsyncDisposable` e implementa `public async [Symbol.asyncDispose](): Promise<void>`, esperando de forma explícita la finalización de `reset()` durante la liberación de recursos.
+- [Juan Carlos] `modules/utiles/postgres.ts` — la instancia global se declara con `await using db = PostgreSQL.build();` para alinear el ciclo de vida con `AsyncDisposable` y permitir limpieza asíncrona automática al salir del módulo.
+
+---
+## 2026.6.2+1
+
+### Fixed
+- [Juan Carlos] `modules/net/cache/redis.ts` — corregido bug en `NetCacheRedis.redis()` donde las opciones de timeout se expandían con spread (`...options`) en el nivel raíz del objeto de `Redis.build()`, en lugar de pasarse como campo `options` anidado según la firma de `IRedisBuild`. Las opciones nunca llegaban al cliente Redis.
+
+### Updated
+- [Juan Carlos] Añadida documentación TSDoc en `modules/messages/pubsub/v2/utiles/message-manager.ts`.
+
+---
+## 2026.5.18+1
 
 ### Changed
 - [Jose] `modules/utiles/log.ts` — **logging estructurado JSON para Cloud Logging y Datadog**:

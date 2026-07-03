@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: fbab196adcca9af16bbf44cca005aff9
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Wed, 01 Jul 2026 07:39:00 GMT
+ * Hash: bc4f9a37262e0c81634b5b5f90e714dd
+ * Versión: 2026.7.1+2-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 import {Colors} from "../../colors";
@@ -153,8 +155,9 @@ export async function actualizarTodo(basedir: string, config: IActualizarTodoCon
             info.instalado && info.tieneUpdate ? Accion.Actualizar : Accion.Nada,
         );
     } else {
+        const filtrados = infos.filter(info => info.instalado && info.tieneUpdate);
         console.log("");
-        const tabla = new GestorTabla(infos, {modo: "update", frameworkUpdates});
+        const tabla = new GestorTabla(filtrados, {modo: "update", frameworkUpdates});
         const resultado = await tabla.run({autoConfirmMs: 5000});
         console.log("");
 
@@ -162,7 +165,12 @@ export async function actualizarTodo(basedir: string, config: IActualizarTodoCon
             console.log(Colors.colorize([Colors.FgYellow], "Cancelado"));
             return false;
         }
-        accionesArr = resultado;
+
+        accionesArr = infos.map((info: IPaqueteGestion) => {
+            const idx = filtrados.indexOf(info);
+            if (idx === -1) { return Accion.Nada; }
+            return resultado[idx];
+        });
     }
 
     const n = accionesArr.filter(a => a === Accion.Actualizar || a === Accion.Instalar).length;

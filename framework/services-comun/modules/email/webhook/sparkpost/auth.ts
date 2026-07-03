@@ -1,5 +1,12 @@
+/**
+ * Editor: Fran García
+ * Fecha: Fri, 19 Jun 2026 07:29:05 GMT
+ * Hash: fc78aab80742540eef1430e61bb5bdc3
+ * Versión: 2026.6.19+1-frangarcia
+ */
+
 import {readJSONSync} from "../../../utiles/fs";
-import {Conexion} from "../../../net/conexion";
+import {Conexion} from "@mr/core-network/server/http/conexion";
 
 interface ICredenciales {
     username: string;

@@ -1,3 +1,11 @@
+/**
+ * Editor: miguel
+ * Fecha: Mon, 22 Jun 2026 08:02:44 GMT
+ * Hash: ff96c2ac867bd97ba365eeae149c6596
+ * Versión: 2026.6.22+1-miguel
+ * Anterior: 2026.6.17+1-juancmartinez
+ */
+
 export async function PromiseDelayed(delay: number = 0): Promise<void> {
     return new Promise<void>((resolve: Function) => {
         setTimeout(() => {
@@ -39,7 +47,7 @@ export async function PromiseChainWTB<T>(listado: PromiseFunctionWTB<T>[], delay
 
 export class PromiseTimeoutError extends Error {
     public constructor(public readonly ms: number) {
-        super("Timed out");
+        super(`Timed out: The promise did not resolve within ${ms} milliseconds.`);
 
         Object.setPrototypeOf(this, new.target.prototype);
 

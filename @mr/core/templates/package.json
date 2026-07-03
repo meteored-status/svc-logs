@@ -1,0 +1,33 @@
+{
+  "name": "@mr/core-templates",
+  "version": "2026.7.2+1-miguel",
+  "description": "Utilidades Relacionadas con las plantillas web",
+  "author": "José Antonio Jiménez",
+  "config": {
+    "subible": true,
+    "tipo": "core"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./componente": "./src/componente.ts",
+    "./device": "./src/device.ts",
+    "./controlador": "./js/root/controlador.ts",
+    "./entry": "./js/root/entry.ts",
+    "./modulo": "./js/root/modulo/index.ts",
+    "./error": "./js/root/modulo/error.ts",
+    "./scroll": "./js/root/modulo/scroll.ts",
+    "./visible": "./js/root/modulo/visible.ts",
+    "./config": "./js/utiles/config.ts",
+    "./config_tiempo": "./js/utiles/config_tiempo.ts"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@mr/core-dev": "workspace:*",
+    "@mr/core-i18n": "workspace:*",
+    "@mr/core-network": "workspace:*",
+    "@types/node": "^24.13.2",
+    "services-comun": "workspace:*"
+  }
+}

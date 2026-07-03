@@ -1,10 +1,17 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Thu, 11 Jun 2026 10:10:08 GMT
+ * Hash: 5a88f27386b1058038bca430ca938a1a
+ * Versión: 2026.6.11+1-josantoniojimnez
+ */
+
 import {CacheAdapter, ICacheGetOptions, ICacheMetadata, TExtra, TExtraChecker} from "../cache/adapter";
 import {CacheAdapterDisk} from "../cache/adapter/disk";
 import {ConfigCache} from "../cache/config";
 import {error} from "../utiles/log";
 import {logCall, logRejection} from "../decorators/metodo";
 
-export {TDevice} from "./device";
+export {TDevice} from "@mr/core-templates/device";
 
 export interface IConfigPlantilla {
     extra?: TExtra;

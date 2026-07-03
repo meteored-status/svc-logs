@@ -1,7 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 8991a60d3d13b8240a0dc9b34a8239c0
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 268ed9148c2443de3257ab6d892c4f94
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {JSONItem, JSONValorMap, JSONValuePlural, JSONValueSingular} from "../../data";
@@ -52,7 +54,7 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
                 break;
             case "plural":
                 const pluralValue = value as JSONValuePlural;
-                imports.add(`import {${langKey}} from "make-plural/cardinals";`)
+                imports.add(`import pluralBuilder from "services-comun/modules/traduccion/v2/util/plural-function-builder";`)
                 imports.add(`import {PluralValue} from "services-comun/modules/traduccion/v2/value/plural-value";`);
                 imports.add(`import {TPluralKey} from "services-comun/modules/traduccion/v2/value";`);
                 if (item.params && item.params.length > 0) {
@@ -68,10 +70,10 @@ export default (lang: string, value: JSONValorMap, item: JSONItem, module: Modul
                 block2.push('};');
 
                 if (item.params && item.params.length > 0) {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, ${langKey}, ["${item.params.join("\", \"")}"]);`);
+                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, pluralBuilder('${langKey}'), ["${item.params.join("\", \"")}"]);`);
                     definition.addParamDefinition(paramDefinition, item.params);
                 } else {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue(values${valueCount}, ${langKey});`);
+                    block2.push(`const pluralValue${valueCount} = new PluralValue(values${valueCount}, pluralBuilder('${langKey}'));`);
                 }
                 keys[key] = `pluralValue${valueCount}`;
                 break;

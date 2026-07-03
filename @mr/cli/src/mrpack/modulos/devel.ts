@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 4fe31122e49860384009b0aedb61fd69
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 94ef7c274fed56337f24368077fdad4a
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {type IModulo, type IModuloConfig, Modulo} from "../modulo";
@@ -49,10 +50,12 @@ export class ModuloDevel<T extends IDevelConfig> extends Modulo<T> {
     /**
      * Arranca el entorno de desarrollo o muestra la ayuda según los flags.
      *
+     * Requiere al menos `-c` o `-e`; sin ninguno de los dos muestra la ayuda.
+     *
      * @param config - Opciones del módulo (`help`, `compilar`, `ejecutar`, `forzar`).
      */
     protected async parseParams(config: IDevel): Promise<void> {
-        if (config.help) {
+        if (config.help || (!config.compilar && !config.ejecutar)) {
             this.mostrarAyuda();
         } else {
             run(this.root, config);

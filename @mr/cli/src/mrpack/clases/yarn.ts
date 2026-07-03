@@ -1,11 +1,14 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: a25e2b268ced9e5ae425dfe6185420d5
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: e0cb0de181d5fe441881e1bb604ca1f0
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {spawn as spawnProcess} from "node:child_process";
 
+import {Deferred} from "services-comun/modules/utiles/promise";
 import {readFileBuffer, readFileString, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 
 import {Colors} from "./colors";
@@ -50,16 +53,17 @@ async function updateBase(basedir: string): Promise<{anterior: string, nueva: st
 async function upgrade(basedir: string): Promise<number> {
     console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Actualizando dependencias"));
     console.group();
-    return new Promise<number>((resolve)=>{
-        spawnProcess("yarn", ["upgrade-interactive"], {cwd: basedir, shell: false, stdio: "inherit"})
-            .on("error", (err)=>{
-                console.error("Error actualizando dependencias", err);
-            })
-            .on("close", (status)=>{
-                console.groupEnd();
-                resolve(status??0);
-            });
-    });
+    const deferred = new Deferred<number>();
+    spawnProcess("yarn", ["upgrade-interactive"], {cwd: basedir, shell: process.platform === "win32", stdio: "inherit"})
+        .on("error", (err) => {
+            console.error("Error actualizando dependencias", err);
+            deferred.resolve(1);
+        })
+        .on("close", (status) => {
+            console.groupEnd();
+            deferred.resolve(status ?? 0);
+        });
+    return deferred.promise;
 }
 
 export async function update(basedir: string, doInstall: boolean): Promise<void> {

@@ -1,10 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 03f69bceaef512f89c4a3c4c753dd348
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 9921b58dc3277077971943b30839c12d
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
-
-import {Fecha} from "services-comun/modules/utiles/fecha";
 
 import {Colors} from "./colors";
 
@@ -13,8 +13,14 @@ interface ILogConfig {
     label: string;
 }
 
+function horaLocal(d: Date): string {
+    return [d.getHours(), d.getMinutes(), d.getSeconds()]
+        .map(n => String(n).padStart(2, "0"))
+        .join(":");
+}
+
 function generarFechaLog(cfg: ILogConfig): string {
-    return `[${Fecha.generarHora(new Date(), false)}][${cfg.type}][${cfg.label}]`;
+    return `[${horaLocal(new Date())}][${cfg.type}][${cfg.label}]`;
 }
 
 export const Log = {

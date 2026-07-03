@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 26d4042574f9c5d45cbf989eaeba6546
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Thu, 02 Jul 2026 11:35:20 GMT
+ * Hash: 2943cfc20f742dfc284bc59bdc61c977
+ * Versión: 2026.7.2+4-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-ads.git
  */
 
 import type {ManifestRoot} from "@mr/core-dev/manifest/root";
@@ -72,7 +74,12 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
 
                 return hashInicial!==hashFinal;
             })
-            .catch(() => {
+            .catch((err) => {
+                if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") {
+                    // El fichero existe pero no es JSON válido (p. ej. edición manual en curso):
+                    // no se resetea a los valores por defecto ni se sobrescribe el fichero.
+                    return Promise.reject(err);
+                }
                 this.manifest = new this.Manifest(this.defecto.default);
                 return true;
             });

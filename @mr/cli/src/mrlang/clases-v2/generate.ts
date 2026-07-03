@@ -1,23 +1,36 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: b88c3042a2990ce3ba5429011733282d
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 8f6755ad166db9e083afd8dfd2d01632
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import chokidar from "chokidar";
 
 import {isDir, mkdir, readDir, rmdir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
+import {error, info} from "services-comun/modules/utiles/log";
 
-import {JSONItemLiteral, JSONItemMap, JSONItemSet} from "./data";
+import {JSONItemLiteral, JSONItemMap, JSONItemSet, JSONValue} from "./data";
+import {Lang} from "./lang/lang.ts";
 import {ModuloJSON} from "./modulo/json";
+import {Definition} from "./modulo/definition";
 import generateLiteral from "./modulo/translation/literal";
 import generateMap from "./modulo/translation/map";
 import generateSet from "./modulo/translation/set";
-import {Definition} from "./modulo/definition";
-import {error, info} from "services-comun/modules/utiles/log";
 
+/**
+ * Genera los artefactos TypeScript de i18n a partir de los JSON fuente.
+ */
 export class Generate {
     /* STATIC */
+
+    /**
+     * Ejecuta la generación completa de módulos y, opcionalmente, activa watch.
+     *
+     * @param basedir - Directorio raíz del workspace.
+     * @param watch - Si es `true`, observa cambios en los JSON de idioma.
+     */
     public static async run(basedir: string, watch: boolean): Promise<void> {
 
         const jsondir = `${basedir}/i18n/.json`;
@@ -50,6 +63,14 @@ export class Generate {
         }
     }
 
+    /**
+     * Carga recursivamente los módulos JSON y configura watchers cuando aplica.
+     *
+     * @param basedir - Directorio base a escanear.
+     * @param langsDir - Directorio de salida para idiomas.
+     * @param definitionsDir - Directorio de salida para definiciones.
+     * @param watch - Si debe activar observadores de cambios.
+     */
     private static async loadModule(basedir: string, langsDir: string, definitionsDir: string, watch: boolean): Promise<ModuloJSON[]> {
         const files = await readDir(basedir);
 
@@ -80,6 +101,13 @@ export class Generate {
         return modulos;
     }
 
+    /**
+     * Genera los ficheros de un módulo para todos sus idiomas disponibles.
+     *
+     * @param modulo - Módulo de traducciones cargado desde JSON.
+     * @param langsDir - Directorio de salida para idiomas.
+     * @param definitionsDir - Directorio de salida para definiciones compartidas.
+     */
     private static async generateModule(modulo: ModuloJSON, langsDir: string, definitionsDir: string): Promise<void> {
 
         const moduleLangs = modulo.moduleLangs();
@@ -100,7 +128,18 @@ export class Generate {
                 switch (jsonItem.tipo) {
                     case "literal":
                         const literal = jsonItem as JSONItemLiteral;
-                        const valor = literal.values.valor[lang]??literal.values.defecto;
+                        let valor: JSONValue | undefined = undefined;
+                        let currentLang: Lang | null = await Lang.getByCode(lang);
+                        // Busca primero en el idioma solicitado y sube por su jerarquía.
+                        while (currentLang && !valor) {
+                            valor = literal.values.valor[currentLang.code];
+                            if (!valor) {
+                                currentLang = await currentLang.parent;
+                            }
+                        }
+                        if (!valor) {
+                            valor = literal.values.defecto;
+                        }
 
                         if (valor) {
                             const content = generateLiteral(lang, valor, literal, modulo, definition);

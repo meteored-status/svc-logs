@@ -1,4 +1,4 @@
-import {IGoogle} from "services-comun/modules/utiles/config";
+import {type IGoogle} from "@mr/core-workload/config/google";
 
 const GOOGLE: IGoogle = {
     id: "api-project-858154548956",

@@ -1,0 +1,20 @@
+{
+  "name": "@mr/core-workload",
+  "version": "2026.6.17+1-josantoniojimnez",
+  "description": "Utilidades relacionadas con las cargas de trabajo",
+  "author": "José Antonio Jiménez",
+  "config": {
+    "subible": true,
+    "tipo": "core"
+  },
+  "dependencies": {
+    "chokidar": "^5.0.0"
+  },
+  "devDependencies": {
+    "@mr/core-dev": "workspace:*",
+    "@mr/core-network": "workspace:*",
+    "@mr/core-utils": "workspace:*",
+    "@types/node": "^24.13.2",
+    "services-comun": "workspace:*"
+  }
+}
