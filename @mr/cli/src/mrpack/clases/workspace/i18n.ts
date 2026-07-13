@@ -1,22 +1,23 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 7b2a95ebde13cb139d9788a42686796e
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 5f62aa15f00747f9d309ad6ae8ed5e40
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
+import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
 import chokidar from "chokidar";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
 
 import {Colors} from "../colors";
-import {IConfigServices} from "./service";
-import {IWorkspace, Workspace} from "../workspace";
+import type {IConfigServices} from "./service";
+import {type IWorkspace, Workspace} from "../workspace";
 import {Log} from "../log";
-import {readJSON} from "services-comun/modules/utiles/fs";
-import {IPackageJson} from "../packagejson";
+import {readJSON} from "../../../utiles/fs";
+import type {IPackageJson} from "../packagejson";
 
 export interface IService extends IWorkspace {
     pad: number;
@@ -212,10 +213,6 @@ export class I18N extends Workspace {
                 label: this.label,
             }, Colors.colorize([Colors.FgRed, Colors.Bright], "Error de generación de idiomas"), error);
         });
-
-        // this.compilador.on("close", ()=>{
-        //     console.log("Terminado")
-        // });
 
         await deferred.promise;
     }

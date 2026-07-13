@@ -16,7 +16,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^9.4.2",
     "chokidar": "^5.0.0",
-    "dd-trace": "^5.113.0",
+    "dd-trace": "^6.2.0",
     "formidable": "^3.5.4",
     "hexoid": "^2.0.0",
     "qs": "^6.15.3",

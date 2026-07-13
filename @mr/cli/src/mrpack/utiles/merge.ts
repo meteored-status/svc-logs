@@ -1,16 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
- * Hash: 034c04338e1615ae50d649d5a877733e
- * Versión: 2026.7.3+2-josantoniojimnez
- * Anterior: 2026.7.2+2-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: aff66322ee3dfe90383226fdd5a917e9
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.3+2-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {diff3Merge} from "node-diff3";
 
 import {Colors} from "services-comun/modules/utiles/colors";
-import {warning} from "services-comun/modules/utiles/log";
+
+import {warning} from "../../utiles/log";
 
 /**
  * Una sección en conflicto del merge 3-way, con las tres versiones enfrentadas.

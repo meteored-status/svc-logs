@@ -1,16 +1,16 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 02 Jul 2026 11:35:20 GMT
- * Hash: 2943cfc20f742dfc284bc59bdc61c977
- * Versión: 2026.7.2+4-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-ads.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 7635f1293c61986a3af668d0794c8aed
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.2+4-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import type {ManifestRoot} from "@mr/core-dev/manifest/root";
-import {readJSON, readJSONSync, safeWrite} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
+import {readJSON, readJSONSync, safeWrite} from "../../../utiles/fs";
 import {Log} from "../log";
 import type {IPackageJsonLegacy} from "../packagejson";
 

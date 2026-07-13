@@ -21,6 +21,7 @@ import {deprecatedNetCheckersImportRule} from "./rules/deprecated-net-checkers-i
 import {breakingForwardIncommingConnectionRenameRule} from "./rules/breaking-forward-incomming-connection-rename.mjs";
 import {deprecatedNetRequestParserJsonImportRule} from "./rules/deprecated-net-request-parser-json-import.mjs";
 import {deprecatedFrontendDeviceImportRule} from "./rules/deprecated-frontend-device-import.mjs";
+import {deprecatedFrontendLegacyImportRule} from "./rules/deprecated-frontend-legacy-import.mjs";
 import {deprecatedPortalSeccionImportRule} from "./rules/deprecated-portal-seccion-import.mjs";
 import {deprecatedPortalConfigImportRule} from "./rules/deprecated-portal-config-import.mjs";
 import {deprecatedPortalMeteoredImportRule} from "./rules/deprecated-portal-meteored-import.mjs";
@@ -62,6 +63,7 @@ const RULES = [
     breakingForwardIncommingConnectionRenameRule,  // R014 (breaking: forwardIncommingConnection -> forwardIncomingConnection)
     deprecatedNetRequestParserJsonImportRule,      // R015 (services-comun/modules/net/request/parser/json)
     deprecatedFrontendDeviceImportRule,            // R016 (services-comun/modules/frontend/device)
+    deprecatedFrontendLegacyImportRule,            // R034 (services-comun/modules/frontend/* -> @mr/core-templates/legacy/*)
     deprecatedPortalSeccionImportRule,             // R017 (services-comun-meteored/modules/portal/meteored/seccion/*)
     deprecatedPortalConfigImportRule,              // R019 (services-comun-meteored/modules/portal/meteored/config/*)
     deprecatedPortalIdiomasImportRule,             // R020 (services-comun-meteored/modules/portal/idiomas)

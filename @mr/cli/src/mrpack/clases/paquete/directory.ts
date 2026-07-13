@@ -1,17 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 26 Jun 2026 10:04:43 GMT
- * Hash: b2b0d59f7b1c99ebd19812d1b92e94cb
- * Versión: 2026.6.26+1-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-web-www.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: f8fc7c8d80b23a862470441e2ff1aba7
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.26+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import JSZip from "jszip";
 
-import {isDir, isFile, mkdir, readDir, readFileString, unlink} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
+import {isDir, isFile, mkdir, readDir, readFileString, unlink} from "../../../utiles/fs";
 import {PaqueteFile, type IPaqueteFile, type IUpdateTracker, type PaqueteFileFiles} from "./file";
 
 /**
@@ -151,7 +151,7 @@ export class PaqueteDirectory extends PaqueteFile {
      * @param basedir - Raíz absoluta del monorepo.
      */
     public override async crearPath(basedir: string): Promise<void> {
-        await mkdir(`${basedir}/${this.filename}`, true);
+        await mkdir(`${basedir}/${this.filename}`);
     }
 
     /**

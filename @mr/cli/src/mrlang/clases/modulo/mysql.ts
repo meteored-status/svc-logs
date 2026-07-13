@@ -1,13 +1,13 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 5ece799febb455673f02bd9aec95c27f
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 8380690b6ea5fbfb2b9420cea7e35dc1
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {readDir, unlink} from "services-comun/modules/utiles/fs";
-
+import {readDir, unlink} from "../../../utiles/fs";
 import {Colors} from "../../../mrpack/clases/colors";
 import type {Idiomas, TIdiomas} from "../idioma";
 import {IdiomasLoader} from "../idioma/loader";

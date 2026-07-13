@@ -1,10 +1,18 @@
-import {isDir, isFile, readDir, readFileString, readJSON, safeWrite, unlink} from "services-comun/modules/utiles/fs";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 6d6db7289c76dafcd70bb09c9c171ccf
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
+ */
+
 import {md5} from "services-comun/modules/utiles/hash";
 
 import {BuildFW} from "@mr/core-dev/manifest/build";
 import type {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 
+import {isDir, isFile, readDir, readFileString, readJSON, safeWrite, unlink} from "../../utiles/fs";
 import {Colors} from "./colors";
 import {Comando} from "./comando";
 import {Log} from "./log";
@@ -30,6 +38,7 @@ import {limpiarLegacy} from "./init/legacy";
 import {initGithub, initAgents} from "./init/symlinks";
 import {initYarnRC} from "./init/yarnrc";
 import {initConfig, type IWorkspaces} from "./init/config-workspaces";
+import {initRun} from "./init/run";
 
 interface IConfiguracion {
     // openTelemetry: boolean;
@@ -51,6 +60,7 @@ export async function init(basedir: string): Promise<boolean> {
 
     const config = await initWorkspaces(basedir, workspaces);
     await initConfig(basedir, workspaces);
+    await initRun(basedir, workspaces);
 
     const cambio = await initYarnRC(basedir/*, config*/);
 

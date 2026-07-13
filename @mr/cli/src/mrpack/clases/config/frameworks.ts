@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 11:42:00 GMT
- * Hash: cb1de361a72aa3863eabcdcc79a26168
- * Versión: 2026.6.25+10-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: d88187197139d5e25602dcd8129034a2
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+10-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Colors} from "../colors";

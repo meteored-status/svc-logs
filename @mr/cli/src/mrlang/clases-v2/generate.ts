@@ -1,16 +1,16 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 8f6755ad166db9e083afd8dfd2d01632
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 8569a5441d1c64e2be615a5bc84b2f6c
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import chokidar from "chokidar";
 
-import {isDir, mkdir, readDir, rmdir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
-import {error, info} from "services-comun/modules/utiles/log";
-
+import {isDir, mkdir, readDir, rmdir, safeWrite, unlink} from "../../utiles/fs";
+import {error, info} from "../../utiles/log";
 import {JSONItemLiteral, JSONItemMap, JSONItemSet, JSONValue} from "./data";
 import {Lang} from "./lang/lang.ts";
 import {ModuloJSON} from "./modulo/json";
@@ -49,9 +49,9 @@ export class Generate {
         const langsDir = `${sourceDir}/langs`;
         const definitionsDir = `${sourceDir}/definitions`;
 
-        await mkdir(sourceDir, true);
-        await mkdir(langsDir, true);
-        await mkdir(definitionsDir, true);
+        await mkdir(sourceDir);
+        await mkdir(langsDir);
+        await mkdir(definitionsDir);
 
         const modulos = await this.loadModule(jsondir, langsDir, definitionsDir, watch);
 
@@ -119,7 +119,7 @@ export class Generate {
 
             const langdir = `${langsDir}/${lang.replace("-", "")}`;
             const moduleDir = `${langdir}${modulo.path()}/${modulo.name()}`;
-            await mkdir(moduleDir, true);
+            await mkdir(moduleDir);
             const indexFileName = `${moduleDir}/index.ts`;
 
             for (const jsonItem of jsonItems) {
@@ -170,7 +170,7 @@ export class Generate {
             definition.moduleInterface = modulo.generateIndex();
         }
 
-        await mkdir(definition.dir(), true)
+        await mkdir(definition.dir())
         await safeWrite(`${definition.dir()}/index.ts`, definition.index(), true);
         await safeWrite(`${definition.dir()}/bundle.ts`, definition.bundle(), true);
     }

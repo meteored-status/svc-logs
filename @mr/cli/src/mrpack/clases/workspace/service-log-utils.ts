@@ -1,10 +1,22 @@
 /**
+ * Editor: José Antonio Jiménez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 7ea5fb27640cd8961cc316b79f63d7d4
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
+ */
+
+/**
  * Utilidades puras de formateo y parsing usadas por `Service` para generar el log
  * markdown de compilación (`output/compilar.md`): timestamps legibles y detección
  * de referencias a fichero:línea:columna en la salida de los bundlers.
  */
 
 import path from "node:path";
+
+import {fechaHoraLocal, horaLocal} from "../../utiles/fecha";
+
+export {fechaHoraLocal, horaLocal};
 
 /**
  * Referencia a un fichero fuente detectada en la salida de un bundler (rspack/esbuild/next),
@@ -20,32 +32,6 @@ export interface IFileRef {
     href: string;
     lineNum: number;
     colNum: number;
-}
-
-/**
- * Formatea una fecha como hora local `HH:MM:SS`.
- *
- * @param d - Fecha a formatear.
- * @returns Hora en formato `HH:MM:SS`.
- */
-export function horaLocal(d: Date): string {
-    return [d.getHours(), d.getMinutes(), d.getSeconds()]
-        .map(n => String(n).padStart(2, "0"))
-        .join(":");
-}
-
-/**
- * Formatea una fecha como fecha y hora local `YYYY-MM-DD HH:MM:SS`.
- *
- * @param d - Fecha a formatear.
- * @returns Fecha y hora en formato `YYYY-MM-DD HH:MM:SS`.
- */
-export function fechaHoraLocal(d: Date): string {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return [
-        `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
-        horaLocal(d),
-    ].join(" ");
 }
 
 /**

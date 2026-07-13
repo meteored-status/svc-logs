@@ -1,10 +1,12 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: eac194bfd8a2bb9b4d88328f46e67e39
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 20826ac227ce1dd2115db74988cd1547
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {readJSON} from "services-comun/modules/utiles/fs";
+import {readJSON} from "../../../../../utiles/fs";
 
 import {type ITraduccionData, TraduccionOrigen, TraduccionTipo} from "..";
 import {type ITraduccionLiteralValues, TraduccionLiteral} from "../literal";

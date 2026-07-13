@@ -1,12 +1,13 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 07480e957c933c5afc4cfaacef688277
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 939ef3bf1dad55bf5ffa9c83a1fc5b89
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {parseArgs, ParseArgsConfig} from "node:util";
+import {parseArgs, type ParseArgsConfig} from "node:util";
 
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
@@ -68,7 +69,7 @@ export abstract class Modulo<T extends IModuloConfig> {
      *
      * @param positionals - Lista de argumentos posicionales de la línea de comandos.
      */
-    protected async parsePositionals(positionals: string[]): Promise<void> {
+    protected async parsePositionals(_positionals: string[]): Promise<void> {
 
     }
 

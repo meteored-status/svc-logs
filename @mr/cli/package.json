@@ -24,7 +24,7 @@
     "@google-cloud/storage": "^7.21.0",
     "@inquirer/prompts": "^8.5.2",
     "chokidar": "^5.0.0",
-    "dd-trace": "^5.113.0",
+    "dd-trace": "^6.2.0",
     "dotenv": "^17.4.2",
     "js-yaml": "^5.2.1",
     "jszip": "^3.10.1",
@@ -47,5 +47,5 @@
     "tslib": "^2.8.1",
     "typescript": "^6.0.3"
   },
-  "version": "2026.7.3+2-josantoniojimnez"
+  "version": "2026.7.14+2-josantoniojimnez"
 }

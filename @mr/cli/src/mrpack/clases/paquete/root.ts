@@ -1,16 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
- * Hash: fd38d2d40014ef866bf278d467b0d89c
- * Versión: 2026.7.3+2-josantoniojimnez
- * Anterior: 2026.6.26+3-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 98a6f1b79501999040a4facc7c4c73e6
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.3+2-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import JSZip from "jszip";
 
-import {readDir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
-
+import {readDir, safeWrite, unlink} from "../../../utiles/fs";
 import {incrementarVersion} from "../../utiles/version";
 import {Comando} from "../comando";
 import {type IPaqueteDirectory, PaqueteDirectory} from "./directory";

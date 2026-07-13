@@ -1,15 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 07:20:01 GMT
- * Hash: c2a3c554c45002c679dff3e9af9b99f4
- * Versión: 2026.6.25+7-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 0c6a36eb0fdaf6d514eb0131fd793d50
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+7-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Storage} from "@google-cloud/storage";
 
-import {isDir, isFile, readDir} from "services-comun/modules/utiles/fs";
-
+import {isDir, isFile, readDir} from "../../../../utiles/fs";
 import {Paquete, PaqueteTipo} from "../../paquete";
 
 /**

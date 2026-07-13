@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 3058d3bfa2bbc0ac14d0a29c066ad2d2
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 1c0096cee72465dc1be6defbbca5832e
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.5.27+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import type {IManifestDeploymentRun} from "../../../../../../manifest/deploy/run";

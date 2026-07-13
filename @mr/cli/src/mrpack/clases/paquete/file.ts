@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
- * Hash: ce14db09a1c80fcc068b0b0f5e4f7013
- * Versión: 2026.7.3+2-josantoniojimnez
- * Anterior: 2026.6.26+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 6ca3e27806532c552b6a9c4695c6c90f
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.3+2-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -11,9 +11,9 @@ import type JSZip from "jszip";
 import path from "node:path";
 
 import {Fecha} from "services-comun/modules/utiles/fecha";
-import {isFile, mkdir, readFile, readFileString, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
+import {isFile, mkdir, readFile, readFileString, safeWrite, unlink} from "../../../utiles/fs";
 import {PaqueteDirectory} from "./directory";
 import merge3, {type IConflictoBloque} from "../../utiles/merge";
 
@@ -227,7 +227,7 @@ export class PaqueteFile {
      * @param basedir - Raíz absoluta del monorepo.
      */
     public async crearPath(basedir: string): Promise<void> {
-        await mkdir(path.dirname(`${basedir}/${this.filename}`), true);
+        await mkdir(path.dirname(`${basedir}/${this.filename}`));
     }
 
     /**

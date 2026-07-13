@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-workload",
-  "version": "2026.6.17+1-josantoniojimnez",
+  "version": "2026.7.14+1-josantoniojimnez",
   "description": "Utilidades relacionadas con las cargas de trabajo",
   "author": "José Antonio Jiménez",
   "config": {

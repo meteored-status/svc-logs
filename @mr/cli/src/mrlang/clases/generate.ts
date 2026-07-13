@@ -1,12 +1,14 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: e49b2ee46511ed9efe375f859c826959
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: ae4a7dec0ac8b012c8b789706d1f3318
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Colors} from "services-comun/modules/utiles/colors";
-import {isDir, isFile, mkdir, readDir, readJSON, rmdir, safeWrite} from "services-comun/modules/utiles/fs";
 
+import {isDir, isFile, mkdir, readDir, readJSON, rmdir, safeWrite} from "../../utiles/fs";
 import {IdiomasLoader} from "./idioma/loader";
 import type {IPackageConfig} from "./modulo";
 import type {TIdiomas} from "./idioma";
@@ -41,7 +43,7 @@ export class Generate {
                 await rmdir(`${classdir}/${file}`);
             }
         }
-        await mkdir(`${classdir}/.src`, true);
+        await mkdir(`${classdir}/.src`);
 
         const moduloIDs = Object.keys(config.modulos).filter(id => !id.includes("."));
 
@@ -72,7 +74,7 @@ export class Generate {
             if (procesados.includes(idioma)) {
                 continue;
             }
-            await mkdir(`${classdir}/.src/${idioma.replace("-", "")}`, true);
+            await mkdir(`${classdir}/.src/${idioma.replace("-", "")}`);
             promesas.push(
                 safeWrite(`${classdir}/.src/${idioma.replace("-", "")}/index.ts`, loaderLangTMPL({lang: idioma, modulos, langs}), true),
                 safeWrite(`${classdir}/.src/${idioma.replace("-", "")}/bundle.ts`, loaderLangBundleTMPL({lang: idioma, modulos, langs}), true),

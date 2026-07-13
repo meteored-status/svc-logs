@@ -1,12 +1,14 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 3de05015351b02661dec533b3944c5a9
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 0cbc947840033ac3637a8cbccc6eb53b
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {createHash} from "node:crypto";
-import {safeWrite} from "services-comun/modules/utiles/fs";
 
+import {safeWrite} from "../../../../utiles/fs";
 import type {Idiomas, TIdiomas} from "../../idioma";
 import {IdiomasLoader} from "../../idioma/loader";
 import type {ITraduccionJSON} from "./loader/json";

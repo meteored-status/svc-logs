@@ -1,10 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 01 Jul 2026 07:11:52 GMT
- * Hash: 7507bd79e6678002509bdc28d3118d67
- * Versión: 2026.7.1+1-josantoniojimnez
- * Anterior: 2026.6.30+4-alexcg
- * Proyecto: https://github.com/alpred/tiempo-web-estaticos.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 21396080e736f88c8be7b3e541774d7e
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.1+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import path from "node:path";
@@ -12,6 +12,8 @@ import path from "node:path";
 import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 import {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
+import {md5} from "services-comun/modules/utiles/hash";
+
 import {
     isDir,
     isFile,
@@ -21,12 +23,10 @@ import {
     readJSON,
     safeWrite,
     unlink,
-} from "services-comun/modules/utiles/fs";
-import {md5} from "services-comun/modules/utiles/hash";
-
+} from "../../../utiles/fs";
 import {Comando} from "../comando";
 import {Log} from "../log";
-import {IPackageJson} from "../packagejson";
+import type {IPackageJson} from "../packagejson";
 import type {Manifest as ManifestRoot} from "../../../../manifest";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
@@ -406,7 +406,7 @@ export class Compilar {
     }
 
     private async prepararCredenciales(): Promise<void> {
-        await mkdir(`${this.dir}/files/credenciales/`, true);
+        await mkdir(`${this.dir}/files/credenciales/`);
 
         let mysql: string|undefined;
         if (await isFile(`${this.basedir}/mysql.txt`)) {
@@ -418,7 +418,7 @@ export class Compilar {
                 if (await isFile(`${this.basedir}/kustomizar/tmp/credenciales/${source}`)) {
                     const data = await readFileString(`${this.basedir}/kustomizar/tmp/credenciales/${source}`);
                     const destino = path.resolve(`${this.dir}/files/credenciales/${target}`);
-                    await mkdir(path.dirname(destino), true);
+                    await mkdir(path.dirname(destino));
                     await safeWrite(destino, data);
 
                     if (mysql != undefined && target == "mysql.json") {

@@ -17,7 +17,7 @@
     "@elastic/elasticsearch": "^9.4.2",
     "@google-cloud/storage": "^7.21.0",
     "chokidar": "^5.0.0",
-    "dd-trace": "^5.113.0",
+    "dd-trace": "^6.2.0",
     "formidable": "^3.5.4",
     "hexoid": "^2.0.0",
     "mysql2": "^3.22.6",

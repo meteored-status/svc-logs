@@ -1,16 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: e0cb0de181d5fe441881e1bb604ca1f0
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 359d700a756ad499dea5e1dadc32a813
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {spawn as spawnProcess} from "node:child_process";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-import {readFileBuffer, readFileString, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 
+import {readFileBuffer, readFileString, safeWrite, unlink} from "../../utiles/fs";
 import {Colors} from "./colors";
 import {Comando} from "./comando";
 import {Log} from "./log";

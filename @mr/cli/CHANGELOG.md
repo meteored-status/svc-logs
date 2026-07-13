@@ -4,6 +4,26 @@
 
 ## 2026.7.13
 
+### Added — `src/mrpack/clases/init/run.ts`, `src/mrpack/clases/init.ts`
+
+- [Jose] **`mrpack init` genera acciones de depuración por workspace en `.run/`**: nueva
+  función `initRun()` que crea, en la raíz del proyecto, un fichero
+  `.run/{type}-{service}.run.xml` (acción `ejecutar => {type} => {service}` de JetBrains) por
+  cada workspace cuyo `deploy.type` sea `service`/`cronjob`/`job` y que tenga `enabled: true`,
+  `devel.enabled: true` y `build.framework: "meteored"`, permitiendo depurarlo
+  individualmente (`yarn workspace {service} run devel`) sin configuración manual. Si `.run/`
+  no existe se crea; si ya existe, se eliminan las acciones de workspaces que hayan dejado de
+  cumplir esas condiciones (renombrados, deshabilitados, eliminados…) y se regeneran las
+  vigentes, respetando cualquier otro `.run.xml` no gestionado por `mrpack`.
+
+### Changed — `package.json`
+
+- [Jose] `dd-trace` actualizado de `^5.113.0` a `^6.2.0`. Revisado el *changelog* oficial
+  del major: los *breaking changes* de la v6 (Node.js ≥22 como mínimo soportado, retirada de
+  APIs ya deprecadas de AppSec/plugins y cambios en Test Optimization) no afectan al uso
+  actual (`tracer.init()`, `tracer.trace`, `formats` de `dd-trace/ext`, spans manuales en
+  HTTP/WebSocket). Sin cambios de código necesarios.
+
 ### Fixed — `src/esbuild.config.mjs`
 
 - **`tscBin` fallaba con `ERR_PACKAGE_PATH_NOT_EXPORTED` tras actualizar a TypeScript 7**:
@@ -23,6 +43,57 @@
   `@mr/core-*`, etc.), aunque esbuild sí compilaba correctamente. Documentada la limitación
   en `README.md` para no repetir el upgrade hasta que el soporte de PnP esté publicado en
   una versión estable de TS7.
+
+### Changed — `src/mrpack/clases/**` (refactorización de `mrpack`)
+
+- **Deduplicación y división de módulos grandes**: extraído `ejecutarTablaInteractiva()`
+  compartido en `framework/gestor/index.ts`; extraído `ejecutarConLoginRetry<T>()` en
+  `paquete/storage.ts`; tipado completo de `auto-doc.ts` (sin `any` explícitos, nuevo tipo
+  `JSONValue`/`IEsquema*`); `init.ts` dividido en 8 submódulos bajo `clases/init/` (`git.ts`,
+  `legacy.ts`, `scripts.ts`, `dependencias.ts`, `symlinks.ts`, `yarnrc.ts`,
+  `config-workspaces.ts`); unificada la lógica duplicada de `getBundlerCoherente`/
+  `getBundlerNormalizado` (`workspace/service.ts` e `init.ts`) en `clases/bundler.ts`;
+  `workspace/service.ts` y `framework/gestor/tabla.ts` reducidos extrayendo funciones puras
+  de formateo/parsing (`workspace/service-log-utils.ts`) y de cálculo/renderizado de diff
+  (`framework/gestor/diff-render.ts`). De paso se corrigieron dos bugs reales: un bucle
+  infinito potencial en `extractFileRefs` (faltaba avanzar `match` en una rama con
+  `continue`) y una discrepancia entre las dos copias de `getBundlerCoherente` (una de ellas
+  no comprobaba `reflect-metadata`).
+- **Nuevo diseño de consola en `clases/log.ts`**: `Log.info`/`Log.error` escriben ahora
+  directamente vía `process.stdout.write`/`process.stderr.write` en vez de
+  `console.info`/`console.error`, evitando que `console.group()`/`console.groupEnd()`
+  indentara sus líneas y las mezclara de forma confusa con el prefijo
+  `[hora][tipo][etiqueta]` propio de `Log`. El anidamiento lógico de secciones (antes
+  representado con indentación) se representa ahora dentro de la propia etiqueta mediante
+  una pila interna (p.ej. `[init]` → `[init cliente]` → `[init cliente yarn]`, sin duplicar
+  cuando la etiqueta coincide con la del grupo más interno). Nuevos métodos `Log.group(cfg,
+  ...txt)`/`Log.groupEnd()` sustituyen al patrón previo `Log.info(...); console.group();
+  ...; console.groupEnd();` en `init.ts` y submódulos, `yarn.ts` y `framework/cliente.ts`.
+  Los corchetes `[ ]` del prefijo se colorean en morado para diferenciarlos del contenido.
+- **Limpieza de imports**: eliminados imports sin usar (`IConfigServices` en `devel.ts`,
+  `Manifest` en `workspace/service.ts`) y convertidos a `import type` los imports usados
+  solo como tipo (`auto-doc.ts`, `workspace/compilar.ts`, `workspace/i18n.ts`,
+  `workspace/service.ts`, `mrpack.ts`, `modulo.ts`).
+- **Segunda pasada de limpieza de imports/`type` y parámetros no usados**: revisión completa
+  de `mrpack/` con `tsc --noEmit --noUnusedLocals --noUnusedParameters --isolatedModules
+  --verbatimModuleSyntax`. Eliminados imports sin usar en `manifest/workspace/legacy.ts`;
+  convertidos a `import type`/especificador `type` los imports usados solo como tipo en
+  `deployment/imagen/index.ts`, `deployment/lambda/index.ts` y `modulos/auto-doc.ts`;
+  renombrados con prefijo `_` los parámetros no usados de `modulo.ts::parsePositionals` y
+  `mrpack.ts::parseParams`; eliminado el campo muerto `consolaEscribiendo` de `Paquete`
+  (se asignaba pero nunca se leía); eliminado un bloque de código comentado muerto en
+  `workspace/i18n.ts`. `horaLocal`/`fechaHoraLocal`, duplicadas entre `clases/log.ts` y
+  `workspace/service-log-utils.ts`, se extrajeron al nuevo `utiles/fecha.ts`.
+- **División de `paquete/index.ts`** (1073 → 847 líneas), con el mismo criterio de extraer
+  solo las partes puras/de bajo acoplamiento aplicado antes a `Service`/`GestorTabla`:
+  nuevo `paquete/consola.ts` (clase `PaqueteConsola` + `ConsolaEstado`/`STATUS`/`IConsola`,
+  encapsula el estado de renderizado de la consola de progreso, antes 7 campos sueltos en
+  `Paquete`); nuevo `paquete/archivos-cambiados.ts` (`EstadoArchivo`/`OrigenArchivo`/
+  `IArchivoCambiado` + la función pura `combinarArchivosCambiados()`, reexportados desde
+  `paquete/index.ts` para no romper a `framework/gestor/tabla.ts`/`diff-render.ts`); y la
+  función `capturarDatosPush()` movida desde un método privado de `Paquete` a
+  `paquete/push-log.ts`. El resto de `Paquete` (`pull`/`push`/`reset`/`applyUpdate`) se deja
+  intacto por su fuerte acoplamiento a estado mutable y E/S real.
 
 ---
 

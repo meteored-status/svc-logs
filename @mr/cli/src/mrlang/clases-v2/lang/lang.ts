@@ -1,12 +1,13 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 40d4b4bad6422c5c2433553779139d72
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: bd5cd2638d5b99a22e9a70e778c6e85b
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {readJSON} from "services-comun/modules/utiles/fs.ts";
+import {readJSON} from "../../../utiles/fs";
 
 /**
  * Modelo del catálogo de idiomas cargado desde `assets/langs.json`.

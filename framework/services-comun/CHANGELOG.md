@@ -2,6 +2,35 @@
 
 ---
 
+## 2026.7.14+1
+
+### Removed
+- [Jose] `modules/frontend/critical.ts`, `modules/frontend/metatags.ts`, `modules/frontend/miga.ts`,
+  `modules/frontend/pagina.ts`, `modules/frontend/plantilla.ts` — trasladados a
+  `@mr/core/templates/src/legacy/*`, expuestos ahora como `@mr/core-templates/legacy/*`
+  (puente de compatibilidad; ver [`@mr/core/templates/CHANGELOG.md`](../../@mr/core/templates/CHANGELOG.md)).
+  Migración automática de imports disponible vía el sistema de patches
+  (`@mr/core/dev/patches/`, regla `R034`): `yarn run patch:apply`.
+- [Jose] `package.json` — eliminada la `devDependency` `@mr/core-templates`. Era la única razón
+  por la que `services-comun` dependía de este paquete; tras el punto anterior, `services-comun`
+  **ya no depende de `@mr/core-templates`**. Los proyectos que dependan de `services-comun` pero no
+  usen el sistema de plantillas (`Plantilla`/`Componente`/`legacy/*`) ya no necesitan instalar
+  `@mr/core-templates` como dependencia transitiva; solo deben añadirlo explícitamente los
+  workspaces que realmente lo usen.
+
+---
+
+## 2026.7.13
+
+### Changed
+- [Jose] `package.json` — `dd-trace` actualizado de `^5.113.0` a `^6.2.0`. Revisado el
+  *changelog* oficial del major: los *breaking changes* de la v6 (Node.js ≥22 como mínimo
+  soportado, retirada de APIs ya deprecadas de AppSec/plugins y cambios en Test Optimization)
+  no afectan al uso actual en `modules/utiles/log.ts` (`tracer.init()`, `tracer.trace`,
+  `formats` de `dd-trace/ext`). Sin cambios de código necesarios.
+
+---
+
 ## 2026.7.3+1
 
 ### Changed

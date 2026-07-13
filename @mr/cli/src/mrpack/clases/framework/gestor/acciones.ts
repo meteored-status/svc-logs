@@ -1,13 +1,13 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 02 Jul 2026 10:35:59 GMT
- * Hash: 1452935fde633dbbb4d4202dd057f7f5
- * Versión: 2026.7.2+2-josantoniojimnez
- * Anterior: 2026.6.26+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 2673e0403cfbb22306e82935694de0fd
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.2+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {mkdir, readFileString, safeWrite, unlink} from "services-comun/modules/utiles/fs";
+import {mkdir, readFileString, safeWrite, unlink} from "../../../../utiles/fs";
 
 import {Colors} from "../../colors";
 import {Log} from "../../log";
@@ -74,7 +74,7 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
             const tipo = info.tipo === "core" ? PaqueteTipo.core
                        : info.tipo === "user" ? PaqueteTipo.user
                        : PaqueteTipo.root;
-            await mkdir(info.localDir, true);
+            await mkdir(info.localDir);
             await safeWrite(`${info.localDir}/package.json`, `${JSON.stringify({
                 name: info.npmName,
                 version: "0.0.0+0-new",

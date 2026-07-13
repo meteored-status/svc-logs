@@ -1,14 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: d8fc14a5c43f6d7914bd1302a76a0fba
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: db82ac942e4c527b4278bf5894e20cae
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {isDir, mkdir, readDir, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
 import {soportados} from "@mr/core-i18n/langs";
 
+import {isDir, mkdir, readDir, readJSON, safeWrite} from "../../utiles/fs";
 import {Colors} from "../../mrpack/clases/colors";
 import type {IPackageConfig} from "./modulo";
 
@@ -18,16 +19,16 @@ export class Init {
         const i18n = `${basedir}/i18n`;
 
         console.log(Colors.colorize([Colors.FgGreen], "Creando /i18n/"));
-        await mkdir(i18n, true);
+        await mkdir(i18n);
 
         console.log(Colors.colorize([Colors.FgGreen], "Creando /i18n/.credenciales/"));
-        await mkdir(`${i18n}/.credenciales`, true);
+        await mkdir(`${i18n}/.credenciales`);
 
         console.log(Colors.colorize([Colors.FgGreen], "Creando /i18n/.json/"));
-        await mkdir(`${i18n}/.json`, true);
+        await mkdir(`${i18n}/.json`);
 
         console.log(Colors.colorize([Colors.FgGreen], "Creando /i18n/.run/"));
-        await mkdir(`${i18n}/.run`, true);
+        await mkdir(`${i18n}/.run`);
 
         console.log(Colors.colorize([Colors.FgGreen], "Creando /i18n/.run/generate.run.xml"));
         await safeWrite(`${i18n}/.run/generate.run.xml`, "<component name=\"ProjectRunConfigurationManager\">\n" +

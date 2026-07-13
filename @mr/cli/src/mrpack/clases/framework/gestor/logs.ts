@@ -1,16 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
- * Hash: e8ac6bd98ab88060122e3a34cd55ce8f
- * Versión: 2026.7.3+2-josantoniojimnez
- * Anterior: 2026.7.2+2-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: c20f28329fb286d6f8f4661468f07674
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.3+2-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import path from "node:path";
 
-import {mkdir, readDir, safeWrite} from "services-comun/modules/utiles/fs";
-
+import {mkdir, readDir, safeWrite} from "../../../../utiles/fs";
 import type {IEntradaActualizacion} from "../../paquete/file";
 import type {IPaqueteGestion} from "./datos";
 
@@ -40,7 +39,7 @@ function anclaConflicto(archivo: string): string {
  */
 export async function escribirLog(basedir: string, info: IPaqueteGestion, entradas: IEntradaActualizacion[], logsRaw: string[], error?: string): Promise<string> {
     const logDir = `${basedir}/tmp/log`;
-    await mkdir(logDir, true);
+    await mkdir(logDir);
 
     const safeNombre = info.npmName.replace(/[@/]/g, "-").replace(/^-+/, "");
     const logPath    = `${logDir}/${safeNombre}.pull.md`;
@@ -135,7 +134,7 @@ export async function escribirLog(basedir: string, info: IPaqueteGestion, entrad
  */
 export async function escribirLogPush(basedir: string, info: IPaqueteGestion, archivos: string[]): Promise<string> {
     const logDir = `${basedir}/tmp/log`;
-    await mkdir(logDir, true);
+    await mkdir(logDir);
 
     const safeNombre = info.npmName.replace(/[@/]/g, "-").replace(/^-+/, "");
     const logPath    = `${logDir}/${safeNombre}.push.md`;

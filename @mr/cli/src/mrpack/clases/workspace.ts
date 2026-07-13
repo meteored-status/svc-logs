@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 2db8317300b03a751e0b70d191bcd9d7
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: cbfdf980a267f5fce80c33fb1e88bf8e
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.5.27+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import chokidar, {type FSWatcher} from "chokidar";

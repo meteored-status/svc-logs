@@ -1,5 +1,12 @@
-import {isDir, isFile, unlink} from "services-comun/modules/utiles/fs";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: f34612dcd2331e458f5fcff0f2cce76d
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
+ */
 
+import {isDir, isFile, unlink} from "../../../utiles/fs";
 import {Colors} from "../colors";
 import {Log} from "../log";
 

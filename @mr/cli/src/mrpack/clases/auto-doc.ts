@@ -1,14 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 19c6461daeb348a54b09ed7bb6ef788a
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: c4bfcf1db136ec51552af95036d57d3f
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import ts from "typescript";
 
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
-import {isDir, readDir} from "services-comun/modules/utiles/fs";
-import {
+import type {
     IHTTPMethod,
     IItems,
     IOpenAPI,
@@ -19,6 +20,7 @@ import {
 import type {Manifest} from "@mr/core-dev/manifest";
 import {MySQL} from "services-comun/modules/database/mysql";
 
+import {isDir, readDir} from "../../utiles/fs";
 import {Log} from "./log";
 import {ManifestWorkspaceLoader} from "./manifest/workspace";
 

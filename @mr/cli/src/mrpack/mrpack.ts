@@ -1,14 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 11:42:00 GMT
- * Hash: aa4b477f0809cb54240657d82eea8903
- * Versión: 2026.6.25+10-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 89d061c7be12faf89e818bcddb8ff6c8
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+10-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {readJSON} from "services-comun/modules/utiles/fs";
+import {readJSON} from "../utiles/fs";
 import {Colors} from "./clases/colors";
-import {IPackageJson} from "./clases/packagejson";
+import type {IPackageJson} from "./clases/packagejson";
 import {type IModulo, type IModuloConfig, Modulo} from "./modulo";
 import {ModuloConfig} from "./modulos/config";
 import {ModuloDevel} from "./modulos/devel";
@@ -114,7 +115,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
      * @param config      - Opciones globales del CLI (actualmente solo `help`).
      * @param positionals - Lista de argumentos posicionales; el primero es el nombre del submódulo.
      */
-    protected async parseParams(config: IMRPack, positionals: string[]): Promise<void> {
+    protected async parseParams(_config: IMRPack, positionals: string[]): Promise<void> {
         MRPack.MODULOS.find(modulo=>modulo.nombre===positionals[0])?.run();
     }
 

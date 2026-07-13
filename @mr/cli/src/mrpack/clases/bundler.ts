@@ -1,3 +1,11 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: ff199309b07db8038852180e75156744
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
+ */
+
 import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 import type {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";

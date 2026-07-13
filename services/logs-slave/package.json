@@ -18,7 +18,7 @@
     "@google-cloud/storage": "^7.21.0",
     "chokidar": "^5.0.0",
     "crawler-user-agents": "^1.56.0",
-    "dd-trace": "^5.113.0",
+    "dd-trace": "^6.2.0",
     "formidable": "^3.5.4",
     "geoip-lite": "^2.0.3",
     "hexoid": "^2.0.0",

@@ -1,16 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 6dcca89484bfdde79c3f1e21c2c9ecb9
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 448aa335f3eb7dcb9012ffcfc4e7c024
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {spawn} from "node:child_process";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-import {isFile, md5Dir, mkdir, readDir, readFileString, safeWrite} from "services-comun/modules/utiles/fs";
 
+import {isFile, md5Dir, mkdir, readDir, readFileString, safeWrite} from "../../../utiles/fs";
 import {Colors} from "../colors";
 import {Comando} from "../comando";
 import {Log} from "../log";
@@ -247,7 +248,7 @@ export async function add(basedir: string, frameworks: string[], visitados: Set<
         }
 
         Log.info({type: Log.label_base, label: "framework"}, `Añadiendo framework ${Colors.colorize([Colors.FgMagenta], fw)}...`);
-        await mkdir(localDir, true);
+        await mkdir(localDir);
         await safeWrite(`${localDir}/package.json`, `${JSON.stringify({
             name: npmName,
             version: "0.0.0+0-new",

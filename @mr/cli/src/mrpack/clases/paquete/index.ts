@@ -1,23 +1,26 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
- * Hash: eb347f7504f5bf5d94a5379eb61330c4
- * Versión: 2026.7.3+2-josantoniojimnez
- * Anterior: 2026.7.2+2-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: a56841327fb2c024e3eef44028b73e90
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.3+2-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {confirm} from "@inquirer/prompts";
 
-import {isDir, isFile, readDir, readFileString, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
-
+import {isDir, isFile, readDir, readFileString, readJSON, safeWrite} from "../../../utiles/fs";
 import {compararVersiones, maquetarVersion} from "../../utiles/version";
 import {Colors} from "../colors";
 import type {IPackageJson} from "../packagejson";
-import {getProyectoUrl, PaqueteDirectoryRoot, type PaqueteDirectoryRootFiles} from "./root";
+import {PaqueteDirectoryRoot, type PaqueteDirectoryRootFiles} from "./root";
 import {PaqueteStorage} from "./storage";
 import {type IEntradaActualizacion, stripAutoria} from "./file";
-import {type IArchivoConDiff, type IPushLogData, subirLogHtmlPush} from "./push-log";
+import {capturarDatosPush, type IPushLogData, subirLogHtmlPush} from "./push-log";
+import {combinarArchivosCambiados, EstadoArchivo, type IArchivoCambiado, OrigenArchivo} from "./archivos-cambiados";
+import {ConsolaEstado, PaqueteConsola} from "./consola";
+
+export {EstadoArchivo, OrigenArchivo, type IArchivoCambiado} from "./archivos-cambiados";
 
 /**
  * Elimina el bloque de autoría de un fichero `.ts` y devuelve también cuántas
@@ -54,75 +57,11 @@ interface IPaqueteCFG {
 }
 
 /**
- * Estado de un fichero en el listado de cambios del gestor de frameworks.
- *
- * - `Cambiado`  — el fichero existe en ambos lados pero con contenido diferente.
- * - `Nuevo`     — el fichero no existía antes (creado localmente o traído por el remoto).
- * - `Eliminado` — el fichero ha sido borrado.
- */
-export const enum EstadoArchivo {
-    Cambiado  = "cambiado",
-    Nuevo     = "nuevo",
-    Eliminado = "eliminado",
-}
-
-/**
- * Origen del cambio de un fichero en el listado combinado.
- *
- * - `Local`  — solo hay cambio en el lado local.
- * - `Remoto` — solo hay cambio en el lado remoto.
- * - `Ambos`  — hay cambio en los dos lados simultáneamente.
- */
-export const enum OrigenArchivo {
-    Local  = "local",
-    Remoto = "remoto",
-    Ambos  = "ambos",
-}
-
-/**
- * Fichero con estado de cambio para la vista de diff del gestor de frameworks.
- *
- * @property archivo   - Ruta relativa al directorio raíz del paquete.
- * @property estado    - Estado del fichero (`EstadoArchivo`).
- * @property origen    - Origen del cambio (`OrigenArchivo`).
- * @property conflicto - `true` cuando `origen === Ambos` y los estados son contradictorios (uno crea y el otro borra el mismo fichero).
- */
-export interface IArchivoCambiado {
-    archivo: string;
-    estado: EstadoArchivo;
-    origen: OrigenArchivo;
-    conflicto?: boolean;
-}
-
-/**
  * `package.json` de un paquete gestionado por mrpack,
  * con el campo `config` obligatorio que describe el tipo y bucket del paquete.
  */
 export interface IPackageFW extends IPackageJson {
     config: IPaqueteCFG;
-}
-
-enum ConsolaEstado {
-    EMPTY,
-    PENDING,
-    OK,
-    KO,
-    CONFLICTO,
-}
-
-const STATUS = {
-    [ConsolaEstado.EMPTY]:     `${Colors.colorize([Colors.FgWhite, Colors.Bright], "[")}${Colors.colorize([],                              "         ")}${Colors.colorize([Colors.FgWhite, Colors.Bright], "]")}`,
-    [ConsolaEstado.PENDING]:   `${Colors.colorize([Colors.FgWhite, Colors.Bright], "[")}${Colors.colorize([Colors.FgYellow],                "PENDING  ")}${Colors.colorize([Colors.FgWhite, Colors.Bright], "]")}`,
-    [ConsolaEstado.OK]:        `${Colors.colorize([Colors.FgWhite, Colors.Bright], "[")}${Colors.colorize([Colors.FgGreen],                 "OK       ")}${Colors.colorize([Colors.FgWhite, Colors.Bright], "]")}`,
-    [ConsolaEstado.KO]:        `${Colors.colorize([Colors.FgWhite, Colors.Bright], "[")}${Colors.colorize([Colors.FgRed],                   "ERROR    ")}${Colors.colorize([Colors.FgWhite, Colors.Bright], "]")}`,
-    [ConsolaEstado.CONFLICTO]: `${Colors.colorize([Colors.FgWhite, Colors.Bright], "[")}${Colors.colorize([Colors.FgMagenta, Colors.Bright], "CONFLICTO")}${Colors.colorize([Colors.FgWhite, Colors.Bright], "]")}`,
-};
-
-interface IConsola {
-    estado?: ConsolaEstado;
-    actual?: boolean;
-    nueva?: string;
-    mensaje?: string;
 }
 
 /**
@@ -174,17 +113,16 @@ export class Paquete {
 
         const len = resto.reduce((len, actual)=>Math.max(len, actual.nombre.length), cli.nombre.length);
         cli.ajustarConsolaPadding(len);
-        cli.consolaAvanzada = true;
         if (indexCli) {
-            cli.consolaLength = resto.length+1;
+            cli.consolaUI.configurarPosicion(0, resto.length+1);
             console.log("");
+        } else {
+            cli.consolaUI.configurarPosicion(0, 1);
         }
         const extra = indexCli ? 1 : 0;
         for (let i=0, length=resto.length; i<length; i++) {
             resto[i].ajustarConsolaPadding(len);
-            resto[i].consolaIndex = i+extra;
-            resto[i].consolaLength = length+1;
-            resto[i].consolaAvanzada = true;
+            resto[i].consolaUI.configurarPosicion(i+extra, length+1);
             console.log("");
         }
 
@@ -229,14 +167,7 @@ export class Paquete {
     protected readonly config: IPaqueteCFG;
     private readonly gcs: PaqueteStorage;
 
-    protected readonly consolaActual: string;
-    protected readonly consolaOK: string;
-    protected readonly consolaKO: string;
-    protected consolaPadding: string;
-    protected consolaIndex: number;
-    protected consolaLength: number;
-    protected consolaAvanzada: boolean;
-    private consolaEscribiendo: boolean;
+    private readonly consolaUI: PaqueteConsola;
     public readonly logs: string[];
     public error: string | undefined;
     private _snapshot: ISnapshotPrevio | undefined;
@@ -280,14 +211,7 @@ export class Paquete {
         }
         this.gcs = new PaqueteStorage(this.config.bucket, repo, this.nombre, this.basedir);
 
-        this.consolaActual = Colors.colorize([Colors.FgBlue], maquetarVersion(this.version));
-        this.consolaOK = `[${Colors.colorize([Colors.FgGreen, Colors.Bright], "OK   ")}]`;
-        this.consolaKO = `[${Colors.colorize([Colors.FgRed, Colors.Bright], "ERROR")}]`;
-        this.consolaPadding = "";
-        this.consolaIndex = 0;
-        this.consolaLength = 1;
-        this.consolaAvanzada = false;
-        this.consolaEscribiendo = false;
+        this.consolaUI = new PaqueteConsola(this.nombre, this.version);
         this.logs = [];
         this.error = undefined;
         this._snapshot = undefined;
@@ -300,7 +224,7 @@ export class Paquete {
      * @param len - Longitud máxima entre todos los nombres de paquete en la lista.
      */
     protected ajustarConsolaPadding(len: number): void {
-        this.consolaPadding = " ".repeat(len - this.nombre.length);
+        this.consolaUI.ajustarPadding(len);
     }
 
     /** Versión local actualmente instalada. */
@@ -334,53 +258,6 @@ export class Paquete {
         return this.gcs.getListaCache();
     }
 
-    /**
-     * Renderiza una línea de progreso en la consola para este paquete.
-     *
-     * @param config - Opciones de la línea: estado, si muestra la versión actual, nueva versión y mensaje.
-     */
-    protected consola({estado=ConsolaEstado.EMPTY, actual=false, nueva, mensaje}: IConsola): void {
-        const salida: string[] = [];
-        if (this.consolaAvanzada) {
-            salida.push(Colors.up(this.consolaLength - this.consolaIndex));
-        }
-        salida.push(Colors.colorize([Colors.FgMagenta], `${this.nombre}${this.consolaPadding}`));
-        salida.push(Colors.colorize([Colors.FgWhite, Colors.Bright], "["));
-        if (actual) {
-            salida.push(this.consolaActual);
-        } else {
-            salida.push(" ".repeat(13));
-        }
-        salida.push(Colors.colorize([Colors.FgWhite, Colors.Bright], "]"));
-        salida.push(Colors.colorize([Colors.FgWhite, Colors.Bright], "=>"));
-        salida.push(mensaje?.substring(0, 30).padEnd(30)??" ".repeat(30));
-        salida.push(Colors.colorize([Colors.FgWhite, Colors.Bright], "["));
-        if (nueva!==undefined) {
-            salida.push(this.consolaNueva(nueva));
-        } else {
-            salida.push(" ".repeat(13));
-        }
-        salida.push(Colors.colorize([Colors.FgWhite, Colors.Bright], "]"));
-        salida.push(STATUS[estado]);
-        if (this.consolaAvanzada) {
-            salida.push(Colors.down(this.consolaLength - this.consolaIndex - 1));
-        }
-
-        this.consolaEscribiendo = true;
-        console.log(...salida);
-        this.consolaEscribiendo = false;
-    }
-
-    /**
-     * Formatea una versión con colores ANSI para mostrarla como "versión nueva" en la consola.
-     *
-     * @param version - Versión en formato `YYYY.MM.DD+INDEX`.
-     * @returns Cadena de 13 caracteres coloreada en verde.
-     */
-    protected consolaNueva(version: string): string {
-        return Colors.colorize([Colors.FgGreen], maquetarVersion(version));
-    }
-
     private async reloadPaquete(): Promise<void> {
         this.paquete = await readJSON<Partial<IPackageFW>>(`${this.basedir}/package.json`);
     }
@@ -399,7 +276,7 @@ export class Paquete {
     public async pull(actualizar: boolean): Promise<boolean> {
         const latest = await this.gcs.getLatest();
         if (latest===undefined || !this.anticuado(latest)) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.OK,
                 actual: true,
                 mensaje: "Nada que actualizar",
@@ -413,7 +290,7 @@ export class Paquete {
         ]);
 
         if (nuevo===undefined) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.KO,
                 actual: true,
                 nueva: latest,
@@ -421,7 +298,7 @@ export class Paquete {
             });
             return false;
         }
-        this.consola({
+        this.consolaUI.render({
             estado: ConsolaEstado.PENDING,
             actual: true,
             nueva: latest,
@@ -468,14 +345,14 @@ export class Paquete {
      * @returns `true` si se subió una nueva versión.
      */
     public async push(autor: string): Promise<boolean> {
-        this.consola({
+        this.consolaUI.render({
             estado: ConsolaEstado.PENDING,
             actual: this.config.subible,
             mensaje: "Comprobando actualización",
         });
 
         if (!this.config.subible) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.OK,
                 mensaje: "Desactivado por configuración",
             });
@@ -485,7 +362,7 @@ export class Paquete {
         const latest = await this.gcs.getLatest();
 
         if (latest!==undefined &&  this.anticuado(latest)) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.KO,
                 actual: true,
                 nueva: latest,
@@ -525,7 +402,7 @@ export class Paquete {
         }
 
         if (!hayCambios && latest!==undefined && !this.adelantado(latest)) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.OK,
                 actual: true,
                 mensaje: "No hay cambios que subir",
@@ -533,7 +410,7 @@ export class Paquete {
             return false;
         }
 
-        this.consola({
+        this.consolaUI.render({
             estado: ConsolaEstado.PENDING,
             actual: true,
             nueva: status.version,
@@ -543,7 +420,7 @@ export class Paquete {
         if (!Paquete.SIMULAR) {
             const versionAnterior = this.version;
             if (hayCambios) {
-                this._pushLogData = await this.capturarDatosPush(autor, status.version, versionAnterior, this.logs.slice(), antiguo);
+                this._pushLogData = await capturarDatosPush(this.basedir, this.nombre, autor, status.version, versionAnterior, this.logs.slice(), antiguo);
             }
             this.version = status.version;
             await status.prepararParaPush(autor);
@@ -556,7 +433,7 @@ export class Paquete {
             await this.savePaquete();
         }
 
-        this.consola({
+        this.consolaUI.render({
             estado: ConsolaEstado.OK,
             actual: true,
             nueva: status.version,
@@ -575,7 +452,7 @@ export class Paquete {
     public async reset(): Promise<void> {
         const latest = await this.gcs.getLatest();
         if (latest===undefined) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.KO,
                 actual: true,
                 mensaje: "No hay versión para resetear",
@@ -586,7 +463,7 @@ export class Paquete {
         const nuevo = await this.getPaqueteNuevo(latest);
 
         if (nuevo.status===undefined) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.KO,
                 actual: true,
                 nueva: latest,
@@ -595,7 +472,7 @@ export class Paquete {
             return;
         }
 
-        this.consola({
+        this.consolaUI.render({
             estado: ConsolaEstado.PENDING,
             actual: false,
             nueva: latest,
@@ -605,7 +482,7 @@ export class Paquete {
         await this.reloadPaquete();
         this.version = this.paquete.version ?? nuevo.status.version;
 
-        this.consola({
+        this.consolaUI.render({
             estado: ConsolaEstado.OK,
             actual: false,
             nueva: latest,
@@ -792,50 +669,7 @@ export class Paquete {
             this.getArchivosCambiados(),
             this.getArchivosModificadosPorUpdate(latest),
         ]);
-        if (locales === null && remotos === null) {
-            return null;
-        }
-        const localMap  = new Map((locales  ?? []).map(a => [a.archivo, a]));
-        const remotoMap = new Map((remotos  ?? []).map(a => [a.archivo, a]));
-        const resultado: IArchivoCambiado[] = [];
-        for (const [archivo, item] of localMap) {
-            const remotoItem = remotoMap.get(archivo);
-            if (remotoItem !== undefined) {
-                // Caso: local crea un fichero nuevo y remote no lo tiene → falso conflicto.
-                // El update no borra ficheros locales que no estaban en el ZIP base, así que
-                // este fichero simplemente no es conocido por el remoto. Mostrarlo como local-only.
-                if (item.estado === EstadoArchivo.Nuevo && remotoItem.estado === EstadoArchivo.Eliminado) {
-                    resultado.push({...item, origen: OrigenArchivo.Local});
-                    continue;
-                }
-                // Caso: ambos lados lo eliminaron → no hay diff que ver.
-                if (item.estado === EstadoArchivo.Eliminado && remotoItem.estado === EstadoArchivo.Eliminado) {
-                    resultado.push({archivo, estado: EstadoArchivo.Eliminado, origen: OrigenArchivo.Ambos});
-                    continue;
-                }
-                // Caso conflicto real:
-                //   1) El usuario lo borró y el remoto lo trae.
-                //   2) Ambos crearon el mismo fichero nuevo de forma independiente con distinto contenido
-                //      (si fueran iguales, el fichero no aparecería en la lista remota).
-                const conflicto = (item.estado === EstadoArchivo.Eliminado && remotoItem.estado === EstadoArchivo.Nuevo)
-                    || (item.estado === EstadoArchivo.Nuevo && remotoItem.estado === EstadoArchivo.Cambiado);
-                resultado.push({archivo, estado: EstadoArchivo.Cambiado, origen: OrigenArchivo.Ambos, conflicto: conflicto || undefined});
-            } else {
-                resultado.push({...item, origen: OrigenArchivo.Local});
-            }
-        }
-        for (const [archivo, item] of remotoMap) {
-            if (!localMap.has(archivo)) {
-                resultado.push({...item, origen: OrigenArchivo.Remoto});
-            }
-        }
-        const ORDEN: Record<string, number> = {
-            [OrigenArchivo.Ambos]:  0,
-            [OrigenArchivo.Local]:  1,
-            [OrigenArchivo.Remoto]: 2,
-        };
-        resultado.sort((a, b) => ORDEN[a.origen] - ORDEN[b.origen] || a.archivo.localeCompare(b.archivo));
-        return resultado;
+        return combinarArchivosCambiados(locales, remotos);
     }
 
     /**
@@ -883,7 +717,7 @@ export class Paquete {
      */
     public async applyUpdate(latest: string): Promise<{cambio: boolean; conflictos: boolean; entradas: IEntradaActualizacion[]}> {
         try {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.PENDING,
                 actual: true,
                 nueva: latest,
@@ -896,7 +730,7 @@ export class Paquete {
             ]);
 
             if (nuevo.status === undefined) {
-                this.consola({
+                this.consolaUI.render({
                     estado: ConsolaEstado.KO,
                     actual: true,
                     nueva: latest,
@@ -920,7 +754,7 @@ export class Paquete {
             }
             this._snapshot = undefined;
 
-            this.consola({
+            this.consolaUI.render({
                 estado: conflicto ? ConsolaEstado.CONFLICTO : ConsolaEstado.OK,
                 actual: true,
                 nueva: latest,
@@ -929,7 +763,7 @@ export class Paquete {
 
             return {cambio: actualizado, conflictos: conflicto, entradas};
         } catch (err) {
-            this.consola({
+            this.consolaUI.render({
                 estado: ConsolaEstado.KO,
                 actual: true,
                 nueva: latest,
@@ -957,9 +791,9 @@ export class Paquete {
         return [
             Colors.colorize([Colors.FgMagenta], nombre),
             " ",
-            this.consolaActual,
+            this.consolaUI.actual,
             Colors.colorize([Colors.FgWhite, Colors.Bright], " => "),
-            this.consolaNueva(latest),
+            this.consolaUI.formatVersionNueva(latest),
         ].join("");
     }
 
@@ -976,70 +810,9 @@ export class Paquete {
         const len = paquetes.reduce((acc, p) => Math.max(acc, p.nombre.length), 0);
         for (let i = 0; i < paquetes.length; i++) {
             paquetes[i].ajustarConsolaPadding(len);
-            paquetes[i].consolaIndex = i;
-            paquetes[i].consolaLength = paquetes.length;
-            paquetes[i].consolaAvanzada = true;
+            paquetes[i].consolaUI.configurarPosicion(i, paquetes.length);
             console.log("");
         }
-    }
-
-    /**
-     * Recopila el estado y el contenido de cada fichero cambiado en este push para
-     * generar el log HTML. Se llama justo antes de actualizar `this.version` y subir
-     * el ZIP, de modo que `antiguo.files` aún contiene la versión anterior.
-     *
-     * @param autor          - Autor del push.
-     * @param nuevaVersion   - Nueva versión que se va a publicar.
-     * @param versionAnterior - Versión actualmente publicada.
-     * @param archivos        - Rutas de los ficheros detectados como cambiados.
-     * @param antiguo         - Contenido del ZIP de la versión anterior.
-     */
-    private async capturarDatosPush(autor: string, nuevaVersion: string, versionAnterior: string, archivos: string[], antiguo: PaqueteDirectoryRootFiles): Promise<IPushLogData> {
-        const fecha = new Date();
-        const [proyecto, archivosConDiff] = await Promise.all([
-            getProyectoUrl(this.basedir),
-            Promise.all(archivos.map(async (archivo): Promise<IArchivoConDiff> => {
-                const enZip   = antiguo.files[archivo] !== undefined;
-                const enDisco = await isFile(`${this.basedir}/${archivo}`);
-                const esTs    = archivo.endsWith(".ts");
-
-                let estado: IArchivoConDiff["estado"];
-                let contenidoOriginal = "";
-                let contenidoNuevo   = "";
-
-                if (!enDisco) {
-                    estado = "eliminado";
-                    if (enZip) {
-                        const raw = await antiguo.files[archivo].async("text").catch(() => "");
-                        contenidoOriginal = esTs ? stripAutoria(raw) : raw;
-                    }
-                } else if (!enZip) {
-                    estado = "nuevo";
-                    const raw = await readFileString(`${this.basedir}/${archivo}`).catch(() => "");
-                    contenidoNuevo = esTs ? stripAutoria(raw) : raw;
-                } else {
-                    estado = "cambiado";
-                    const [rawOld, rawNew] = await Promise.all([
-                        antiguo.files[archivo].async("text").catch(() => ""),
-                        readFileString(`${this.basedir}/${archivo}`).catch(() => ""),
-                    ]);
-                    contenidoOriginal = esTs ? stripAutoria(rawOld) : rawOld;
-                    contenidoNuevo   = esTs ? stripAutoria(rawNew)  : rawNew;
-                }
-
-                return {archivo, estado, contenidoOriginal, contenidoNuevo};
-            })),
-        ]);
-
-        return {
-            autor,
-            version: nuevaVersion,
-            versionAnterior,
-            npmName: this.nombre,
-            proyecto,
-            fecha,
-            archivos: archivosConDiff,
-        };
     }
 
     /**

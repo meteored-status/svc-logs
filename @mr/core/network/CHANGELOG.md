@@ -2,6 +2,19 @@
 
 ---
 
+## 2026.7.13 — [Jose]
+
+### Changed
+
+- **`package.json`** — `dd-trace` actualizado de `^5.113.0` a `^6.2.0`. Revisado el
+  *changelog* oficial del major: los *breaking changes* de la v6 (Node.js ≥22 como mínimo
+  soportado, retirada de APIs ya deprecadas de AppSec/plugins y cambios en Test Optimization)
+  no afectan al uso actual en `server/http/conexion.ts`, `server/websocket/index.ts` y
+  `client/websocket/index.ts` (`tracer` como default export, `type Span`, `formats` de
+  `dd-trace/ext`). Sin cambios de código necesarios.
+
+---
+
 ## 2026.6.16 — [Jose]
 
 ### Removed

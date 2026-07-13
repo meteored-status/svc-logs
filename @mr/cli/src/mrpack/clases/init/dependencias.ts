@@ -1,8 +1,15 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 15e477f772dbff536f1463d5db513e36
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
+ */
+
 import type {Manifest} from "@mr/core-dev/manifest";
 import {BuildFW} from "@mr/core-dev/manifest/build";
 
-import {readJSON} from "services-comun/modules/utiles/fs";
-
+import {readJSON} from "../../../utiles/fs";
 import type {IPackageJson as IPackageJsonBase} from "../packagejson";
 
 /**

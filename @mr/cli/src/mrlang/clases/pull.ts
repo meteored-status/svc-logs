@@ -1,11 +1,12 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 993fa6df00c12df3491c8da99f17a6cf
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: b1af065d06833165cb115926eb3b8ff7
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {isDir, isFile, mkdir, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
-
+import {isDir, isFile, mkdir, readJSON, safeWrite} from "../../utiles/fs";
 import {IdiomasLoader} from "./idioma/loader";
 import type {IPackageConfig} from "./modulo";
 import {ModuloMySQL} from "./modulo/mysql";
@@ -26,7 +27,7 @@ export class Pull {
         const ids = Object.keys(config.modulos);
 
         if (!await isDir(dir)) {
-            await mkdir(dir, true);
+            await mkdir(dir);
             // } else {
             //     const todos = ids.length==0;
             //     const checks = [...ids];

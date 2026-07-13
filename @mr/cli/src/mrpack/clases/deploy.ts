@@ -1,12 +1,14 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 47f0fbab26a395ba2887f743ca1d9a4c
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 1e0fcc967272c6e50e8bdb3924509104
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {isDir, readDir} from "services-comun/modules/utiles/fs";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
+import {isDir, readDir} from "../../utiles/fs";
 import {Comando} from "./comando";
 import {GRUPOS} from "./config/datos";
 import {Log} from "./log";

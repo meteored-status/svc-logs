@@ -1,17 +1,20 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 26 Jun 2026 10:53:57 GMT
- * Hash: 7158629e47249d9a1b3d637bcb5a194d
- * Versión: 2026.6.26+7-josantoniojimnez
- * Anterior: 2026.6.26+6-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-web-www.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: a5a41c0222ce886cf2598340de8c07db
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.26+7-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Storage} from "@google-cloud/storage";
 
 import {buffer2stream, pipeline} from "services-comun/modules/utiles/stream";
 
+import {isFile, readFileString} from "../../../utiles/fs";
 import {calcularDiffOps, DIFF_CONTEXTO, indicesConContexto} from "../../utiles/diff";
+import {getProyectoUrl, type PaqueteDirectoryRootFiles} from "./root";
+import {stripAutoria} from "./file";
 
 /**
  * Estado de un fichero en el log de push.
@@ -398,6 +401,70 @@ ${tocModificados}
 </body>
 </html>
 `;
+}
+
+/* ─── Captura de datos ──────────────────────────────────────────────────────── */
+
+/**
+ * Recopila el estado y el contenido de cada fichero cambiado en un push para
+ * generar su log HTML. Debe llamarse antes de actualizar la versión del paquete
+ * y subir el ZIP, de modo que `antiguo.files` todavía contenga la versión anterior.
+ *
+ * @param basedir         - Directorio raíz del paquete en disco.
+ * @param npmName         - Nombre npm del paquete.
+ * @param autor           - Autor del push.
+ * @param nuevaVersion    - Nueva versión que se va a publicar.
+ * @param versionAnterior - Versión actualmente publicada.
+ * @param archivos        - Rutas de los ficheros detectados como cambiados.
+ * @param antiguo         - Contenido del ZIP de la versión anterior.
+ * @returns Datos completos del push, listos para generar el log HTML.
+ */
+export async function capturarDatosPush(basedir: string, npmName: string, autor: string, nuevaVersion: string, versionAnterior: string, archivos: string[], antiguo: PaqueteDirectoryRootFiles): Promise<IPushLogData> {
+    const fecha = new Date();
+    const [proyecto, archivosConDiff] = await Promise.all([
+        getProyectoUrl(basedir),
+        Promise.all(archivos.map(async (archivo): Promise<IArchivoConDiff> => {
+            const enZip   = antiguo.files[archivo] !== undefined;
+            const enDisco = await isFile(`${basedir}/${archivo}`);
+            const esTs    = archivo.endsWith(".ts");
+
+            let estado: IArchivoConDiff["estado"];
+            let contenidoOriginal = "";
+            let contenidoNuevo   = "";
+
+            if (!enDisco) {
+                estado = "eliminado";
+                if (enZip) {
+                    const raw = await antiguo.files[archivo].async("text").catch(() => "");
+                    contenidoOriginal = esTs ? stripAutoria(raw) : raw;
+                }
+            } else if (!enZip) {
+                estado = "nuevo";
+                const raw = await readFileString(`${basedir}/${archivo}`).catch(() => "");
+                contenidoNuevo = esTs ? stripAutoria(raw) : raw;
+            } else {
+                estado = "cambiado";
+                const [rawOld, rawNew] = await Promise.all([
+                    antiguo.files[archivo].async("text").catch(() => ""),
+                    readFileString(`${basedir}/${archivo}`).catch(() => ""),
+                ]);
+                contenidoOriginal = esTs ? stripAutoria(rawOld) : rawOld;
+                contenidoNuevo   = esTs ? stripAutoria(rawNew)  : rawNew;
+            }
+
+            return {archivo, estado, contenidoOriginal, contenidoNuevo};
+        })),
+    ]);
+
+    return {
+        autor,
+        version: nuevaVersion,
+        versionAnterior,
+        npmName,
+        proyecto,
+        fecha,
+        archivos: archivosConDiff,
+    };
 }
 
 /* ─── Subida a GCS ──────────────────────────────────────────────────────────── */

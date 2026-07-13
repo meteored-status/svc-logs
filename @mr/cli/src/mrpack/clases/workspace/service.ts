@@ -1,18 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 02 Jul 2026 11:35:20 GMT
- * Hash: cb49b9d0016fb19a742ef1902b593a06
- * Versión: 2026.7.2+4-josantoniojimnez
- * Anterior: 2026.7.2+3-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-ads.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 0fa4c348f24b13f5389656883e1d66b4
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.2+4-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
+import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import chokidar, {type ChokidarOptions} from "chokidar";
 
-import type {Manifest} from "@mr/core-dev/manifest";
 import {BuildFW} from "@mr/core-dev/manifest/build";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 

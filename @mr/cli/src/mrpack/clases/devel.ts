@@ -1,22 +1,23 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 11:42:00 GMT
- * Hash: 73b1019f73b35174cce9c05a250a6129
- * Versión: 2026.6.25+10-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 3943e4f8edd6ed5f0786df0a60337ec6
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+10-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import chokidar from "chokidar";
 
-import {isDir, readDir} from "services-comun/modules/utiles/fs";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
+import {isDir, readDir} from "../../utiles/fs";
 import {GRUPOS, cargarConfig} from "./config/datos";
 import {actualizarTodo} from "./framework";
 import {init} from "./init";
 import {aplicarPatches} from "./patches";
 import {I18N} from "./workspace/i18n";
-import {IConfigServices, sanitizeFrameworkUpdates, Service} from "./workspace/service";
+import {sanitizeFrameworkUpdates, Service} from "./workspace/service";
 import {Log} from "./log";
 import {Workspace} from "./workspace";
 import {install} from "./yarn";

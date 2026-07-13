@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 80a822c60d99dc1ed01ad2282f3b6847
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: e51d0d078d198237793528dfe12a923f
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.5.27+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import type {IManifestBuildDatabase} from "@mr/core-dev/manifest/build/database";

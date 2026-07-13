@@ -1,16 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 30 Jun 2026 10:32:49 GMT
- * Hash: 06cc72a5d106ead30e677175d73770fc
- * Versión: 2026.6.30+3-josantoniojimnez
- * Anterior: 2026.6.30+2-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-ads.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 83891d4e3c4ac72bdcea8f169b65b127
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.30+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
-
-import {isDir, isFile, readDir, readJSON, safeWrite} from "services-comun/modules/utiles/fs";
 
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 
+import {isDir, isFile, readDir, readJSON, safeWrite} from "../../../utiles/fs";
 import {type IConfigServices} from "../workspace/service";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 

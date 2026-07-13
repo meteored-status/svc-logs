@@ -146,6 +146,7 @@ registra cuál fue la última regla aplicada para evitar reprocesar lo mismo.
 | `R031` | `import {DominioTiempo} from "@mr/user-tiempo-domain"` *(breaking)* | `import {Dominio as DominioTiempo} from "@mr/user-tiempo-domain"` |
 | `R032` | `import Foo from "@mr/user-tiempo-domain"` *(breaking: default export eliminado)* | `import {Dominio as Foo} from "@mr/user-tiempo-domain"` *(también maneja `import type` y mixto `Foo, {Bar}`)* |
 | `R033` | `import {DominioTiempoList} from "@mr/user-tiempo-domain/loader"` *(breaking)* | `import {DominioList as DominioTiempoList} from "@mr/user-tiempo-domain/loader"` |
+| `R034` | `services-comun/modules/frontend/*` | `@mr/core-templates/legacy/*` |
 
 > **Orden de evaluación:** subpaths deben ir **antes** que sus paths padre en `RULES` para
 > evitar matches parciales (p.ej. R017/R019 antes que R018).

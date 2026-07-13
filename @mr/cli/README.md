@@ -34,6 +34,23 @@ yarn mrpack <modulo> [opciones]
 > yarn mrpack devel --help
 > ```
 
+### Formato de logs
+
+Cada línea de log de `mrpack` se muestra como `[hora][TIPO][etiqueta]`, con los corchetes
+`[ ]` coloreados en morado. La etiqueta representa el anidamiento lógico de la operación en
+curso: al entrar en una subsección (p.ej. comprobar el cliente dentro de `init`, o Yarn
+dentro de esa comprobación) la etiqueta compone el camino completo separado por espacios,
+sin depender de la indentación de `console.group()`:
+
+```
+[11:00:12][ENTORNO ][init] Inicializando
+[11:00:12][ENTORNO ][init cliente] Comprobando cliente
+[11:00:12][ENTORNO ][init cliente yarn] Reinstalando dependencias
+```
+
+Si una llamada usa la misma etiqueta que la sección en la que ya está anidada, no se
+duplica (p.ej. varias líneas seguidas dentro de `yarn` no producen `"yarn yarn"`).
+
 ---
 
 ### `devel`
@@ -574,6 +591,13 @@ Entre otras acciones:
   > fue necesaria durante el desarrollo pero quedó obsoleta con Node.js **24.18**, que
   > corrige el comportamiento de streams que rompía `node-fetch@2.x`.
 
+- Regenera `.run/` con una acción de depuración (`{type}-{service}.run.xml`) por cada workspace
+  cuyo `deploy.type` sea `service`/`cronjob`/`job` y que tenga `enabled: true`,
+  `devel.enabled: true` y `build.framework: "meteored"`, permitiendo depurarlo individualmente
+  desde el IDE (ver [Integración con IDEs](#integración-con-ides-jetbrains--vs-code)). Si el
+  directorio no existe se crea; si ya existe, se eliminan las acciones de workspaces que ya no
+  cumplan esas condiciones y se regeneran las vigentes, dejando intactos otros ficheros
+  `.run.xml` no gestionados por `mrpack`.
 - Regenera el `.yarnrc.yml` con claves ordenadas alfabéticamente y una línea en blanco entre
   cada campo de nivel raíz. Garantiza la presencia de las siguientes opciones de seguridad:
 
@@ -789,6 +813,11 @@ Para facilitar la ejecución y depuración de las herramientas del monorepo (`mr
 ### JetBrains (PhpStorm, WebStorm, etc.)
 * **Ubicación**: `.run/`
 * Al abrir cualquier proyecto que incorpore este CLI, el IDE importará automáticamente las configuraciones de la barra de herramientas superior (ej. `develop => Ejecutar`, `develop => Compilar`, `cli => Actualizar`, etc.).
+* `yarn mrpack init` regenera además, en la raíz del proyecto, una acción `ejecutar => {type} => {service}`
+  (fichero `.run/{type}-{service}.run.xml`) por cada workspace cuyo `deploy.type` sea
+  `service`/`cronjob`/`job`, esté habilitado para desarrollo (`enabled` + `devel.enabled`) y use
+  el framework `meteored`, permitiendo depurarlo individualmente (`yarn workspace {service} run devel`)
+  desde el IDE sin configuración manual.
 
 ### VS Code
 * **Ubicación**: `.vscode/`

@@ -1,23 +1,19 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 9921b58dc3277077971943b30839c12d
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 20a65533a3deb79430ceb48970d819ef
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Colors} from "./colors";
 import util from "node:util";
+import {horaLocal} from "../utiles/fecha";
 
 interface ILogConfig {
     type: string;
     label: string;
-}
-
-function horaLocal(d: Date): string {
-    return [d.getHours(), d.getMinutes(), d.getSeconds()]
-        .map(n => String(n).padStart(2, "0"))
-        .join(":");
 }
 
 // Pila de etiquetas activas (una por cada `Log.group()` sin su `Log.groupEnd()` correspondiente).

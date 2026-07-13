@@ -1,4 +1,12 @@
 /**
+ * Editor: José Antonio Jiménez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 09df0d8954dab7060d73d642d137e5b6
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
+ */
+
+/**
  * Utilidades puras de cálculo y renderizado de diffs estructurados (side-by-side y unificado)
  * usadas por la vista de diff de {@link GestorTabla}. No dependen del estado de la tabla.
  */

@@ -1,10 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 01 Jul 2026 07:39:00 GMT
- * Hash: bc4f9a37262e0c81634b5b5f90e714dd
- * Versión: 2026.7.1+2-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-web-www.git
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 11e1a99434cc607d9935665d8a8a7bfe
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.1+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Colors} from "../../colors";
