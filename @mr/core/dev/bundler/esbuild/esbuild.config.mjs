@@ -6,7 +6,10 @@ import {createRequire} from "node:module";
 import path from "node:path";
 
 const require = createRequire(import.meta.url);
-const tscBin = require.resolve("typescript/bin/tsc");
+// TypeScript 7 ya no expone "./bin/tsc" en el campo "exports" de su package.json,
+// así que resolvemos el paquete y componemos la ruta al binario manualmente.
+const tscBin = path.join(path.dirname(require.resolve("typescript/package.json")), "bin/tsc");
+// const tscBin = require.resolve("typescript/bin/tsc");
 
 function readJSONSync(file) {
     try {

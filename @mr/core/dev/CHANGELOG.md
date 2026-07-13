@@ -2,6 +2,30 @@
 
 ---
 
+## 2026.7.13
+
+### Fixed — `bundler/esbuild/esbuild.config.mjs`
+
+- **`tscBin` fallaba con `ERR_PACKAGE_PATH_NOT_EXPORTED` tras actualizar a TypeScript 7**:
+  `require.resolve("typescript/bin/tsc")` dejó de funcionar porque TypeScript 7 ya no
+  expone el subpath `./bin/tsc` en el campo `exports` de su `package.json` (aunque el
+  fichero sigue existiendo físicamente). Ahora `tscBin` se resuelve componiendo la ruta a
+  partir de `typescript/package.json` (`dirname(require.resolve("typescript/package.json"))`
+  + `bin/tsc`), evitando depender de subpaths restringidos por `exports`.
+
+### Changed — `package.json`, `bundler/esbuild/README.md`
+
+- **`typescript` revertido de `^7.0.2` a `^6.0.3`**: el compilador nativo de TypeScript 7
+  (Go, "Corsa"/`tsgo`) todavía no soporta resolución de módulos bajo Yarn PnP (ver
+  [microsoft/typescript-go#460](https://github.com/microsoft/typescript-go/issues/460),
+  PR [#1966](https://github.com/microsoft/typescript-go/pull/1966) sin fusionar). Con TS7,
+  `tsc --noEmit`/`--watch` no resolvía ningún módulo de workspace (`services-comun/...`,
+  `@mr/core-*`, etc.), aunque esbuild sí compilaba correctamente. Documentada la limitación
+  en `bundler/esbuild/README.md` para no repetir el upgrade hasta que el soporte de PnP esté
+  publicado en una versión estable de TS7.
+
+---
+
 ## 2026.6.26
 
 ### Added

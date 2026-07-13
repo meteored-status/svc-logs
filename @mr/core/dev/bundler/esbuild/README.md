@@ -21,6 +21,20 @@ bundler/esbuild/esbuild.config.mjs
 5. En watch (por `entorno=desarrollo` o `--watch`) lanza también `tsc --watch`.
 6. En `test/produccion` limpia `output/` y compila una vez.
 
+> **Resolución de `tscBin`:** el binario de `tsc` se localiza componiendo la ruta a partir
+> de `typescript/package.json` (`require.resolve("typescript/package.json")` +
+> `bin/tsc`), en lugar de `require.resolve("typescript/bin/tsc")`. Este último subpath dejó
+> de estar expuesto en el campo `exports` del `package.json` de TypeScript 7, por lo que
+> fallaba con `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+>
+> **Versión de `typescript` fijada en `^6.x`:** TypeScript 7 (compilador nativo en Go,
+> "Corsa"/`tsgo`) todavía no soporta resolución de módulos bajo Yarn PnP (ver
+> [microsoft/typescript-go#460](https://github.com/microsoft/typescript-go/issues/460) y el
+> PR [#1966](https://github.com/microsoft/typescript-go/pull/1966), sin fusionar). Con TS7,
+> `tsc --noEmit`/`--watch` no encuentra ningún módulo de workspace (`services-comun/...`,
+> `@mr/core-*`, etc.), aunque esbuild sí compila correctamente. No actualizar a `^7.x` hasta
+> que ese soporte se publique en una versión estable.
+
 ---
 
 ## Reglas de runtime
