@@ -1,6 +1,6 @@
 # CODEMAP — `@mr/cli/src/mrpack/`
 
-> Generado: 2026-06-26. Actualizar tras cambios significativos. Última revisión: 2026-06-26 (optimización push-log).
+> Generado: 2026-06-26. Actualizar tras cambios significativos. Última revisión: 2026-07-03 (refactorización transversal + fase 2: deduplicación y división de módulos grandes).
 
 ---
 
@@ -636,4 +636,36 @@ utiles/tty   ← menu.ts (config/), GestorTabla (tabla.ts)
 - El algoritmo LCS para diffs está centralizado en `utiles/diff.ts`; los consumidores solo añaden el formato de salida (ANSI o HTML).
 - Las primitivas TTY (`Render`, `prepararTTY`, `restaurarTTY`) están centralizadas en `utiles/tty.ts`.
 - Los ficheros `bin/min/*` se excluyen de los diffs HTML (mismo criterio que `GestorTabla.esDiffable` en `tabla.ts`).
+
+## Refactorización 2026-07-03
+
+- Eliminado código muerto confirmado: `clases/plugin/manager.ts`, `clases/plugin/template.ts` y `remove()` de `framework/cliente.ts` (ninguno tenía referencias en el resto de `@mr/cli/src`).
+- Corregido bug de tipos real en `manifest/workspace/deployment/index.ts`: `Exclude<IManifestDeployment, "kustomize">` no elimina la propiedad de un tipo objeto (`Exclude` opera sobre uniones); sustituido por `Omit`.
+- Corregidos nombres de parámetros copy-paste: `database.ts` usaba `imagen` como nombre de parámetro, `root/deploy/build.ts`/`run.ts` usaban `devel`.
+- `mrpack.ts`: los módulos CLI (`autodoc`, `config`, `devel`, ...) ahora se definen en una única lista de metadatos (`MRPack.MODULOS: IModuloMeta[]`) en vez de estar duplicados en un array, un `switch` y el texto de ayuda por separado.
+- Sustituidos los `new Promise(...)` por `Deferred<T>` en `config/menu.ts`, `workspace/i18n.ts` y `workspace/service.ts`.
+- Extraído `Workspace.detenerProceso()` (en `clases/workspace.ts`) para eliminar la lógica duplicada de "spawn + timeout + `tree-kill`" que existía por separado en `I18N.stopCompilar`, `Service.stopCompilar` y `Service.stopEjecutar`.
+- `devel.ts` reutiliza ahora `cargarConfig`/`GRUPOS` de `config/datos.ts` en vez de reimplementar la carga de `config.workspaces.json` y la lista de grupos; `deploy.ts` también usa `GRUPOS`, corrigiendo que antes no incluía el grupo `scripts`.
+- Migrados los mensajes de progreso/error de `console.log`/`console.error` a la clase `Log` (`clases/log.ts`) en: `mrpack.ts` (solo el fatal-handler de `modulo.ts`, que se deja como excepción del propio runner), `manifest/index.ts`, `devel.ts`, `deploy.ts`, `patches.ts`, `yarn.ts`, `workspace/compilar.ts`, `init.ts`, `config/frameworks.ts`, `config/workspaces.ts`, `framework/cliente.ts`, `framework/gestor/index.ts`, `framework/gestor/acciones.ts`, `auto-doc.ts`. Se han respetado como excepción legítima los banners/ayuda de `mrpack.ts`/`modulos/*.ts`, los menús TUI de `config/menu.ts` y `framework/gestor/tabla.ts`, y el renderizado de progreso con control de cursor de `paquete/index.ts`.
+- `Promise.reject()` sin `Error` sustituido por `throw new Error(...)` con contexto en `workspace/compilar.ts` (rspack/esbuild/next) y `framework/cliente.ts` (`getAutor`).
+- Añadidas llaves faltantes en `if`/`for` sin bloque en `paquete/index.ts` y `paquete/file.ts`; eliminada una doble línea en blanco en `gestor/acciones.ts`; sustituidas comparaciones `==`/`!=` por `===`/`!==` en `framework/cliente.ts`.
+- Catches silenciosos ahora loguean el error: `JSON.parse` en `gestor/acciones.ts`, `subirLogHtml()` en `gestor/acciones.ts`, `save()` en `manifest/index.ts`.
+
+## Refactorización 2026-07-03 (fase 2 — deduplicación y división de módulos grandes)
+
+- `framework/gestor/index.ts`: extraída la función `ejecutarTablaInteractiva()` compartida por `actualizarTodo`, `enviarTodo` y `resetearTodo` (mostrar `GestorTabla`, traducir el resultado indexado sobre `filtrados` de vuelta a un array indexado sobre `infos`, y loguear cancelación), eliminando ~30 líneas duplicadas 3 veces.
+- `paquete/storage.ts`: extraído `ejecutarConLoginRetry<T>()`, que encapsula el patrón "ejecutar operación → si falla por auth reintentar tras `gcloud login` → si falla por 'No such object' devolver valor por defecto" antes duplicado entre `_fetchListaConLogin` y `getZIP()`.
+- `auto-doc.ts`: eliminados todos los `any` explícitos (`querySchema`, `tsToJSON`, `resolveIdentifier`, `buildParameters`, `buildSchemaFromResponseObject`, ...), sustituidos por un tipo `JSONValue` y una interfaz `IEsquemaCampo`/`IEsquema` que modelan la forma real de los esquemas de validación de `services-comun`.
+- `init.ts` (1141 → 498 líneas): dividido en 8 submódulos cohesivos bajo `clases/init/`: `git.ts` (`corregirGITs`/`corregirGIT`), `legacy.ts` (`limpiarLegacy`), `bundler.ts` → movido a `clases/bundler.ts` (compartido, ver más abajo), `scripts.ts` (`checkScripts`), `dependencias.ts` (`checkDependencies`, `resolverDepsTransitivas`, `versionMasReciente`, `mrNombreADir`), `symlinks.ts` (`initGithub`/`initAgents`), `yarnrc.ts` (`initYarnRC`/`IYarnRC`), `config-workspaces.ts` (`initConfig`/`IWorkspaces`/`sanitizePatch`). `init.ts` conserva solo la orquestación (`init`, `checkCliente`, `initBase`, `checkFiles`, `loadConfig`, `initWorkspace(s)`).
+- **Dedup real encontrada durante la división**: `workspace/service.ts` tenía su propia copia (ligeramente distinta, sin chequeo de `reflect-metadata`) de `getBundlerCoherente`/`getBundlerNormalizado`, duplicada con la de `init.ts`. Unificadas en `clases/bundler.ts` (parámetro `dependencies` opcional), usado ahora por `init/scripts.ts`, `init.ts` y `workspace/service.ts`.
+- `workspace/service.ts` (766 → 686 líneas): extraídas a `workspace/service-log-utils.ts` las funciones puras de formateo/parsing usadas para el log markdown de compilación: `horaLocal`, `fechaHoraLocal`, `extractFileRefs`. Al extraer `extractFileRefs` se corrigió un bug real de bucle infinito potencial: en la rama `rawPath.includes("node_modules")` se hacía `continue` sin haber avanzado `match = patron.exec(text)`, dejando el `while` en el mismo match para siempre.
+- `framework/gestor/tabla.ts` (1280 → 1028 líneas): extraídas a `framework/gestor/diff-render.ts` (258 líneas) todas las funciones estáticas puras de cálculo/renderizado de diff, sin dependencia del estado de `GestorTabla`: `panelMagenta`, `lcsOps`, `alinearOps`, `renderCeldaDiff`, `calcularDiffSideBySide`, `calcularDiff`, `esDiffable`.
+- No se ha dividido más `Service` ni `GestorTabla`: el resto de su lógica (spawn/timeout/watchers de procesos; navegación/dibujado interactivo del TUI) está fuertemente acoplada a estado de instancia mutable y es difícil de verificar sin pruebas manuales interactivas; se ha priorizado extraer solo las partes puras y de bajo riesgo.
+
+## Refactorización 2026-07-03 (fase 3 — `Log` sin indentación de `console.group` y etiquetas anidadas)
+
+- `clases/log.ts`: `Log.info`/`Log.error` escriben ahora directamente vía `process.stdout.write`/`process.stderr.write` (con `util.format`) en vez de `console.info`/`console.error`, para no heredar la indentación que añade `console.group()`/`console.groupEnd()` a cualquier llamada de `console.*` (mezclaba mal con el prefijo `[hora][tipo][label]` propio de `Log`).
+- Se añade una pila de etiquetas (`pilaEtiquetas`) y una función `etiquetaCompuesta()`: en vez de indentar visualmente los bloques anidados, la propia etiqueta compone el camino de anidamiento, p.ej. `[init]` → `[init cliente]` → `[init cliente yarn]`. Si la etiqueta del grupo más interno coincide con la etiqueta de la llamada actual (caso típico: varias líneas seguidas dentro de la misma sección, como en `yarn.ts`), no se duplica (no aparece `"yarn yarn"`). Los corchetes `[ ]` del prefijo se colorean en morado (`Colors.FgMagenta`) para diferenciarlos visualmente del contenido.
+- Nuevos métodos `Log.group(cfg, ...txt)` (loguea igual que `Log.info` con la etiqueta compuesta y apila `cfg.label`) y `Log.groupEnd()` (desapila). Sustituyen al patrón previo `Log.info(cfg, msg); console.group(); ...; console.groupEnd();` en los puntos donde `Log` delimitaba secciones anidadas: `init.ts`, `init/git.ts`, `init/legacy.ts`, `init/yarnrc.ts`, `init/config-workspaces.ts`, `yarn.ts` y los dos `console.groupEnd()` "huérfanos" de `framework/cliente.ts` (cierran un grupo abierto por `init.ts::checkCliente()` antes de `process.exit()`/de lanzar un error).
+- No se ha tocado `console.group()`/`console.groupEnd()` en `mrpack.ts` ni en `modulos/*.ts`: ahí se usa solo para indentar texto de ayuda (`console.log` directo), sin relación con `Log`.
 

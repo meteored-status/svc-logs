@@ -8,34 +8,26 @@ import {isDir, readDir} from "services-comun/modules/utiles/fs";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
 import {Comando} from "./comando";
+import {GRUPOS} from "./config/datos";
+import {Log} from "./log";
 import {Compilar} from "./workspace/compilar";
 import {ManifestRootLoader} from "./manifest/root";
 
 export function run(basedir: string, env: string): void {
     PromiseDelayed()
         .then(async ()=>{
-            const cronjobs: string[] = [];
-            const services: string[] = [];
-            const jobs: string[] = [];
-            if (await isDir(`${basedir}/cronjobs/`)) {
-                cronjobs.push(...await readDir(`${basedir}/cronjobs/`));
-            }
-            if (await isDir(`${basedir}/services/`)) {
-                services.push(...await readDir(`${basedir}/services/`));
-            }
-            if (await isDir(`${basedir}/jobs/`)) {
-                jobs.push(...await readDir(`${basedir}/jobs/`));
+            const workspacesPorGrupo: Record<string, string[]> = {};
+            for (const grupo of GRUPOS) {
+                workspacesPorGrupo[grupo] = await isDir(`${basedir}/${grupo}/`)
+                    ? await readDir(`${basedir}/${grupo}/`)
+                    : [];
             }
 
             const {manifest} = await new ManifestRootLoader(basedir).load(true);
-            // console.log(JSON.stringify(process.env));
-            // console.log(JSON.stringify(manifest.toJSON()));
 
-            const compilaciones = await Promise.all([
-                ...cronjobs.map((service)=>Compilar.build(basedir, service, "cronjobs")),
-                ...services.map((service)=>Compilar.build(basedir, service, "services")),
-                ...jobs.map((service)=>Compilar.build(basedir, service, "jobs")),
-            ]);
+            const compilaciones = await Promise.all(
+                GRUPOS.flatMap((grupo)=>workspacesPorGrupo[grupo].map((service)=>Compilar.build(basedir, service, grupo))),
+            );
             const compilaciones_validas = compilaciones.filter((compilacion)=>compilacion!=null);
             compilaciones_validas.forEach((compilacion)=>{
                 compilacion.checkDependencias(compilaciones_validas);
@@ -44,12 +36,10 @@ export function run(basedir: string, env: string): void {
             if (manifest.deploy.build.enabled && await isDir(`${basedir}/i18n`)) {
                 const {status, stdout, stderr} = await Comando("yarn", ["workspace", "i18n", "run", "generate"]);
                 if (status != 0) {
-                    console.error("i18n", "[KO   ]", "Error compilando:");
-                    console.error(stdout);
-                    console.error(stderr);
+                    Log.error({type: Log.label_compilar, label: "i18n"}, "Error compilando:", stdout, stderr);
                     return Promise.reject();
                 }
-                console.log("i18n", "[OK   ]", "Traducciones generadas");
+                Log.info({type: Log.label_compilar, label: "i18n"}, "Traducciones generadas");
             }
 
             // eliminamos las compilaciones dependientes de otras compilaciones (serán iniciadas por las propias dependencias)
@@ -59,8 +49,8 @@ export function run(basedir: string, env: string): void {
             ]);
         })
         .catch((error)=>{
-            if (error!=undefined) {
-                console.error(error);
+            if (error!==undefined) {
+                Log.error({type: Log.label_base, label: "deploy"}, error);
             }
             process.exit(1);
         });

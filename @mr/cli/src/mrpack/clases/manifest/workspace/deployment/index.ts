@@ -19,10 +19,10 @@ import ManifestWorkspaceDeploymentKustomizeLoader from "./kustomize";
 import ManifestWorkspaceDeploymentLambdaLoader from "./lambda";
 import ManifestWorkspaceDeploymentStorageLoader from "./storage";
 
-type IManifestDeploymentUpdate1 = Exclude<IManifestDeployment, "kustomize"> & {
+type IManifestDeploymentUpdate1 = Omit<IManifestDeployment, "kustomize"> & {
     kustomize?: string;
 }
-type IManifestDeploymentUpdate2 = Exclude<IManifestDeployment, "kustomize"> & {
+type IManifestDeploymentUpdate2 = Omit<IManifestDeployment, "kustomize"> & {
     kustomize: {
         legacy: string;
     };

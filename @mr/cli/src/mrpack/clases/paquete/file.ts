@@ -306,7 +306,7 @@ export class PaqueteFile {
             }
 
             const mezcla = await this.mezclar(basedir, nuevo.files[this.filename]);
-            if (mezcla.conflict && tracker) tracker.hayConflictos = true;
+            if (mezcla.conflict && tracker) { tracker.hayConflictos = true; }
             tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok", conflictos: mezcla.conflict ? mezcla.bloques : undefined});
             this.recalcularHash([mezcla.hash], nuevo.status.autor);
 
@@ -346,7 +346,7 @@ export class PaqueteFile {
         if (antiguo.status.hash!==this.hash && nuevo.status.hash!==this.hash) {
             // el antiguo, el actual y el nuevo son diferentes => mezclar
             const mezcla = await this.mezclar(basedir, nuevo.files[this.filename], !bin ? antiguo.files[this.filename] : undefined);
-            if (mezcla.conflict && tracker) tracker.hayConflictos = true;
+            if (mezcla.conflict && tracker) { tracker.hayConflictos = true; }
             tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok", conflictos: mezcla.conflict ? mezcla.bloques : undefined});
             this.recalcularHash([mezcla.hash], nuevo.status.autor);
 

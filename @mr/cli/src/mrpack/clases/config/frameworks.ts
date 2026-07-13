@@ -6,6 +6,7 @@
  */
 
 import {Colors} from "../colors";
+import {Log} from "../log";
 import {FrameworkUpdates} from "../workspace/service";
 import {cargarConfig, guardarConfig} from "./datos";
 import {elegirUno, seleccionar} from "./menu";
@@ -41,7 +42,7 @@ async function gestionarAutoupdates(basedir: string): Promise<void> {
     config.framework = {updates: resultado};
     await guardarConfig(basedir, config);
 
-    console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], `✓ Autoupdates: ${resultado}`));
+    Log.info({type: Log.label_base, label: "frameworks"}, Colors.colorize([Colors.FgGreen, Colors.Bright], `✓ Autoupdates: ${resultado}`));
 }
 
 /**
@@ -77,7 +78,7 @@ async function gestionarPatches(basedir: string): Promise<void> {
     delete config.patch;
     await guardarConfig(basedir, config);
 
-    console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], "✓ Sistema de Patches: patch eliminado"));
+    Log.info({type: Log.label_base, label: "frameworks"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "✓ Sistema de Patches: patch eliminado"));
 }
 
 /**

@@ -6,9 +6,9 @@
     "@mr/core-dev": "workspace:*",
     "@mr/core-network": "workspace:*",
     "@mr/core-workload": "workspace:*",
-    "@types/node": "^24.12.4",
+    "@types/node": "^24.13.3",
     "@types/qs": "^6.15.1",
-    "qs": "^6.15.2",
+    "qs": "^6.15.3",
     "services-comun": "workspace:*",
     "tslib": "^2.8.1"
   },

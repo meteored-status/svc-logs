@@ -13,6 +13,7 @@ import {isFile, md5Dir, mkdir, readDir, readFileString, safeWrite} from "service
 
 import {Colors} from "../colors";
 import {Comando} from "../comando";
+import {Log} from "../log";
 import {Paquete, PaqueteTipo} from "../paquete";
 import {install} from "../yarn";
 
@@ -245,7 +246,7 @@ export async function add(basedir: string, frameworks: string[], visitados: Set<
             continue;
         }
 
-        console.log(`Añadiendo framework ${Colors.colorize([Colors.FgMagenta], fw)}...`);
+        Log.info({type: Log.label_base, label: "framework"}, `Añadiendo framework ${Colors.colorize([Colors.FgMagenta], fw)}...`);
         await mkdir(localDir, true);
         await safeWrite(`${localDir}/package.json`, `${JSON.stringify({
             name: npmName,
@@ -263,7 +264,7 @@ export async function add(basedir: string, frameworks: string[], visitados: Set<
         const depsFw = await leerDepsMrFramework(localDir);
         const faltantes = depsFw.filter(d => !visitados.has(d));
         if (faltantes.length > 0) {
-            console.log(`  → Verificando dependencias de ${npmName}: ${faltantes.join(", ")}`);
+            Log.info({type: Log.label_base, label: "framework"}, `  → Verificando dependencias de ${npmName}: ${faltantes.join(", ")}`);
             if (await add(basedir, faltantes, visitados)) {
                 cambio = true;
             }
@@ -271,10 +272,6 @@ export async function add(basedir: string, frameworks: string[], visitados: Set<
     }
 
     return cambio;
-}
-
-export async function remove(_basedir: string, _frameworks: string[]): Promise<boolean> {
-    return false;
 }
 
 export async function getClienteHash(basedir: string): Promise<string> {
@@ -297,7 +294,7 @@ export async function checkCliente(basedir: string): Promise<string | undefined>
             getClienteHash(basedir),
             getClienteMD5(basedir),
         ]);
-        if (hash != md5) {
+        if (hash !== md5) {
             return hash;
         }
     }
@@ -311,18 +308,17 @@ export async function recompilarCliente(basedir: string, hash: string, config: I
         await install(basedir, {verbose: false, optimize: true});
     }
 
-    console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], "Compilando nueva versión del cliente"));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "Compilando nueva versión del cliente"));
     await Comando("yarn", ["run", "compile"], {cwd: `${basedir}/@mr/cli`});
     const md5 = await md5Dir(`${basedir}/@mr/cli/bin/min`);
     await safeWrite(`${basedir}/@mr/cli/bin/hash.md5`, md5, true);
 
-    if (md5 == hash || !reiniciar) {
+    if (md5 === hash || !reiniciar) {
         return;
     }
 
-    console.log(Colors.colorize([Colors.FgYellow, Colors.Bright], "Reiniciando..."));
-    console.groupEnd();
-    console.log("");
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow, Colors.Bright], "Reiniciando..."));
+    Log.groupEnd();
     const child = spawn("yarn", ["mrpack", ...process.argv.slice(2)], {
         stdio: "inherit",
         shell: process.platform === "win32",
@@ -353,11 +349,11 @@ export async function getAutor(): Promise<string> {
         return autorEnv;
     }
 
-    console.log(Colors.colorize([Colors.FgRed], "No se puede obtener el usuario de git"));
-    console.log(Colors.colorize([Colors.FgYellow], "Configura user.name y reintenta:"));
-    console.log(Colors.colorize([Colors.FgCyan], "git config --global user.name \"Tu Nombre\""));
-    console.groupEnd();
-    return Promise.reject(new Error("No se puede obtener el usuario de git"));
+    Log.error({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgRed], "No se puede obtener el usuario de git"));
+    Log.error({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "Configura user.name y reintenta:"));
+    Log.error({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan], "git config --global user.name \"Tu Nombre\""));
+    Log.groupEnd();
+    throw new Error("No se puede obtener el usuario de git");
 }
 
 /**

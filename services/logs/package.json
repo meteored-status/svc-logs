@@ -16,7 +16,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^9.4.2",
     "chokidar": "^5.0.0",
-    "dd-trace": "^5.110.0",
+    "dd-trace": "^5.113.0",
     "formidable": "^3.5.4",
     "hexoid": "^2.0.0",
     "qs": "^6.15.3",
@@ -29,7 +29,7 @@
     "@mr/core-i18n": "workspace:*",
     "@mr/core-network": "workspace:*",
     "@mr/core-workload": "workspace:*",
-    "@types/node": "^24.13.2",
+    "@types/node": "^24.13.3",
     "logs-services": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"

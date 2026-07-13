@@ -14,7 +14,7 @@
     "@mr/core-dev": "workspace:*",
     "@mr/core-network": "workspace:*",
     "@mr/core-utils": "workspace:*",
-    "@types/node": "^24.13.2",
+    "@types/node": "^24.13.3",
     "services-comun": "workspace:*"
   }
 }

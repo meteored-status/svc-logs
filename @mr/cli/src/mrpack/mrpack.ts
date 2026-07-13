@@ -18,6 +18,12 @@ import {ModuloUpdate} from "./modulos/update";
 import {ModuloFramework} from "./modulos/framework";
 import {ModuloAutoDoc} from "./modulos/auto-doc";
 
+interface IModuloMeta {
+    nombre: string;
+    descripcion: string;
+    run: () => void;
+}
+
 export interface IMRPackConfig extends IModuloConfig {
     options: IModuloConfig["options"];/* & {
     };*/
@@ -41,15 +47,15 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
         strict: false,
     };
 
-    private static readonly MODULOS = [
-        "autodoc",
-        "config",
-        "devel",
-        "deploy",
-        "framework",
-        "init",
-        "update",
-    ] as const;
+    private static readonly MODULOS: readonly IModuloMeta[] = [
+        {nombre: "autodoc", descripcion: "Genera la documentación automática del proyecto", run: ()=>ModuloAutoDoc.run()},
+        {nombre: "config", descripcion: "Gestiona la configuración del proyecto (config.workspaces.json)", run: ()=>ModuloConfig.run()},
+        {nombre: "devel", descripcion: "Inicia el entorno de desarrollo", run: ()=>ModuloDevel.run()},
+        {nombre: "deploy", descripcion: "Compila el proyecto en modo producción", run: ()=>ModuloDeploy.run()},
+        {nombre: "framework", descripcion: "Operaciones sobre los frameworks", run: ()=>ModuloFramework.run()},
+        {nombre: "init", descripcion: "Inicializa la configuración del proyecto", run: ()=>ModuloInit.run()},
+        {nombre: "update", descripcion: "Actualiza las librerías", run: ()=>ModuloUpdate.run()},
+    ];
 
     public static override run(): void {
         super.run(new this(this.OPTIONS));
@@ -66,11 +72,14 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
      */
     protected override async run(): Promise<void> {
         const {version} = await readJSON<IPackageJson>(`${this.root}/@mr/cli/package.json`);
-        const [v, autor] = version!.split("-");
+        if (version===undefined) {
+            throw new Error("No se ha encontrado la versión de @mr/cli en su package.json");
+        }
+        const [v, autor] = version.split("-");
         const [mayor, release] = v.split("+");
         const partes: string[] = [];
         partes.push(Colors.colorize([Colors.FgWhite, Colors.Underscore], "MRPack"));
-        partes.push(" ")
+        partes.push(" ");
         partes.push(Colors.colorize([Colors.FgGreen, Colors.Bright], mayor));
         partes.push(Colors.colorize([Colors.FgWhite], "+"));
         partes.push(Colors.colorize([Colors.FgRed, Colors.Bright], release));
@@ -92,7 +101,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
      * @param positionals - Argumentos posicionales (se espera uno: el nombre del submódulo).
      */
     protected override async parsePositionals(positionals: string[]): Promise<void> {
-        if (positionals.length!=1 || !(MRPack.MODULOS as readonly string[]).includes(positionals[0])) {
+        if (positionals.length!=1 || !MRPack.MODULOS.some(modulo=>modulo.nombre===positionals[0])) {
             this.mostrarAyuda();
 
             return Promise.reject();
@@ -106,29 +115,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
      * @param positionals - Lista de argumentos posicionales; el primero es el nombre del submódulo.
      */
     protected async parseParams(config: IMRPack, positionals: string[]): Promise<void> {
-        switch (positionals[0]) {
-            case "autodoc":
-                ModuloAutoDoc.run();
-                break;
-            case "config":
-                ModuloConfig.run();
-                break;
-            case "devel":
-                ModuloDevel.run();
-                break;
-            case "deploy":
-                ModuloDeploy.run();
-                break;
-            case "framework":
-                ModuloFramework.run();
-                break;
-            case "init":
-                ModuloInit.run();
-                break;
-            case "update":
-                ModuloUpdate.run();
-                break;
-        }
+        MRPack.MODULOS.find(modulo=>modulo.nombre===positionals[0])?.run();
     }
 
     protected mostrarAyuda(): void {
@@ -141,13 +128,9 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
                 console.log(`Indica el módulo a ejecutar.`);
                 console.log(`${Colors.colorize([Colors.FgMagenta], "Módulos disponibles:")}`);
                 console.group();
-                    console.log(`${Colors.colorize([Colors.FgBlue], "autodoc")}:   Genera la documentación automática del proyecto`);
-                    console.log(`${Colors.colorize([Colors.FgBlue], "config")}:    Gestiona la configuración del proyecto (config.workspaces.json)`);
-                    console.log(`${Colors.colorize([Colors.FgBlue], "devel")}:     Inicia el entorno de desarrollo`);
-                    console.log(`${Colors.colorize([Colors.FgBlue], "deploy")}:    Compila el proyecto en modo producción`);
-                    console.log(`${Colors.colorize([Colors.FgBlue], "framework")}: Operaciones sobre los frameworks`);
-                    console.log(`${Colors.colorize([Colors.FgBlue], "init")}:      Inicializa la configuración del proyecto`);
-                    console.log(`${Colors.colorize([Colors.FgBlue], "update")}:    Actualiza las librerías`);
+                    for (const modulo of MRPack.MODULOS) {
+                        console.log(`${Colors.colorize([Colors.FgBlue], modulo.nombre.padEnd(9))}: ${modulo.descripcion}`);
+                    }
                 console.groupEnd();
                 console.log(`${Colors.colorize([Colors.FgRed], "Solo puede indicarse uno")}`);
             console.groupEnd();

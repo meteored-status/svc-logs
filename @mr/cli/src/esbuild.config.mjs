@@ -37,7 +37,9 @@ const define = {
 };
 
 const outdir      = resolve(__dirname, "../bin/min");
-const tscBin      = _require.resolve("typescript/bin/tsc");
+// TypeScript 7 ya no expone "./bin/tsc" en el campo "exports" de su package.json,
+// así que resolvemos el paquete y componemos la ruta al binario manualmente.
+const tscBin      = resolve(dirname(_require.resolve("typescript/package.json")), "bin/tsc");
 const tsconfigPath = resolve(__dirname, "tsconfig.json");
 
 const watch = process.argv.includes("--watch");

@@ -166,9 +166,9 @@ export class Paquete {
             isDir(`${basedir}/@mr/user`).then(ok => ok ? readDir(`${basedir}/@mr/user`) : []),
             isDir(`${basedir}/framework`).then(ok => ok ? readDir(`${basedir}/framework`) : []),
         ]);
-        for (const dir of coreDirs)   paquetes.push(this.build(`${basedir}/@mr/core/${dir}`));
-        for (const dir of userDirs)   paquetes.push(this.build(`${basedir}/@mr/user/${dir}`));
-        for (const dir of fwDirs)     paquetes.push(this.build(`${basedir}/framework/${dir}`));
+        for (const dir of coreDirs) { paquetes.push(this.build(`${basedir}/@mr/core/${dir}`)); }
+        for (const dir of userDirs) { paquetes.push(this.build(`${basedir}/@mr/user/${dir}`)); }
+        for (const dir of fwDirs)   { paquetes.push(this.build(`${basedir}/framework/${dir}`)); }
 
         const [cli, ...resto] = await Promise.all(paquetes);
 
@@ -243,7 +243,10 @@ export class Paquete {
     private _pushLogData: IPushLogData | undefined;
 
     protected constructor(protected readonly basedir: string, protected paquete: Partial<IPackageFW>) {
-        this.nombre = paquete.name!;
+        if (paquete.name === undefined) {
+            throw new Error(`El package.json de ${basedir} no tiene la propiedad "name"`);
+        }
+        this.nombre = paquete.name;
         this.version = paquete.version ?? "0.0.0.0+0";
         const config: Partial<IPaqueteCFG> = paquete.config ?? {};
         this.config = {

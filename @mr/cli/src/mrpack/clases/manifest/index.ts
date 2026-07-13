@@ -11,6 +11,7 @@ import type {ManifestRoot} from "@mr/core-dev/manifest/root";
 import {readJSON, readJSONSync, safeWrite} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
+import {Log} from "../log";
 import type {IPackageJsonLegacy} from "../packagejson";
 
 type ManifestDefault<T> = {default: T};
@@ -29,7 +30,7 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
      * @param basedir - Directorio del workspace o raíz del monorepo.
      * @returns Ruta absoluta al fichero `mrpack.json`.
      */
-    public static getFile(basedir: string): string {
+    protected static getFile(basedir: string): string {
         return `${basedir}/mrpack.json`;
     }
 
@@ -125,7 +126,7 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         try {
             await safeWrite(this.file, JSON.stringify(this.toJSON(), null, 4), true);
         } catch (err) {
-            console.log("Error guardando manifest", err);
+            Log.error({type: Log.label_base, label: "manifest"}, "Error guardando manifest", err);
         } finally {
             this.guardando = false;
         }

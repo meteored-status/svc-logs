@@ -15,7 +15,7 @@ import {type IConfigServices} from "../workspace/service";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
 /** Grupos de workspaces ejecutables/compilables gestionados por `config.workspaces.json`. */
-const GRUPOS = ["cronjobs", "jobs", "scripts", "services"] as const;
+export const GRUPOS = ["cronjobs", "jobs", "scripts", "services"] as const;
 
 /**
  * Capacidades de compilación/ejecución de un workspace, derivadas de su `mrpack.json`.

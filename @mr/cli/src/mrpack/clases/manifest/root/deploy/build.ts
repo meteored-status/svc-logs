@@ -19,16 +19,16 @@ class ManifestRootDeploymentBuildLoader {
     /**
      * Normaliza y valida la sección `build` del despliegue raíz.
      *
-     * @param devel - Datos parciales de la sección `build`.
+     * @param build - Datos parciales de la sección `build`.
      * @returns Configuración de build completa y normalizada.
      */
-    public check(devel: Partial<IManifestDeploymentBuild>={}): IManifestDeploymentBuild {
+    public check(build: Partial<IManifestDeploymentBuild>={}): IManifestDeploymentBuild {
         const data = this.default;
-        if (devel.enabled !== undefined) {
-            data.enabled = devel.enabled;
+        if (build.enabled !== undefined) {
+            data.enabled = build.enabled;
         }
-        if (devel.force !== undefined) {
-            data.force = devel.force;
+        if (build.force !== undefined) {
+            data.force = build.force;
         }
 
         return data;

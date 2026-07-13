@@ -11,16 +11,17 @@ import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import chokidar, {type ChokidarOptions} from "chokidar";
-import treeKill from "tree-kill";
 
 import type {Manifest} from "@mr/core-dev/manifest";
-import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
+import {BuildFW} from "@mr/core-dev/manifest/build";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 
 import {Colors} from "../colors";
+import {getBundlerNormalizado} from "../bundler";
 import {type IWorkspace, Workspace} from "../workspace";
 import {Log} from "../log";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
+import {extractFileRefs, fechaHoraLocal, horaLocal} from "./service-log-utils";
 
 /**
  * Frecuencia de comprobación de actualizaciones de frameworks.
@@ -109,47 +110,6 @@ export class Service extends Workspace {
     private static TIMEOUT = 300000;
     private static COMPILABLES: (Runtime|undefined)[] = [Runtime.node, Runtime.browser, Runtime.cfworker];
     private static PAUSABLES: (BuildFW|undefined)[] = [BuildFW.meteored, BuildFW.nextjs];
-
-    private static horaLocal(d: Date): string {
-        return [d.getHours(), d.getMinutes(), d.getSeconds()]
-            .map(n => String(n).padStart(2, "0"))
-            .join(":");
-    }
-
-    private static fechaHoraLocal(d: Date): string {
-        const pad = (n: number) => String(n).padStart(2, "0");
-        return [
-            `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
-            Service.horaLocal(d),
-        ].join(" ");
-    }
-
-    private static getBundlerCoherente(config: Manifest): BuildBundler {
-        switch (config.deploy.runtime) {
-            case Runtime.browser:
-                return BuildBundler.rspack;
-            case Runtime.cfworker:
-            case Runtime.php:
-                return BuildBundler.none;
-            case Runtime.node:
-            default:
-                if (config.build.framework===BuildFW.nextjs) {
-                    return BuildBundler.none;
-                }
-                if (config.build.bundle.toJSON()?.componentes!=undefined && Object.keys(config.build.bundle.toJSON()?.componentes ?? {}).length>0) {
-                    return BuildBundler.rspack;
-                }
-                return BuildBundler.esbuild;
-        }
-    }
-
-    private static getBundlerNormalizado(config: Manifest): BuildBundler {
-        const bundlerEsperado = Service.getBundlerCoherente(config);
-        if (bundlerEsperado===BuildBundler.esbuild && config.build.bundler===BuildBundler.rspack) {
-            return BuildBundler.rspack;
-        }
-        return bundlerEsperado;
-    }
 
     /* INSTANCE */
     private readonly compilar: boolean;
@@ -317,7 +277,7 @@ export class Service extends Workspace {
         const anterior = await this.config;
         const config = new ManifestWorkspaceLoader(this.dir).loadSync();
         const bundlerAnterior = anterior.manifest.build.bundler;
-        const bundlerNuevo = Service.getBundlerNormalizado(config.manifest);
+        const bundlerNuevo = getBundlerNormalizado(config.manifest);
         if (bundlerAnterior!==bundlerNuevo && this.compilador!=undefined) {
             Log.info({
                 type: Log.label_compilar,
@@ -460,51 +420,10 @@ export class Service extends Workspace {
             .then(() => fs.rename(actual, anterior).catch(() => undefined))
             .then(() => fs.writeFile(
                 actual,
-                `# ${this.nombre}\n## Compilación iniciada: ${Service.fechaHoraLocal(new Date())}\n\n---\n\n`,
+                `# ${this.nombre}\n## Compilación iniciada: ${fechaHoraLocal(new Date())}\n\n---\n\n`,
                 "utf-8",
             ))
             .catch(() => undefined);
-    }
-
-    private extractFileRefs(lineas: string[]): {label: string; href: string; lineNum: number; colNum: number}[] {
-        const patron = /([^\s'"<>()|,]+\.(?:tsx|ts|jsx|js|mjs|cjs|scss|css|html))(?::(\d+)(?::(\d+))?)?/g;
-        const refs: Map<string, {label: string; href: string; baseName: string; lineNum: number; colNum: number}> = new Map();
-        for (const linea of lineas) {
-            const text = linea.replace(/\x1B\[[0-9;]*[mGKF]/g, "").replace(/^\[ERR] /, "");
-            patron.lastIndex = 0;
-            let match = patron.exec(text);
-            while (match !== null) {
-                const rawPath = match[1];
-                if (rawPath.includes("node_modules")) {
-                    continue;
-                }
-                const lineNum = match[2] !== undefined ? parseInt(match[2], 10) : 0;
-                const colNum = match[3] !== undefined ? parseInt(match[3], 10) : 0;
-                // rspack corre desde {root}/@mr/core/dev (yarn workspace @mr/core-dev)
-                // → las rutas relativas del output son relativas a ese directorio
-                const rspackCwd = path.join(this.root, "@mr", "core", "dev");
-                const absPath = path.resolve(rspackCwd, rawPath);
-                const relPath = path.relative(path.join(this.dir, "output"), absPath);
-                const key = `${relPath}:${lineNum}:${colNum}`;
-                if (!refs.has(key)) {
-                    const baseName = path.basename(rawPath);
-                    const label = lineNum > 0
-                        ? colNum > 0
-                            ? `${baseName}:${lineNum}:${colNum}`
-                            : `${baseName}:${lineNum}`
-                        : baseName;
-                    refs.set(key, {label, href: relPath, baseName, lineNum, colNum});
-                }
-                match = patron.exec(text);
-            }
-        }
-        return [...refs.values()]
-            .sort((a, b) =>
-                a.baseName.localeCompare(b.baseName) ||
-                a.lineNum - b.lineNum ||
-                a.colNum - b.colNum
-            )
-            .map(({label, href, lineNum, colNum}) => ({label, href, lineNum, colNum}));
     }
 
     private async appendChunkLogCompilar(lineas: string[], tipo: "out" | "err"): Promise<void> {
@@ -513,7 +432,7 @@ export class Service extends Workspace {
         const contenido = lineas
             .map(linea => `${prefijo}${linea.replace(/\x1B\[[0-9;]*[mGKF]/g, "")}`)
             .join("\n");
-        const refs = this.extractFileRefs(lineas);
+        const refs = extractFileRefs(lineas, this.root, this.dir);
         const enlaces = refs.length > 0
             ? `\n${refs.map(({label, href}) => `- [\`${label}\`](${href})`).join("\n")}\n`
             : "";
@@ -526,7 +445,7 @@ export class Service extends Workspace {
         }
         await fs.appendFile(
             `${this.dir}/output/compilar.md`,
-            `**${Service.horaLocal(new Date())}**\n\`\`\`\n${contenido}\n\`\`\`${enlaces}\n\n---\n\n`,
+            `**${horaLocal(new Date())}**\n\`\`\`\n${contenido}\n\`\`\`${enlaces}\n\n---\n\n`,
             "utf-8",
         );
     }
@@ -623,38 +542,11 @@ export class Service extends Workspace {
     }
 
     private async stopCompilar(): Promise<void> {
-        return new Promise((resolve, reject)=>{
-            if (this.compilador==undefined) {
-                resolve();
-                return;
-            }
-
-            Log.info({
-                type: Log.label_compilar,
-                label: this.label,
-            }, `Deteniendo compilador (`, this.compilador.pid, ")");
-            if (this.compilador.pid == undefined) {
-                resolve();
-                return;
-            }
-
-            treeKill(this.compilador.pid, (err) => {
-                if (err) {
-                    Log.error({
-                        type: Log.label_compilar,
-                        label: this.label,
-                    }, `Deteniendo compilador => KO`, err);
-                    reject(err);
-                } else {
-                    Log.info({
-                        type: Log.label_compilar,
-                        label: this.label,
-                    }, `Deteniendo compilador => OK`);
-                    this.compilador = undefined;
-                    resolve();
-                }
-            });
-        });
+        return this.detenerProceso(this.compilador, {
+            type: Log.label_compilar,
+            label: this.label,
+            accion: "compilador",
+        }, () => { this.compilador = undefined; });
     }
 
     private async checkEjecucion(): Promise<boolean> {
@@ -785,37 +677,10 @@ export class Service extends Workspace {
     }
 
     private async stopEjecutar(): Promise<void> {
-        return new Promise((resolve, reject)=>{
-            if (this.ejecucion==undefined) {
-                resolve();
-                return;
-            }
-
-            Log.info({
-                type: Log.label_ejecutar,
-                label: this.label,
-            }, `Deteniendo ejecución (`, this.ejecucion.pid, ")");
-            if (this.ejecucion.pid == undefined) {
-                resolve();
-                return;
-            }
-
-            treeKill(this.ejecucion.pid, (err)=>{
-                if (err) {
-                    Log.error({
-                        type: Log.label_ejecutar,
-                        label: this.label,
-                    }, `Deteniendo ejecución => KO`, err);
-                    reject(err);
-                } else {
-                    Log.info({
-                        type: Log.label_ejecutar,
-                        label: this.label,
-                    }, `Deteniendo ejecución => OK`);
-                    this.ejecucion = undefined;
-                    resolve();
-                }
-            });
-        });
+        return this.detenerProceso(this.ejecucion, {
+            type: Log.label_ejecutar,
+            label: this.label,
+            accion: "ejecución",
+        }, () => { this.ejecucion = undefined; });
     }
 }

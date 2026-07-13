@@ -99,25 +99,38 @@ export class PaqueteStorage {
      * @returns Lista de versiones publicadas (la más reciente en índice 0), o `[]` si no existe.
      */
     public getListaCache(): Promise<string[]> {
-        return this._listaCache ??= this._fetchListaConLogin(false);
+        return this._listaCache ??= this._fetchListaConLogin();
     }
 
-    private async _fetchListaConLogin(login: boolean): Promise<string[]> {
+    /**
+     * Ejecuta una operación de GCS gestionando el reintento tras `gcloud auth application-default
+     * login` (si el fallo es de autenticación) y el caso "objeto no encontrado".
+     *
+     * @param operacion    - Operación de GCS a ejecutar (y reintentar tras login si aplica).
+     * @param onNotFound   - Valor a devolver si GCS responde "No such object".
+     * @param mensajeError - Mensaje a usar si el error no es una instancia de `Error`.
+     * @param login        - `true` si ya se ha reintentado tras un login (evita bucles).
+     */
+    private async ejecutarConLoginRetry<T>(operacion: () => Promise<T>, onNotFound: T, mensajeError: string, login: boolean = false): Promise<T> {
         try {
-            return await this._descargarLista();
+            return await operacion();
         } catch (err) {
             if (err instanceof Error) {
                 if (!login && PaqueteStorage.esErrorDeAuth(err)) {
                     if (await PaqueteStorage.login()) {
-                        return this._fetchListaConLogin(true);
+                        return this.ejecutarConLoginRetry(operacion, onNotFound, mensajeError, true);
                     }
                 } else if (err.message.includes("No such object")) {
-                    return [];
+                    return onNotFound;
                 }
-                return Promise.reject(new Error(err.message));
+                throw new Error(err.message);
             }
-            return Promise.reject(new Error("Ha ocurrido un error comprobando la versión actual"));
+            throw new Error(mensajeError);
         }
+    }
+
+    private async _fetchListaConLogin(): Promise<string[]> {
+        return this.ejecutarConLoginRetry(() => this._descargarLista(), [], "Ha ocurrido un error comprobando la versión actual");
     }
 
     private async _descargarLista(): Promise<string[]> {
@@ -154,31 +167,17 @@ export class PaqueteStorage {
      * @returns Contenido del ZIP parseado, o `{files:{}}` si el objeto no existe en GCS.
      */
     public async getZIP(nombreZip: string): Promise<PaqueteDirectoryRootFiles> {
-        return this._getZIPConLogin(nombreZip, false);
+        return this.ejecutarConLoginRetry(() => this._descargarZIP(nombreZip), {files: {}}, "Ha ocurrido un error descargando el paquete antiguo");
     }
 
-    private async _getZIPConLogin(nombreZip: string, login: boolean): Promise<PaqueteDirectoryRootFiles> {
+    private async _descargarZIP(nombreZip: string): Promise<PaqueteDirectoryRootFiles> {
         const ruta = `${this.repo}/${nombreZip}.zip`;
-        try {
-            const file = this.storage.bucket(this.bucket).file(ruta);
-            const [buffer] = await file.download();
-            if (buffer === undefined) {
-                return {files: {}};
-            }
-            return PaqueteDirectoryRoot.buildBuffer(this.nombre, this.basedir, buffer);
-        } catch (err) {
-            if (err instanceof Error) {
-                if (!login && PaqueteStorage.esErrorDeAuth(err)) {
-                    if (await PaqueteStorage.login()) {
-                        return this._getZIPConLogin(nombreZip, true);
-                    }
-                } else if (err.message.includes("No such object")) {
-                    return {files: {}};
-                }
-                return Promise.reject(new Error(err.message));
-            }
-            return Promise.reject(new Error("Ha ocurrido un error descargando el paquete antiguo"));
+        const file = this.storage.bucket(this.bucket).file(ruta);
+        const [buffer] = await file.download();
+        if (buffer === undefined) {
+            return {files: {}};
         }
+        return PaqueteDirectoryRoot.buildBuffer(this.nombre, this.basedir, buffer);
     }
 
     /**

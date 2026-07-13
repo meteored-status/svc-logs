@@ -7,6 +7,8 @@
  * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
+import {Deferred} from "services-comun/modules/utiles/promise";
+
 import {Colors} from "../colors";
 import {Render, prepararTTY, restaurarTTY} from "../../utiles/tty";
 
@@ -90,19 +92,20 @@ async function correrMenuTTY<T>(
 ): Promise<T | null> {
     prepararTTY();
     const render = new Render();
-    return new Promise<T | null>((resolve) => {
-        let resuelto = false;
-        const resolver = (valor: T | null): void => {
-            if (resuelto) { return; }
-            resuelto = true;
-            process.stdin.removeListener("keypress", onKeypress);
-            render.limpiar();
-            restaurarTTY();
-            resolve(valor);
-        };
-        const onKeypress = arrancar(render, resolver);
-        process.stdin.on("keypress", onKeypress);
-    });
+    const deferred = new Deferred<T | null>();
+    let resuelto = false;
+    const resolver = (valor: T | null): void => {
+        if (resuelto) { return; }
+        resuelto = true;
+        process.stdin.removeListener("keypress", onKeypress);
+        render.limpiar();
+        restaurarTTY();
+        deferred.resolve(valor);
+    };
+    const onKeypress = arrancar(render, resolver);
+    process.stdin.on("keypress", onKeypress);
+
+    return deferred.promise;
 }
 
 /**

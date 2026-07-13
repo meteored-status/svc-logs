@@ -9,6 +9,6 @@
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
-    "@types/node": "^24.13.2"
+    "@types/node": "^24.13.3"
   }
 }

@@ -39,10 +39,8 @@ export abstract class Modulo<T extends IModuloConfig> {
         PromiseDelayed()
             .then(async ()=>modulo.run())
             .catch((err)=>{
-                if (err!=undefined) {
-                    console.error(err)
-                // } else {
-                //     modulo.mostrarAyuda();
+                if (err!==undefined) {
+                    console.error(err);
                 }
             });
     }

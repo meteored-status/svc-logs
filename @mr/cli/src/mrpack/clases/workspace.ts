@@ -6,6 +6,12 @@
  */
 
 import chokidar, {type FSWatcher} from "chokidar";
+import type {ChildProcessWithoutNullStreams} from "node:child_process";
+import treeKill from "tree-kill";
+
+import {Deferred} from "services-comun/modules/utiles/promise";
+
+import {Log} from "./log";
 
 /**
  * Datos básicos de un workspace del monorepo.
@@ -97,5 +103,39 @@ export class Workspace {
      */
     protected async run(): Promise<void> {
         // compilar
+    }
+
+    /**
+     * Detiene un proceso hijo en ejecución (compilador o ejecución) usando `tree-kill`,
+     * logueando el resultado con la etiqueta indicada. No-op si `proceso` es `undefined`.
+     *
+     * @param proceso    - Proceso a detener, o `undefined` si no hay ninguno en marcha.
+     * @param log        - Configuración de log (`type`/`label`) y `accion` descrita en los mensajes.
+     * @param onDetenido - Callback invocado tras detener el proceso con éxito, para que el
+     *   llamador limpie su propia referencia al proceso.
+     */
+    protected async detenerProceso(proceso: ChildProcessWithoutNullStreams|undefined, log: {type: string, label: string, accion: string}, onDetenido: () => void): Promise<void> {
+        if (proceso==undefined) {
+            return;
+        }
+
+        Log.info({type: log.type, label: log.label}, `Deteniendo ${log.accion} (`, proceso.pid, ")");
+        if (proceso.pid == undefined) {
+            return;
+        }
+
+        const deferred = new Deferred<void>();
+        treeKill(proceso.pid, (err) => {
+            if (err) {
+                Log.error({type: log.type, label: log.label}, `Deteniendo ${log.accion} => KO`, err);
+                deferred.reject(err);
+            } else {
+                Log.info({type: log.type, label: log.label}, `Deteniendo ${log.accion} => OK`);
+                onDetenido();
+                deferred.resolve();
+            }
+        });
+
+        return deferred.promise;
     }
 }

@@ -25,6 +25,7 @@ import {
 import {md5} from "services-comun/modules/utiles/hash";
 
 import {Comando} from "../comando";
+import {Log} from "../log";
 import {IPackageJson} from "../packagejson";
 import type {Manifest as ManifestRoot} from "../../../../manifest";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
@@ -54,7 +55,7 @@ export class Compilar {
     public static async build(basedir: string, name: string, path: string): Promise<Compilar|null> {
         const dir = `${basedir}/${path}/${name}`;
         if (!await isDir(dir) || !await isFile(`${dir}/package.json`)) {
-            console.error(name, "[ERROR]", "Servicio no válido");
+            Log.error({type: Log.label_compilar, label: name}, "Servicio no válido");
             return null;
         }
         const json = await readJSON<IPackageJson>(`${dir}/package.json`);
@@ -135,7 +136,7 @@ export class Compilar {
             delete this.pendientes[compilar.name];
             const keys = Object.keys(this.pendientes);
             if (keys.length>0) {
-                console.log(this.name, "[     ]", "Esperando dependencias:", keys.join(", "));
+                Log.info({type: Log.label_compilar, label: this.name}, "Esperando dependencias:", keys.join(", "));
                 return;
             }
         }
@@ -144,11 +145,11 @@ export class Compilar {
             await this.mantenerVersion(env, manifest);
 
             if (this.dependencias.length==0) {
-                console.log(this.name, "[OK   ]", "Servicio desactivado para despliegue");
+                Log.info({type: Log.label_compilar, label: this.name}, "Servicio desactivado para despliegue");
                 return;
             }
 
-            console.warn(this.name, "[WARN ]", "Servicio desactivado para despliegue. Hay servicios dependientes que podrían no generarse correctamente:", this.dependencias.map((dependencia)=>dependencia.name).join(", "));
+            Log.info({type: Log.label_compilar, label: this.name}, "Servicio desactivado para despliegue. Hay servicios dependientes que podrían no generarse correctamente:", this.dependencias.map((dependencia)=>dependencia.name).join(", "));
             return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, {compilar: this}))).then(() => undefined);
         }
 
@@ -163,10 +164,10 @@ export class Compilar {
                     await this.packNextJS(env, manifest);
                     break;
             }
-            console.log(this.name, "[OK   ]", "Servicio compilado");
+            Log.info({type: Log.label_compilar, label: this.name}, "Servicio compilado");
         } else {
             await this.mantenerVersion(env, manifest);
-            console.log(this.name, "[OK   ]", "Versión mantenida");
+            Log.info({type: Log.label_compilar, label: this.name}, "Versión mantenida");
         }
 
         if (this.dependencias.length==0) {
@@ -241,20 +242,16 @@ export class Compilar {
     private async rspack(env: string): Promise<void> {
         const {status, stdout, stderr} = await Comando("yarn", ["workspace", "@mr/core-dev", "rspack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `bundler/rspack/rspack.config.ts`], {cwd: this.basedir, colores: false});
         if (status != 0) {
-            console.error(this.name, "[KO   ]", "Error compilando:");
-            console.error(stdout);
-            console.error(stderr);
-            return Promise.reject();
+            Log.error({type: Log.label_compilar, label: this.name}, "Error compilando:", stdout, stderr);
+            throw new Error(`Error compilando "${this.name}" con rspack`);
         }
     }
 
     private async esbuild(env: string): Promise<void> {
         const {status, stdout, stderr} = await Comando("yarn", ["workspace", "@mr/core-dev", "node", "bundler/esbuild/esbuild.config.mjs", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`], {cwd: this.basedir, colores: false});
         if (status != 0) {
-            console.error(this.name, "[KO   ]", "Error compilando:");
-            console.error(stdout);
-            console.error(stderr);
-            return Promise.reject();
+            Log.error({type: Log.label_compilar, label: this.name}, "Error compilando:", stdout, stderr);
+            throw new Error(`Error compilando "${this.name}" con esbuild`);
         }
     }
 
@@ -265,16 +262,15 @@ export class Compilar {
         } else if (! await isFile(`${this.dir}/.env.local`)) {
             await safeWrite(`${this.dir}/.env.local`, `ENV=${env}`, true, true);
         } else {
-            console.log(`Existe el fichero .env.local, se mantiene tal cual.`);
+            Log.info({type: Log.label_compilar, label: this.name}, "Existe el fichero .env.local, se mantiene tal cual.");
         }
 
         {
             // todo falta añadir la fecha del commit (this.fecha)
             const {status, stderr} = await Comando("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {NODE_OPTIONS: '--max_old_space_size=10240', ZONA: nodeEnv}, colores: false});
             if (status != 0) {
-                console.error(this.name, "[KO   ]", "Error compilando:");
-                console.error(stderr);
-                return Promise.reject();
+                Log.error({type: Log.label_compilar, label: this.name}, "Error compilando:", stderr);
+                throw new Error(`Error compilando "${this.name}" con next`);
             }
         }
         await this.checkVersionService(env, manifest, [

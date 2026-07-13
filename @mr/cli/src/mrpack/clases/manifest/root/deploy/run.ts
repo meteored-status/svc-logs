@@ -19,16 +19,16 @@ class ManifestRootDeploymentRunLoader {
     /**
      * Normaliza y valida la sección `run` del despliegue raíz.
      *
-     * @param devel - Datos parciales de la sección `run`.
+     * @param run - Datos parciales de la sección `run`.
      * @returns Configuración de run completa y normalizada.
      */
-    public check(devel: Partial<IManifestDeploymentRun>={}): IManifestDeploymentRun {
+    public check(run: Partial<IManifestDeploymentRun>={}): IManifestDeploymentRun {
         const data = this.default;
-        if (devel.enabled !== undefined) {
-            data.enabled = devel.enabled;
+        if (run.enabled !== undefined) {
+            data.enabled = run.enabled;
         }
-        if (devel.latest !== undefined) {
-            data.latest = devel.latest;
+        if (run.latest !== undefined) {
+            data.latest = run.latest;
         }
 
         return data;

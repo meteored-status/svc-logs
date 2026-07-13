@@ -16,19 +16,19 @@ class ManifestWorkspaceBuildDatabaseLoader {
     /**
      * Normaliza y valida la configuración de base de datos del build.
      *
-     * @param imagen - Datos parciales de la configuración de base de datos.
+     * @param database - Datos parciales de la configuración de base de datos.
      * @returns Configuración de base de datos completa, o `undefined` si no se proporciona.
      */
-    public check(imagen?: Partial<IManifestBuildDatabase>): IManifestBuildDatabase|undefined {
-        if (!imagen) {
+    public check(database?: Partial<IManifestBuildDatabase>): IManifestBuildDatabase|undefined {
+        if (!database) {
             return this.default;
         }
         const data = this.default ?? {};
-        if (imagen.produccion) {
-            data.produccion = imagen.produccion;
+        if (database.produccion) {
+            data.produccion = database.produccion;
         }
-        if (imagen.test) {
-            data.test = imagen.test;
+        if (database.test) {
+            data.test = database.test;
         }
 
         return data;

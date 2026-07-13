@@ -8,6 +8,7 @@
  */
 
 import {Colors} from "../colors";
+import {Log} from "../log";
 import {cargarConfig, existeI18n, guardarConfig, type IInfoWorkspace, listarWorkspacesConInfo} from "./datos";
 import {alternarLista, elegirUno, seleccionar} from "./menu";
 
@@ -49,7 +50,7 @@ async function gestionarLista(basedir: string, clave: ClaveLista, titulo: string
     const relevantes = filtrarPorClave(infos, clave);
 
     if (relevantes.length === 0) {
-        console.log(Colors.colorize([Colors.FgYellow], "No se encontraron workspaces gestionables"));
+        Log.info({type: Log.label_base, label: "workspaces"}, Colors.colorize([Colors.FgYellow], "No se encontraron workspaces gestionables"));
         return;
     }
 
@@ -81,7 +82,7 @@ async function gestionarLista(basedir: string, clave: ClaveLista, titulo: string
     config[clave] = {available, disabled: nuevoDisabled};
     await guardarConfig(basedir, config);
 
-    console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], `✓ ${titulo}: configuración guardada`));
+    Log.info({type: Log.label_base, label: "workspaces"}, Colors.colorize([Colors.FgGreen, Colors.Bright], `✓ ${titulo}: configuración guardada`));
 }
 
 /**
@@ -107,7 +108,7 @@ async function gestionarI18n(basedir: string): Promise<void> {
     config.i18n = resultado;
     await guardarConfig(basedir, config);
 
-    console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], `✓ Generar i18n: ${resultado ? "activado" : "desactivado"}`));
+    Log.info({type: Log.label_base, label: "workspaces"}, Colors.colorize([Colors.FgGreen, Colors.Bright], `✓ Generar i18n: ${resultado ? "activado" : "desactivado"}`));
 }
 
 /**

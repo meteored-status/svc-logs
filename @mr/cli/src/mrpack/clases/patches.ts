@@ -11,6 +11,7 @@ import {spawn as spawnProcess} from "node:child_process";
 import {Deferred} from "services-comun/modules/utiles/promise";
 
 import {Colors} from "./colors";
+import {Log} from "./log";
 
 /**
  * Ejecuta `yarn run patch:apply` en la raíz del monorepo mostrando la salida en tiempo real.
@@ -19,8 +20,7 @@ import {Colors} from "./colors";
  */
 export function aplicarPatches(basedir: string): Promise<void> {
     const deferred = new Deferred<void>();
-    console.log("");
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Aplicando patches"));
+    Log.info({type: Log.label_base, label: "patches"}, Colors.colorize([Colors.FgCyan, Colors.Bright], "Aplicando patches"));
     spawnProcess("yarn", ["run", "patch:apply"], {cwd: basedir, stdio: "inherit", shell: process.platform === "win32"})
         .on("error", (err) => { deferred.reject(err); })
         .on("close", (status) => {

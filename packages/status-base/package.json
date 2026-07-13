@@ -16,7 +16,7 @@
   "devDependencies": {
     "@mr/core-utils": "workspace:*",
     "@mr/core-workload": "workspace:*",
-    "@types/node": "^24.12.4",
+    "@types/node": "^24.13.3",
     "services-comun": "*",
     "tslib": "^2.8.1"
   }

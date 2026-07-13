@@ -8,7 +8,6 @@
 
 import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
 import chokidar from "chokidar";
-import treeKill from "tree-kill";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
 
@@ -222,37 +221,10 @@ export class I18N extends Workspace {
     }
 
     private async stopCompilar(): Promise<void> {
-        return new Promise((resolve, reject)=>{
-            if (this.compilador==undefined) {
-                resolve();
-                return;
-            }
-
-            Log.info({
-                type: Log.label_compilar,
-                label: this.label,
-            }, `Deteniendo generación de idiomas (`, this.compilador.pid, ")");
-            if (this.compilador.pid == undefined) {
-                resolve();
-                return;
-            }
-
-            treeKill(this.compilador.pid, (err) => {
-                if (err) {
-                    Log.error({
-                        type: Log.label_compilar,
-                        label: this.label,
-                    }, `Deteniendo generación de idiomas => KO`, err);
-                    reject(err);
-                } else {
-                    Log.info({
-                        type: Log.label_compilar,
-                        label: this.label,
-                    }, `Deteniendo generación de idiomas => OK`);
-                    this.compilador = undefined;
-                    resolve();
-                }
-            });
-        });
+        return this.detenerProceso(this.compilador, {
+            type: Log.label_compilar,
+            label: this.label,
+            accion: "generación de idiomas",
+        }, () => { this.compilador = undefined; });
     }
 }

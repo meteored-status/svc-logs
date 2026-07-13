@@ -8,9 +8,10 @@
 
 import chokidar from "chokidar";
 
-import {isDir, readDir, readJSON} from "services-comun/modules/utiles/fs";
+import {isDir, readDir} from "services-comun/modules/utiles/fs";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
+import {GRUPOS, cargarConfig} from "./config/datos";
 import {actualizarTodo} from "./framework";
 import {init} from "./init";
 import {aplicarPatches} from "./patches";
@@ -44,7 +45,7 @@ export function run(basedir: string, config: IConfigEjecucion): void {
     PromiseDelayed()
         .then(async ()=>{
             if (config.compilar) {
-                const cfgWorkspaces = await loadConfig(basedir);
+                const cfgWorkspaces = await cargarConfig(basedir);
                 const frameworkUpdates = sanitizeFrameworkUpdates(cfgWorkspaces.framework?.updates);
                 const cambios = [
                     await init(basedir),
@@ -56,13 +57,12 @@ export function run(basedir: string, config: IConfigEjecucion): void {
                 }
 
                 await aplicarPatches(basedir);
-                console.log("");
             }
             await ejecutar(config, basedir);
         })
         .catch((err)=>{
             if (err!==undefined) {
-                console.error(err);
+                Log.error({type: Log.label_base, label: "devel"}, err);
             }
         });
 }
@@ -101,25 +101,10 @@ async function ejecutarWorkspace(basedir: string, path: string, workspace: strin
     return devel.init().then(()=>devel);
 }
 
-async function loadConfig(basedir: string): Promise<IConfigServices> {
-    return readJSON<IConfigServices>(`${basedir}/config.workspaces.json`).catch(()=>({
-        devel: {
-            available: [],
-            disabled: [],
-        },
-        packd: {
-            available: [],
-            disabled: [],
-        },
-        i18n: true,
-        services: {},
-    } as IConfigServices));
-}
-
 async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, dependencias: Workspace[]): Promise<boolean> {
-    const config_global = await loadConfig(basedir);
+    const config_global = await cargarConfig(basedir);
 
-    const groups: string[] = ["cronjobs", "jobs", "scripts", "services"];
+    const groups = GRUPOS;
     const workspacesList: Record<string, string[]> = {};
 
     for (const group of groups) {
@@ -188,7 +173,7 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
     chokidar.watch(`${basedir}/config.workspaces.json`, {
         persistent: true,
     }).on("change", ()=>{
-        loadConfig(basedir)
+        cargarConfig(basedir)
             .then(async (config_global)=>{
                 for (const actual of services) {
                     actual.updateGlobal(config_global);
