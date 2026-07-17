@@ -170,13 +170,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@emnapi/core@npm:1.11.1":
-  version: 1.11.1
-  resolution: "@emnapi/core@npm:1.11.1"
+"@emnapi/core@npm:1.11.2":
+  version: 1.11.2
+  resolution: "@emnapi/core@npm:1.11.2"
   dependencies:
     "@emnapi/wasi-threads": "npm:1.2.2"
     tslib: "npm:^2.4.0"
-  checksum: 10/9aba37e0c11a75ef8372fd0a9c6e5396f4e8c1ebdd6fee737414787610a9dc1cd9bf188f525153561ca9363896e1135dd240f1ce28f3470dba3ad7e683e6db1a
+  checksum: 10/b3e9693f79ca1d8bb90cb8a950150c7738f54eca0ae1849d3d5103a87ce4e388c2669fb253cc123d3449ad2ae12583435455dbdc0270b1e9efb0cfd502c952b4
   languageName: node
   linkType: hard
 
@@ -189,12 +189,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@emnapi/runtime@npm:1.11.1":
-  version: 1.11.1
-  resolution: "@emnapi/runtime@npm:1.11.1"
+"@emnapi/runtime@npm:1.11.2":
+  version: 1.11.2
+  resolution: "@emnapi/runtime@npm:1.11.2"
   dependencies:
     tslib: "npm:^2.4.0"
-  checksum: 10/8f7c622a49314df4d07952110e108e83b0fe129a8ddb9ef1e0ae372d754616169d5b0dd47a0d354a0fea2612abe42cedb582d15916936d1320c6c468acc804cc
+  checksum: 10/280a219d3bf302615dabaaa248223b0e5fe9c49bacf0987dd958ca37ab425b62cf05287053cb188e711681418aaa5e447eaed6b62a0848c0a1303b2707864600
   languageName: node
   linkType: hard
 
@@ -433,12 +433,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@google-cloud/eventarc-publishing@npm:^4.2.2":
-  version: 4.2.2
-  resolution: "@google-cloud/eventarc-publishing@npm:4.2.2"
+"@google-cloud/eventarc-publishing@npm:^4.3.0":
+  version: 4.3.0
+  resolution: "@google-cloud/eventarc-publishing@npm:4.3.0"
   dependencies:
     google-gax: "npm:^5.0.0"
-  checksum: 10/49c380af1cb0a8dadb186329550ed30c6ad6bd6f2a08cd22a5a28de442b3d01d554dc13f4bdc154dda13d4c96b0fd09a7c89ca8bddcedaca3cdd591b0c0c5ee3
+  checksum: 10/5865265e9a60992781f9fd2620e8c316d419cddff2837e921c6268e4ad27799a5598bb2313d6d079607c33aab3b0f6b90a8e5678db6263917375124f51de0182
   languageName: node
   linkType: hard
 
@@ -1103,18 +1103,18 @@ __metadata:
     "@inquirer/prompts": "npm:^8.5.2"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
-    "@rspack/cli": "npm:^2.1.3"
-    "@rspack/core": "npm:^2.1.3"
+    "@rspack/cli": "npm:^2.1.4"
+    "@rspack/core": "npm:^2.1.4"
     "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:^24.13.3"
     "@types/source-map-support": "npm:^0.5.10"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.2.0"
+    dd-trace: "npm:^6.3.0"
     dotenv: "npm:^17.4.2"
     esbuild: "npm:^0.28.1"
     js-yaml: "npm:^5.2.1"
     jszip: "npm:^3.10.1"
-    mysql2: "npm:^3.22.6"
+    mysql2: "npm:^3.23.0"
     node-diff3: "npm:^3.2.1"
     services-comun: "workspace:*"
     source-map-support: "npm:^0.5.21"
@@ -1132,8 +1132,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mr/core-dev@workspace:@mr/core/dev"
   dependencies:
-    "@rspack/cli": "npm:^2.1.3"
-    "@rspack/core": "npm:^2.1.3"
+    "@rspack/cli": "npm:^2.1.4"
+    "@rspack/core": "npm:^2.1.4"
     "@tsconfig/node24": "npm:^24.0.4"
     "@tsconfig/recommended": "npm:^1.0.13"
     "@types/node": "npm:^24.13.3"
@@ -1179,12 +1179,12 @@ __metadata:
     "@types/qs": "npm:^6.15.1"
     "@types/ws": "npm:^8.18.1"
     bufferutil: "npm:^4.1.0"
-    dd-trace: "npm:^6.2.0"
+    dd-trace: "npm:^6.3.0"
     formidable: "npm:^3.5.4"
     qs: "npm:^6.15.3"
     services-comun: "workspace:*"
     tslib: "npm:^2.8.1"
-    ws: "npm:^8.21.0"
+    ws: "npm:^8.21.1"
   dependenciesMeta:
     bufferutil:
       optional: true
@@ -1755,110 +1755,110 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rspack/binding-darwin-arm64@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-darwin-arm64@npm:2.1.3"
+"@rspack/binding-darwin-arm64@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-darwin-arm64@npm:2.1.4"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rspack/binding-darwin-x64@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-darwin-x64@npm:2.1.3"
+"@rspack/binding-darwin-x64@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-darwin-x64@npm:2.1.4"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-arm64-gnu@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-linux-arm64-gnu@npm:2.1.3"
+"@rspack/binding-linux-arm64-gnu@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-linux-arm64-gnu@npm:2.1.4"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-arm64-musl@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-linux-arm64-musl@npm:2.1.3"
+"@rspack/binding-linux-arm64-musl@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-linux-arm64-musl@npm:2.1.4"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-riscv64-gnu@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-linux-riscv64-gnu@npm:2.1.3"
+"@rspack/binding-linux-riscv64-gnu@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-linux-riscv64-gnu@npm:2.1.4"
   conditions: os=linux & cpu=riscv64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-riscv64-musl@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-linux-riscv64-musl@npm:2.1.3"
+"@rspack/binding-linux-riscv64-musl@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-linux-riscv64-musl@npm:2.1.4"
   conditions: os=linux & cpu=riscv64 & libc=musl
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-x64-gnu@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-linux-x64-gnu@npm:2.1.3"
+"@rspack/binding-linux-x64-gnu@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-linux-x64-gnu@npm:2.1.4"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@rspack/binding-linux-x64-musl@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-linux-x64-musl@npm:2.1.3"
+"@rspack/binding-linux-x64-musl@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-linux-x64-musl@npm:2.1.4"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@rspack/binding-wasm32-wasi@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-wasm32-wasi@npm:2.1.3"
+"@rspack/binding-wasm32-wasi@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-wasm32-wasi@npm:2.1.4"
   dependencies:
-    "@emnapi/core": "npm:1.11.1"
-    "@emnapi/runtime": "npm:1.11.1"
+    "@emnapi/core": "npm:1.11.2"
+    "@emnapi/runtime": "npm:1.11.2"
     "@napi-rs/wasm-runtime": "npm:1.1.6"
   conditions: cpu=wasm32
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-arm64-msvc@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-win32-arm64-msvc@npm:2.1.3"
+"@rspack/binding-win32-arm64-msvc@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-win32-arm64-msvc@npm:2.1.4"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-ia32-msvc@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-win32-ia32-msvc@npm:2.1.3"
+"@rspack/binding-win32-ia32-msvc@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-win32-ia32-msvc@npm:2.1.4"
   conditions: os=win32 & cpu=ia32
   languageName: node
   linkType: hard
 
-"@rspack/binding-win32-x64-msvc@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding-win32-x64-msvc@npm:2.1.3"
+"@rspack/binding-win32-x64-msvc@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding-win32-x64-msvc@npm:2.1.4"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@rspack/binding@npm:2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/binding@npm:2.1.3"
+"@rspack/binding@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/binding@npm:2.1.4"
   dependencies:
-    "@rspack/binding-darwin-arm64": "npm:2.1.3"
-    "@rspack/binding-darwin-x64": "npm:2.1.3"
-    "@rspack/binding-linux-arm64-gnu": "npm:2.1.3"
-    "@rspack/binding-linux-arm64-musl": "npm:2.1.3"
-    "@rspack/binding-linux-riscv64-gnu": "npm:2.1.3"
-    "@rspack/binding-linux-riscv64-musl": "npm:2.1.3"
-    "@rspack/binding-linux-x64-gnu": "npm:2.1.3"
-    "@rspack/binding-linux-x64-musl": "npm:2.1.3"
-    "@rspack/binding-wasm32-wasi": "npm:2.1.3"
-    "@rspack/binding-win32-arm64-msvc": "npm:2.1.3"
-    "@rspack/binding-win32-ia32-msvc": "npm:2.1.3"
-    "@rspack/binding-win32-x64-msvc": "npm:2.1.3"
+    "@rspack/binding-darwin-arm64": "npm:2.1.4"
+    "@rspack/binding-darwin-x64": "npm:2.1.4"
+    "@rspack/binding-linux-arm64-gnu": "npm:2.1.4"
+    "@rspack/binding-linux-arm64-musl": "npm:2.1.4"
+    "@rspack/binding-linux-riscv64-gnu": "npm:2.1.4"
+    "@rspack/binding-linux-riscv64-musl": "npm:2.1.4"
+    "@rspack/binding-linux-x64-gnu": "npm:2.1.4"
+    "@rspack/binding-linux-x64-musl": "npm:2.1.4"
+    "@rspack/binding-wasm32-wasi": "npm:2.1.4"
+    "@rspack/binding-win32-arm64-msvc": "npm:2.1.4"
+    "@rspack/binding-win32-ia32-msvc": "npm:2.1.4"
+    "@rspack/binding-win32-x64-msvc": "npm:2.1.4"
   dependenciesMeta:
     "@rspack/binding-darwin-arm64":
       optional: true
@@ -1884,13 +1884,13 @@ __metadata:
       optional: true
     "@rspack/binding-win32-x64-msvc":
       optional: true
-  checksum: 10/7e499489ac0d882ba6573854d8bed7db8fd2ce8c95274a28527b2e8a8692c3c75e34c892cff9385082b3eafe199ececeb0878ab9314adcd54c5ed0db916e410b
+  checksum: 10/425bf152dba708992ce16114ce6bc8dfa424071694e85201317518dce1899eeae873a2adbd23b214bb8d223f7290e000fd78ad9bf262c633e12d3d4ff73bbdcd
   languageName: node
   linkType: hard
 
-"@rspack/cli@npm:^2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/cli@npm:2.1.3"
+"@rspack/cli@npm:^2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/cli@npm:2.1.4"
   peerDependencies:
     "@rspack/core": ^2.0.0-0
     "@rspack/dev-server": ^2.0.0-0
@@ -1899,15 +1899,15 @@ __metadata:
       optional: true
   bin:
     rspack: ./bin/rspack.js
-  checksum: 10/e454806c3f6ce70f1e9564fc659651cfa26b8dbb7abe7ded33cfe4f774806b434fa18fac253eef07ab84f9880a364858573ae6d762bab0805f8a6dff0206fa28
+  checksum: 10/6a3029920f962f99d79b39d8a464e9f6f2b6d28be608073c3775779d5ac7614432ed9f9d9e8c6014918c4ee4b17258f60c309636dbb610eb9aeb5bf8d84a90b9
   languageName: node
   linkType: hard
 
-"@rspack/core@npm:^2.1.3":
-  version: 2.1.3
-  resolution: "@rspack/core@npm:2.1.3"
+"@rspack/core@npm:^2.1.4":
+  version: 2.1.4
+  resolution: "@rspack/core@npm:2.1.4"
   dependencies:
-    "@rspack/binding": "npm:2.1.3"
+    "@rspack/binding": "npm:2.1.4"
   peerDependencies:
     "@module-federation/runtime-tools": ^0.24.1 || ^2.0.0
     "@swc/helpers": ^0.5.23
@@ -1916,7 +1916,7 @@ __metadata:
       optional: true
     "@swc/helpers":
       optional: true
-  checksum: 10/24579403136732ba0710e83851c4ac557f3cab78bb80a58999b02c8a11cb6f0d64fd71010b4fb02824b124aa4da80af544f17e31b59b1a231993124c637cadf7
+  checksum: 10/3c7aa9e8dbe8b132b51fc017a6c2c76ddf346cf663cad2a8912ba61469d80468acd045503d405bf962bb5ec44f44036512dd6d6233ea6d1419979e5c17e1dbd8
   languageName: node
   linkType: hard
 
@@ -2171,60 +2171,60 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@valkey/valkey-glide-darwin-arm64@npm:2.4.2":
-  version: 2.4.2
-  resolution: "@valkey/valkey-glide-darwin-arm64@npm:2.4.2"
+"@valkey/valkey-glide-darwin-arm64@npm:2.5.0":
+  version: 2.5.0
+  resolution: "@valkey/valkey-glide-darwin-arm64@npm:2.5.0"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@valkey/valkey-glide-darwin-x64@npm:2.4.2":
-  version: 2.4.2
-  resolution: "@valkey/valkey-glide-darwin-x64@npm:2.4.2"
+"@valkey/valkey-glide-darwin-x64@npm:2.5.0":
+  version: 2.5.0
+  resolution: "@valkey/valkey-glide-darwin-x64@npm:2.5.0"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@valkey/valkey-glide-linux-arm64-gnu@npm:2.4.2":
-  version: 2.4.2
-  resolution: "@valkey/valkey-glide-linux-arm64-gnu@npm:2.4.2"
+"@valkey/valkey-glide-linux-arm64-gnu@npm:2.5.0":
+  version: 2.5.0
+  resolution: "@valkey/valkey-glide-linux-arm64-gnu@npm:2.5.0"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@valkey/valkey-glide-linux-arm64-musl@npm:2.4.2":
-  version: 2.4.2
-  resolution: "@valkey/valkey-glide-linux-arm64-musl@npm:2.4.2"
+"@valkey/valkey-glide-linux-arm64-musl@npm:2.5.0":
+  version: 2.5.0
+  resolution: "@valkey/valkey-glide-linux-arm64-musl@npm:2.5.0"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@valkey/valkey-glide-linux-x64-gnu@npm:2.4.2":
-  version: 2.4.2
-  resolution: "@valkey/valkey-glide-linux-x64-gnu@npm:2.4.2"
+"@valkey/valkey-glide-linux-x64-gnu@npm:2.5.0":
+  version: 2.5.0
+  resolution: "@valkey/valkey-glide-linux-x64-gnu@npm:2.5.0"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@valkey/valkey-glide-linux-x64-musl@npm:2.4.2":
-  version: 2.4.2
-  resolution: "@valkey/valkey-glide-linux-x64-musl@npm:2.4.2"
+"@valkey/valkey-glide-linux-x64-musl@npm:2.5.0":
+  version: 2.5.0
+  resolution: "@valkey/valkey-glide-linux-x64-musl@npm:2.5.0"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@valkey/valkey-glide@npm:^2.4.2":
-  version: 2.4.2
-  resolution: "@valkey/valkey-glide@npm:2.4.2"
+"@valkey/valkey-glide@npm:^2.5.0":
+  version: 2.5.0
+  resolution: "@valkey/valkey-glide@npm:2.5.0"
   dependencies:
-    "@valkey/valkey-glide-darwin-arm64": "npm:2.4.2"
-    "@valkey/valkey-glide-darwin-x64": "npm:2.4.2"
-    "@valkey/valkey-glide-linux-arm64-gnu": "npm:2.4.2"
-    "@valkey/valkey-glide-linux-arm64-musl": "npm:2.4.2"
-    "@valkey/valkey-glide-linux-x64-gnu": "npm:2.4.2"
-    "@valkey/valkey-glide-linux-x64-musl": "npm:2.4.2"
+    "@valkey/valkey-glide-darwin-arm64": "npm:2.5.0"
+    "@valkey/valkey-glide-darwin-x64": "npm:2.5.0"
+    "@valkey/valkey-glide-linux-arm64-gnu": "npm:2.5.0"
+    "@valkey/valkey-glide-linux-arm64-musl": "npm:2.5.0"
+    "@valkey/valkey-glide-linux-x64-gnu": "npm:2.5.0"
+    "@valkey/valkey-glide-linux-x64-musl": "npm:2.5.0"
     long: "npm:5"
-    protobufjs: "npm:7"
+    protobufjs: "npm:^7.6.3"
   dependenciesMeta:
     "@valkey/valkey-glide-darwin-arm64":
       optional: true
@@ -2238,7 +2238,7 @@ __metadata:
       optional: true
     "@valkey/valkey-glide-linux-x64-musl":
       optional: true
-  checksum: 10/aa92fcc453c0b6eca0a95321fe70e5777e0102af84653daf70c12f7fcbd566a0ceaa900b0c4effb3c69b0a7bb9ee8bc82ffd5c4aaa812f105c3ef2abf2167238
+  checksum: 10/d34ca0b008d8ddc5dc91a1c995bc801fd2f5ed6b36ad8d6d0909e4be7798c22921d216e9dcc01978bf9397c54545239e6e989794b08e113522b3fc9649b7a5d0
   languageName: node
   linkType: hard
 
@@ -2780,12 +2780,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cron-parser@npm:^5.6.1":
-  version: 5.6.1
-  resolution: "cron-parser@npm:5.6.1"
+"cron-parser@npm:^5.6.2":
+  version: 5.6.2
+  resolution: "cron-parser@npm:5.6.2"
   dependencies:
     luxon: "npm:^3.7.2"
-  checksum: 10/b319c58bcd8a8aeca90ec19ba2e209851ed6fe82a6500c7430af61adc8413549d3228d08647fc4a4022e81888a758bc3018309a3a4d82c04aa1cf6c98d2edc84
+  checksum: 10/43dda9ac0865b1c8d0945940e3442efb51c55c2ca411ee8de86c0af4aaa8ac8dfa6c8d659309366aa9ed0c45ad469840922c4840e244ebb5550f80bcef884966
   languageName: node
   linkType: hard
 
@@ -2863,9 +2863,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dd-trace@npm:^6.2.0":
-  version: 6.2.0
-  resolution: "dd-trace@npm:6.2.0"
+"dd-trace@npm:^6.3.0":
+  version: 6.3.0
+  resolution: "dd-trace@npm:6.3.0"
   dependencies:
     "@datadog/libdatadog": "npm:0.9.4"
     "@datadog/native-appsec": "npm:11.0.1"
@@ -2901,7 +2901,7 @@ __metadata:
       optional: true
     oxc-parser:
       optional: true
-  checksum: 10/2aa879a96e51fb5167f8ea34ad04d0e512566ee5b04b9b389245575090928c6f7f5fcabea99cecbe544775c72b431591e50835c9955522372b80e0ccfa1006c9
+  checksum: 10/28bb90fcb4f34ce077f63b7bd304c49b8ac78699dbb19b964882bb7cf35f25f0e69cb79b3ba0f42d3519b285c894b953c792b69d412ea4898c62b1c70335f95c
   languageName: node
   linkType: hard
 
@@ -4086,10 +4086,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isbot@npm:^5.2.0":
-  version: 5.2.0
-  resolution: "isbot@npm:5.2.0"
-  checksum: 10/8baf01625f4980dfede5783ee3971338fe9c09b215ae27bbc9284c0a195c97e6507c5a0f24318cc7a21f6772cbb3c2d61d336bff215c60230ac8ac3b6474dbc8
+"isbot@npm:^5.2.1":
+  version: 5.2.1
+  resolution: "isbot@npm:5.2.1"
+  checksum: 10/9319abee74daad2c2893dc2417207b974a1cc1f577c3887c699a685c1efc87384f1413df766a5a2e2c29c22d9301f46ec50bac1f122bb79bdbcc794d9ea18681
   languageName: node
   linkType: hard
 
@@ -4369,7 +4369,7 @@ __metadata:
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
     crawler-user-agents: "npm:^1.56.0"
-    dd-trace: "npm:^6.2.0"
+    dd-trace: "npm:^6.3.0"
     formidable: "npm:^3.5.4"
     geoip-lite: "npm:^2.0.3"
     hexoid: "npm:^2.0.0"
@@ -4381,7 +4381,7 @@ __metadata:
     supports-color: "npm:^10.2.2"
     tslib: "npm:^2.8.1"
     ua-parser-js: "npm:^2.0.10"
-    ws: "npm:^8.21.0"
+    ws: "npm:^8.21.1"
     zod: "npm:^4.4.3"
   dependenciesMeta:
     bufferutil:
@@ -4413,18 +4413,18 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.2.0"
+    dd-trace: "npm:^6.3.0"
     formidable: "npm:^3.5.4"
     hexoid: "npm:^2.0.0"
     logs-services: "workspace:*"
     logs-status-base: "workspace:*"
-    mysql2: "npm:^3.22.6"
+    mysql2: "npm:^3.23.0"
     qs: "npm:^6.15.3"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tslib: "npm:^2.8.1"
-    ws: "npm:^8.21.0"
+    ws: "npm:^8.21.1"
   dependenciesMeta:
     bufferutil:
       optional: true
@@ -4443,7 +4443,7 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.2.0"
+    dd-trace: "npm:^6.3.0"
     formidable: "npm:^3.5.4"
     hexoid: "npm:^2.0.0"
     logs-services: "workspace:*"
@@ -4452,7 +4452,7 @@ __metadata:
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tslib: "npm:^2.8.1"
-    ws: "npm:^8.21.0"
+    ws: "npm:^8.21.1"
   dependenciesMeta:
     bufferutil:
       optional: true
@@ -4648,9 +4648,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mysql2@npm:^3.22.6":
-  version: 3.22.6
-  resolution: "mysql2@npm:3.22.6"
+"mysql2@npm:^3.23.0":
+  version: 3.23.0
+  resolution: "mysql2@npm:3.23.0"
   dependencies:
     aws-ssl-profiles: "npm:^1.1.2"
     denque: "npm:^2.1.0"
@@ -4659,10 +4659,10 @@ __metadata:
     long: "npm:^5.3.2"
     lru.min: "npm:^1.1.4"
     named-placeholders: "npm:^1.1.6"
-    sql-escaper: "npm:^1.4.0"
+    sql-escaper: "npm:^1.5.1"
   peerDependencies:
     "@types/node": ">= 8"
-  checksum: 10/4a2196c6ea7d4cdf38849807eb6278fd5a9aace84af15a764d7a0bacd14cdeafd60dce38e4a0c6779c705452e153ef96ffb0c9ebc2f1c45105a5582495357d87
+  checksum: 10/173a7fb9bf9d0ddc2f4acd578e38418a1398eb7e0d074f177de952b0969ffa1b1e3cb8ceb3fee2a972612177714d78f915606f2c8e644ba19e9d2c93d0cc1b34
   languageName: node
   linkType: hard
 
@@ -5261,7 +5261,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs@npm:7, protobufjs@npm:^7.4.0, protobufjs@npm:^7.5.4, protobufjs@npm:^7.5.5":
+"protobufjs@npm:^7.4.0, protobufjs@npm:^7.5.4, protobufjs@npm:^7.5.5, protobufjs@npm:^7.6.3":
   version: 7.6.5
   resolution: "protobufjs@npm:7.6.5"
   dependencies:
@@ -6023,7 +6023,7 @@ __metadata:
   dependencies:
     "@elastic/elasticsearch": "npm:^9.4.2"
     "@google-cloud/common": "npm:^6.0.1"
-    "@google-cloud/eventarc-publishing": "npm:^4.2.2"
+    "@google-cloud/eventarc-publishing": "npm:^4.3.0"
     "@google-cloud/pubsub": "npm:^5.3.1"
     "@google-cloud/storage": "npm:^7.21.0"
     "@mr/core-dev": "workspace:*"
@@ -6041,14 +6041,14 @@ __metadata:
     "@types/sparkpost": "npm:^2.1.9"
     "@types/ungap__structured-clone": "npm:^1.2.0"
     "@ungap/structured-clone": "npm:^1.3.3"
-    "@valkey/valkey-glide": "npm:^2.4.2"
+    "@valkey/valkey-glide": "npm:^2.5.0"
     chokidar: "npm:^5.0.0"
-    cron-parser: "npm:^5.6.1"
-    dd-trace: "npm:^6.2.0"
+    cron-parser: "npm:^5.6.2"
+    dd-trace: "npm:^6.3.0"
     formidable: "npm:^3.5.4"
-    isbot: "npm:^5.2.0"
+    isbot: "npm:^5.2.1"
     moment-timezone: "npm:^0.6.2"
-    mysql2: "npm:^3.22.6"
+    mysql2: "npm:^3.23.0"
     node-ical: "npm:^0.26.1"
     pg: "npm:^8.22.0"
     pidusage: "npm:^4.0.1"
@@ -6207,10 +6207,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sql-escaper@npm:^1.4.0":
-  version: 1.4.0
-  resolution: "sql-escaper@npm:1.4.0"
-  checksum: 10/ae3ad93a87a7b5c0fd3b16cd0c71f8bb62e6d29c0d84680063fe4f6ae9b994d7b308e27ff25b888d8a5dcda24e7db8d17f38507ba7fa89720d800cd9d9419da6
+"sql-escaper@npm:^1.5.1":
+  version: 1.5.1
+  resolution: "sql-escaper@npm:1.5.1"
+  checksum: 10/787ff7b829152380ac996bdba29a631f2005b772c302426d4676b24246ee47787cbdf9b0e565060851e078e2d15f7a014d6c48e637ec9a0127f0cbb436743ef4
   languageName: node
   linkType: hard
 
@@ -6824,17 +6824,17 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.2.0"
+    dd-trace: "npm:^6.3.0"
     formidable: "npm:^3.5.4"
     hexoid: "npm:^2.0.0"
-    mysql2: "npm:^3.22.6"
+    mysql2: "npm:^3.23.0"
     qs: "npm:^6.15.3"
     services-comun: "workspace:*"
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tslib: "npm:^2.8.1"
     workers-base: "workspace:*"
-    ws: "npm:^8.21.0"
+    ws: "npm:^8.21.1"
   dependenciesMeta:
     bufferutil:
       optional: true
@@ -6870,9 +6870,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ws@npm:^8.21.0":
-  version: 8.21.0
-  resolution: "ws@npm:8.21.0"
+"ws@npm:^8.21.1":
+  version: 8.21.1
+  resolution: "ws@npm:8.21.1"
   peerDependencies:
     bufferutil: ^4.0.1
     utf-8-validate: ">=5.0.2"
@@ -6881,7 +6881,7 @@ __metadata:
       optional: true
     utf-8-validate:
       optional: true
-  checksum: 10/088411956432c8f876158409d5a285cb9ad1382f593391f51d3a599bd0a5b277f876609ebd00fc3596321c4a4c9064d6fffe1ebad960e8ea7fd9ae25324f35c2
+  checksum: 10/8493bc543072763d7bacffb2282c9d7954dc5c599c9df4c2d15f91c217f63e293a33ffc70756e3f2bf8c5d85bc6069ad7d9983c382d4713c807b083ffb1b1719
   languageName: node
   linkType: hard
 

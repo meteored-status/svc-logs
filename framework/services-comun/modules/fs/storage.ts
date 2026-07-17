@@ -1,13 +1,15 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 6548fb7cdb5319aed55c89c0657b1754
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Juan C. Martínez
+ * Fecha: Thu, 16 Jul 2026 07:20:29 GMT
+ * Hash: 5837d2d170dff59a102084d196f78a0a
+ * Versión: 2026.7.16+1-juancmartinez
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
  */
 
 import fs from "node:fs";
 import {Readable} from "node:stream";
-import {type File, Storage as StorageBase} from "@google-cloud/storage";
+import {CreateWriteStreamOptions, type File, Storage as StorageBase} from "@google-cloud/storage";
 import {Metadata} from "@google-cloud/common";
 
 import type {Google} from "@mr/core-workload/config/google";
@@ -25,8 +27,13 @@ export interface IDocumento extends IFile {
     size: Promise<number>;
 }
 
+type SaveOptions = CreateWriteStreamOptions & {
+
+};
+
 export class Storage implements IDocumento {
     /* STATIC */
+    public static readonly MAX_RETRIES = 10;
     private static storage: NodeJS.Dict<StorageBase> = {};
     private static getStorage(config: Google): StorageBase {
         return this.storage[config.id] ??= new StorageBase({
@@ -35,39 +42,40 @@ export class Storage implements IDocumento {
         });
     }
 
-    public static setFiles(config: Google, buckets: string[], file: string, contentType: string): NodeJS.WritableStream[] {
+    public static setFiles(config: Google, buckets: string[], file: string, contentType: string, options?: SaveOptions): NodeJS.WritableStream[] {
         const storage = this.getStorage(config);
         return buckets.map((actual:string)=>{
             return storage.bucket(actual).file(file).createWriteStream({
+                ...options,
                 contentType,
             });
         });
     }
 
-    private static async handleUploadBufferError(err: any, config: Google, buckets: string[], filename: string, type: string, datos: Buffer, retry: number): Promise<void> {
-        if (retry < 10) {
+    private static async handleUploadBufferError(err: any, config: Google, buckets: string[], filename: string, type: string, datos: Buffer, retry: number, options?: SaveOptions): Promise<void> {
+        if (retry < this.MAX_RETRIES) {
             retry++;
             error(`Reintentando subida a Google Storage ${filename} ${retry}`);//, JSON.stringify(err));
             await PromiseDelayed(retry * 1000);
-            return this.uploadBuffer(config, buckets, filename, type, datos, retry);
+            return this.uploadBuffer(config, buckets, filename, type, datos, retry, options);
         }
         return Promise.reject(err);
     }
 
-    public static async uploadBuffer(config: Google, buckets: string[], filename: string, type: string, datos: Buffer, retry: number = 0): Promise<void> {
+    public static async uploadBuffer(config: Google, buckets: string[], filename: string, type: string, datos: Buffer, retry: number = 0, options?: SaveOptions): Promise<void> {
         try {
-            await this.uploadStream(config, buckets, filename, type, buffer2stream(datos)).catch(async (err) => {
-                return this.handleUploadBufferError(err, config, buckets, filename, type, datos, retry);
-            });
+            await this.uploadStream(config, buckets, filename, type, buffer2stream(datos), options)/*.catch(async (err) => {
+                return this.handleUploadBufferError(err, config, buckets, filename, type, datos, retry, options);
+            })*/;
         } catch (err: any) {
-            return this.handleUploadBufferError(err, config, buckets, filename, type, datos, retry);
+            return this.handleUploadBufferError(err, config, buckets, filename, type, datos, retry, options);
         }
     }
 
 
-    public static async uploadStream(config: Google, buckets: string[], filename: string, type: string, datos: NodeJS.ReadableStream): Promise<void> {
+    public static async uploadStream(config: Google, buckets: string[], filename: string, type: string, datos: NodeJS.ReadableStream, options?: SaveOptions): Promise<void> {
         const promesas: Promise<void>[] = [];
-        for (const actual of this.setFiles(config, buckets, filename, type)) {
+        for (const actual of this.setFiles(config, buckets, filename, type, options)) {
             promesas.push(pipeline(datos, actual));
         }
 
@@ -226,5 +234,9 @@ export class StorageClient {
 
     public async get(file: string): Promise<Storage> {
         return Storage.get(this.config, this.buckets, file);
+    }
+
+    public async uploadBuffer(filename: string, type: string, datos: Buffer, retry = 0, options?: SaveOptions): Promise<void> {
+        return Storage.uploadBuffer(this.config, this.buckets, filename, type, datos, retry, options);
     }
 }

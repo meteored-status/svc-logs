@@ -1,3 +1,11 @@
+/**
+ * Editor: Diego Jesús Ramos Rodríguez
+ * Fecha: Wed, 15 Jul 2026 11:44:16 GMT
+ * Hash: 38230e889d1de87ed13d413527077404
+ * Versión: 2026.7.15+2-diegojesusramosrodriguez
+ * Proyecto: https://github.com/alpred-cms/svc-portadillas.git
+ */
+
 const comments: RegExp = /<!--[\s\S]*?-->/gi;
 const tags: RegExp = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi;
 
@@ -677,4 +685,15 @@ export const capitalize = (str: string): string => {
     }
 
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export const toStringID = (str: string): string => {
+    if(!str) return "";
+
+    return str.normalize('NFD') // Descompone los caracteres con acentos
+        .replace(/[\u0300-\u036f]/g, '') // Elimina los diacríticos (acentos)
+        .replace(/[^\w\s-]/g, '') // Elimina caracteres no alfanuméricos excepto espacios y guiones
+        .trim() // Elimina espacios en los extremos
+        .replace(/\s+/g, '-') // Reemplaza espacios por un solo guion
+        .toLowerCase();
 }
