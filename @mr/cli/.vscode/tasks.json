@@ -37,7 +37,7 @@
     {
       "label": "develop => Compilar (Active Workspaces)",
       "type": "shell",
-      "command": "yarn mrpack devel -c",
+      "command": "yarn mrpack devel -c -w",
       "options": {
         "cwd": "${workspaceFolder}/.."
       },
@@ -52,7 +52,7 @@
     {
       "label": "develop => Compilar (Todos)",
       "type": "shell",
-      "command": "yarn mrpack devel -c -f",
+      "command": "yarn mrpack devel -c -f -w",
       "options": {
         "cwd": "${workspaceFolder}/.."
       },

@@ -2,6 +2,32 @@
 
 ---
 
+## 2026.7.17
+
+### Added — `src/mrpack/clases/init/ignore.ts`
+
+- [Jose] **`mrpack init` añade `.codex/` al `.gitignore` generado**: la plantilla `IGNORE`
+  incluye ahora la entrada `.codex/`, de modo que el directorio de configuración local de
+  Codex quede ignorado automáticamente al ejecutar `mrpack init` en cualquier monorepo,
+  sin necesidad de añadirlo a mano al `.gitignore`.
+
+### Added — `src/mrpack/clases/init/symlinks.ts`, `src/mrpack/clases/init.ts`
+
+- [Jose] **`mrpack init` crea/corrige el enlace `CLAUDE.md` → `@mr/core/dev/CLAUDE.md`**:
+  Claude Code no lee `AGENTS.md` automáticamente (solo `CLAUDE.md`/`CLAUDE.local.md`), así
+  que se añade una nueva `initClaude()`, análoga a `initAgents()`, que gestiona ese symlink.
+  El fichero canónico `@mr/core/dev/CLAUDE.md` contiene dos imports (`@AGENTS.md` y
+  `@.github/copilot-instructions.md`), la sintaxis nativa de Claude Code para incluir
+  contenido de otro fichero, evitando duplicar las instrucciones ya mantenidas en
+  `AGENTS.md`/`.github/copilot-instructions.md`. Nótese que la mención a
+  `.github/copilot-instructions.md` dentro del propio `AGENTS.md` es solo texto entre
+  backticks (no un import), por lo que su contenido solo llega a Claude a través de este
+  segundo import explícito en `CLAUDE.md`. Extraída además `initSymlinkFichero()` (helper
+  compartido por `initAgents`/`initClaude`) para no triplicar la lógica de comprobar/recrear
+  un symlink de fichero simple.
+
+---
+
 ## 2026.7.13
 
 ### Added — `src/mrpack/clases/init/run.ts`, `src/mrpack/clases/init.ts`

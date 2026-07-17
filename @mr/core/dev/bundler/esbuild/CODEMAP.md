@@ -39,8 +39,8 @@ bundler/esbuild/
   1. Lee `entorno` y `dir`.
   2. Carga `package.json` + `mrpack.json`.
   3. Construye opciones de build.
-  4. En watch: arranca `tsc --watch` + `context(...).watch()`.
-  5. En test/producción: limpia `output/`, ejecuta `build(...)` y `tsc --noEmit` en paralelo.
+  4. Con `--watch` (cualquier `entorno`): arranca `tsc --watch` + `context(...).watch()`.
+  5. Sin `--watch` (incluido `entorno=desarrollo`): limpia `output/`, ejecuta `build(...)` y `tsc --noEmit` en paralelo, y termina.
 
 ---
 
@@ -49,4 +49,4 @@ bundler/esbuild/
 - Soporta solo compilación Node.
 - Solo compila cuando `deploy.runtime === "node"` y `build.framework !== "nextjs"`.
 - Inyecta el mismo set de globales usado por rspack.
-- Mantiene modo watch en desarrollo.
+- El modo watch es opt-in vía `--watch`; ya no se activa automáticamente por `entorno=desarrollo`.

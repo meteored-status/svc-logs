@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: cbfdf980a267f5fce80c33fb1e88bf8e
- * Versión: 2026.7.14+1-josantoniojimnez
- * Anterior: 2026.5.27+1-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: b20b5995e67d21e2b7936b11426bef15
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -21,11 +21,14 @@ import {Log} from "./log";
  * @property nombre - Nombre del workspace (directorio).
  * @property path   - Subdirectorio relativo a `root` donde se aloja el workspace (p.ej. `"services"`). Opcional.
  * @property root   - Raíz absoluta del monorepo.
+ * @property watch  - Si `true`, se registra el watcher de ficheros del workspace. Si `false`,
+ *   el workspace no observa cambios (compilación/ejecución de una sola vez).
  */
 export interface IWorkspace {
     nombre: string;
     path?: string;
     root: string;
+    watch: boolean;
 }
 
 /**
@@ -40,6 +43,7 @@ export class Workspace {
     protected readonly root: string;
     protected readonly dir: string;
     protected readonly hijos: Workspace[];
+    protected readonly watch: boolean;
 
     protected iniciado: boolean;
     protected watcher?: FSWatcher;
@@ -49,6 +53,7 @@ export class Workspace {
         this.root = data.root;
         this.dir = data.path!=undefined ? `${data.root}/${data.path}/${data.nombre}` : `${data.root}/${data.nombre}`;
         this.hijos = [];
+        this.watch = data.watch;
 
         this.iniciado = false;
     }
@@ -75,7 +80,9 @@ export class Workspace {
 
         await this.run();
 
-        this.initWatcher();
+        if (this.watch) {
+            this.initWatcher();
+        }
     }
 
     public parar(): void {

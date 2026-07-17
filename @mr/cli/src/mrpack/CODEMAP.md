@@ -1,6 +1,9 @@
 # CODEMAP — `@mr/cli/src/mrpack/`
 
-> Generado: 2026-06-26. Actualizar tras cambios significativos. Última revisión: 2026-07-03 (refactorización transversal + fase 2: deduplicación y división de módulos grandes).
+> Generado: 2026-06-26. Actualizar tras cambios significativos. Última revisión: 2026-07-17 (`mrpack devel`: nuevo flag `-w/--watch`; sin él los compiladores compilan una única vez y el proceso termina; añadido `.codex/` a la plantilla `IGNORE` de `init/ignore.ts` para que `mrpack init` lo incluya en el `.gitignore` del monorepo; nueva `initClaude()` en
+`init/symlinks.ts`, que crea/corrige el symlink `CLAUDE.md` → `@mr/core/dev/CLAUDE.md`
+—fichero que solo importa `@AGENTS.md`, ya que Claude Code no lee `AGENTS.md`
+automáticamente—; extraído `initSymlinkFichero()` compartido por `initAgents`/`initClaude`).
 
 ---
 
@@ -166,7 +169,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
 | `auto-doc.ts` | `ModuloAutoDoc` | `--env <string>` | `clases/auto-doc.ts → run()` |
 | `config.ts` | `ModuloConfig` | _(ninguno extra)_ | `clases/config → gestionar()` |
 | `deploy.ts` | `ModuloDeploy` | `--env produccion\|test` | `clases/deploy.ts → run()` |
-| `devel.ts` | `ModuloDevel` | `-c/--compilar`, `-e/--ejecutar`, `-f/--forzar` | `clases/devel.ts → run()` |
+| `devel.ts` | `ModuloDevel` | `-c/--compilar`, `-e/--ejecutar`, `-f/--forzar`, `-w/--watch` | `clases/devel.ts → run()` |
 | `framework.ts` | `ModuloFramework` | `-u/--update`, `-r/--reset`, `-s/--send`, `-y/--yes` | `clases/framework → actualizarTodo/resetearTodo/enviarTodo/gestionar` |
 | `init.ts` | `ModuloInit` | _(ninguno extra)_ | `clases/init.ts → init()` |
 | `update.ts` | `ModuloUpdate` | _(ninguno extra)_ | `clases/update.ts → init()` |
@@ -177,11 +180,11 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
 
 ### `clases/workspace.ts` — `Workspace`
 ```ts
-export interface IWorkspace { nombre: string; path?: string; root: string; }
+export interface IWorkspace { nombre: string; path?: string; root: string; watch: boolean; }
 
 export class Workspace {
     public addHijo(ws: Workspace): void
-    public async init(): Promise<void>      // run() + initWatcher(); idempotente
+    public async init(): Promise<void>      // run() + initWatcher() si watch; idempotente
     public parar(): void                   // cierra el FSWatcher
     public cambio(): void                  // notifica a hijos
     protected async run(): Promise<void>   // override para compilar
@@ -221,7 +224,7 @@ export class Compilar {
 ### `clases/workspace/i18n.ts` — `I18N extends Workspace`
 ```ts
 export class I18N extends Workspace {
-    // Lanza `mrlang generate --watch`; se reinicia ante cambios .json
+    // Lanza `mrlang generate` (con `--watch` solo si `this.watch`); se reinicia ante cambios .json
     public updateGlobal(config: IConfigServices): void
 }
 ```
@@ -491,11 +494,12 @@ export function run(basedir:string, env:string): void
 
 ### `clases/devel.ts`
 ```ts
-export interface IConfigEjecucion { compilar:boolean; ejecutar:boolean; forzar:boolean; }
+export interface IConfigEjecucion { compilar:boolean; ejecutar:boolean; forzar:boolean; watch:boolean; }
 export function run(basedir:string, config:IConfigEjecucion): void
 // Si compilar: init + actualizarTodo + install
 // Siempre: ejecutarWorkspaces(@mr/core,@mr/user,framework,packages) → ejecutarServices(cronjobs,jobs,scripts,services)
-// Watcher sobre config.workspaces.json para recargar en caliente
+// watch=false (por defecto): no se registra ningún FSWatcher; el proceso termina al acabar los compiladores
+// watch=true: Watcher sobre config.workspaces.json para recargar en caliente + watchers de cada Workspace/Service/I18N
 ```
 
 ---

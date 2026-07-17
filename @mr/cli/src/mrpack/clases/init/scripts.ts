@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: df123ea98ad394b65d98e0fc24b4800b
- * Versión: 2026.7.14+1-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: 89c91bb711457b1abeea67843f754398
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -38,7 +39,7 @@ export function checkScripts(config: Manifest, scripts: Record<string, string>, 
     config.build.bundler = getBundlerNormalizado(config, dependencies);
     switch(config.deploy.runtime) {
         case Runtime.cfworker:
-            scripts["packd"] = `yarn tsc --noemit --watch`;
+            scripts["packd"] = `yarn tsc --noemit`;
             // scripts["devel"] = "wrangler dev --remote --env test";
             scripts["devel"] = "wrangler dev -e test --ip local.tiempo.com --port 3500 --local-protocol https --https-cert-path ./files/fullchain.pem --https-key-path ./files/privkey.pem";
             return;

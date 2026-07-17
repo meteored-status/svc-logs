@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 5f62aa15f00747f9d309ad6ae8ed5e40
- * Versión: 2026.7.14+1-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: 04e3e58475be8c639ff85965724e1873
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -149,7 +149,9 @@ export class I18N extends Workspace {
 
     private async initCompilar(): Promise<void> {
 
-        this.setTimeoutCompilador();
+        if (this.watch) {
+            this.setTimeoutCompilador();
+        }
 
         if (this.compilador!==undefined) {
             return;
@@ -170,7 +172,7 @@ export class I18N extends Workspace {
             label: this.label,
         }, `Usando versión ${version} del generador de idiomas`);
 
-        this.compilador = spawn("yarn", ["run", "i18n", "run", "generate", `-${version}`, "--watch"], {
+        this.compilador = spawn("yarn", ["run", "i18n", "run", "generate", `-${version}`, ...(this.watch ? ["--watch"] : [])], {
             cwd: this.root,
             env: { ...process.env, FORCE_COLOR: "1" },
             stdio: "pipe",

@@ -3,11 +3,12 @@
 Este workspace es un **monorepo** Node.js/TypeScript organizado en paquetes bajo `@mr/cli`, `@mr/core/`, `@mr/user/`, `framework`, `packages`, `cronjobs`, `jobs` y `services`.
 Usa **Yarn workspaces** y **TypeScript** con paths absolutos entre paquetes.
 
-> **Nota sobre este archivo y AGENTS:**
+> **Nota sobre este archivo y AGENTS/CLAUDE:**
 > - La copia canónica de `copilot-instructions` vive en `@mr/core/dev/.github/copilot-instructions.md` y en la raíz se expone mediante el **enlace simbólico de directorio** `.github`.
 > - La copia canónica de `AGENTS.md` vive en `@mr/core/dev/AGENTS.md` y en la raíz se expone mediante el **enlace simbólico de fichero** `AGENTS.md`.
+> - La copia canónica de `CLAUDE.md` vive en `@mr/core/dev/CLAUDE.md` y en la raíz se expone mediante el **enlace simbólico de fichero** `CLAUDE.md`. Claude Code no lee `AGENTS.md` ni `copilot-instructions.md` por sí solo, así que `CLAUDE.md` los importa explícitamente (`@AGENTS.md` y `@.github/copilot-instructions.md`).
 >
-> Esto significa que cualquier archivo creado o editado dentro de `.github/` en la raíz realmente se crea/edita en `@mr/core/dev/.github/`, y cualquier edición sobre `AGENTS.md` en la raíz aplica sobre `@mr/core/dev/AGENTS.md`. Debe mantenerse ese esquema.
+> Esto significa que cualquier archivo creado o editado dentro de `.github/` en la raíz realmente se crea/edita en `@mr/core/dev/.github/`, y cualquier edición sobre `AGENTS.md`/`CLAUDE.md` en la raíz aplica sobre `@mr/core/dev/AGENTS.md`/`@mr/core/dev/CLAUDE.md`. Debe mantenerse ese esquema.
 
 ---
 

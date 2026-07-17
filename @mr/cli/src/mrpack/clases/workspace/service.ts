@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 0fa4c348f24b13f5389656883e1d66b4
- * Versión: 2026.7.14+1-josantoniojimnez
- * Anterior: 2026.7.2+4-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: 55d47d15c0e6170ad00bd5499cd96a46
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -12,7 +12,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import chokidar, {type ChokidarOptions} from "chokidar";
 
-import {BuildFW} from "@mr/core-dev/manifest/build";
+import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 
 import {Colors} from "../colors";
@@ -456,7 +456,7 @@ export class Service extends Workspace {
             return;
         }
 
-        if (Service.PAUSABLES.includes(config.build.framework)) {
+        if (this.watch && Service.PAUSABLES.includes(config.build.framework)) {
             this.setTimeoutCompilador();
         }
 
@@ -474,7 +474,7 @@ export class Service extends Workspace {
                 "yarn",
                 [
                     "workspace", "@mr/core-dev", "tsc",
-                    "--noEmit", "--watch", "--preserveWatchOutput",
+                    "--noEmit", ...(this.watch ? ["--watch", "--preserveWatchOutput"] : []),
                     "--project", path.join(this.dir, "tsconfig.json"),
                 ],
                 {
@@ -485,7 +485,10 @@ export class Service extends Workspace {
                 }
             );
         } else {
-            this.compilador = spawn("yarn", ["run", this.nombre, "run", "packd"], {
+            const watchArgs = this.watch
+                ? (config.build.bundler === BuildBundler.rspack ? ["--env", "watch=true"] : ["--watch"])
+                : [];
+            this.compilador = spawn("yarn", ["run", this.nombre, "run", "packd", ...watchArgs], {
                 cwd: this.root,
                 env: { ...process.env, FORCE_COLOR: "1" },
                 stdio: "pipe",

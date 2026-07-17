@@ -17,8 +17,19 @@
 
 ## Flujos de trabajo criticos
 - Desarrollo (ejecutar habilitados en `config.workspaces.json`): `yarn run devel`
-- Compilacion watch (habilitados): `yarn run packd`
-- Forzar todos los workspaces (incluye deshabilitados): `yarn run devel-f` / `yarn run packd-f`
+- Compilar TODOS los workspaces habilitados (una sola vez, sin watch; termina al acabar): `yarn run packd`
+  (equivale a `yarn mrpack devel -c`). Solo compila los marcados como habilitados en
+  `config.workspaces.json` (propiedad `packd.available`/`packd.disabled`).
+- **Un agente de IA que necesite compilar todo el proyecto debe usar SIEMPRE `-f`/`--forzar`
+  además de `-c`**: `yarn mrpack devel -c -f` (equivale a `yarn run packd-f`). Así se compilan
+  también los workspaces deshabilitados en `config.workspaces.json`, sin que el resultado
+  dependa de esa configuración local/por-desarrollador. `yarn run packd` (sin `-f`) puede dar
+  una compilación incompleta si algún workspace está deshabilitado.
+- Compilar SOLO un workspace concreto (una sola vez, sin watch): `yarn run <workspace> run packd`.
+- Ejecutar/depurar SOLO un workspace concreto (requiere que ya tenga `output/` compilado):
+  `yarn run <workspace> run devel` (`run dev` en vez de `run devel` si su framework es Next.js).
+  Ojo: esto **ejecuta**, no compila — para compilar ese workspace usa `run packd` (ver arriba).
+- Forzar todos los workspaces también en modo ejecución (incluye deshabilitados): `yarn run devel-f`
 - Actualizacion de stack del monorepo: `yarn run update`
 - Tras update, aplicar migraciones automatizadas SIEMPRE: `yarn run patch:apply`.
 - Ejecutar scripts de un workspace desde raiz: `yarn run www-frontend <script>` (atajo de `yarn workspace www-frontend <script>`).
@@ -26,6 +37,7 @@
 
 ## Convenciones no obvias (importantes para agentes)
 - Fuente canonica de convenciones AI: `.github/copilot-instructions.md` (ojo: `.github/` es symlink a `@mr/core/dev/.github/` y `AGENTS.md` en raíz es symlink a `@mr/core/dev/AGENTS.md`).
+- Claude Code no lee `AGENTS.md` ni `.github/copilot-instructions.md` automaticamente: `CLAUDE.md` en raíz (symlink a `@mr/core/dev/CLAUDE.md`) importa explícitamente ambos (`@AGENTS.md` y `@.github/copilot-instructions.md`) para que reciba las mismas instrucciones sin duplicar contenido. Ojo: una mención a un fichero entre backticks (como la de la línea de arriba) es solo texto — no es un import; el import real requiere la sintaxis `@ruta` sin backticks.
 - Mantener `CODEMAP.md` en la misma tarea cuando haya cambios significativos (modulos, API publica, rutas, flujos o reorganizacion). Si no existe, crearlo y enlazarlo desde el `README.md` mas cercano.
 - TypeScript estricto; evitar `any` explicito salvo necesidad real.
 - Imports en 3 bloques con una linea en blanco: (1) node/publico, (2) otros workspaces, (3) local relativo; usar `type` en imports solo-tipo.

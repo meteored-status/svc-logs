@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 6d6db7289c76dafcd70bb09c9c171ccf
- * Versión: 2026.7.14+1-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: dc2499f740a3cd6f126c7f891db48f77
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -35,7 +36,7 @@ import {getBundlerNormalizado} from "./bundler";
 import {checkScripts} from "./init/scripts";
 import {corregirGITs} from "./init/git";
 import {limpiarLegacy} from "./init/legacy";
-import {initGithub, initAgents} from "./init/symlinks";
+import {initGithub, initAgents, initClaude} from "./init/symlinks";
 import {initYarnRC} from "./init/yarnrc";
 import {initConfig, type IWorkspaces} from "./init/config-workspaces";
 import {initRun} from "./init/run";
@@ -66,6 +67,7 @@ export async function init(basedir: string): Promise<boolean> {
 
     await initGithub(basedir);
     await initAgents(basedir);
+    await initClaude(basedir);
 
     if (await isDir(`${basedir}/i18n`)) {
         Log.info({type: Log.label_base, label: "i18n"}, Colors.colorize([Colors.FgWhite], "Inicializando i18n"));

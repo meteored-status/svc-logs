@@ -21,7 +21,7 @@ yarn mrpack <modulo> [opciones]
 
 | Módulo | Descripción |
 |--------|-------------|
-| [`devel`](#devel) | Compila y/o ejecuta los workspaces en modo desarrollo (con watch) |
+| [`devel`](#devel) | Compila y/o ejecuta los workspaces en modo desarrollo (watch opcional con `-w`) |
 | [`deploy`](#deploy) | Compila todos los workspaces para un entorno de producción o test |
 | [`config`](#config) | Gestión interactiva de `config.workspaces.json` |
 | [`framework`](#framework) | Operaciones sobre los frameworks compartidos (añadir, actualizar, resetear, enviar…) |
@@ -56,7 +56,11 @@ duplica (p.ej. varias líneas seguidas dentro de `yarn` no producen `"yarn yarn"
 ### `devel`
 
 Inicia la compilación y/o ejecución de los workspaces habilitados en modo desarrollo.
-Activa el modo **watch** del bundler configurado (`rspack` o `esbuild`): recompila automáticamente al detectar cambios.
+
+Por defecto (sin `-w`) los compiladores (`tsc`, `esbuild`, `rspack`) compilan **una única vez**
+y el proceso termina en cuanto todos han finalizado. Con `-w` se activa el modo **watch** del
+bundler configurado (`rspack` o `esbuild`): recompila automáticamente al detectar cambios y el
+proceso permanece en ejecución.
 
 ```
 yarn mrpack devel [opciones] [adicional]
@@ -67,6 +71,7 @@ yarn mrpack devel [opciones] [adicional]
 | `-c` / `--compilar` | Compila los workspaces habilitados |
 | `-e` / `--ejecutar` | Ejecuta los workspaces habilitados |
 | `-f` / `--forzar` | Fuerza la operación en **todos** los workspaces (incluso los deshabilitados) |
+| `-w` / `--watch` | Activa el modo watch: los compiladores quedan observando cambios y el proceso no termina por sí solo |
 
 > **Patches automáticos:** al arrancar con `-c`, `mrpack devel` ejecuta siempre
 > `yarn run patch:apply` antes de iniciar los compiladores, independientemente de si
@@ -108,11 +113,15 @@ Ejemplo de `config.workspaces.json`:
 
 #### Timeout de pausa del compilador
 
+> Solo aplica en modo watch (`-w`); sin él, el compilador termina por sí solo tras compilar.
+
 Para los frameworks `meteored` y `nextjs`, el compilador se pausa automáticamente
 tras **5 minutos de inactividad** para liberar recursos. Se reactiva en el siguiente
 cambio de fichero.
 
 #### Edición manual de `mrpack.json` durante `devel`
+
+> Solo aplica en modo watch (`-w`); sin él no se registra ningún watcher de ficheros.
 
 El watcher de cada workspace **solo observa** los cambios de `mrpack.json` mientras
 `mrpack devel` está en marcha: recarga el manifest en memoria (de forma síncrona y sin
@@ -155,11 +164,14 @@ En modo `-c`, la salida del compilador de cada workspace se persiste en
 #### Ejemplos
 
 ```bash
-# Solo compilar los workspaces habilitados
+# Compilar los workspaces habilitados una única vez (el proceso termina al acabar)
 yarn mrpack devel -c
 
-# Compilar y ejecutar todos los workspaces
-yarn mrpack devel -c -e -f
+# Compilar en modo watch: recompila al detectar cambios, el proceso queda en ejecución
+yarn mrpack devel -c -w
+
+# Compilar y ejecutar todos los workspaces en modo watch
+yarn mrpack devel -c -e -f -w
 
 yarn mrpack devel -e
 ```
@@ -559,6 +571,11 @@ Entre otras acciones:
   crea un symlink relativo estándar; en **Windows** se usa una *junction* de directorio,
   que no requiere permisos de administrador ni Developer Mode.
 - Crea (o corrige) el enlace `AGENTS.md` → `@mr/core/dev/AGENTS.md`.
+- Crea (o corrige) el enlace `CLAUDE.md` → `@mr/core/dev/CLAUDE.md`. Este fichero canónico
+  contiene los imports `@AGENTS.md` y `@.github/copilot-instructions.md`, ya que Claude Code
+  no lee ninguno de los dos automáticamente (ni siquiera de forma transitiva: la mención a
+  `.github/copilot-instructions.md` dentro de `AGENTS.md` es texto entre backticks, no un
+  import) y así reutiliza las mismas instrucciones sin duplicarlas.
 - Por cada workspace en `services/`, `packages/`, `jobs/` y `cronjobs/`, propaga de forma
   recursiva las `dependencies` **y** `optionalDependencies` de producción de todos sus
   `devDependencies` de tipo `@mr/*` (incluidas las dependencias transitivas), resolviendo
@@ -650,10 +667,11 @@ yarn mrpack autodoc --env=<entorno>
 
 | Tarea | Comando |
 |-------|---------|
-| Compilar workspaces habilitados | `yarn mrpack devel -c` |
-| Compilar **todos** los workspaces | `yarn mrpack devel -c -f` |
-| Compilar y ejecutar workspaces habilitados | `yarn mrpack devel -c -e` |
-| Compilar y ejecutar **todos** los workspaces | `yarn mrpack devel -c -e -f` |
+| Compilar workspaces habilitados (una única vez) | `yarn mrpack devel -c` |
+| Compilar workspaces habilitados en modo watch | `yarn mrpack devel -c -w` |
+| Compilar **todos** los workspaces en modo watch | `yarn mrpack devel -c -f -w` |
+| Compilar y ejecutar workspaces habilitados en modo watch | `yarn mrpack devel -c -e -w` |
+| Compilar y ejecutar **todos** los workspaces en modo watch | `yarn mrpack devel -c -e -f -w` |
 | Solo ejecutar (sin recompilar) | `yarn mrpack devel -e` |
 | Build de producción | `yarn mrpack deploy --env=produccion` |
 | Build de test/staging | `yarn mrpack deploy --env=test` |

@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-network",
-  "version": "2026.7.14+1-josantoniojimnez",
+  "version": "2026.7.17+1-josantoniojimnez",
   "description": "Utilidades de red de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {

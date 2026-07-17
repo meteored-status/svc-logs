@@ -18,8 +18,8 @@ bundler/esbuild/esbuild.config.mjs
 2. Solo compila si `deploy.runtime` es `node` y `build.framework` no es `nextjs`.
 3. Genera una única build Node (`app -> main.ts`).
 4. Ejecuta `tsc --noEmit` en paralelo a esbuild (equivalente al type-check de rspack).
-5. En watch (por `entorno=desarrollo` o `--watch`) lanza también `tsc --watch`.
-6. En `test/produccion` limpia `output/` y compila una vez.
+5. En watch (activado explícitamente con `--watch`, independientemente del `entorno`) lanza también `tsc --watch`.
+6. Sin `--watch` (incluido `entorno=desarrollo`) limpia `output/` y compila una única vez.
 
 > **Resolución de `tscBin`:** el binario de `tsc` se localiza componiendo la ruta a partir
 > de `typescript/package.json` (`require.resolve("typescript/package.json")` +
@@ -63,10 +63,11 @@ Y sus equivalentes en `global.*`.
 ## Uso
 
 ```bash
+# Compila una única vez (sin --watch, el proceso termina al acabar)
 node bundler/esbuild/esbuild.config.mjs --env entorno=desarrollo --env dir="$(pwd)"
 ```
 
-También admite `--watch` explícito:
+También admite `--watch` explícito (independiente del `entorno`):
 
 ```bash
 node bundler/esbuild/esbuild.config.mjs --env entorno=test --env dir="$(pwd)" --watch

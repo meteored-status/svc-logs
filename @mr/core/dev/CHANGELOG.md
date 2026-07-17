@@ -2,6 +2,45 @@
 
 ---
 
+## 2026.7.17
+
+### Added — `CLAUDE.md`
+
+- [Jose] **Nuevo fichero canónico `CLAUDE.md`**, expuesto en la raíz del monorepo mediante
+  symlink (gestionado por la nueva `initClaude()` de `@mr/cli`, ver su changelog). Claude
+  Code no lee `AGENTS.md` ni `.github/copilot-instructions.md` automáticamente — ni siquiera
+  de forma transitiva, ya que la mención a este último dentro de `AGENTS.md` es solo texto
+  entre backticks, no un import — así que `CLAUDE.md` los importa explícitamente con
+  `@AGENTS.md` y `@.github/copilot-instructions.md` para que Claude reciba las mismas
+  instrucciones que Copilot/Codex sin duplicar contenido.
+
+### Changed — `AGENTS.md`, `.github/copilot-instructions.md`
+
+- [Jose] Documentado el esquema de symlinks/imports anterior en ambos ficheros: la nota de
+  cabecera de `copilot-instructions.md` ahora menciona también `CLAUDE.md` (symlink de
+  fichero, igual que `AGENTS.md`), y `AGENTS.md` aclara en "Convenciones no obvias" que solo
+  `CLAUDE.md` importa realmente su contenido y el de `copilot-instructions.md` para Claude
+  Code.
+
+### Changed — `AGENTS.md`
+
+- [Jose] **"Flujos de trabajo criticos" documenta ahora la compilación de un único
+  workspace**, distinguiéndola de la ejecución. Verificado directamente en
+  `@mr/cli/src/mrpack/clases/workspace/service.ts` (líneas ~491/608: los `spawn` que lanza
+  `mrpack devel` por cada workspace): compilar uno solo es `yarn run <workspace> run packd`
+  (una sola vez, sin watch); ejecutarlo/depurarlo es `yarn run <workspace> run devel`
+  (`run dev` en Next.js) y requiere que `output/` ya esté compilado. También se corrige la
+  descripción de `yarn run packd` (compilación de todos los habilitados): por defecto es
+  **una sola vez** (termina al acabar), no "watch" — el watch solo se activa con `-w`.
+- [Jose] **Un agente de IA que compile todo el proyecto debe añadir siempre `-f`/`--forzar`
+  junto a `-c`**: `yarn mrpack devel -c -f` (= `yarn run packd-f`), no solo `yarn mrpack devel -c`
+  (= `yarn run packd`). Sin `-f`, la compilación solo cubre los workspaces marcados como
+  habilitados en `config.workspaces.json` (`packd.available`/`packd.disabled`), que es una
+  configuración local por desarrollador — sin `-f` un agente podría dar por buena una
+  compilación que en realidad se saltó services/jobs/cronjobs deshabilitados en esa máquina.
+
+---
+
 ## 2026.7.13
 
 ### Fixed — `bundler/esbuild/esbuild.config.mjs`

@@ -150,8 +150,7 @@ async function run() {
     }
     const options = getOptions(buildContext.basedir, buildContext.dependencies, buildContext.entorno, buildContext.database);
 
-    const desarrollo = !["produccion", "test"].includes(entorno);
-    const watchMode = process.argv.includes("--watch") || desarrollo;
+    const watchMode = process.argv.includes("--watch");
     if (watchMode) {
         runTsc(basedir, true);
         const buildContext = await context(options);

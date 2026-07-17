@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 3943e4f8edd6ed5f0786df0a60337ec6
- * Versión: 2026.7.14+1-josantoniojimnez
- * Anterior: 2026.6.25+10-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: f72fce3aa3dc373a017eefd97371880a
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -28,11 +28,14 @@ import {install} from "./yarn";
  * @property compilar - Si `true`, compila los workspaces habilitados.
  * @property ejecutar - Si `true`, ejecuta los servicios tras compilar.
  * @property forzar   - Si `true`, fuerza la compilación aunque no haya cambios.
+ * @property watch    - Si `true`, los compiladores permanecen observando cambios. Si `false`,
+ *   compilan una única vez y el proceso termina al finalizar todos ellos.
  */
 export interface IConfigEjecucion {
     compilar: boolean;
     ejecutar: boolean;
     forzar: boolean;
+    watch: boolean;
 }
 
 /**
@@ -70,10 +73,10 @@ export function run(basedir: string, config: IConfigEjecucion): void {
 
 async function ejecutar(ejecucion: IConfigEjecucion, basedir: string): Promise<void> {
     const frameworks = await Promise.all([
-        ejecutarWorkspaces(basedir, "@mr/core"),
-        ejecutarWorkspaces(basedir, "@mr/user"),
-        ejecutarWorkspaces(basedir, "framework"),
-        ejecutarWorkspaces(basedir, "packages"),
+        ejecutarWorkspaces(basedir, "@mr/core", ejecucion.watch),
+        ejecutarWorkspaces(basedir, "@mr/user", ejecucion.watch),
+        ejecutarWorkspaces(basedir, "framework", ejecucion.watch),
+        ejecutarWorkspaces(basedir, "packages", ejecucion.watch),
     ]).then(frameworks=>frameworks.flat());
 
     if (!await ejecutarServices(ejecucion, basedir, frameworks)) {
@@ -83,20 +86,21 @@ async function ejecutar(ejecucion: IConfigEjecucion, basedir: string): Promise<v
     }
 }
 
-async function ejecutarWorkspaces(basedir: string, path: string): Promise<Workspace[]> {
+async function ejecutarWorkspaces(basedir: string, path: string, watch: boolean): Promise<Workspace[]> {
     if (!await isDir(`${basedir}/${path}`)) {
         return [];
     }
 
     const workspaces_list = await readDir(`${basedir}/${path}`);
-    return Promise.all(workspaces_list.map(workspace=>ejecutarWorkspace(basedir, path, workspace)));
+    return Promise.all(workspaces_list.map(workspace=>ejecutarWorkspace(basedir, path, workspace, watch)));
 }
 
-async function ejecutarWorkspace(basedir: string, path: string, workspace: string): Promise<Workspace> {
+async function ejecutarWorkspace(basedir: string, path: string, workspace: string, watch: boolean): Promise<Workspace> {
     const devel = new Workspace({
         nombre: workspace,
         path,
         root: basedir,
+        watch,
     });
 
     return devel.init().then(()=>devel);
@@ -129,6 +133,7 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
             root: basedir,
             pad: length,
             global: config_global,
+            watch: ejecucion.watch,
         });
         await i18n.init();
         dependencias.push(i18n);
@@ -147,6 +152,7 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
                 compilar: ejecucion.compilar,
                 ejecutar: ejecucion.ejecutar,
                 forzar: ejecucion.forzar,
+                watch: ejecucion.watch,
                 global: config_global,
             });
             serviciosCreados.push({nombre: workspace, service: devel});
@@ -171,25 +177,27 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
         ),
     );
 
-    chokidar.watch(`${basedir}/config.workspaces.json`, {
-        persistent: true,
-    }).on("change", ()=>{
-        cargarConfig(basedir)
-            .then(async (config_global)=>{
-                for (const actual of services) {
-                    actual.updateGlobal(config_global);
-                }
-                if (i18n!=undefined) {
-                    i18n.updateGlobal(config_global);
-                }
-            })
-            .catch((err)=>{
-                Log.error({
-                    type: Log.label_base,
-                    label: "config.workspaces.json",
-                }, "Error recargando configuración global", err);
-            });
-    });
+    if (ejecucion.watch) {
+        chokidar.watch(`${basedir}/config.workspaces.json`, {
+            persistent: true,
+        }).on("change", ()=>{
+            cargarConfig(basedir)
+                .then(async (config_global)=>{
+                    for (const actual of services) {
+                        actual.updateGlobal(config_global);
+                    }
+                    if (i18n!=undefined) {
+                        i18n.updateGlobal(config_global);
+                    }
+                })
+                .catch((err)=>{
+                    Log.error({
+                        type: Log.label_base,
+                        label: "config.workspaces.json",
+                    }, "Error recargando configuración global", err);
+                });
+        });
+    }
 
     return true;
 }

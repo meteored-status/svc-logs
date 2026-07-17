@@ -1,7 +1,7 @@
 # CODEMAP — `@mr/core/dev/bundler/rspack/`
 
-> Generado: 2026-06-15. Actualizar tras cambios en la configuración de rspack.
-> Importar vía: `yarn workspace @mr/core-dev rspack --env entorno=<e> --env dir=<dir> --config bundler/rspack/rspack.config.ts`
+> Generado: 2026-06-15. Actualizar tras cambios en la configuración de rspack. Última revisión: 2026-07-17 (watch ya no depende solo de `entorno=desarrollo`; requiere `--env watch=true`).
+> Importar vía: `yarn workspace @mr/core-dev rspack --env entorno=<e> --env dir=<dir> [--env watch=true] --config bundler/rspack/rspack.config.ts`
 
 ---
 
@@ -44,8 +44,10 @@ export default (env: IEnv) => Configuration[]
 
 **Variables de entorno recibidas:**
 ```
-IEnv { entorno: string; dir: string; }
+IEnv { entorno: string; dir: string; watch?: string|boolean; }
 ```
+`watch` habilita el modo watch (`watch === true || watch === "true"`) cuando además `entorno`
+es de desarrollo; se propaga a cada `configuracion({...watch: watchHabilitado})`.
 
 ---
 
@@ -57,6 +59,7 @@ interface IConfiguracionConfig {
     bundle:       ManifestBuildBundleBase;
     dependencies: Record<string, string>;
     entorno:      string;
+    watch:        boolean;        // activa watch (junto con desarrollo); viene de `--env watch=true`
     framework:    BuildFW;
     runtime:      Runtime;
     database?:    string;         // BD activa para el entorno
@@ -67,10 +70,12 @@ export default (config: IConfiguracionConfig): Configuration
 ```
 
 **Lógica de entorno:**
-- `desarrollo = !["produccion","test"].includes(entorno)` → activa watch, desactiva minificación
+- `desarrollo = !["produccion","test"].includes(entorno)` → desactiva minificación
 - `test = ["desarrollo","test"].includes(entorno)` → activa source maps de CSS
+- Watch: `desarrollo && watch` → ya no basta con `entorno=desarrollo`, requiere `watch=true`
+  explícito (`rspack.config.ts` lo lee de `--env watch=true`, que `mrpack devel -c -w` propaga)
 
-**Modo `watch` (solo desarrollo):**
+**Modo `watch` (solo desarrollo, y si `watch` es `true`):**
 ```
 aggregateTimeout: 1000
 ignored: .yarn, @mr/cli, assets, files, mapping, output (en todos los niveles)

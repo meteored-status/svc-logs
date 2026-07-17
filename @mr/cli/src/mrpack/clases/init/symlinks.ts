@@ -1,8 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 35d126593f04afe8d785d97c1352c723
- * Versión: 2026.7.14+1-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:54:44 GMT
+ * Hash: 012fe343aab2d190fecc135ea3535059
+ * Versión: 2026.7.17+2-josantoniojimnez
+ * Anterior: 2026.7.17+1-josantoniojimnez
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
@@ -56,17 +57,21 @@ export async function initGithub(basedir: string): Promise<void> {
 }
 
 /**
- * Verifica que `{basedir}/AGENTS.md` sea un symlink apuntando a
- * `@mr/core/dev/AGENTS.md`.
+ * Verifica que `{basedir}/{nombre}` sea un symlink apuntando a
+ * `@mr/core/dev/{nombre}`. Si existe pero no apunta al destino correcto
+ * (fichero real u otro enlace), lo elimina y crea el enlace correcto.
+ * Si no existe, lo crea.
  *
- * Si existe pero no apunta al destino correcto (fichero real u otro enlace),
- * lo elimina y crea el enlace correcto. Si no existe, lo crea.
+ * Usado por `initAgents`/`initClaude` — ambos son symlinks a fichero simple
+ * (sin la casuística de junction de Windows que requiere `initGithub` para
+ * enlazar un directorio).
  *
  * @param basedir - Raíz absoluta del monorepo.
+ * @param nombre - Nombre del fichero en la raíz y en `@mr/core/dev/`.
  */
-export async function initAgents(basedir: string): Promise<void> {
-    const agentsPath = `${basedir}/AGENTS.md`;
-    const destinoRelativo = "@mr/core/dev/AGENTS.md";
+async function initSymlinkFichero(basedir: string, nombre: string): Promise<void> {
+    const destinoPath = `${basedir}/${nombre}`;
+    const destinoRelativo = `@mr/core/dev/${nombre}`;
     const isWindows = process.platform === "win32";
 
     // En Windows forzamos ruta absoluta para evitar variaciones de resolución.
@@ -74,17 +79,39 @@ export async function initAgents(basedir: string): Promise<void> {
         ? resolve(basedir, destinoRelativo)
         : destinoRelativo;
 
-    const stat = await lstat(agentsPath).catch(() => undefined);
+    const stat = await lstat(destinoPath).catch(() => undefined);
 
     if (stat !== undefined) {
-        const actual = await readlink(agentsPath).catch(() => undefined);
+        const actual = await readlink(destinoPath).catch(() => undefined);
         if (actual === destinoEfectivo) {
             return;
         }
 
-        Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgYellow], "Corrigiendo AGENTS.md -> symlink a @mr/core/dev/AGENTS.md"));
-        await unlink(agentsPath);
+        Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgYellow], `Corrigiendo ${nombre} -> symlink a @mr/core/dev/${nombre}`));
+        await unlink(destinoPath);
     }
 
-    await symlink(destinoEfectivo, agentsPath);
+    await symlink(destinoEfectivo, destinoPath);
+}
+
+/**
+ * Verifica que `{basedir}/AGENTS.md` sea un symlink apuntando a
+ * `@mr/core/dev/AGENTS.md`.
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ */
+export async function initAgents(basedir: string): Promise<void> {
+    await initSymlinkFichero(basedir, "AGENTS.md");
+}
+
+/**
+ * Verifica que `{basedir}/CLAUDE.md` sea un symlink apuntando a
+ * `@mr/core/dev/CLAUDE.md`. Ese fichero canónico contiene los imports `@AGENTS.md` y
+ * `@.github/copilot-instructions.md` para que Claude Code cargue las mismas instrucciones
+ * que Copilot/Codex sin duplicar contenido (Claude no lee ninguno de los dos por sí solo).
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ */
+export async function initClaude(basedir: string): Promise<void> {
+    await initSymlinkFichero(basedir, "CLAUDE.md");
 }
