@@ -13,6 +13,48 @@ en Windows, symlink relativo en Unix), que symlinkea el directorio completo `.cl
 entradas a `@mr/core/dev/.claude/` antes de sustituirlo por el symlink; añadido
 `**/.claude/settings.local.json` a la plantilla `IGNORE` de `init/ignore.ts` para que
 `mrpack init` lo excluya también del `.gitignore` del monorepo).
+Última revisión: 2026-07-17 (rediseño de `config.workspaces.json`: las antiguas propiedades
+planas `devel`/`packd` —`{available:string[], disabled:string[]}`— y `services` —mapa de
+variables de entorno nunca consumido— se sustituyen por `workspaces`, que agrupa los
+workspaces por `deploy.type` (`browser`/`cronjobs`/`jobs`/`services`, vía nueva
+`grupoDeploy()` en `workspace/service.ts`) con un flag booleano `ejecutar`/`compilar` por
+workspace (nueva `IWorkspaceFlags`/`IConfigWorkspaces`/`flagsWorkspace()`); `initConfig()`
+(`init/config-workspaces.ts`) migra automáticamente tanto el formato antiguo (listas planas)
+como el intermedio (`packd`/`devel` dentro de `workspaces`, usado brevemente antes de
+renombrarlos) la primera vez que se regenera el fichero; `Service`/`gestionarLista`
+(`config/workspaces.ts`) y `listarWorkspacesConInfo`/`leerCapacidades` (`config/datos.ts`)
+actualizados para leer/escribir el nuevo esquema anidado). Migrada también la propiedad
+`i18n: boolean` (a nivel raíz) a `workspaces.i18n` (nueva `IConfigWorkspacesI18n`, primera
+propiedad de `workspaces`, solo presente si existe el workspace `i18n`), con dos flags:
+`enabled` (equivalente al `i18n` antiguo; gatea si `devel.ts::ejecutarServices()` inicia el
+paso de generación de i18n) y `watch` (nuevo; controla si el workspace `I18N` arranca en modo
+observación, ahora desacoplado del flag `-w` global de `mrpack devel` — antes
+`I18N.watch` heredaba siempre `ejecucion.watch`). Corregido además un bloqueo real de
+`mrpack devel -c -w`: `I18N.initCompilar()` (`workspace/i18n.ts`) no resolvía su `Deferred`
+si `mrlang generate` terminaba en modo no-watch sin escribir nada por stdout/stderr —
+añadido un handler `.on("close", ...)` que lo resuelve igualmente (mismo patrón que
+`Service.initCompilar()`).
+Última revisión: 2026-07-17 (`mrpack config` → "Gestionar workspaces": rediseñado de un
+submenú de 3 pantallas —Compilar/Ejecutar/Generar i18n, cada una con su propia lista— a una
+única pantalla con `alternarMatriz()`, nueva primitiva de `config/menu.ts` que sustituye a
+`alternarLista`/`IToggleItem` (eliminados, sin otros usos): cada fila puede tener un número
+distinto de casillas —`i18n` con `enabled`/`watch`; el resto de workspaces, en orden
+alfabético, con `compilar`/`ejecutar` según les aplique—, navegables con ←→ dentro de la fila
+activa además de ↑↓ entre filas; `gestionarLista()`/`gestionarI18n()` (`config/workspaces.ts`)
+eliminadas y fusionadas en la nueva `gestionarWorkspaces()`, que construye las filas y persiste
+el resultado en una sola llamada a `guardarConfig()`).
+Última revisión: 2026-07-17 (`patch` se traslada de nivel raíz a `framework.patch`, como
+primera propiedad de `framework` —antes de `framework.updates`—: `IConfigServices.patch`
+desaparece; `initConfig()` (`init/config-workspaces.ts`) migra automáticamente el `patch` raíz
+legacy; `gestionarPatches()` (`config/frameworks.ts`) lee/borra `config.framework?.patch`. El
+runner de patches, `@mr/core/dev/patches/index.mjs` —paquete framework aparte—, se actualiza en
+paralelo: nueva `getPatchFromConfig(json)` acepta ambas ubicaciones y `writePatchCursor()`
+reconstruye `framework` para que `patch` quede primero, ver el changelog de `@mr/core-dev`).
+Última revisión: 2026-07-20 (corregida la alineación de casillas en `alternarMatriz()`
+—`config/menu.ts`—: la fila `i18n` y las de workspace tienen casillas con etiquetas de
+distinta longitud, por lo que la segunda casilla de cada fila arrancaba en una columna
+distinta; se calcula un ancho fijo por columna, `anchoColumnas[j]`, y se aplica `padEnd()` a
+cada etiqueta antes de colorearla).
 
 ---
 
@@ -49,10 +91,10 @@ mrpack/
 │   │
 │   ├── config/
 │   │   ├── index.ts                 gestionar() — menú principal de `mrpack config`
-│   │   ├── menu.ts                  seleccionar/elegirUno/alternarLista — primitivas TUI readline
+│   │   ├── menu.ts                  seleccionar/elegirUno/alternarMatriz — primitivas TUI readline
 │   │   │                            (Render y helpers TTY importados de utiles/tty.ts)
 │   │   ├── datos.ts                 cargarConfig/guardarConfig/listarWorkspacesConInfo/existeI18n
-│   │   ├── workspaces.ts            gestionarWorkspaces() — submenú compilar/ejecutar/i18n
+│   │   ├── workspaces.ts            gestionarWorkspaces() — pantalla única (matriz i18n + workspaces)
 │   │   └── frameworks.ts            gestionarFrameworks() — submenú autoupdates/patches
 │   │
 │   ├── framework/
@@ -205,15 +247,24 @@ export class Workspace {
 ```ts
 export const enum FrameworkUpdates { all="all", daily="daily", weekly="weekly" }
 export function sanitizeFrameworkUpdates(value: unknown): FrameworkUpdates
+export type GrupoWorkspace = "browser" | "cronjobs" | "jobs" | "services";
+export function grupoDeploy(tipo: ManifestDeploymentKind): GrupoWorkspace|undefined  // deploy.type → grupo; undefined si no gestionable (p.ej. "worker")
+export interface IWorkspaceFlags { ejecutar?:boolean; compilar?:boolean; }
+export interface IConfigWorkspacesI18n { enabled?:boolean; watch?:boolean; }  // enabled: inicia el paso i18n al compilar; watch: i18n observa cambios (independiente del -w global)
+export interface IConfigWorkspaces {
+    i18n?: IConfigWorkspacesI18n;  // solo presente si existe el workspace i18n
+    browser?: Record<string,IWorkspaceFlags>;
+    cronjobs?: Record<string,IWorkspaceFlags>;
+    jobs?: Record<string,IWorkspaceFlags>;
+    services?: Record<string,IWorkspaceFlags>;
+}
+export function flagsWorkspace(workspaces: IConfigWorkspaces|undefined, nombre:string): IWorkspaceFlags  // busca por nombre en los 4 grupos deploy.type (no incluye i18n)
 export interface IConfigServices {
-    devel: {available:string[];disabled:string[]};
-    packd: {available:string[];disabled:string[]};
-    i18n: boolean;
-    services: Record<string,string>;
-    framework?: {updates: FrameworkUpdates};
-    patch?: string;
+    workspaces?: IConfigWorkspaces;
+    framework?: {patch?:string; updates: FrameworkUpdates};  // patch: último RXXX aplicado por patch:apply, primera propiedad
 }
 // Service: lanza/reinicia el proceso del servicio con spawn; respeta config.workspaces.json
+// (flags ejecutar/compilar resueltos vía flagsWorkspace(), sin importar en qué grupo esté)
 export class Service extends Workspace {
     public updateGlobal(config: IConfigServices): void
 }
@@ -233,7 +284,15 @@ export class Compilar {
 ### `clases/workspace/i18n.ts` — `I18N extends Workspace`
 ```ts
 export class I18N extends Workspace {
+    // this.compilar = global.workspaces?.i18n?.enabled ?? true (gatea si se lanza mrlang generate)
+    // this.watch (heredado de Workspace) ahora lo fija devel.ts con workspaces?.i18n?.watch ?? false,
+    // ya no con el flag -w/--watch global de `mrpack devel`
     // Lanza `mrlang generate` (con `--watch` solo si `this.watch`); se reinicia ante cambios .json
+    // initCompilar() espera (deferred) a la 1ª línea de stdout/stderr del proceso para
+    // considerarlo arrancado; el handler `close` (fix: antes ausente) también resuelve ese
+    // deferred, necesario porque `Generate.run()` (mrlang/clases/generate.ts) no escribe NADA
+    // por consola cuando corre sin --watch — sin el handler, `initCompilar()` (y quien espera
+    // `i18n.init()`, es decir `devel.ts`) se quedaba bloqueado para siempre
     public updateGlobal(config: IConfigServices): void
 }
 ```
@@ -427,42 +486,55 @@ export async function actualizarIndiceLogs(logDir:string): Promise<void>
 ### `index.ts`
 ```ts
 export async function gestionar(basedir:string): Promise<void>
-// Menú principal de `mrpack config`. Opciones: "Gestionar workspaces" → gestionarWorkspaces()
+// Menú principal de `mrpack config`. Opciones: "Framework" → gestionarFrameworks()
+//                                              · "Workspaces" → gestionarWorkspaces()
 ```
 
 ### `workspaces.ts`
 ```ts
 export async function gestionarWorkspaces(basedir:string): Promise<void>
-// Submenú: Compilar (packd.available/disabled) · Ejecutar (devel.available/disabled)
-//          · Generar i18n (elegirUno ON/OFF; solo si existe el workspace i18n)
+// Pantalla única (sin submenús), vía alternarMatriz() de menu.ts: fila "i18n" primero
+// (casillas enabled/watch, solo si existe el workspace i18n) y a continuación el resto de
+// workspaces en orden alfabético, cada uno con las casillas compilar/ejecutar que le
+// apliquen según compilable/ejecutable. Persiste workspaces.i18n.{enabled,watch} y
+// workspaces.<grupo>.<nombre>.{compilar,ejecutar} en un solo guardarConfig().
 ```
 
 ### `frameworks.ts`
 ```ts
 export async function gestionarFrameworks(basedir:string): Promise<void>
 // Submenú: Autoupdates (elegirUno de framework.updates: all/daily/weekly)
-//          · Sistema de Patches (elimina config.patch para forzar reaplicación)
+//          · Patches (elimina framework.patch para forzar reaplicación)
 ```
 
 ### `datos.ts`
 ```ts
-export interface IInfoWorkspace { nombre:string; compilable:boolean; ejecutable:boolean }
-export async function cargarConfig(basedir:string): Promise<IConfigServices>           // lee con defaults
-export async function guardarConfig(basedir:string, config:IConfigServices): Promise<void>  // normaliza + safeWrite
-export async function listarWorkspacesConInfo(basedir:string): Promise<IInfoWorkspace[]>    // lee mrpack.json de cada workspace
+export const GRUPOS = ["cronjobs","jobs","scripts","services"] as const;  // directorios físicos donde se descubren workspaces
+export interface IInfoWorkspace { nombre:string; compilable:boolean; ejecutable:boolean; grupo:GrupoWorkspace }
+export async function cargarConfig(basedir:string): Promise<IConfigServices>           // lee con defaults ({workspaces:{}, i18n:true})
+export async function guardarConfig(basedir:string, config:IConfigServices): Promise<void>  // safeWrite directo (sin normalización de listas)
+export async function listarWorkspacesConInfo(basedir:string): Promise<IInfoWorkspace[]>    // lee mrpack.json de cada workspace; excluye los sin grupo gestionable
 // compilable = runtime !== "php" | ejecutable = framework === "meteored" && runtime === "node"
+// grupo = grupoDeploy(deploy.type) — grupo de config.workspaces.json, independiente del directorio físico (GRUPOS)
 export async function existeI18n(basedir:string): Promise<boolean>
 ```
 
 ### `menu.ts` — primitivas TUI readline
 ```ts
 export interface IMenuOpcion<T> { label:string; value:T; descripcion?:string; disabled?:boolean }
-export interface IToggleItem { label:string; checked:boolean }
+export interface ICheckbox { key:string; label:string; checked:boolean }
+export interface IFilaMatriz { label:string; checkboxes:ICheckbox[] }
 export async function seleccionar<T>(titulo:string, opciones:IMenuOpcion<T>[], config?:{inicial?:number}): Promise<T|null>
 export async function elegirUno<T>(titulo:string, opciones:IMenuOpcion<T>[], config?:{inicial?:number}): Promise<T|null>
-export async function alternarLista(titulo:string, items:IToggleItem[]): Promise<boolean[]|null>
+export async function alternarMatriz(titulo:string, filas:IFilaMatriz[]): Promise<Record<string,boolean>[]|null>
 // Render, prepararTTY, restaurarTTY importados de utiles/tty.ts
-// Modo raw + redibujado con Colors.up; ↑↓ navegar, Espacio/←→ alternar, Intro confirmar, Esc cancelar
+// Modo raw + redibujado con Colors.up; ↑↓ navegar fila, ←→ navegar casilla de la fila activa
+// (número de casillas variable por fila), Espacio alternar, a/n marcar/desmarcar todas,
+// Intro confirmar, Esc cancelar
+// anchoColumnas[j] = máximo cb.label.length en la columna j entre todas las filas —
+// las etiquetas se rellenan con padEnd() a ese ancho para que las casillas de filas con
+// distinto contenido (p.ej. i18n "enabled"/"watch" vs workspace "compilar"/"ejecutar")
+// queden alineadas verticalmente
 ```
 
 ---
@@ -508,7 +580,9 @@ export function run(basedir:string, config:IConfigEjecucion): void
 // Si compilar: init + actualizarTodo + install
 // Siempre: ejecutarWorkspaces(@mr/core,@mr/user,framework,packages) → ejecutarServices(cronjobs,jobs,scripts,services)
 // watch=false (por defecto): no se registra ningún FSWatcher; el proceso termina al acabar los compiladores
-// watch=true: Watcher sobre config.workspaces.json para recargar en caliente + watchers de cada Workspace/Service/I18N
+// watch=true: Watcher sobre config.workspaces.json para recargar en caliente + watchers de cada Workspace/Service
+// I18N es la excepción: su propio watch NO usa `config.watch` (el -w/--watch global), sino
+// `config_global.workspaces?.i18n?.watch ?? false`, fijado una sola vez al construir la instancia
 ```
 
 ---

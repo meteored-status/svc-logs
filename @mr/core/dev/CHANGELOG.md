@@ -88,6 +88,17 @@
   configuración local por desarrollador — sin `-f` un agente podría dar por buena una
   compilación que en realidad se saltó services/jobs/cronjobs deshabilitados en esa máquina.
 
+### Changed — `patches/index.mjs`, `patches/README.md`, `patches/CODEMAP.md`
+
+- [Jose] **El cursor de patch de `config.workspaces.json` pasa de `patch` (nivel raíz) a
+  `framework.patch`**, como primera propiedad del objeto `framework` (antes de
+  `framework.updates`) — coherente con que `@mr/cli` ya agrupa ahí el resto de configuración
+  de frameworks (ver su changelog). Nueva `getPatchFromConfig(json)` en `index.mjs` centraliza
+  la lectura aceptando ambas ubicaciones (`framework.patch` o el `patch` legacy a nivel raíz);
+  `writePatchCursor()` reconstruye `framework` para que `patch` quede como primera clave y
+  limpia el `patch` legacy de la raíz en la misma escritura, sin esperar a una migración
+  aparte. La migración del lado `@mr/cli` (`initConfig()`) es independiente y automática.
+
 ---
 
 ## 2026.7.13

@@ -155,13 +155,21 @@ function highestPatchCode(rules) {
     return mejor?.code;
 }
 
+/**
+ * Lee el cursor de patch de un `config.workspaces.json` ya parseado, aceptando tanto la
+ * ubicacion vigente (`framework.patch`) como la previa (`patch` a nivel raiz, sin migrar).
+ */
+function getPatchFromConfig(json) {
+    return getPatchCode(json?.framework?.patch ?? json?.patch);
+}
+
 async function readPatchCursor() {
     const raw = await fs.readFile(CONFIG_WORKSPACES_FILE, "utf8").catch(() => undefined);
     if (raw === undefined) {
         return undefined;
     }
     const json = JSON.parse(raw);
-    return getPatchCode(json?.patch);
+    return getPatchFromConfig(json);
 }
 
 async function writePatchCursor(patch) {
@@ -171,11 +179,17 @@ async function writePatchCursor(patch) {
     }
 
     const json = JSON.parse(raw);
-    if (getPatchCode(json?.patch) === patch) {
+    if (getPatchFromConfig(json) === patch) {
         return;
     }
 
-    json.patch = patch;
+    // Reconstruye `framework` con `patch` como primera propiedad (antes de `updates`),
+    // y limpia el `patch` legacy a nivel raiz si el fichero aun no habia sido migrado.
+    const frameworkAnterior = (json.framework !== null && typeof json.framework === "object") ? {...json.framework} : {};
+    delete frameworkAnterior.patch;
+    json.framework = {patch, ...frameworkAnterior};
+    delete json.patch;
+
     await fs.writeFile(CONFIG_WORKSPACES_FILE, `${JSON.stringify(json, null, 2)}\n`, "utf8");
 }
 

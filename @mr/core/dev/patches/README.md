@@ -47,8 +47,10 @@ transparente al desarrollador:
 Aplica todas las reglas activas sobre el workspace. Reescribe en disco los archivos
 que contengan incidencias detectadas.
 
-Desde `2026.6.3+2`, el comando usa el cursor opcional `patch` de `config.workspaces.json`
-para aplicar solo reglas posteriores al último patch ejecutado.
+Desde `2026.6.3+2`, el comando usa el cursor opcional `framework.patch` de
+`config.workspaces.json` para aplicar solo reglas posteriores al último patch ejecutado
+(hasta `2026.7`, este cursor vivía en `patch` a nivel raíz; se migra automáticamente a
+`framework.patch` en la primera ejecución tras actualizar).
 
 ```bash
 yarn run patch:apply
@@ -71,12 +73,14 @@ Si `config.workspaces.json` contiene:
 
 ```json
 {
-  "patch": "R012"
+  "framework": {
+    "patch": "R012"
+  }
 }
 ```
 
 `patch:apply` evaluará únicamente `R013+`. Al finalizar (haya o no cambios), actualiza
-`patch` al último ID procesado. Si no hay patches nuevos, finaliza directamente con:
+`framework.patch` al último ID procesado. Si no hay patches nuevos, finaliza directamente con:
 
 ```
 mrpack-patch: no hay patches nuevos (ultimo: RXXX)
@@ -108,8 +112,8 @@ cuando corresponda.
 
 ### Reglas de fichero (`RULES`)
 
-Se ejecutan sobre cada fichero individualmente. El cursor `config.workspaces.json.patch`
-registra cuál fue la última regla aplicada para evitar reprocesar lo mismo.
+Se ejecutan sobre cada fichero individualmente. El cursor `config.workspaces.json`
+(`framework.patch`) registra cuál fue la última regla aplicada para evitar reprocesar lo mismo.
 
 | ID | Modulo deprecado | Target |
 |----|-----------------|--------|

@@ -1,13 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 17 Jul 2026 12:09:53 GMT
- * Hash: c264839ccb3f5fe563ad83e884ee1343
- * Versión: 2026.7.17+3-josantoniojimnez
- * Anterior: 2026.7.17+2-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Sat, 18 Jul 2026 19:01:45 GMT
+ * Hash: 14d4c0cbf88528beba3ffa2b3f1da574
+ * Versión: 2026.7.18+1-bixus
+ * Anterior: 2026.7.17+3-josantoniojimnez
+ * Proyecto: https://github.com/bixus/bixloader
  */
 
-import {lstat, readlink, rename, symlink} from "node:fs/promises";
+import {link, lstat, readlink, rename, stat, symlink} from "node:fs/promises";
 import {resolve} from "node:path";
 
 import {isDir, isFile, readDir, unlink} from "../../../utiles/fs";
@@ -62,9 +62,16 @@ export async function initGithub(basedir: string): Promise<void> {
  * (fichero real u otro enlace), lo elimina y crea el enlace correcto.
  * Si no existe, lo crea.
  *
- * Usado por `initAgents`/`initClaude` — ambos son symlinks a fichero simple
+ * Usado por `initAgents`/`initClaude` — ambos son enlaces a fichero simple
  * (sin la casuística de junction de Windows que requiere `initGithub`/`initClaudeDir` para
  * enlazar un directorio).
+ *
+ * En Windows los symlinks de fichero requieren permisos de administrador o tener
+ * activado el Developer Mode (`SeCreateSymbolicLinkPrivilege`), a diferencia de las
+ * junctions de directorio. Por eso ahí se usa en su lugar un *hardlink* (`fs.link`),
+ * que en NTFS no requiere ningún privilegio especial. La detección de "ya está
+ * correcto" se hace comparando el inodo (`ino`)/dispositivo (`dev`) en vez de
+ * `readlink`, ya que un hardlink es indistinguible de un fichero normal.
  *
  * @param basedir - Raíz absoluta del monorepo.
  * @param nombre - Nombre del fichero en la raíz y en `@mr/core/dev/`.
@@ -74,16 +81,29 @@ async function initSymlinkFichero(basedir: string, nombre: string): Promise<void
     const destinoRelativo = `@mr/core/dev/${nombre}`;
     const isWindows = process.platform === "win32";
 
-    // En Windows forzamos ruta absoluta para evitar variaciones de resolución.
-    const destinoEfectivo = isWindows
-        ? resolve(basedir, destinoRelativo)
-        : destinoRelativo;
+    if (isWindows) {
+        const origenPath = resolve(basedir, destinoRelativo);
+        const destinoStat = await lstat(destinoPath).catch(() => undefined);
 
-    const stat = await lstat(destinoPath).catch(() => undefined);
+        if (destinoStat !== undefined) {
+            const origenStat = await stat(origenPath).catch(() => undefined);
+            if (origenStat !== undefined && destinoStat.dev === origenStat.dev && destinoStat.ino === origenStat.ino) {
+                return; // ya es el mismo hardlink
+            }
 
-    if (stat !== undefined) {
+            Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgYellow], `Corrigiendo ${nombre} -> hardlink a @mr/core/dev/${nombre}`));
+            await unlink(destinoPath);
+        }
+
+        await link(origenPath, destinoPath);
+        return;
+    }
+
+    const stats = await lstat(destinoPath).catch(() => undefined);
+
+    if (stats !== undefined) {
         const actual = await readlink(destinoPath).catch(() => undefined);
-        if (actual === destinoEfectivo) {
+        if (actual === destinoRelativo) {
             return;
         }
 
@@ -91,7 +111,7 @@ async function initSymlinkFichero(basedir: string, nombre: string): Promise<void
         await unlink(destinoPath);
     }
 
-    await symlink(destinoEfectivo, destinoPath);
+    await symlink(destinoRelativo, destinoPath);
 }
 
 /**

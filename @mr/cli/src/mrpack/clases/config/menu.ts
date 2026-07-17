@@ -28,14 +28,29 @@ export interface IMenuOpcion<T> {
 }
 
 /**
- * Elemento de una lista de alternancia (checkbox múltiple).
+ * Casilla individual dentro de una fila de {@link alternarMatriz}.
  *
- * @property label   - Texto visible del elemento.
+ * @property key     - Clave que identifica la casilla en el resultado devuelto.
+ * @property label   - Texto visible junto a la casilla.
  * @property checked - Estado inicial (marcado/desmarcado).
  */
-export interface IToggleItem {
+export interface ICheckbox {
+    key: string;
     label: string;
     checked: boolean;
+}
+
+/**
+ * Fila de {@link alternarMatriz}: una entrada con sus casillas asociadas.
+ * El número de casillas puede variar entre filas (p.ej. una fila `i18n` con `enabled`/`watch`
+ * junto a filas de workspace con solo `compilar`, solo `ejecutar`, o ambas).
+ *
+ * @property label      - Texto visible de la fila (nombre de la entrada).
+ * @property checkboxes - Casillas de la fila, en el orden en que se muestran.
+ */
+export interface IFilaMatriz {
+    label: string;
+    checkboxes: ICheckbox[];
 }
 
 /**
@@ -297,29 +312,39 @@ export async function elegirUno<T>(titulo: string, opciones: IMenuOpcion<T>[], {
 }
 
 /**
- * Muestra una lista de elementos alternables (checkbox múltiple) y espera la confirmación
- * del usuario. El usuario navega con ↑↓ / PgUp PgDn, alterna el elemento bajo el cursor
- * con Espacio, marca/desmarca todos con `a`/`n`, confirma con Intro y cancela con Esc.
+ * Muestra una matriz de filas con casillas independientes por fila y espera la confirmación
+ * del usuario. El usuario navega entre filas con ↑↓ / PgUp PgDn, entre las casillas de la
+ * fila activa con ← →, alterna la casilla bajo el cursor con Espacio, marca/desmarca todas
+ * las casillas de todas las filas con `a`/`n`, confirma con Intro y cancela con Esc.
  * Si la lista supera el alto del terminal se aplica scroll automático con indicadores ↑/↓.
  *
- * @param titulo - Título mostrado en la cabecera de la lista.
- * @param items  - Elementos con su estado inicial.
- * @returns Array con el nuevo estado de cada elemento, o `null` si el usuario cancela.
+ * @param titulo - Título mostrado en la cabecera de la matriz.
+ * @param filas  - Filas con sus casillas y estado inicial.
+ * @returns Por cada fila, un objeto `{clave: estado}` con el nuevo estado de sus casillas
+ *   (mismo orden que `filas`), o `null` si el usuario cancela.
  */
-export async function alternarLista(titulo: string, items: IToggleItem[]): Promise<boolean[] | null> {
-    if (items.length === 0) { return null; }
+export async function alternarMatriz(titulo: string, filas: IFilaMatriz[]): Promise<Record<string, boolean>[] | null> {
+    if (filas.length === 0) { return null; }
 
-    const estado = items.map(item => item.checked);
-    const todosIndices = items.map((_, i) => i);
-    let cursor = 0;
+    const estado = filas.map(fila => fila.checkboxes.map(cb => cb.checked));
+    const todasFilas = filas.map((_, i) => i);
+    const maxLabel = filas.reduce((max, f) => Math.max(max, f.label.length), 0);
+    const anchoColumnas: number[] = [];
+    for (const fila of filas) {
+        fila.checkboxes.forEach((cb, j) => {
+            anchoColumnas[j] = Math.max(anchoColumnas[j] ?? 0, cb.label.length);
+        });
+    }
+    let filaCursor = 0;
+    let colCursor = 0;
     let scroll = 0;
 
-    return correrMenuTTY<boolean[]>((render, resolver) => {
+    return correrMenuTTY<Record<string, boolean>[]>((render, resolver) => {
         const dibujar = (): void => {
             const viewport = calcularViewport();
-            const necesitaScroll = items.length > viewport;
+            const necesitaScroll = filas.length > viewport;
             const inicio = necesitaScroll ? scroll : 0;
-            const fin    = necesitaScroll ? Math.min(items.length, inicio + viewport) : items.length;
+            const fin    = necesitaScroll ? Math.min(filas.length, inicio + viewport) : filas.length;
 
             const lineas: string[] = [];
             lineas.push(Colors.colorize([Colors.FgCyan, Colors.Bright], titulo));
@@ -331,27 +356,37 @@ export async function alternarLista(titulo: string, items: IToggleItem[]): Promi
                     : "");
             }
             for (let i = inicio; i < fin; i++) {
-                const activo = i === cursor;
-                const marcado = estado[i];
-                const casilla = marcado
-                    ? Colors.colorize([Colors.FgGreen, Colors.Bright], "[x]")
-                    : Colors.colorize([Colors.FgWhite, Colors.Dim], "[ ]");
-                const indicador = activo
+                const fila = filas[i];
+                const filaActiva = i === filaCursor;
+                const indicador = filaActiva
                     ? Colors.colorize([Colors.FgGreen, Colors.Bright], "►")
                     : " ";
-                const etiqueta = activo
-                    ? Colors.colorize([Colors.FgWhite, Colors.Bright], items[i].label)
-                    : Colors.colorize(marcado ? [Colors.FgWhite] : [Colors.FgWhite, Colors.Dim], items[i].label);
-                lineas.push(`${indicador} ${casilla} ${etiqueta}`);
+                const etiqueta = filaActiva
+                    ? Colors.colorize([Colors.FgWhite, Colors.Bright], fila.label.padEnd(maxLabel))
+                    : Colors.colorize([Colors.FgWhite], fila.label.padEnd(maxLabel));
+                const celdas = fila.checkboxes.map((cb, j) => {
+                    const marcado = estado[i][j];
+                    const activo = filaActiva && j === colCursor;
+                    const casilla = marcado
+                        ? Colors.colorize([Colors.FgGreen, Colors.Bright], "[x]")
+                        : Colors.colorize([Colors.FgWhite, Colors.Dim], "[ ]");
+                    const etiquetaCasilla = cb.label.padEnd(anchoColumnas[j]);
+                    const texto = activo
+                        ? Colors.colorize([Colors.FgGreen, Colors.Bright], etiquetaCasilla)
+                        : Colors.colorize(marcado ? [Colors.FgWhite] : [Colors.FgWhite, Colors.Dim], etiquetaCasilla);
+                    return `${casilla} ${texto}`;
+                }).join("   ");
+                lineas.push(`${indicador} ${etiqueta}  ${celdas}`);
             }
             if (necesitaScroll) {
-                lineas.push(fin < items.length
+                lineas.push(fin < filas.length
                     ? Colors.colorize([Colors.FgCyan, Colors.Dim], "  ↓ ··· más elementos abajo ···")
                     : "");
             }
             lineas.push("");
             lineas.push(lineaAtajos([
-                atajo("↑ ↓", "navegar"),
+                atajo("↑ ↓", "fila"),
+                atajo("← →", "campo"),
                 ...(necesitaScroll ? [atajo("PgUp PgDn", "avanzar")] : []),
                 atajo("Espacio", "alternar"),
                 atajo("a", "todos"),
@@ -366,16 +401,22 @@ export async function alternarLista(titulo: string, items: IToggleItem[]): Promi
 
         return (_str, key) => {
             if (key == null) { return; }
-            if (key.name === "return") { resolver([...estado]); return; }
-            if (key.name === "escape" || key.name === "left" || (key.ctrl && key.name === "c")) { resolver(null); return; }
-            if (key.sequence === " " || key.name === "space") { estado[cursor] = !estado[cursor]; dibujar(); return; }
-            if (key.name === "a") { estado.fill(true);  dibujar(); return; }
-            if (key.name === "n") { estado.fill(false); dibujar(); return; }
+            if (key.name === "return") {
+                resolver(filas.map((fila, i) => Object.fromEntries(fila.checkboxes.map((cb, j) => [cb.key, estado[i][j]]))));
+                return;
+            }
+            if (key.name === "escape" || (key.ctrl && key.name === "c")) { resolver(null); return; }
+            if (key.sequence === " " || key.name === "space") { estado[filaCursor][colCursor] = !estado[filaCursor][colCursor]; dibujar(); return; }
+            if (key.name === "a") { for (const fila of estado) { fila.fill(true); } dibujar(); return; }
+            if (key.name === "n") { for (const fila of estado) { fila.fill(false); } dibujar(); return; }
+            if (key.name === "left") { colCursor = Math.max(0, colCursor - 1); dibujar(); return; }
+            if (key.name === "right") { colCursor = Math.min(filas[filaCursor].checkboxes.length - 1, colCursor + 1); dibujar(); return; }
             const viewport = calcularViewport();
-            const nuevo = navegarCursor(key.name, cursor, todosIndices, viewport);
-            if (nuevo !== cursor) {
-                cursor = nuevo;
-                scroll = sincronizarScroll(cursor, viewport, scroll);
+            const nuevaFila = navegarCursor(key.name, filaCursor, todasFilas, viewport);
+            if (nuevaFila !== filaCursor) {
+                filaCursor = nuevaFila;
+                colCursor = Math.min(colCursor, filas[filaCursor].checkboxes.length - 1);
+                scroll = sincronizarScroll(filaCursor, viewport, scroll);
                 dibujar();
             }
         };

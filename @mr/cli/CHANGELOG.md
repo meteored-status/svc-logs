@@ -45,6 +45,107 @@
   `@mr/core/dev/.claude/` (sin sobreescribir lo que ya hubiera) antes de sustituirlo por el
   symlink, para no perder configuración local del desarrollador.
 
+### Changed — `src/mrpack/clases/workspace/service.ts`, `src/mrpack/clases/config/*.ts`, `src/mrpack/clases/init/config-workspaces.ts`
+
+- [Jose] **`config.workspaces.json` agrupa ahora los workspaces por `deploy.type` en vez de
+  usar listas planas `devel`/`packd`**: las antiguas propiedades
+  `devel: {available, disabled}` / `packd: {available, disabled}` (listas de nombres,
+  compartidas entre todos los workspaces del monorepo sin distinguir su tipo) se sustituyen
+  por una única propiedad `workspaces`, con hasta 4 sub-propiedades opcionales —`browser`,
+  `cronjobs`, `jobs`, `services`— según el `deploy.type` de cada workspace (nueva
+  `grupoDeploy()`, que traduce `ManifestDeploymentKind` al grupo correspondiente; `worker` no
+  tiene grupo gestionable). Dentro de cada grupo, cada workspace tiene un objeto con dos
+  flags booleanos opcionales `ejecutar`/`compilar` (nueva `IWorkspaceFlags`; ausente =
+  habilitado, igual que "no estar en `disabled`" en el formato antiguo; nombres alineados con
+  los ya usados internamente en `Service`/`IService.compilar`/`.ejecutar`). Nueva
+  `flagsWorkspace()` busca los flags de un workspace por nombre en los 4 grupos (los nombres
+  son únicos en todo el monorepo), usada tanto por `Service`/`Service.updateGlobal()` como por
+  el menú interactivo `gestionarLista()` (`config/workspaces.ts`).
+  `listarWorkspacesConInfo()`/`leerCapacidades()` (`config/datos.ts`) devuelven ahora también
+  el `grupo` de cada workspace y excluyen los que no tengan grupo gestionable. `initConfig()`
+  (`init/config-workspaces.ts`) migra automáticamente tanto el formato antiguo (listas planas
+  `devel.disabled`/`packd.disabled`) como el intermedio (`workspaces.<grupo>.<nombre>.packd`/
+  `.devel`, nombre usado brevemente antes de renombrarlos a `compilar`/`ejecutar`) la primera
+  vez que se regenera el fichero tras esta actualización.
+- [Jose] **Eliminada la propiedad `services` de `config.workspaces.json`**: era un mapa
+  `Record<string, string>` documentado como "variables de entorno adicionales por servicio",
+  pero un examen del código confirmó que nunca se leía en ningún sitio (solo se preservaba de
+  forma acrítica en cada regeneración vía `initConfig()`) — no existía ningún punto donde se
+  inyectaran esas variables en el entorno de un proceso `spawn`. Se deja de generar; los
+  ficheros existentes que aún la tuvieran simplemente la pierden en la siguiente regeneración,
+  sin que ningún consumidor real se vea afectado.
+- [Jose] **`i18n` pasa de propiedad plana (`i18n: boolean`) a `workspaces.i18n` (objeto), como
+  primera propiedad de `workspaces` y solo presente si el proyecto tiene workspace `i18n`
+  (`existeI18n()`, reutilizada desde `config/datos.ts` en `initConfig()`)**: nueva
+  `IConfigWorkspacesI18n` con dos flags — `enabled` (equivalente al `i18n` antiguo; por
+  defecto `true`; gatea si `I18N.checkCompilar()` llega a lanzar `mrlang generate` al arrancar
+  la compilación, sin cambios en ese mecanismo) y `watch` (nuevo; por defecto `false`). Antes,
+  el modo watch del workspace `I18N` heredaba siempre el flag global `-w/--watch` de `mrpack
+  devel` (`ejecucion.watch`, igual que cualquier otro `Workspace`); ahora `devel.ts` lo fija
+  de forma independiente con `workspaces.i18n.watch`, permitiendo que la generación de i18n
+  quede observando cambios aunque el resto de la compilación no esté en modo watch (o
+  viceversa). `initConfig()` migra automáticamente el `i18n: boolean` a nivel raíz del formato
+  antiguo (`watch` siempre parte de `false` en esa migración, al no existir equivalente previo).
+
+### Fixed — `src/mrpack/clases/workspace/i18n.ts`
+
+- [Jose] **`mrpack devel -c -w` se quedaba bloqueado justo tras "Iniciando generación de
+  idiomas" cuando `workspaces.i18n.watch` es `false` (el valor por defecto)**: `I18N.initCompilar()`
+  esperaba (`await deferred.promise`) a que el proceso `mrlang generate` escribiera al menos una
+  línea por stdout/stderr para considerarlo arrancado, pero `Generate.run()`
+  (`mrlang/clases/generate.ts:85-91`) solo escribe algo por consola cuando `watch===true` — sin
+  `--watch`, el proceso termina limpiamente sin emitir ninguna línea, así que `deferred` nunca se
+  resolvía y `devel.ts` se quedaba esperando `await i18n.init()` para siempre, sin llegar
+  siquiera a crear los `Service` del resto de workspaces (`logs`, etc.). Antes de desacoplar
+  `I18N.watch` del flag global `-w` (cambio anterior de esta misma entrada), este camino no se
+  ejercitaba en la práctica porque `-w` implicaba siempre `I18N.watch=true` y por tanto siempre
+  había log. Corregido añadiendo un handler `close` al proceso (mismo patrón que ya usa
+  `Service.initCompilar()` con `notificarCompilacionExitosa()`) que resuelve `deferred` si aún no
+  se había resuelto por stdout/stderr.
+
+### Changed — `src/mrpack/clases/config/menu.ts`, `src/mrpack/clases/config/workspaces.ts`
+
+- [Jose] **`mrpack config` → "Gestionar workspaces" pasa de un submenú de 3 pantallas a una
+  única pantalla**: antes había que entrar por separado a "Compilar", "Ejecutar" y "Generar
+  i18n" (cada una con su propia lista de checkboxes o su propio selector ON/OFF). Ahora
+  `gestionarWorkspaces()` construye una sola matriz con la fila `i18n` primero (solo si el
+  proyecto tiene ese workspace, con casillas `enabled`/`watch`) y el resto de workspaces a
+  continuación en orden alfabético, cada uno con las casillas `compilar`/`ejecutar` que le
+  apliquen según sus capacidades — un workspace sin ninguna casilla aplicable no aparece.
+  Todo se confirma y persiste con un solo `Intro`. Nueva primitiva `alternarMatriz()` en
+  `config/menu.ts` (sustituye a `alternarLista`/`IToggleItem`, eliminados por quedar sin
+  otros usos): cada fila puede tener un número distinto de casillas, navegables con `←`/`→`
+  dentro de la fila activa (`↑`/`↓` sigue moviendo entre filas; `a`/`n` marcan/desmarcan
+  todas las casillas de todas las filas). `gestionarLista()`/`gestionarI18n()`
+  (`config/workspaces.ts`) desaparecen, fusionadas en la nueva `gestionarWorkspaces()`.
+
+### Fixed — `src/mrpack/clases/config/menu.ts`
+
+- [Jose] **`alternarMatriz()`: las casillas no quedaban alineadas entre filas con distinto
+  contenido**: la fila `i18n` (`enabled`/`watch`) y las filas de workspace (`compilar`/`ejecutar`)
+  tienen etiquetas de distinta longitud, y al unir las casillas de cada fila sin normalizar su
+  ancho, la segunda casilla arrancaba en una columna distinta según la fila. Se calcula ahora
+  un ancho fijo por columna (`anchoColumnas[j]`, máximo de `cb.label.length` entre todas las
+  filas que tienen casilla en esa posición) y se aplica `padEnd()` a la etiqueta antes de
+  colorearla, de modo que todas las casillas de una misma columna arrancan en la misma posición
+  horizontal independientemente de la fila.
+
+### Changed — `src/mrpack/clases/workspace/service.ts`, `src/mrpack/clases/init/config-workspaces.ts`, `src/mrpack/clases/config/frameworks.ts`
+
+- [Jose] **`patch` pasa de propiedad a nivel raíz a `framework.patch`**, como primera
+  propiedad del objeto `framework` (antes de `framework.updates`): `IConfigServices.patch`
+  desaparece, sustituido por `IConfigServices.framework.patch`. `initConfig()`
+  (`init/config-workspaces.ts`) migra automáticamente el `patch` legacy a nivel raíz
+  (`anterior?.framework?.patch ?? anterior?.patch`) la primera vez que se regenera el fichero.
+  `gestionarPatches()` (`config/frameworks.ts`) lee y elimina ahora `config.framework?.patch`
+  en vez de `config.patch`. El runner que realmente consume este cursor,
+  `@mr/core/dev/patches/index.mjs` (paquete framework aparte, no TypeScript), se actualiza en
+  el mismo cambio para no desincronizarse — ver el changelog de `@mr/core-dev`. `gestionarPatches()`
+  trata además `framework.patch === ""` igual que ausente (`hayPatch`), coherente con que tanto
+  `sanitizePatch()` como `getPatchCode()` de `index.mjs` ya normalizan una cadena vacía a "sin
+  patch" — dejar `framework.patch: ""` a mano en el fichero es una forma válida de forzar que
+  `patch:apply` reprocese todas las reglas desde cero sin tener que borrar la propiedad entera.
+
 ---
 
 ## 2026.7.13

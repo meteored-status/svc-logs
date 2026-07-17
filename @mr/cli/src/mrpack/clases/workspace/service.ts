@@ -1,10 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
- * Hash: 55d47d15c0e6170ad00bd5499cd96a46
- * Versión: 2026.7.17+1-josantoniojimnez
- * Anterior: 2026.7.14+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Sat, 18 Jul 2026 19:01:45 GMT
+ * Hash: 082166b7aa582f8672b684449fdba678
+ * Versión: 2026.7.18+1-bixus
+ * Anterior: 2026.7.17+1-josantoniojimnez
+ * Proyecto: https://github.com/bixus/bixloader
  */
 
 import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
@@ -13,7 +13,7 @@ import path from "node:path";
 import chokidar, {type ChokidarOptions} from "chokidar";
 
 import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
-import {Runtime} from "@mr/core-dev/manifest/deployment";
+import {ManifestDeploymentKind, Runtime} from "@mr/core-dev/manifest/deployment";
 
 import {Colors} from "../colors";
 import {getBundlerNormalizado} from "../bundler";
@@ -50,31 +50,102 @@ export function sanitizeFrameworkUpdates(value: unknown): FrameworkUpdates {
     return FrameworkUpdates.all;
 }
 
+/** Grupos de workspaces gestionados en `config.workspaces.json`, según su `deploy.type`. */
+export type GrupoWorkspace = "browser" | "cronjobs" | "jobs" | "services";
+
+/**
+ * Traduce el `deploy.type` (`ManifestDeploymentKind`) de un workspace al grupo correspondiente
+ * de `config.workspaces.json`. Es independiente del directorio físico que lo contiene
+ * (`services/`, `cronjobs/`, `jobs/`, `scripts/`): un workspace bajo `scripts/` con
+ * `deploy.type: "browser"` se agrupa en `workspaces.browser`.
+ *
+ * @param tipo - `deploy.type` del workspace.
+ * @returns Grupo correspondiente, o `undefined` si el tipo no tiene grupo gestionable (p.ej. `worker`).
+ */
+export function grupoDeploy(tipo: ManifestDeploymentKind): GrupoWorkspace|undefined {
+    switch (tipo) {
+        case ManifestDeploymentKind.BROWSER:
+            return "browser";
+        case ManifestDeploymentKind.CRONJOB:
+            return "cronjobs";
+        case ManifestDeploymentKind.JOB:
+            return "jobs";
+        case ManifestDeploymentKind.SERVICE:
+            return "services";
+        default:
+            return undefined;
+    }
+}
+
+/**
+ * Flags de compilación/ejecución de un workspace concreto dentro de `config.workspaces.json`.
+ *
+ * @property ejecutar - Si `true` (o ausente), el workspace se ejecuta en modo devel. Solo aplica a
+ *   workspaces ejecutables (`deploy.runtime === "node"`).
+ * @property compilar - Si `true` (o ausente), el workspace se compila. Solo aplica a workspaces
+ *   compilables (`deploy.runtime !== "php"`).
+ */
+export interface IWorkspaceFlags {
+    ejecutar?: boolean;
+    compilar?: boolean;
+}
+
+/**
+ * Configuración del workspace de internacionalización (`i18n`) dentro de `config.workspaces.json`.
+ *
+ * @property enabled - Si `true` (o ausente), se inicia la generación de i18n al arrancar la
+ *   compilación. Si `false`, ese paso se omite por completo.
+ * @property watch - Si `true`, la generación de i18n permanece observando cambios en los
+ *   ficheros de traducción del workspace. Si `false` (o ausente), genera una única vez.
+ */
+export interface IConfigWorkspacesI18n {
+    enabled?: boolean;
+    watch?: boolean;
+}
+
+/**
+ * Workspaces gestionados en `config.workspaces.json`, agrupados por `deploy.type`.
+ * Todas las propiedades son opcionales: un grupo sin workspaces gestionables se omite, e
+ * `i18n` solo se incluye si el proyecto tiene workspace de internacionalización.
+ */
+export interface IConfigWorkspaces {
+    i18n?: IConfigWorkspacesI18n;
+    browser?: Record<string, IWorkspaceFlags>;
+    cronjobs?: Record<string, IWorkspaceFlags>;
+    jobs?: Record<string, IWorkspaceFlags>;
+    services?: Record<string, IWorkspaceFlags>;
+}
+
+/**
+ * Busca los flags de un workspace por nombre en cualquiera de los grupos de `workspaces`
+ * (los nombres de workspace son únicos en todo el monorepo).
+ *
+ * @param workspaces - `IConfigServices.workspaces`.
+ * @param nombre     - Nombre del workspace a buscar.
+ * @returns Flags encontrados, o un objeto vacío si el workspace no está configurado.
+ */
+export function flagsWorkspace(workspaces: IConfigWorkspaces|undefined, nombre: string): IWorkspaceFlags {
+    return workspaces?.browser?.[nombre]
+        ?? workspaces?.cronjobs?.[nombre]
+        ?? workspaces?.jobs?.[nombre]
+        ?? workspaces?.services?.[nombre]
+        ?? {};
+}
+
 /**
  * Configuración personal de workspaces leída de `config.workspaces.json`.
  *
- * @property devel     - Workspaces habilitados/deshabilitados para el modo devel.
- * @property packd     - Workspaces habilitados/deshabilitados para la compilación.
- * @property i18n      - Si `true`, el workspace de i18n está habilitado.
- * @property services  - Mapa de variables de entorno adicionales por servicio.
- * @property framework - Política de actualización automática de frameworks.
- * @property patch     - Último patch aplicado (`RXXX`) por `yarn run patch:apply`.
+ * @property workspaces - Workspaces gestionados, agrupados por `deploy.type`, con sus flags
+ *   `ejecutar`/`compilar`; incluye también `workspaces.i18n` (ver {@link IConfigWorkspacesI18n}).
+ * @property framework - Configuración de frameworks: último patch aplicado (`patch`, `RXXX`,
+ *   por `yarn run patch:apply`) y política de actualización automática (`updates`).
  */
 export interface IConfigServices {
-    devel: {
-        available: string[];
-        disabled: string[];
-    };
-    packd: {
-        available: string[];
-        disabled: string[];
-    };
-    i18n: boolean;
-    services: Record<string, string>;
+    workspaces?: IConfigWorkspaces;
     framework?: {
+        patch?: string;
         updates: FrameworkUpdates;
     };
-    patch?: string;
 }
 
 /**
@@ -138,8 +209,9 @@ export class Service extends Workspace {
         this.ejecutar = data.ejecutar;
 
         this.label = Colors.colorize(color, nombre);
-        this.global_compilar = !data.global.packd.disabled.includes(this.nombre);
-        this.global_ejecutar = !data.global.devel.disabled.includes(this.nombre);
+        const flags = flagsWorkspace(data.global.workspaces, this.nombre);
+        this.global_compilar = flags.compilar ?? true;
+        this.global_ejecutar = flags.ejecutar ?? true;
         this.config = new ManifestWorkspaceLoader(this.dir).load();
         // Evita un unhandledRejection si `mrpack.json` es inválido al arrancar; el rechazo
         // real se sigue propagando a quien haga `await this.config`.
@@ -296,8 +368,9 @@ export class Service extends Workspace {
      * @param global - Nueva configuración global leída de `config.workspaces.json`.
      */
     public updateGlobal(global: IConfigServices): void {
-        this.global_compilar = !global.packd.disabled.includes(this.nombre);
-        this.global_ejecutar = !global.devel.disabled.includes(this.nombre);
+        const flags = flagsWorkspace(global.workspaces, this.nombre);
+        this.global_compilar = flags.compilar ?? true;
+        this.global_ejecutar = flags.ejecutar ?? true;
 
         this.run()
             .then(()=>undefined)
@@ -481,7 +554,7 @@ export class Service extends Workspace {
                     cwd: this.root,
                     env: { ...process.env, FORCE_COLOR: "1" },
                     stdio: "pipe",
-                    shell: false,
+                    shell: process.platform === "win32",
                 }
             );
         } else {

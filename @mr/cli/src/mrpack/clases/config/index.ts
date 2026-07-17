@@ -19,8 +19,8 @@ import {gestionarWorkspaces} from "./workspaces";
 export async function gestionar(basedir: string): Promise<void> {
     while (true) {
         const opcion = await seleccionar("Configuración del proyecto", [
-            {label: "Gestionar workspaces", value: "workspaces", descripcion: "compilar · ejecutar · generar i18n"},
-            {label: "Gestionar frameworks", value: "frameworks", descripcion: "autoupdates · sistema de patches"},
+            {label: "Framework", value: "frameworks", descripcion: "autoupdates · sistema de patches"},
+            {label: "Workspaces", value: "workspaces", descripcion: "compilar · ejecutar · generar i18n"},
             {label: "Salir", value: "salir"},
         ]);
 

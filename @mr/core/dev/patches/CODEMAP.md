@@ -5,6 +5,13 @@
 > Última revisión: 2026-07-17 (documentadas R028-R034, que faltaban desde su introducción;
 > corregido bug real en `getRulesSince`/cursor — ver nota bajo "Funciones internas" — y
 > eliminado un bloque de texto inyectado que sustituía la nota de orden real).
+> Última revisión: 2026-07-17 (el cursor de patch en `config.workspaces.json` se mueve de
+> `patch` a nivel raíz a `framework.patch` —primera propiedad del objeto `framework`, antes de
+> `framework.updates`, ver `@mr/cli/src/mrpack/clases/init/config-workspaces.ts`—; nueva
+> `getPatchFromConfig(json)` en `index.mjs` que centraliza la lectura aceptando ambas
+> ubicaciones, usada por `readPatchCursor()`/`writePatchCursor()`; `writePatchCursor()`
+> reconstruye `framework` para que `patch` quede primero y limpia el `patch` legacy de la raíz
+> en la misma escritura).
 
 ---
 
@@ -57,7 +64,8 @@ patches/
 ## `index.mjs` — Runner principal
 
 ### Responsabilidades
-- Lee el cursor `patch` de `config.workspaces.json` para saber desde qué regla continuar.
+- Lee el cursor `framework.patch` (o el legacy `patch` a nivel raíz) de `config.workspaces.json`
+  para saber desde qué regla continuar.
 - Camina el árbol del monorepo (raíz inferida desde la ubicación del script, 4 niveles arriba) buscando ficheros `.ts`, `.tsx`, `.js`, `.mjs`, `.cjs`.
 - Aplica las **reglas de fichero** (`RULES`) en orden sobre cada fichero.
 - Aplica las **reglas de workspace** (`WORKSPACE_RULES`) una vez sobre la raíz.
@@ -74,8 +82,9 @@ getPatchCode(value)                          // → "R014" | undefined
 getPatchNumber(value)                        // → 14 | undefined
 getRulesSince(lastPatch)                     // → Rule[] — reglas con numero > cursor (SIEMPRE numerico, ver nota abajo)
 highestPatchCode(rules)                      // → "R034" | undefined — ID de mayor numero dentro de `rules`
+getPatchFromConfig(json)                     // → "R014" | undefined — framework.patch, o legacy patch a nivel raíz
 readPatchCursor()                            // → "R014" | undefined — lee config.workspaces.json
-writePatchCursor(patch)                      // escribe config.workspaces.json
+writePatchCursor(patch)                      // escribe framework.patch (primera prop.) en config.workspaces.json, limpia el legacy
 walk(dir, out, {skipRootI18n?})             // walk recursivo de ficheros con extensión TARGET_EXT
 processFile(filePath, rules)                 // → { changed, hits[] } — aplica rules sobre un fichero
 ```

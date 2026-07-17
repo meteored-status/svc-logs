@@ -48,7 +48,7 @@ async function gestionarAutoupdates(basedir: string): Promise<void> {
 }
 
 /**
- * Gestiona el sistema de patches (`patch`).
+ * Gestiona el sistema de patches (`framework.patch`).
  *
  * Muestra el último patch aplicado y ofrece la opción de eliminarlo del fichero,
  * lo que fuerza a que `patch:apply` vuelva a aplicar todos los patches desde el inicio.
@@ -57,18 +57,19 @@ async function gestionarAutoupdates(basedir: string): Promise<void> {
  */
 async function gestionarPatches(basedir: string): Promise<void> {
     const config = await cargarConfig(basedir);
-    const patchActual = config.patch;
+    const patchActual = config.framework?.patch;
+    const hayPatch = patchActual !== undefined && patchActual !== "";
 
-    const descripcionActual = patchActual !== undefined
+    const descripcionActual = hayPatch
         ? `último patch aplicado: ${patchActual}`
         : "(sin patch registrado)";
 
-    const resultado = await seleccionar(`Sistema de Patches — ${descripcionActual}`, [
+    const resultado = await seleccionar(`Patches — ${descripcionActual}`, [
         {
-            label: "Eliminar patch",
-            value: "eliminar",
+            label: "Resetear",
+            value: "resetear",
             descripcion: "fuerza reaplicar todos los patches en el próximo arranque",
-            disabled: patchActual === undefined,
+            disabled: !hayPatch,
         },
         {label: "Cancelar", value: "cancelar"},
     ]);
@@ -77,10 +78,12 @@ async function gestionarPatches(basedir: string): Promise<void> {
         return;
     }
 
-    delete config.patch;
+    if (config.framework !== undefined) {
+        delete config.framework.patch;
+    }
     await guardarConfig(basedir, config);
 
-    Log.info({type: Log.label_base, label: "frameworks"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "✓ Sistema de Patches: patch eliminado"));
+    Log.info({type: Log.label_base, label: "frameworks"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "✓ Patches: patch reseteado"));
 }
 
 /**
@@ -94,7 +97,7 @@ export async function gestionarFrameworks(basedir: string): Promise<void> {
     while (true) {
         const opcion = await seleccionar("Gestionar frameworks", [
             {label: "Autoupdates", value: "autoupdates", descripcion: "frecuencia de comprobación de actualizaciones"},
-            {label: "Sistema de Patches", value: "patches", descripcion: "resetear el último patch aplicado"},
+            {label: "Patches", value: "patches", descripcion: "resetear el último patch aplicado"},
             {label: "Volver", value: "volver"},
         ]);
 

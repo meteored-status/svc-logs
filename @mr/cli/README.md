@@ -84,10 +84,37 @@ yarn mrpack devel [opciones] [adicional]
 El fichero `config.workspaces.json` en la raíz del monorepo controla qué workspaces se
 compilan/ejecutan en modo desarrollo. Se genera y actualiza con `mrpack init`.
 
-Incluye también la propiedad `framework.updates` que controla con qué frecuencia se
-**preseleccionan** los paquetes de framework con update disponible al arrancar `devel -c`:
+`workspaces.i18n` (primera propiedad, solo presente si el proyecto tiene workspace `i18n`)
+controla la generación de internacionalización:
 
-| Valor | Comportamiento |
+| Flag | Significado |
+|------|-------------|
+| `enabled` | `true` (o ausente) = al arrancar la compilación se inicia el paso de generación de i18n; `false` = se omite por completo |
+| `watch` | `true` = la generación de i18n permanece observando cambios en los ficheros de traducción del workspace; `false` (o ausente) = genera una única vez |
+
+El resto de la propiedad `workspaces` agrupa los demás workspaces del proyecto según su
+`deploy.type` (`browser`, `cronjobs`, `jobs`, `services`; ver
+[`@mr/core/dev/manifest/README.md`](../@mr/core/dev/manifest/README.md) para
+`ManifestDeploymentKind`), **no** según el directorio físico que los contiene. Cada
+workspace tiene dos flags booleanos opcionales:
+
+| Flag | Significado | Solo aplica a |
+|------|-------------|---------------|
+| `compilar` | `true` (o ausente) = se compila; `false` = no se compila | workspaces compilables (`deploy.runtime !== "php"`) |
+| `ejecutar` | `true` (o ausente) = se ejecuta en modo devel; `false` = no se ejecuta | workspaces ejecutables (`deploy.runtime === "node"`) |
+
+Todas las propiedades dentro de `workspaces` (`i18n`, los 4 grupos, y `ejecutar`/`compilar`
+de cada workspace) son opcionales: un grupo sin workspaces gestionables, o un flag no
+aplicable a un workspace concreto, simplemente se omiten.
+
+La propiedad `framework` agrupa la configuración relativa a los paquetes framework:
+
+| Flag | Significado |
+|------|-------------|
+| `patch` | Último patch aplicado (`RXXX`) por `yarn run patch:apply` (ver [`@mr/core/dev/patches/README.md`](../@mr/core/dev/patches/README.md)). Ausente **o cadena vacía `""`** = ningún patch registrado; `patch:apply` reprocesa todas las reglas desde cero. |
+| `updates` | Frecuencia de **preselección** de paquetes de framework con update disponible al arrancar `devel -c` (tabla siguiente). |
+
+| Valor de `updates` | Comportamiento |
 |-------|----------------|
 | `"all"` *(por defecto)* | Todos los paquetes con update quedan preseleccionados en `actualizar` |
 | `"daily"` | Solo se preselecciona `actualizar` si la versión instalada tiene **1 día o más** de antigüedad |
@@ -101,15 +128,33 @@ Ejemplo de `config.workspaces.json`:
 
 ```json
 {
-  "devel":  { "available": ["www-frontend"], "disabled": ["www-legacy"] },
-  "packd":  { "available": ["www-frontend", "www-legacy"], "disabled": [] },
-  "i18n":   true,
-  "services": {},
+  "workspaces": {
+    "i18n": { "enabled": true, "watch": false },
+    "browser": {
+      "www-frontend": { "compilar": true, "ejecutar": true }
+    },
+    "services": {
+      "www-legacy": { "compilar": true, "ejecutar": false }
+    }
+  },
   "framework": {
+    "patch": "R034",
     "updates": "daily"
   }
 }
 ```
+
+> **Migración desde formatos antiguos:** hasta 2026.7, `config.workspaces.json` usaba
+> `devel`/`packd` como listas planas `{available: string[], disabled: string[]}` a nivel
+> raíz (sin agrupar por `deploy.type`), un `i18n: boolean` también a nivel raíz (equivalente
+> solo a `workspaces.i18n.enabled`; no existía nada equivalente a `watch`), más una propiedad
+> `services` (mapa de variables de entorno por servicio) que nunca llegó a consumirse en
+> ningún sitio. `mrpack init`/`devel -c` migra automáticamente ese formato antiguo a
+> `workspaces`, y `services` deja de generarse. Los flags por workspace se llamaron
+> brevemente `packd`/`devel` (dentro ya de `workspaces`) antes de renombrarse a
+> `compilar`/`ejecutar`; esa migración también es automática. El cursor de patches también
+> vivió a nivel raíz como `patch` antes de trasladarse a `framework.patch`; también se migra
+> automáticamente (y `yarn run patch:apply`, que lee el mismo cursor, acepta ambas ubicaciones).
 
 #### Timeout de pausa del compilador
 
@@ -213,27 +258,28 @@ Gestor interactivo de `config.workspaces.json`. Sin opciones abre un menú TUI.
 yarn mrpack config
 ```
 
-#### Gestionar workspaces
+#### Workspaces
 
-Submenú con tres acciones:
+Una única pantalla (sin submenús) con una fila por entrada gestionable, cada una con sus
+propias casillas:
 
-| Acción | Clave | Descripción |
-|--------|-------|-------------|
-| **Compilar** | `packd` | Lista de checkboxes. Marcado → workspace se compila (`packd.available`); desmarcado → se omite (`packd.disabled`). |
-| **Ejecutar** | `devel` | Ídem para la ejecución en desarrollo (`devel.available` / `devel.disabled`). |
-| **Generar i18n** | `i18n` | Selector ON/OFF para `config.i18n`. Solo disponible si el directorio `i18n` existe. |
+| Fila | Casillas | Descripción |
+|------|----------|-------------|
+| **i18n** *(primera fila, solo si el proyecto tiene workspace `i18n`)* | `enabled`, `watch` | Persisten en `workspaces.i18n.enabled`/`.watch` |
+| *(resto de workspaces, en orden alfabético)* | `compilar` y/o `ejecutar` (según aplique) | Persisten en `workspaces.<grupo>.<nombre>.compilar`/`.ejecutar` |
 
-**Reglas de visibilidad** (las mismas que aplica `mrpack init`):
+**Reglas de visibilidad de las casillas `compilar`/`ejecutar`** (las mismas que aplica `mrpack init`):
 
-| Workspace | Aparece en Compilar | Aparece en Ejecutar |
+| Workspace | Casilla `compilar` | Casilla `ejecutar` |
 |-----------|--------------------|--------------------|
 | `deploy.runtime = "php"` | ✗ | ✗ |
 | `deploy.runtime = "browser"` o `"cfworker"` | ✓ | ✗ |
 | `deploy.runtime = "node"` (`build.framework = "meteored"` o `"nextjs"`) | ✓ | ✓ |
 
-Los workspaces que no cumplen la condición de cada lista se excluyen de la UI y se limpian de `available`/`disabled` al guardar.
+Un workspace sin ninguna casilla aplicable no aparece en la lista. Todo se edita y se guarda
+desde esta misma pantalla, en una sola confirmación (`Intro`).
 
-#### Gestionar frameworks
+#### Framework
 
 Submenú con dos acciones:
 
@@ -245,17 +291,18 @@ Submenú con dos acciones:
 | `daily` | Solo se preselecciona si la versión instalada tiene **≥ 1 día** de antigüedad |
 | `weekly` | Igual que `daily` pero con umbral de **7 días** |
 
-**Sistema de Patches** — muestra el valor actual de `config.patch` y permite eliminarlo para que `patch:apply` reaaplique todos los patches desde el inicio en el próximo arranque.
+**Patches** — muestra el valor actual de `framework.patch` y permite eliminarlo para que `patch:apply` reaaplique todos los patches desde el inicio en el próximo arranque.
 
 #### Navegación
 
 | Tecla | Efecto |
 |-------|--------|
-| `↑` / `↓` | Navegar entre opciones |
+| `↑` / `↓` | Navegar entre opciones (o entre filas, en "Workspaces") |
 | `Intro` | Confirmar / seleccionar |
-| `Esc` / `←` | Cancelar / volver al menú anterior |
+| `Esc` / `←` | Cancelar / volver al menú anterior *(en "Workspaces" solo `Esc`: `←` navega entre casillas)* |
 | `Espacio` | Alternar checkbox o confirmar radio |
-| `a` / `n` | Marcar todos / desmarcar todos (en listas de checkboxes) |
+| `a` / `n` | Marcar todos / desmarcar todos (checkboxes o, en "Workspaces", todas las casillas) |
+| `→` | Solo en "Workspaces": navegar hacia la siguiente casilla de la fila activa |
 
 ---
 

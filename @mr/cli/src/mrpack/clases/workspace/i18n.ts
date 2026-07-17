@@ -46,7 +46,7 @@ export class I18N extends Workspace {
         const nombre = data.nombre.padEnd(data.pad);
         const color = Colors.nextColor();
 
-        this.compilar = data.global.i18n;
+        this.compilar = data.global.workspaces?.i18n?.enabled ?? true;
 
         this.label = Colors.colorize(color, nombre);
     }
@@ -101,7 +101,7 @@ export class I18N extends Workspace {
      * @param global - Nueva configuración global leída de `config.workspaces.json`.
      */
     public updateGlobal(global: IConfigServices): void {
-        this.compilar = global.i18n;
+        this.compilar = global.workspaces?.i18n?.enabled ?? true;
 
         this.run()
             .then(()=>undefined)
@@ -214,6 +214,17 @@ export class I18N extends Workspace {
                 type: Log.label_compilar,
                 label: this.label,
             }, Colors.colorize([Colors.FgRed, Colors.Bright], "Error de generación de idiomas"), error);
+        });
+
+        this.compilador.on("close", ()=>{
+            // Sin `--watch`, `mrlang generate` puede terminar sin haber escrito nada por
+            // stdout/stderr (ver `mrlang/clases/generate.ts::Generate.run()`, que solo loguea
+            // si `watch===true`) — sin este handler, `deferred` nunca se resolvería y
+            // `initCompilar()` (y quien lo espera, p.ej. `devel.ts`) se quedaría bloqueado.
+            if (!inicializado) {
+                inicializado = true;
+                deferred.resolve();
+            }
         });
 
         await deferred.promise;

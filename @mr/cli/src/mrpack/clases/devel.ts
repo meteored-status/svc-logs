@@ -133,7 +133,7 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
             root: basedir,
             pad: length,
             global: config_global,
-            watch: ejecucion.watch,
+            watch: config_global.workspaces?.i18n?.watch ?? false,
         });
         await i18n.init();
         dependencias.push(i18n);
