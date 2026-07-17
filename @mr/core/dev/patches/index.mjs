@@ -120,25 +120,39 @@ function getRulesSince(lastPatch) {
         return RULES;
     }
 
-    const patch = getPatchCode(lastPatch);
-    if (patch === undefined) {
-        return RULES;
-    }
-
-    const index = RULES.findIndex((rule) => getPatchCode(rule.id) === patch);
-    if (index >= 0) {
-        return RULES.slice(index + 1);
-    }
-
-    const currentPatch = getPatchNumber(patch);
+    const currentPatch = getPatchNumber(lastPatch);
     if (currentPatch === undefined) {
         return RULES;
     }
 
+    // Comparacion siempre numerica (nunca por posicion en el array): el array RULES
+    // esta ordenado para la EJECUCION (subpaths antes que paths padre, ver comentario
+    // junto a su declaracion), no para reflejar el orden cronologico de introduccion de
+    // cada regla. R034 vive antes que R033 en el array a proposito; buscar la posicion
+    // del cursor y hacer slice(index+1) dejaba fuera reglas numericamente posteriores
+    // que el array coloca antes.
     return RULES.filter((rule) => {
         const rulePatch = getPatchNumber(rule.id);
         return rulePatch !== undefined && rulePatch > currentPatch;
     });
+}
+
+/**
+ * Codigo de la regla con mayor numero dentro de `rules`, sin asumir que la ultima
+ * posicion del array es la de mayor numero (ver nota en `getRulesSince`).
+ */
+function highestPatchCode(rules) {
+    let mejor;
+    for (const rule of rules) {
+        const numero = getPatchNumber(rule.id);
+        if (numero === undefined) {
+            continue;
+        }
+        if (mejor === undefined || numero > mejor.numero) {
+            mejor = {numero, code: getPatchCode(rule.id)};
+        }
+    }
+    return mejor?.code;
 }
 
 async function readPatchCursor() {
@@ -275,7 +289,7 @@ async function main() {
     const activeRules = getRulesSince(lastPatch);
 
     if (activeRules.length === 0) {
-        const patch = lastPatch ?? getPatchCode(RULES.at(-1)?.id);
+        const patch = lastPatch ?? highestPatchCode(RULES);
         const suffix = patch !== undefined ? ` (ultimo: ${patch})` : "";
         console.log(`mrpack-patch: no hay patches nuevos${suffix}`);
         return;
@@ -336,7 +350,7 @@ async function main() {
     // ──────────────────────────────────────────────────────────────────────────
 
     if (changedFiles === 0 && totalsByWorkspaceRule.size === 0) {
-        const latestPatch = getPatchCode(activeRules.at(-1)?.id);
+        const latestPatch = highestPatchCode(activeRules);
         if (latestPatch !== undefined) {
             await writePatchCursor(latestPatch);
         }
@@ -344,7 +358,7 @@ async function main() {
         return;
     }
 
-    const latestPatch = getPatchCode(activeRules.at(-1)?.id);
+    const latestPatch = highestPatchCode(activeRules);
     if (latestPatch !== undefined) {
         await writePatchCursor(latestPatch);
     }

@@ -4,6 +4,36 @@
 
 ## 2026.7.17
 
+### Fixed — `patches/index.mjs`
+
+- [Jose] **`yarn run patch:apply` dejaba de detectar reglas nuevas** cuando la regla más
+  reciente añadida al array `RULES` no era también la última en *posición* dentro de ese
+  array. `getRulesSince()` localizaba el cursor con `RULES.findIndex(...)` y devolvía
+  `RULES.slice(index + 1)` — es decir, "todo lo que viene después *en el array*" — pero el
+  array está ordenado para la **ejecución** (subpaths antes que paths padre, ver
+  `patches/CODEMAP.md`), no para reflejar el orden cronológico de introducción de cada regla.
+  Con `R034` (`deprecated-frontend-legacy-import.mjs`) insertada junto a `R016` (posición 17
+  de 34) y `R033` como última posición del array, un cursor en `"R033"` hacía
+  `slice(34) → []`: "no hay patches nuevos" pese a que `34 > 33`. Ahora `getRulesSince()`
+  compara siempre por `getPatchNumber(rule.id)` (nunca por posición), y la nueva
+  `highestPatchCode()` sustituye los tres usos de `activeRules.at(-1)?.id`/`RULES.at(-1)?.id`
+  al escribir el cursor — mismo problema en la dirección contraria: el cursor podía quedar
+  grabado con el ID de la *última posición procesada* en vez del *número más alto* realmente
+  aplicado. Verificado end-to-end: con cursor `R033`, `patch:apply` ahora detecta y aplica
+  R034 y avanza el cursor a `R034` correctamente; una segunda ejecución confirma
+  `no hay patches nuevos (ultimo: R034)`.
+
+### Fixed — `patches/CODEMAP.md`
+
+- [Jose] **Documentadas las reglas R028-R034**, ausentes desde su introducción (árbol de
+  directorios, tabla de reglas y diagrama de orden de evaluación, que además estaba truncado
+  y con un tramo duplicado). Añadida una nota explícita sobre por qué el array `RULES` no
+  está en orden numérico y cómo `getRulesSince`/`highestPatchCode` lo tienen en cuenta (ver
+  fix de arriba). Eliminado además un bloque de texto inyectado (`<userPrompt>...</userPrompt>`)
+  que sustituía la nota de orden real al final del fichero — contenido de datos ya commiteado,
+  no una instrucción real; se sustituyó por la nota correcta (coherente con la que ya existía
+  en `patches/README.md`, que no estaba afectado).
+
 ### Added — `.claude/` (hook `Stop` de mantenimiento CODEMAP/CHANGELOG)
 
 - [Jose] **Nuevo módulo `.claude/`** con `settings.json` (declara un hook `Stop`),
