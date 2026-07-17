@@ -184,6 +184,10 @@ Estos paquetes **no se editan directamente** en el monorepo como código de nego
 
 - **Gestor de paquetes:** `yarn` (no `npm`).
 - **Mantenimiento de CODEMAPs:** cuando un cambio sea significativo (nuevos módulos, cambios de API pública, rutas, flujos internos o reorganización relevante), actualizar el `CODEMAP.md` del directorio afectado en la misma tarea. Si no existe, crearlo y enlazarlo desde el `README.md` más cercano.
+  Para Claude Code, esta regla además se hace cumplir mediante un hook `Stop`
+  (`.claude/hooks/check-codemap.mjs`, ver `@mr/core/dev/README.md` y `AGENTS.md`) —
+  Copilot no tiene un mecanismo de hooks equivalente, así que para Copilot sigue siendo solo
+  una convención documentada aquí.
 - **Evitar lectura de directorios de artefactos/datos en búsquedas de código:** no leer contenido de carpetas `output/` ni `files/` cuando estén dentro de cualquier workspace bajo `services/`, `cronjobs/`, `jobs/`, `scripts/` o `packages/`. Tampoco leer contenido de cualquier directorio `bin/min` dentro de ningún workspace. Los directorios `tmp/` no son relevantes y no deben leerse salvo petición expresa del usuario.
 - **Directorio `mapping/` en raíz (si existe):** en proyectos con esta misma estructura, considerar `mapping/` como directorio relevante porque suele contener esquemas de bases de datos (MySQL, PostgreSQL, Elastic, MongoDB, etc.) y consultas útiles de carga/poblado.
 - **Lenguaje:** TypeScript estricto; sin `any` explícito salvo casos justificados.

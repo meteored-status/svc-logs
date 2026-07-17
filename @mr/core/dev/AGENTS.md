@@ -39,6 +39,21 @@
 - Fuente canonica de convenciones AI: `.github/copilot-instructions.md` (ojo: `.github/` es symlink a `@mr/core/dev/.github/` y `AGENTS.md` en raíz es symlink a `@mr/core/dev/AGENTS.md`).
 - Claude Code no lee `AGENTS.md` ni `.github/copilot-instructions.md` automaticamente: `CLAUDE.md` en raíz (symlink a `@mr/core/dev/CLAUDE.md`) importa explícitamente ambos (`@AGENTS.md` y `@.github/copilot-instructions.md`) para que reciba las mismas instrucciones sin duplicar contenido. Ojo: una mención a un fichero entre backticks (como la de la línea de arriba) es solo texto — no es un import; el import real requiere la sintaxis `@ruta` sin backticks.
 - Mantener `CODEMAP.md` en la misma tarea cuando haya cambios significativos (modulos, API publica, rutas, flujos o reorganizacion). Si no existe, crearlo y enlazarlo desde el `README.md` mas cercano.
+- Esta regla se hace cumplir tambien mediante un hook `Stop` de Claude Code
+  (`.claude/hooks/check-codemap.mjs`, declarado en `.claude/settings.json`). Todo `.claude/` es
+  symlink a `@mr/core/dev/.claude/` (igual que `.github/`), expuesto por `initClaudeDir()` en
+  `@mr/cli/src/mrpack/clases/init/symlinks.ts`; `.claude/settings.local.json` (local) queda
+  excluido tanto del envio del framework (`@mr/core/dev/.claude/.mr-ignore`) como del `.gitignore`
+  raiz de cada monorepo consumidor (`**/.claude/settings.local.json` en la plantilla `IGNORE` de
+  `@mr/cli/src/mrpack/clases/init/ignore.ts`), asi que nunca se versiona ni se propaga. Al
+  terminar un turno con cambios sin comitear,
+  agrupa los ficheros de codigo modificados por workspace (directorio con `package.json` mas
+  cercano, excluyendo la raiz del monorepo) y bloquea una vez si algun workspace con cambios
+  significativos (fichero nuevo, o >=15 lineas modificadas) no toco su `CODEMAP.md`, o su
+  `CHANGELOG.md` si ya existia. Solo analiza working tree (no commits), y por el guardrail
+  `stop_hook_active` de Claude Code el bloqueo ocurre como maximo una vez por intento de parada
+  (evita bucles infinitos). Ver `@mr/core/dev/README.md` y `@mr/core/dev/.claude/CODEMAP.md`
+  para el detalle de la heuristica.
 - TypeScript estricto; evitar `any` explicito salvo necesidad real.
 - Imports en 3 bloques con una linea en blanco: (1) node/publico, (2) otros workspaces, (3) local relativo; usar `type` en imports solo-tipo.
 - Entre workspaces usa imports por nombre de paquete (`@mr/core-network/...`, `services-comun/...`), no rutas relativas cruzadas.

@@ -8,6 +8,7 @@
  */
 
 export default `
+**/.claude/settings.local.json
 .codex/
 .DS_Store
 .dev.vars

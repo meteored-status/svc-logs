@@ -17,6 +17,7 @@ y el **modelo de manifiesto** (`mrpack.json`) que describe cómo se compila y de
 | [Bundler rspack](#bundler-rspack) | `bundler/rspack/rspack.config.ts` | Configuración rspack compartida por todos los workspaces |
 | [Bundler esbuild](#bundler-esbuild) | `bundler/esbuild/esbuild.config.mjs` | Configuración esbuild compartida por todos los workspaces |
 | [Parches de migración](#parches-de-migración-mrpackpatch) | — | Autofix de imports deprecados; se aplica tras `yarn mrpack update` |
+| [Hook CODEMAP/CHANGELOG](#hook-de-mantenimiento-codemapchangelog-claude-code) | `.claude/settings.json` | Hook `Stop` de Claude Code que fuerza mantener CODEMAP.md/CHANGELOG.md al día |
 
 ---
 
@@ -258,6 +259,35 @@ Los shorthands del `package.json` raíz mapean a:
 | Shorthand | Comando completo |
 |-----------|-----------------|
 | `yarn run patch:apply` | `yarn workspace @mr/core-dev mrpack:patch:apply` |
+
+---
+
+## Hook de mantenimiento CODEMAP/CHANGELOG (Claude Code)
+
+**Ficheros:** `.claude/`
+**Código fuente:** [`.claude/CODEMAP.md`](./.claude/CODEMAP.md) — flujo completo del script del hook
+
+Hook `Stop` de Claude Code que hace cumplir de forma determinista la convención de
+"Mantenimiento de CODEMAPs" (ver `.github/copilot-instructions.md`/`AGENTS.md`): al terminar un
+turno con cambios en el working tree, agrupa los ficheros de código modificados por workspace
+(directorio con `package.json` más cercano, excluyendo la raíz del monorepo) y bloquea una vez
+si algún workspace con cambios significativos (fichero nuevo, o ≥ 15 líneas modificadas) no
+tocó su `CODEMAP.md` — o su `CHANGELOG.md`, si ya existía.
+
+- Todo `.claude/` se symlinkea entero en la raíz de cada monorepo consumidor mediante
+  `initClaudeDir()` (`@mr/cli/src/mrpack/clases/init/symlinks.ts`), igual que `.github/`
+  (junction en Windows, symlink relativo en Unix) — a diferencia de `AGENTS.md`/`CLAUDE.md`,
+  que son symlinks de fichero simple. `.claude/settings.local.json` (local) se excluye tanto
+  del envío del framework (`.claude/.mr-ignore`) como del `.gitignore` raíz de cada monorepo
+  consumidor (`**/.claude/settings.local.json` en la plantilla `IGNORE` de `@mr/cli`); si ya
+  existía como fichero real antes de tener este framework, `initClaudeDir()` lo migra primero a
+  `@mr/core/dev/.claude/` para no perderlo.
+- `.claude/settings.json` — declara el hook.
+- `.claude/hooks/check-codemap.mjs` — Node ESM plano sin dependencias, invocado siempre como
+  `node check-codemap.mjs` (el bit ejecutable es irrelevante).
+
+Solo analiza cambios sin comitear, y por el guardrail `stop_hook_active` de Claude Code el
+bloqueo ocurre como máximo una vez por intento de parada (evita bucles infinitos).
 
 ---
 

@@ -3,7 +3,16 @@
 > Generado: 2026-06-26. Actualizar tras cambios significativos. Última revisión: 2026-07-17 (`mrpack devel`: nuevo flag `-w/--watch`; sin él los compiladores compilan una única vez y el proceso termina; añadido `.codex/` a la plantilla `IGNORE` de `init/ignore.ts` para que `mrpack init` lo incluya en el `.gitignore` del monorepo; nueva `initClaude()` en
 `init/symlinks.ts`, que crea/corrige el symlink `CLAUDE.md` → `@mr/core/dev/CLAUDE.md`
 —fichero que solo importa `@AGENTS.md`, ya que Claude Code no lee `AGENTS.md`
-automáticamente—; extraído `initSymlinkFichero()` compartido por `initAgents`/`initClaude`).
+automáticamente—; extraído `initSymlinkFichero()` compartido por `initAgents`/`initClaude`;
+nueva `initClaudeDir()` en `init/symlinks.ts`, con la misma forma que `initGithub()` (junction
+en Windows, symlink relativo en Unix), que symlinkea el directorio completo `.claude` →
+`@mr/core/dev/.claude` —declara el hook `Stop` de mantenimiento CODEMAP/CHANGELOG, ver
+`@mr/core/dev/.claude/CODEMAP.md`—; nueva `migrarArchivosLocales()` que preserva
+`.claude/settings.local.json` (excluido del envío del framework vía
+`@mr/core/dev/.claude/.mr-ignore`) si `.claude` ya existía como directorio real, moviendo sus
+entradas a `@mr/core/dev/.claude/` antes de sustituirlo por el symlink; añadido
+`**/.claude/settings.local.json` a la plantilla `IGNORE` de `init/ignore.ts` para que
+`mrpack init` lo excluya también del `.gitignore` del monorepo).
 
 ---
 

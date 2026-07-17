@@ -4,6 +4,25 @@
 
 ## 2026.7.17
 
+### Added — `.claude/` (hook `Stop` de mantenimiento CODEMAP/CHANGELOG)
+
+- [Jose] **Nuevo módulo `.claude/`** con `settings.json` (declara un hook `Stop`),
+  `hooks/check-codemap.mjs` (heurística Node ESM sin dependencias) y `.mr-ignore` (excluye
+  `settings.local.json` del envío del framework) — ver [`.claude/CODEMAP.md`](.claude/CODEMAP.md).
+  Al terminar un turno de Claude Code con cambios sin comitear, agrupa los ficheros de código
+  modificados por workspace (directorio con `package.json` más cercano, excluyendo la raíz del
+  monorepo) y bloquea una vez si algún workspace con cambios significativos (fichero nuevo, o
+  ≥15 líneas modificadas) no tocó su `CODEMAP.md` — o su `CHANGELOG.md`, si ya existía. Convierte
+  en mecanismo determinista la convención ya documentada en `AGENTS.md`/`copilot-instructions.md`
+  ("Mantenimiento de CODEMAPs"), y se propaga a cualquier monorepo consumidor vía la nueva
+  `initClaudeDir()` de `@mr/cli` (ver su changelog) — todo el directorio se symlinkea entero,
+  mismo patrón que `.github/` (a diferencia de `CLAUDE.md`/`AGENTS.md`, que son symlinks de
+  fichero simple); simplifica las rutas del hook (`.claude/hooks/...` en vez de
+  `@mr/core/dev/.claude/hooks/...`). Se invoca siempre como `node check-codemap.mjs` (nunca
+  ejecutado directamente), para no depender de que el transporte GCS/zip de `mrpack framework`
+  preserve el bit ejecutable. Solo analiza working tree (no commits); por el guardrail
+  `stop_hook_active` de Claude Code, el bloqueo ocurre como máximo una vez por intento de parada.
+
 ### Added — `CLAUDE.md`
 
 - [Jose] **Nuevo fichero canónico `CLAUDE.md`**, expuesto en la raíz del monorepo mediante

@@ -26,6 +26,25 @@
   compartido por `initAgents`/`initClaude`) para no triplicar la lógica de comprobar/recrear
   un symlink de fichero simple.
 
+### Added — `src/mrpack/clases/init/symlinks.ts`, `src/mrpack/clases/init.ts`, `src/mrpack/clases/init/ignore.ts`
+
+- [Jose] **`mrpack init` crea/corrige el enlace de directorio `.claude` →
+  `@mr/core/dev/.claude`**: nueva `initClaudeDir()`, con la misma forma que `initGithub()`
+  (junction en Windows, symlink relativo en Unix) — a diferencia de `initAgents()`/`initClaude()`,
+  que symlinkean un fichero simple. El directorio canónico declara el hook `Stop` que hace
+  cumplir de forma determinista el mantenimiento de CODEMAP.md/CHANGELOG.md
+  (`.claude/hooks/check-codemap.mjs`, ver el changelog de `@mr/core-dev`), y se propaga así a
+  cualquier monorepo que sincronice este framework, con rutas más simples que un symlink de solo
+  `settings.json` (`.claude/hooks/...` en vez de `@mr/core/dev/.claude/hooks/...`).
+  `.claude/settings.local.json` (local) se excluye tanto del envío del framework vía
+  `@mr/core/dev/.claude/.mr-ignore` como del `.gitignore` de cada monorepo consumidor —nueva
+  entrada `**/.claude/settings.local.json` en la plantilla `IGNORE` de `init/ignore.ts`—, así
+  que nunca queda trackeado por git independientemente del path físico real. Si
+  `{basedir}/.claude` ya existía como directorio real (con un `settings.local.json` de antes de
+  tener este framework), la nueva `migrarArchivosLocales()` mueve sus entradas a
+  `@mr/core/dev/.claude/` (sin sobreescribir lo que ya hubiera) antes de sustituirlo por el
+  symlink, para no perder configuración local del desarrollador.
+
 ---
 
 ## 2026.7.13

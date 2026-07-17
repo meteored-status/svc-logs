@@ -36,7 +36,7 @@ import {getBundlerNormalizado} from "./bundler";
 import {checkScripts} from "./init/scripts";
 import {corregirGITs} from "./init/git";
 import {limpiarLegacy} from "./init/legacy";
-import {initGithub, initAgents, initClaude} from "./init/symlinks";
+import {initGithub, initAgents, initClaude, initClaudeDir} from "./init/symlinks";
 import {initYarnRC} from "./init/yarnrc";
 import {initConfig, type IWorkspaces} from "./init/config-workspaces";
 import {initRun} from "./init/run";
@@ -68,6 +68,7 @@ export async function init(basedir: string): Promise<boolean> {
     await initGithub(basedir);
     await initAgents(basedir);
     await initClaude(basedir);
+    await initClaudeDir(basedir);
 
     if (await isDir(`${basedir}/i18n`)) {
         Log.info({type: Log.label_base, label: "i18n"}, Colors.colorize([Colors.FgWhite], "Inicializando i18n"));

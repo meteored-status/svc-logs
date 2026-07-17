@@ -7,10 +7,10 @@
  * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {lstat, readlink, symlink} from "node:fs/promises";
+import {lstat, readlink, rename, symlink} from "node:fs/promises";
 import {resolve} from "node:path";
 
-import {unlink} from "../../../utiles/fs";
+import {isDir, isFile, readDir, unlink} from "../../../utiles/fs";
 import {Colors} from "../colors";
 import {Log} from "../log";
 
@@ -63,7 +63,7 @@ export async function initGithub(basedir: string): Promise<void> {
  * Si no existe, lo crea.
  *
  * Usado por `initAgents`/`initClaude` — ambos son symlinks a fichero simple
- * (sin la casuística de junction de Windows que requiere `initGithub` para
+ * (sin la casuística de junction de Windows que requiere `initGithub`/`initClaudeDir` para
  * enlazar un directorio).
  *
  * @param basedir - Raíz absoluta del monorepo.
@@ -114,4 +114,67 @@ export async function initAgents(basedir: string): Promise<void> {
  */
 export async function initClaude(basedir: string): Promise<void> {
     await initSymlinkFichero(basedir, "CLAUDE.md");
+}
+
+/**
+ * Migra a `destinoDir` cualquier entrada de `origenDir` que no exista ya en `destinoDir`.
+ * Usado antes de sustituir un directorio real por un symlink, para no perder ficheros
+ * locales (ej. `.claude/settings.local.json`) que un desarrollador ya tuviera ahí.
+ *
+ * @param origenDir - Directorio real que va a eliminarse (ej. `{basedir}/.claude`).
+ * @param destinoDir - Directorio canónico de destino (ej. `{basedir}/@mr/core/dev/.claude`).
+ */
+async function migrarArchivosLocales(origenDir: string, destinoDir: string): Promise<void> {
+    const entradas = await readDir(origenDir).catch(() => [] as string[]);
+    for (const entrada of entradas) {
+        const origen = `${origenDir}/${entrada}`;
+        const destino = `${destinoDir}/${entrada}`;
+        if (await isFile(destino) || await isDir(destino)) {
+            continue; // ya existe en el framework; no sobreescribir
+        }
+        await rename(origen, destino).catch(() => undefined);
+    }
+}
+
+/**
+ * Verifica que `{basedir}/.claude` sea un symlink (Unix) o junction (Windows) apuntando a
+ * `@mr/core/dev/.claude`, igual que `initGithub` con `.github`. Ese directorio canónico
+ * declara el hook `Stop` que hace cumplir el mantenimiento de CODEMAP.md/CHANGELOG.md
+ * (`.claude/settings.json` + `.claude/hooks/check-codemap.mjs`), propagado así a cualquier
+ * monorepo que sincronice este framework, sin tocar nada manualmente en él.
+ *
+ * Si `{basedir}/.claude` ya existe como directorio real (ej. con un `settings.local.json`
+ * local creado antes de tener este framework), sus entradas se migran primero a
+ * `@mr/core/dev/.claude` (sin sobreescribir lo que ya hubiera) para no perderlas — quedan
+ * excluidas del envío del framework vía `@mr/core/dev/.claude/.mr-ignore`.
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ */
+export async function initClaudeDir(basedir: string): Promise<void> {
+    const claudePath = `${basedir}/.claude`;
+    const destinoRelativo = "@mr/core/dev/.claude";
+    const isWindows = process.platform === "win32";
+
+    const destinoEfectivo = isWindows
+        ? resolve(basedir, destinoRelativo)
+        : destinoRelativo;
+
+    const stat = await lstat(claudePath).catch(() => undefined);
+
+    if (stat !== undefined) {
+        const actual = await readlink(claudePath).catch(() => undefined);
+        if (actual === destinoEfectivo) {
+            return; // ya está correcto
+        }
+
+        if (await isDir(claudePath)) {
+            // Directorio real (no symlink todavía): preservar ficheros locales antes de sustituir.
+            await migrarArchivosLocales(claudePath, `${basedir}/${destinoRelativo}`);
+        }
+
+        Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgYellow], "Corrigiendo .claude/ → symlink a @mr/core/dev/.claude"));
+        await unlink(claudePath);
+    }
+
+    await symlink(destinoEfectivo, claudePath, isWindows ? "junction" : undefined);
 }
