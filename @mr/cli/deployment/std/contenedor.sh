@@ -52,7 +52,7 @@ if [[ -f "GENERAR.txt" ]]; then
       echo "${RUTA}: ${BASE_IMAGE}"
       ARCH=$(configw "${RUTA}" '.deploy.arch // empty | select(type == "array") | join(",")')
       if [[ -z "$ARCH" || "$ARCH" == "" ]]; then
-        ARCH="linux/amd64,linux/arm64"
+        ARCH="linux/amd64"
       fi
 
       if [[ -f ${RUTA}/Dockerfile ]]; then

@@ -1,20 +1,21 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 16b32d14c21f1e828c5476f1be3f8cc3
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.15+38-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 6ca3e27806532c552b6a9c4695c6c90f
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.3+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import type JSZip from "jszip";
 import path from "node:path";
 
 import {Fecha} from "services-comun/modules/utiles/fecha";
-import {isFile, mkdir, readFile, readFileString, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
+import {isFile, mkdir, readFile, readFileString, safeWrite, unlink} from "../../../utiles/fs";
 import {PaqueteDirectory} from "./directory";
-import merge3 from "../../utiles/merge";
+import merge3, {type IConflictoBloque} from "../../utiles/merge";
 
 const PACKAGE_JSON_PRIORIDAD = ["name", "description", "author", "scripts", "bin", "config"];
 
@@ -24,7 +25,7 @@ const PACKAGE_JSON_PRIORIDAD = ["name", "description", "author", "scripts", "bin
  * (fecha, autor) no genere un hash diferente y evitar así falsos positivos en
  * los pushes sucesivos.
  */
-const PATRON_AUTORIA = /^\/\*\*\n \* Editor: [^\n]*\n \* Fecha: [^\n]*\n(?: \* Hash: [^\n]*\n)?(?: \* Versión: [^\n]*\n)?(?: \* Anterior: [^\n]*\n)? \*\/\n\n/;
+const PATRON_AUTORIA = /^\/\*\*\n \* Editor: [^\n]*\n \* Fecha: [^\n]*\n(?: \* Hash: [^\n]*\n)?(?: \* Versión: [^\n]*\n)?(?: \* Anterior: [^\n]*\n)?(?: \* Proyecto: [^\n]*\n)? \*\/\n\n/;
 
 const PATRON_VERSION_BLOQUE = /^ \* Versión: ([^\n]+)$/m;
 
@@ -36,7 +37,7 @@ const PATRON_VERSION_BLOQUE = /^ \* Versión: ([^\n]+)$/m;
  * @param contenido - Texto completo del fichero `.ts`.
  * @returns Texto sin los bloques de autoría iniciales.
  */
-function stripAutoria(contenido: string): string {
+export function stripAutoria(contenido: string): string {
     let resultado = contenido;
     while (PATRON_AUTORIA.test(resultado)) {
         resultado = resultado.replace(PATRON_AUTORIA, "");
@@ -77,6 +78,19 @@ export interface PaqueteFileFiles {
 }
 
 /**
+ * Una entrada por cada fichero afectado por una actualización.
+ *
+ * @property archivo    - Ruta relativa del fichero.
+ * @property estado     - `"error"` cuando el merge 3-way produjo conflicto, `"ok"` en cualquier otro caso.
+ * @property conflictos - Detalle de las secciones en conflicto (solo presente cuando `estado === "error"`).
+ */
+export interface IEntradaActualizacion {
+    archivo: string;
+    estado: "ok" | "error";
+    conflictos?: IConflictoBloque[];
+}
+
+/**
  * Tracker mutable que fluye por el árbol de ficheros durante `actualizarVersion`.
  *
  * @property hayConflictos - Se pone a `true` en cuanto algún fichero produce conflicto en el merge 3-way.
@@ -84,7 +98,7 @@ export interface PaqueteFileFiles {
  */
 export interface IUpdateTracker {
     hayConflictos: boolean;
-    entradas: {archivo: string; estado: "ok" | "error"}[];
+    entradas: IEntradaActualizacion[];
 }
 
 /**
@@ -164,9 +178,10 @@ export class PaqueteFile {
      * @param basedir  - Raíz absoluta del monorepo.
      * @param autor    - Nombre del autor a estampar.
      * @param version  - Versión del paquete a registrar en el bloque.
+     * @param proyecto - URL del repositorio git del proyecto (sin credenciales). Si está vacío, se omite la línea.
      * @returns Hash actualizado del fichero.
      */
-    public async inyectarAutoria(basedir: string, autor: string, version: string): Promise<string> {
+    public async inyectarAutoria(basedir: string, autor: string, version: string, proyecto: string): Promise<string> {
         if (!this.nombre.endsWith(".ts") || !this.hashCambio) {
             return this.hash;
         }
@@ -179,13 +194,15 @@ export class PaqueteFile {
         const cuerpo = stripAutoria(contenido);
         const hashCuerpo = md5(cuerpo);
         const lineaAnterior = versionAnterior !== undefined ? ` * Anterior: ${versionAnterior}\n` : "";
-        const comentario = `/**\n * Editor: ${autor}\n * Fecha: ${new Date().toUTCString()}\n * Hash: ${hashCuerpo}\n * Versión: ${version}\n${lineaAnterior} */\n\n`;
+        const lineaProyecto = proyecto.length > 0 ? ` * Proyecto: ${proyecto}\n` : "";
+        const comentario = `/**\n * Editor: ${autor}\n * Fecha: ${new Date().toUTCString()}\n * Hash: ${hashCuerpo}\n * Versión: ${version}\n${lineaAnterior}${lineaProyecto} */\n\n`;
         const nuevo = comentario + cuerpo;
         await safeWrite(`${basedir}/${this.filename}`, nuevo, true);
         // El hash se calcula sobre el CUERPO (sin el bloque de autoría) para que sea
         // coherente con lo que calcula update() y no genere falsos positivos en el
         // siguiente push por el mero hecho de que la fecha del comentario haya cambiado.
-        this.hash = md5([this.filename, hashCuerpo].join(""));
+        this.hash  = md5([this.filename, hashCuerpo].join(""));
+        this.autor = autor;
 
         return this.hash;
     }
@@ -210,7 +227,7 @@ export class PaqueteFile {
      * @param basedir - Raíz absoluta del monorepo.
      */
     public async crearPath(basedir: string): Promise<void> {
-        await mkdir(path.dirname(`${basedir}/${this.filename}`), true);
+        await mkdir(path.dirname(`${basedir}/${this.filename}`));
     }
 
     /**
@@ -289,8 +306,8 @@ export class PaqueteFile {
             }
 
             const mezcla = await this.mezclar(basedir, nuevo.files[this.filename]);
-            if (mezcla.conflict && tracker) tracker.hayConflictos = true;
-            tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok"});
+            if (mezcla.conflict && tracker) { tracker.hayConflictos = true; }
+            tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok", conflictos: mezcla.conflict ? mezcla.bloques : undefined});
             this.recalcularHash([mezcla.hash], nuevo.status.autor);
 
             return true;
@@ -329,8 +346,8 @@ export class PaqueteFile {
         if (antiguo.status.hash!==this.hash && nuevo.status.hash!==this.hash) {
             // el antiguo, el actual y el nuevo son diferentes => mezclar
             const mezcla = await this.mezclar(basedir, nuevo.files[this.filename], !bin ? antiguo.files[this.filename] : undefined);
-            if (mezcla.conflict && tracker) tracker.hayConflictos = true;
-            tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok"});
+            if (mezcla.conflict && tracker) { tracker.hayConflictos = true; }
+            tracker?.entradas.push({archivo: this.filename, estado: mezcla.conflict ? "error" : "ok", conflictos: mezcla.conflict ? mezcla.bloques : undefined});
             this.recalcularHash([mezcla.hash], nuevo.status.autor);
 
             return true;
@@ -360,9 +377,10 @@ export class PaqueteFile {
         return JSON.stringify(normalizarJSON(JSON.parse(texto), PACKAGE_JSON_PRIORIDAD), null, 2) + "\n";
     }
 
-    private async mezclar(basedir: string, nuevo: JSZip.JSZipObject, antiguo?: JSZip.JSZipObject): Promise<{hash: string; conflict: boolean}> {
+    private async mezclar(basedir: string, nuevo: JSZip.JSZipObject, antiguo?: JSZip.JSZipObject): Promise<{hash: string; conflict: boolean; bloques: IConflictoBloque[]}> {
         let mezcla: string;
         let conflict = false;
+        let bloques: IConflictoBloque[] = [];
 
         if (antiguo===undefined || !await isFile(`${basedir}/${this.filename}`)) {
             mezcla = await nuevo.async("text");
@@ -380,11 +398,12 @@ export class PaqueteFile {
             const resultado = merge3(textoA, textoB, textoC, this.filename);
             mezcla = resultado.text;
             conflict = resultado.conflict;
+            bloques = resultado.bloques;
         }
 
         await this.crearPath(basedir);
         await safeWrite(`${basedir}/${this.filename}`, mezcla, true);
 
-        return {hash: md5(mezcla), conflict};
+        return {hash: md5(mezcla), conflict, bloques};
     }
 }

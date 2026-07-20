@@ -1,13 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 74cff5116bf3bc69aec0dcc5f4d1f991
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: d10bc73f58a46d91dd280c34b4067033
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.5.27+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import type {IManifestDeploymentImagen} from "@mr/core-dev/manifest/deployment/imagen";
 
-import {IManifestDeploymentImagenLegacy} from "../../legacy";
+import type {IManifestDeploymentImagenLegacy} from "../../legacy";
 import ManifestWorkspaceDeploymentImagenEntornoLoader from "./entorno";
 
 class ManifestWorkspaceDeploymentImagenLoader {

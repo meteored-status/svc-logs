@@ -1,16 +1,20 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 8ba4ff3a208435d2aa0f5bcbe9d6f8a0
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 2673e0403cfbb22306e82935694de0fd
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.2+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {mkdir, safeWrite, unlink} from "services-comun/modules/utiles/fs";
+import {mkdir, readFileString, safeWrite, unlink} from "../../../../utiles/fs";
 
 import {Colors} from "../../colors";
+import {Log} from "../../log";
 import {Paquete, PaqueteTipo} from "../../paquete";
+import {aplicarPatches} from "../../patches";
 import {FrameworkUpdates} from "../../workspace/service";
-import {getAutor, getClienteHash, recompilarCliente} from "../cliente";
+import {add, getAutor, getClienteHash, leerDepsMrFramework, limpiarDevDepsConsumidores, recompilarCliente} from "../cliente";
 import {install} from "../../yarn";
 import {Accion, type IPaqueteGestion} from "./datos";
 import {escribirLog, escribirLogPush} from "./logs";
@@ -54,11 +58,15 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
         }
     }
 
-    if (aInstalar.length === 0 && aActualizar.length === 0 && aResetear.length === 0
-            && aDesinstalar.length === 0 && aEnviar.length === 0 && aEnviarConUpdate.length === 0) {
-        console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], "Nada que hacer"));
+    const noHayAcciones = [aInstalar, aActualizar, aResetear, aDesinstalar, aEnviar, aEnviarConUpdate].every(lista => lista.length === 0);
+    if (noHayAcciones) {
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "Nada que hacer"));
         return false;
     }
+
+    // Check preventivo: si hay envíos, validar autoría git antes de ejecutar cambios costosos.
+    const requiereAutor = aEnviar.length > 0 || aEnviarConUpdate.length > 0;
+    const autor = requiereAutor ? await getAutor() : "";
 
     // Bootstrap de paquetes a instalar en paralelo
     await Promise.all(aInstalar.map(async info => {
@@ -66,7 +74,7 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
             const tipo = info.tipo === "core" ? PaqueteTipo.core
                        : info.tipo === "user" ? PaqueteTipo.user
                        : PaqueteTipo.root;
-            await mkdir(info.localDir, true);
+            await mkdir(info.localDir);
             await safeWrite(`${info.localDir}/package.json`, `${JSON.stringify({
                 name: info.npmName,
                 version: "0.0.0+0-new",
@@ -98,8 +106,11 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
             .map(async info => {
                 const {cambio: aplicado, entradas} = await info.paquete.applyUpdate(info.versionLatest!);
                 if (aplicado) { cambio = true; }
-                if (entradas.length > 0) {
-                    await escribirLog(basedir, info, entradas, info.paquete.logs);
+                if (entradas.length > 0 || info.paquete.error !== undefined) {
+                    const logPath = await escribirLog(basedir, info, entradas, info.paquete.logs, info.paquete.error);
+                    if (info.paquete.error !== undefined) {
+                        avisos.push(`⚠  ${info.npmName}: error durante la actualización — ver ${logPath}`);
+                    }
                 }
             }),
         ...aActualizar
@@ -110,11 +121,13 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
                     cambio = true;
                     if (info.esCli) { cliActualizado = true; }
                 }
-                if (entradas.length > 0) {
-                    const logPath = await escribirLog(basedir, info, entradas, info.paquete.logs);
+                if (entradas.length > 0 || info.paquete.error !== undefined) {
+                    const logPath = await escribirLog(basedir, info, entradas, info.paquete.logs, info.paquete.error);
                     if (conflictos) {
                         avisos.push(`⚠  ${info.npmName}: merge con conflictos — ver ${logPath}`);
                         aConflictoUpdate.push(info);
+                    } else if (info.paquete.error !== undefined) {
+                        avisos.push(`⚠  ${info.npmName}: error durante la actualización — ver ${logPath}`);
                     }
                 } else if (conflictos) {
                     aConflictoUpdate.push(info);
@@ -131,20 +144,86 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
         if (info.esCli) { cliActualizado = true; }
     }));
 
-    // Desinstalaciones en paralelo
-    await Promise.all(aDesinstalar.map(async info => {
-        await unlink(info.localDir);
-        cambio = true;
-        console.log(Colors.colorize([Colors.FgYellow], `Desinstalado ${info.npmName}`));
+    // ── Desinstalaciones ────────────────────────────────────────────────────────
+    //
+    // Paso 1: construir mapa inverso de dependencias entre frameworks instalados.
+    //   dependantesOf[X] = Set de npmNames de frameworks instalados que dependen de X.
+    const todosInstalados = infos.filter(i => i.instalado);
+    const dependantesOf = new Map<string, Set<string>>();
+    await Promise.all(todosInstalados.map(async info => {
+        const raw = await readFileString(`${info.localDir}/package.json`).catch(() => "{}");
+        let pkg: {devDependencies?: Record<string, string>} = {};
+        try {
+            pkg = JSON.parse(raw);
+        } catch (err) {
+            Log.error({type: Log.label_base, label: "framework"}, `Error parseando ${info.localDir}/package.json`, err);
+        }
+        for (const dep of Object.keys(pkg.devDependencies ?? {})) {
+            if (!dep.startsWith("@mr/")) { continue; }
+            if (!dependantesOf.has(dep)) { dependantesOf.set(dep, new Set()); }
+            dependantesOf.get(dep)!.add(info.npmName);
+        }
     }));
 
+    // Paso 2: determinar iterativamente cuáles pueden desinstalarse.
+    //   Un framework puede desinstalarse si TODOS los frameworks que dependen de él
+    //   también se van a desinstalar. La iteración se repite hasta estabilidad porque
+    //   bloquear un framework puede desbloquear o bloquear a otros en cadena.
+    const puedeDesinstalar = new Set(aDesinstalar.map(i => i.npmName));
+    let huboCambioBloqueo = true;
+    while (huboCambioBloqueo) {
+        huboCambioBloqueo = false;
+        for (const npmName of [...puedeDesinstalar]) {
+            const dependantes = dependantesOf.get(npmName) ?? new Set<string>();
+            const bloqueadores = [...dependantes].filter(d => !puedeDesinstalar.has(d));
+            if (bloqueadores.length > 0) {
+                puedeDesinstalar.delete(npmName);
+                huboCambioBloqueo = true;
+                Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow, Colors.Bright],
+                    `⚠  ${npmName} no desinstalado: sigue siendo necesario para: ${bloqueadores.join(", ")}`));
+            }
+        }
+    }
+
+    // Paso 3: para los frameworks que pasan la validación, limpiar devDependencies
+    //   de los workspaces consumidores y luego eliminar los directorios.
+    const realmDesinstalar = aDesinstalar.filter(i => puedeDesinstalar.has(i.npmName));
+    if (realmDesinstalar.length > 0) {
+        await limpiarDevDepsConsumidores(basedir, realmDesinstalar.map(i => i.npmName));
+        await Promise.all(realmDesinstalar.map(async info => {
+            await unlink(info.localDir);
+            cambio = true;
+            Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], `Desinstalado ${info.npmName}`));
+        }));
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
+    // Resolver dependencias @mr/* de los frameworks instalados.
+    // Se revisan TODOS los instalados (no solo los modificados en este run) para detectar
+    // cualquier dep faltante antes de ejecutar yarn install: ya sea por un framework recién
+    // actualizado que añadió una nueva dep, o por una dep que no se instaló en un run anterior
+    // (p.ej. run interrumpido). add() solo descarga los que realmente falten en disco.
+    const fwDepsArgs = new Set<string>();
+    for (const info of infos.filter(i => i.instalado)) {
+        for (const dep of await leerDepsMrFramework(info.localDir)) {
+            fwDepsArgs.add(dep);
+        }
+    }
+    if (fwDepsArgs.size > 0) {
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], "Verificando dependencias de framework..."));
+        if (await add(basedir, [...fwDepsArgs])) {
+            cambio = true;
+        }
+    }
+
     // Reinstalar dependencias cuando hubo acciones que pueden tocar manifests/locks
-    const necesitaInstall = aInstalar.length > 0 || aDesinstalar.length > 0
+    const necesitaInstall = aInstalar.length > 0 || realmDesinstalar.length > 0
         || aActualizar.length > 0 || aResetear.length > 0;
     let installHecho = false;
     if (necesitaInstall) {
         await install(basedir, {verbose: false});
         installHecho = true;
+        await aplicarPatches(basedir);
     }
 
     // Recompilar CLI si fue modificado
@@ -152,15 +231,13 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
         await recompilarCliente(basedir, await getClienteHash(basedir), {reiniciar, skipInstall: installHecho});
     }
 
-    // Obtener autor una sola vez para todos los envíos
-    const autor = (aEnviar.length > 0 || aEnviarConUpdate.length > 0) ? await getAutor() : "";
-
     // Envíos directos en paralelo
     if (aEnviar.length > 0) {
         Paquete.setupConsolaParaUpdate(aEnviar.map(i => i.paquete));
         await Promise.all(aEnviar.map(async info => {
             await info.paquete.push(autor);
             cambio = true;
+            await info.paquete.subirLogHtml().catch((err) => { Log.error({type: Log.label_base, label: "framework"}, "Error subiendo log HTML", err); });
             if (info.paquete.logs.length > 0) {
                 await escribirLogPush(basedir, info, info.paquete.logs);
             }
@@ -178,13 +255,16 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
                 if (info.esCli) { cliActualizado = true; }
             }
             let logPath: string | undefined;
-            if (entradas.length > 0) {
-                logPath = await escribirLog(basedir, info, entradas, info.paquete.logs);
+            if (entradas.length > 0 || info.paquete.error !== undefined) {
+                logPath = await escribirLog(basedir, info, entradas, info.paquete.logs, info.paquete.error);
             }
 
-            if (!conflictos) {
+            if (info.paquete.error !== undefined) {
+                avisos.push(`⚠  ${info.npmName}: error durante la actualización — no se ha enviado — ver ${logPath}`);
+            } else if (!conflictos) {
                 await info.paquete.push(autor);
                 cambio = true;
+                await info.paquete.subirLogHtml().catch((err) => { Log.error({type: Log.label_base, label: "framework"}, "Error subiendo log HTML", err); });
                 if (info.paquete.logs.length > 0) {
                     await escribirLogPush(basedir, info, info.paquete.logs);
                 }
@@ -208,7 +288,7 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
         ];
 
         console.log("");
-        console.log(Colors.colorize([Colors.FgYellow, Colors.Bright],
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow, Colors.Bright],
             `${aConflicto.length} paquete(s) con conflictos de merge — ¿deseas resetearlos a la versión publicada?`,
         ));
         console.log("");
@@ -229,6 +309,7 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
                     }
                 }));
                 await install(basedir, {verbose: false});
+                await aplicarPatches(basedir);
                 if (conflictoCli) {
                     await recompilarCliente(basedir, await getClienteHash(basedir), {reiniciar, skipInstall: true});
                 }
@@ -237,7 +318,7 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
     }
 
     for (const aviso of avisos) {
-        console.log(Colors.colorize([Colors.FgYellow, Colors.Bright], aviso));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow, Colors.Bright], aviso));
     }
 
     return cambio;

@@ -8,10 +8,7 @@ spec:
   template:
     metadata:
       annotations:
-#        run.googleapis.com/network-interfaces: '[{"network":"servicios-1","subnetwork":"servicios-1"}]' # Se ajusta desde los labels del proyecto de GC
-        run.googleapis.com/vpc-access-egress: private-ranges-only
         run.googleapis.com/execution-environment: gen2
-    #        run.googleapis.com/vpc-access-connector: projects/${PROJECT_ID}/locations/europe-west1/connectors/cloud-run
     spec:
       taskCount: 1
       parallelism: 1
@@ -26,6 +23,10 @@ spec:
                   value: "${ENTORNO}"
                 - name: ZONA
                   value: "${ZONA}"
+                - name: CLOUD_RUN_REGION
+                  value: "${REGION}"
+                - name: SIDECAR
+                  value: "false"
               volumeMounts:
                 - name: temporal
                   mountPath: "/usr/src/app/files/tmp/"

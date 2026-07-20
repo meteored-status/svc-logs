@@ -33,7 +33,7 @@ mrpack.json + package.json
 rspack.config.ts         Lee manifiesto y dependencias; genera N configuraciones
         │
         ▼
-configuracion.ts         Ensambla cada Configuration; activa watch en desarrollo
+configuracion.ts         Ensambla cada Configuration; activa watch en desarrollo si se pide (`--env watch=true`)
    ├── entry.ts          app → main.ts (node) | entradas del manifiesto (browser)
    ├── output.ts         output/ (node) | output/bundle/ o output/critical/ (browser)
    ├── devtool.ts        source-map siempre en node; condicional en browser
@@ -60,12 +60,16 @@ configuracion.ts         Ensambla cada Configuration; activa watch en desarrollo
 
 | Variable de entorno `--env entorno` | `desarrollo` | `test` | Descripción |
 |-------------------------------------|:------------:|:------:|-------------|
-| `"desarrollo"`                      | `true`       | `true` | Watch activado; sin minificación; nombres de chunk sin hash. |
+| `"desarrollo"`                      | `true`       | `true` | Sin minificación; nombres de chunk sin hash. Watch solo si además `--env watch=true`. |
 | `"test"`                            | `false`      | `true` | Sin watch; minificación activa; source maps en browser. |
 | `"produccion"`                      | `false`      | `false`| Sin watch; minificación; nombres de chunk con `[contenthash]`. |
 
 > **Nota:** `test` es `true` también en `"desarrollo"` para habilitar los source maps
 > de CSS/SASS en ese entorno.
+>
+> **Watch:** ya no se activa automáticamente por `entorno=desarrollo`. Requiere además
+> `--env watch=true` (así es como `mrpack devel -c -w` lo propaga; sin `-w` compila una
+> única vez incluso en desarrollo).
 
 ---
 

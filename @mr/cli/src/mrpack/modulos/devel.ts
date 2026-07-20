@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 4fe31122e49860384009b0aedb61fd69
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: 9e921752fd46eaacdd70666e7a167942
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {type IModulo, type IModuloConfig, Modulo} from "../modulo";
@@ -15,6 +17,7 @@ export interface IDevelConfig extends IModuloConfig {
         compilar: { type: "boolean", short: "c", default: false, },
         ejecutar: { type: "boolean", short: "e", default: false, },
         forzar:   { type: "boolean", short: "f", default: false, },
+        watch:    { type: "boolean", short: "w", default: false, },
     };
 }
 
@@ -33,6 +36,7 @@ export class ModuloDevel<T extends IDevelConfig> extends Modulo<T> {
             compilar: { type: "boolean", short: "c", default: false, },
             ejecutar: { type: "boolean", short: "e", default: false, },
             forzar:   { type: "boolean", short: "f", default: false, },
+            watch:    { type: "boolean", short: "w", default: false, },
         },
         strict: true,
     };
@@ -49,10 +53,12 @@ export class ModuloDevel<T extends IDevelConfig> extends Modulo<T> {
     /**
      * Arranca el entorno de desarrollo o muestra la ayuda según los flags.
      *
-     * @param config - Opciones del módulo (`help`, `compilar`, `ejecutar`, `forzar`).
+     * Requiere al menos `-c` o `-e`; sin ninguno de los dos muestra la ayuda.
+     *
+     * @param config - Opciones del módulo (`help`, `compilar`, `ejecutar`, `forzar`, `watch`).
      */
     protected async parseParams(config: IDevel): Promise<void> {
-        if (config.help) {
+        if (config.help || (!config.compilar && !config.ejecutar)) {
             this.mostrarAyuda();
         } else {
             run(this.root, config);
@@ -80,6 +86,7 @@ export class ModuloDevel<T extends IDevelConfig> extends Modulo<T> {
         console.log(`${Colors.colorize([Colors.FgMagenta], "Opciones adicionales disponibles:")}`);
         console.group();
         console.log(`${Colors.colorize([Colors.FgBlue], "-f")} ${Colors.colorize([Colors.FgYellow], "--forzar")}:   Ejecuta los workspaces habilitados`);
+        console.log(`${Colors.colorize([Colors.FgBlue], "-w")} ${Colors.colorize([Colors.FgYellow], "--watch")}:    Activa el modo watch; sin esta opción los compiladores compilan una vez y el proceso termina`);
         console.groupEnd();
         console.groupEnd();
         console.log("");

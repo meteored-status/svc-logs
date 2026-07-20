@@ -2,6 +2,8 @@
 
 Paquete de primitivas de red compartidas por todos los servicios del monorepo.
 
+**Código fuente:** ver [`CODEMAP.md`](./CODEMAP.md).
+
 ---
 
 ## Contenido
@@ -9,6 +11,7 @@ Paquete de primitivas de red compartidas por todos los servicios del monorepo.
 | Módulo | Entrada | Descripción |
 |--------|---------|-------------|
 | [Raíz](#interfaz-iresponse) | `@mr/core-network` | Interfaz `IResponse<T>` — tipo base de todas las respuestas |
+| [Route](./route/README.md) | `@mr/core-network/route` | `Route` — routing HTTP con URLs por idioma, parámetros y ejecución de handlers |
 | [Metadata](./metadata/README.md) | `@mr/core-network/metadata/…` | Interfaces de protocolo compartidas (mensajes WebSocket) |
 | [Server](./server/README.md) | `@mr/core-network/server/…` | Módulos de servidor: WebSocket y configuración HTTP |
 | [Client](./client/README.md) | `@mr/core-network/client/…` | `WSPool` — cliente WebSocket; `factoryCache<T>()` — caché genérica; `randomUA()` — User-Agent aleatorio |
@@ -60,6 +63,19 @@ const bin: IResponse<{ id: number }> = {
 
 ---
 
+## Route
+
+Documentación completa en [`route/README.md`](./route/README.md).
+
+Modela una sección de routing HTTP: URLs por idioma, parámetros de URL variables, validación de idioma y ejecución de handlers. Transferido desde `@mr/core-templates/seccion`.
+
+```ts
+import {Route, crearExactGET} from "@mr/core-network/route";
+import type {IRoute, IRouteBuilderOptions, TRouteRunner, TParams} from "@mr/core-network/route";
+```
+
+---
+
 ## Server
 
 Documentación completa en [`server/README.md`](./server/README.md).
@@ -99,4 +115,3 @@ import {randomUA} from "@mr/core-network/client/ua";
 ## Changelog
 
 Consulta [`CHANGELOG.md`](./CHANGELOG.md) para el historial de cambios del paquete.
-

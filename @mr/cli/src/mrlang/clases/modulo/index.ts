@@ -1,13 +1,14 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: aa13679ae61f0fc0b6ac1a49cccaef15
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 1198cdbe3c6a468669580f8f9d4e1597
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {createHash} from "node:crypto";
 
-import {mkdir, safeWrite} from "services-comun/modules/utiles/fs";
-
+import {mkdir, safeWrite} from "../../../utiles/fs";
 import type {Idiomas, TIdiomas} from "../idioma";
 import {IdiomasLoader} from "../idioma/loader";
 import {IModuloJSON} from "./json";
@@ -165,7 +166,7 @@ export abstract class Modulo<T extends IModuloConfig=IModuloConfig> {
     // }
 
     protected async write(dir: string): Promise<void> {
-        await mkdir(dir, true);
+        await mkdir(dir);
 
         await safeWrite(`${dir}/_metadata.json`, JSON.stringify(this.toJSON(), null, 2), true);
         await safeWrite(`${dir}/_values.json`, JSON.stringify(Object.values(this.values).map(actual=>actual?.toJSON()).filter(actual=>actual!=undefined), null, 2), true);

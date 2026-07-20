@@ -12,24 +12,29 @@ yarn mrpack framework --update
 yarn mrpack update
 ```
 
-### Compilar servicios
+### Compilar servicios (una única vez)
 ```bash
 yarn mrpack devel -c
 ```
 
-### Compilar TODOS los servicios
+### Compilar servicios en modo watch
 ```bash
-yarn mrpack devel -c -f
+yarn mrpack devel -c -w
 ```
 
-### Compilar y ejecutar servicios
+### Compilar TODOS los servicios en modo watch
 ```bash
-yarn mrpack devel -c -e
+yarn mrpack devel -c -f -w
 ```
 
-### Compilar y ejecutar TODOS los servicios
+### Compilar y ejecutar servicios en modo watch
 ```bash
-yarn mrpack devel -c -e -f
+yarn mrpack devel -c -e -w
+```
+
+### Compilar y ejecutar TODOS los servicios en modo watch
+```bash
+yarn mrpack devel -c -e -f -w
 ```
 
 ### Ejecutar servicios

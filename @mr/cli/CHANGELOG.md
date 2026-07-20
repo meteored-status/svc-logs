@@ -2,6 +2,1318 @@
 
 ---
 
+## 2026.7.17
+
+### Added — `src/mrpack/clases/init/ignore.ts`
+
+- [Jose] **`mrpack init` añade `.codex/` al `.gitignore` generado**: la plantilla `IGNORE`
+  incluye ahora la entrada `.codex/`, de modo que el directorio de configuración local de
+  Codex quede ignorado automáticamente al ejecutar `mrpack init` en cualquier monorepo,
+  sin necesidad de añadirlo a mano al `.gitignore`.
+
+### Added — `src/mrpack/clases/init/symlinks.ts`, `src/mrpack/clases/init.ts`
+
+- [Jose] **`mrpack init` crea/corrige el enlace `CLAUDE.md` → `@mr/core/dev/CLAUDE.md`**:
+  Claude Code no lee `AGENTS.md` automáticamente (solo `CLAUDE.md`/`CLAUDE.local.md`), así
+  que se añade una nueva `initClaude()`, análoga a `initAgents()`, que gestiona ese symlink.
+  El fichero canónico `@mr/core/dev/CLAUDE.md` contiene dos imports (`@AGENTS.md` y
+  `@.github/copilot-instructions.md`), la sintaxis nativa de Claude Code para incluir
+  contenido de otro fichero, evitando duplicar las instrucciones ya mantenidas en
+  `AGENTS.md`/`.github/copilot-instructions.md`. Nótese que la mención a
+  `.github/copilot-instructions.md` dentro del propio `AGENTS.md` es solo texto entre
+  backticks (no un import), por lo que su contenido solo llega a Claude a través de este
+  segundo import explícito en `CLAUDE.md`. Extraída además `initSymlinkFichero()` (helper
+  compartido por `initAgents`/`initClaude`) para no triplicar la lógica de comprobar/recrear
+  un symlink de fichero simple.
+
+### Added — `src/mrpack/clases/init/symlinks.ts`, `src/mrpack/clases/init.ts`, `src/mrpack/clases/init/ignore.ts`
+
+- [Jose] **`mrpack init` crea/corrige el enlace de directorio `.claude` →
+  `@mr/core/dev/.claude`**: nueva `initClaudeDir()`, con la misma forma que `initGithub()`
+  (junction en Windows, symlink relativo en Unix) — a diferencia de `initAgents()`/`initClaude()`,
+  que symlinkean un fichero simple. El directorio canónico declara el hook `Stop` que hace
+  cumplir de forma determinista el mantenimiento de CODEMAP.md/CHANGELOG.md
+  (`.claude/hooks/check-codemap.mjs`, ver el changelog de `@mr/core-dev`), y se propaga así a
+  cualquier monorepo que sincronice este framework, con rutas más simples que un symlink de solo
+  `settings.json` (`.claude/hooks/...` en vez de `@mr/core/dev/.claude/hooks/...`).
+  `.claude/settings.local.json` (local) se excluye tanto del envío del framework vía
+  `@mr/core/dev/.claude/.mr-ignore` como del `.gitignore` de cada monorepo consumidor —nueva
+  entrada `**/.claude/settings.local.json` en la plantilla `IGNORE` de `init/ignore.ts`—, así
+  que nunca queda trackeado por git independientemente del path físico real. Si
+  `{basedir}/.claude` ya existía como directorio real (con un `settings.local.json` de antes de
+  tener este framework), la nueva `migrarArchivosLocales()` mueve sus entradas a
+  `@mr/core/dev/.claude/` (sin sobreescribir lo que ya hubiera) antes de sustituirlo por el
+  symlink, para no perder configuración local del desarrollador.
+
+### Changed — `src/mrpack/clases/workspace/service.ts`, `src/mrpack/clases/config/*.ts`, `src/mrpack/clases/init/config-workspaces.ts`
+
+- [Jose] **`config.workspaces.json` agrupa ahora los workspaces por `deploy.type` en vez de
+  usar listas planas `devel`/`packd`**: las antiguas propiedades
+  `devel: {available, disabled}` / `packd: {available, disabled}` (listas de nombres,
+  compartidas entre todos los workspaces del monorepo sin distinguir su tipo) se sustituyen
+  por una única propiedad `workspaces`, con hasta 4 sub-propiedades opcionales —`browser`,
+  `cronjobs`, `jobs`, `services`— según el `deploy.type` de cada workspace (nueva
+  `grupoDeploy()`, que traduce `ManifestDeploymentKind` al grupo correspondiente; `worker` no
+  tiene grupo gestionable). Dentro de cada grupo, cada workspace tiene un objeto con dos
+  flags booleanos opcionales `ejecutar`/`compilar` (nueva `IWorkspaceFlags`; ausente =
+  habilitado, igual que "no estar en `disabled`" en el formato antiguo; nombres alineados con
+  los ya usados internamente en `Service`/`IService.compilar`/`.ejecutar`). Nueva
+  `flagsWorkspace()` busca los flags de un workspace por nombre en los 4 grupos (los nombres
+  son únicos en todo el monorepo), usada tanto por `Service`/`Service.updateGlobal()` como por
+  el menú interactivo `gestionarLista()` (`config/workspaces.ts`).
+  `listarWorkspacesConInfo()`/`leerCapacidades()` (`config/datos.ts`) devuelven ahora también
+  el `grupo` de cada workspace y excluyen los que no tengan grupo gestionable. `initConfig()`
+  (`init/config-workspaces.ts`) migra automáticamente tanto el formato antiguo (listas planas
+  `devel.disabled`/`packd.disabled`) como el intermedio (`workspaces.<grupo>.<nombre>.packd`/
+  `.devel`, nombre usado brevemente antes de renombrarlos a `compilar`/`ejecutar`) la primera
+  vez que se regenera el fichero tras esta actualización.
+- [Jose] **Eliminada la propiedad `services` de `config.workspaces.json`**: era un mapa
+  `Record<string, string>` documentado como "variables de entorno adicionales por servicio",
+  pero un examen del código confirmó que nunca se leía en ningún sitio (solo se preservaba de
+  forma acrítica en cada regeneración vía `initConfig()`) — no existía ningún punto donde se
+  inyectaran esas variables en el entorno de un proceso `spawn`. Se deja de generar; los
+  ficheros existentes que aún la tuvieran simplemente la pierden en la siguiente regeneración,
+  sin que ningún consumidor real se vea afectado.
+- [Jose] **`i18n` pasa de propiedad plana (`i18n: boolean`) a `workspaces.i18n` (objeto), como
+  primera propiedad de `workspaces` y solo presente si el proyecto tiene workspace `i18n`
+  (`existeI18n()`, reutilizada desde `config/datos.ts` en `initConfig()`)**: nueva
+  `IConfigWorkspacesI18n` con dos flags — `enabled` (equivalente al `i18n` antiguo; por
+  defecto `true`; gatea si `I18N.checkCompilar()` llega a lanzar `mrlang generate` al arrancar
+  la compilación, sin cambios en ese mecanismo) y `watch` (nuevo; por defecto `false`). Antes,
+  el modo watch del workspace `I18N` heredaba siempre el flag global `-w/--watch` de `mrpack
+  devel` (`ejecucion.watch`, igual que cualquier otro `Workspace`); ahora `devel.ts` lo fija
+  de forma independiente con `workspaces.i18n.watch`, permitiendo que la generación de i18n
+  quede observando cambios aunque el resto de la compilación no esté en modo watch (o
+  viceversa). `initConfig()` migra automáticamente el `i18n: boolean` a nivel raíz del formato
+  antiguo (`watch` siempre parte de `false` en esa migración, al no existir equivalente previo).
+
+### Fixed — `src/mrpack/clases/workspace/i18n.ts`
+
+- [Jose] **`mrpack devel -c -w` se quedaba bloqueado justo tras "Iniciando generación de
+  idiomas" cuando `workspaces.i18n.watch` es `false` (el valor por defecto)**: `I18N.initCompilar()`
+  esperaba (`await deferred.promise`) a que el proceso `mrlang generate` escribiera al menos una
+  línea por stdout/stderr para considerarlo arrancado, pero `Generate.run()`
+  (`mrlang/clases/generate.ts:85-91`) solo escribe algo por consola cuando `watch===true` — sin
+  `--watch`, el proceso termina limpiamente sin emitir ninguna línea, así que `deferred` nunca se
+  resolvía y `devel.ts` se quedaba esperando `await i18n.init()` para siempre, sin llegar
+  siquiera a crear los `Service` del resto de workspaces (`logs`, etc.). Antes de desacoplar
+  `I18N.watch` del flag global `-w` (cambio anterior de esta misma entrada), este camino no se
+  ejercitaba en la práctica porque `-w` implicaba siempre `I18N.watch=true` y por tanto siempre
+  había log. Corregido añadiendo un handler `close` al proceso (mismo patrón que ya usa
+  `Service.initCompilar()` con `notificarCompilacionExitosa()`) que resuelve `deferred` si aún no
+  se había resuelto por stdout/stderr.
+
+### Changed — `src/mrpack/clases/config/menu.ts`, `src/mrpack/clases/config/workspaces.ts`
+
+- [Jose] **`mrpack config` → "Gestionar workspaces" pasa de un submenú de 3 pantallas a una
+  única pantalla**: antes había que entrar por separado a "Compilar", "Ejecutar" y "Generar
+  i18n" (cada una con su propia lista de checkboxes o su propio selector ON/OFF). Ahora
+  `gestionarWorkspaces()` construye una sola matriz con la fila `i18n` primero (solo si el
+  proyecto tiene ese workspace, con casillas `enabled`/`watch`) y el resto de workspaces a
+  continuación en orden alfabético, cada uno con las casillas `compilar`/`ejecutar` que le
+  apliquen según sus capacidades — un workspace sin ninguna casilla aplicable no aparece.
+  Todo se confirma y persiste con un solo `Intro`. Nueva primitiva `alternarMatriz()` en
+  `config/menu.ts` (sustituye a `alternarLista`/`IToggleItem`, eliminados por quedar sin
+  otros usos): cada fila puede tener un número distinto de casillas, navegables con `←`/`→`
+  dentro de la fila activa (`↑`/`↓` sigue moviendo entre filas; `a`/`n` marcan/desmarcan
+  todas las casillas de todas las filas). `gestionarLista()`/`gestionarI18n()`
+  (`config/workspaces.ts`) desaparecen, fusionadas en la nueva `gestionarWorkspaces()`.
+
+### Fixed — `src/mrpack/clases/config/menu.ts`
+
+- [Jose] **`alternarMatriz()`: las casillas no quedaban alineadas entre filas con distinto
+  contenido**: la fila `i18n` (`enabled`/`watch`) y las filas de workspace (`compilar`/`ejecutar`)
+  tienen etiquetas de distinta longitud, y al unir las casillas de cada fila sin normalizar su
+  ancho, la segunda casilla arrancaba en una columna distinta según la fila. Se calcula ahora
+  un ancho fijo por columna (`anchoColumnas[j]`, máximo de `cb.label.length` entre todas las
+  filas que tienen casilla en esa posición) y se aplica `padEnd()` a la etiqueta antes de
+  colorearla, de modo que todas las casillas de una misma columna arrancan en la misma posición
+  horizontal independientemente de la fila.
+
+### Changed — `src/mrpack/clases/workspace/service.ts`, `src/mrpack/clases/init/config-workspaces.ts`, `src/mrpack/clases/config/frameworks.ts`
+
+- [Jose] **`patch` pasa de propiedad a nivel raíz a `framework.patch`**, como primera
+  propiedad del objeto `framework` (antes de `framework.updates`): `IConfigServices.patch`
+  desaparece, sustituido por `IConfigServices.framework.patch`. `initConfig()`
+  (`init/config-workspaces.ts`) migra automáticamente el `patch` legacy a nivel raíz
+  (`anterior?.framework?.patch ?? anterior?.patch`) la primera vez que se regenera el fichero.
+  `gestionarPatches()` (`config/frameworks.ts`) lee y elimina ahora `config.framework?.patch`
+  en vez de `config.patch`. El runner que realmente consume este cursor,
+  `@mr/core/dev/patches/index.mjs` (paquete framework aparte, no TypeScript), se actualiza en
+  el mismo cambio para no desincronizarse — ver el changelog de `@mr/core-dev`. `gestionarPatches()`
+  trata además `framework.patch === ""` igual que ausente (`hayPatch`), coherente con que tanto
+  `sanitizePatch()` como `getPatchCode()` de `index.mjs` ya normalizan una cadena vacía a "sin
+  patch" — dejar `framework.patch: ""` a mano en el fichero es una forma válida de forzar que
+  `patch:apply` reprocese todas las reglas desde cero sin tener que borrar la propiedad entera.
+
+---
+
+## 2026.7.13
+
+### Added — `src/mrpack/clases/init/run.ts`, `src/mrpack/clases/init.ts`
+
+- [Jose] **`mrpack init` genera acciones de depuración por workspace en `.run/`**: nueva
+  función `initRun()` que crea, en la raíz del proyecto, un fichero
+  `.run/{type}-{service}.run.xml` (acción `ejecutar => {type} => {service}` de JetBrains) por
+  cada workspace cuyo `deploy.type` sea `service`/`cronjob`/`job` y que tenga `enabled: true`,
+  `devel.enabled: true` y `build.framework: "meteored"`, permitiendo depurarlo
+  individualmente (`yarn workspace {service} run devel`) sin configuración manual. Si `.run/`
+  no existe se crea; si ya existe, se eliminan las acciones de workspaces que hayan dejado de
+  cumplir esas condiciones (renombrados, deshabilitados, eliminados…) y se regeneran las
+  vigentes, respetando cualquier otro `.run.xml` no gestionado por `mrpack`.
+
+### Changed — `package.json`
+
+- [Jose] `dd-trace` actualizado de `^5.113.0` a `^6.2.0`. Revisado el *changelog* oficial
+  del major: los *breaking changes* de la v6 (Node.js ≥22 como mínimo soportado, retirada de
+  APIs ya deprecadas de AppSec/plugins y cambios en Test Optimization) no afectan al uso
+  actual (`tracer.init()`, `tracer.trace`, `formats` de `dd-trace/ext`, spans manuales en
+  HTTP/WebSocket). Sin cambios de código necesarios.
+
+### Fixed — `src/esbuild.config.mjs`
+
+- **`tscBin` fallaba con `ERR_PACKAGE_PATH_NOT_EXPORTED` tras actualizar a TypeScript 7**:
+  `require.resolve("typescript/bin/tsc")` dejó de funcionar porque TypeScript 7 ya no
+  expone el subpath `./bin/tsc` en el campo `exports` de su `package.json` (aunque el
+  fichero sigue existiendo físicamente). Ahora `tscBin` se resuelve componiendo la ruta a
+  partir de `typescript/package.json` (`dirname(require.resolve("typescript/package.json"))`
+  + `bin/tsc`), evitando depender de subpaths restringidos por `exports`.
+
+### Changed — `package.json`, `README.md`
+
+- **`typescript` revertido de `^7.0.2` a `^6.0.3`**: el compilador nativo de TypeScript 7
+  (Go, "Corsa"/`tsgo`) todavía no soporta resolución de módulos bajo Yarn PnP (ver
+  [microsoft/typescript-go#460](https://github.com/microsoft/typescript-go/issues/460),
+  PR [#1966](https://github.com/microsoft/typescript-go/pull/1966) sin fusionar). Con TS7,
+  `tsc --noEmit`/`--watch` no resolvía ningún módulo de workspace (`services-comun/...`,
+  `@mr/core-*`, etc.), aunque esbuild sí compilaba correctamente. Documentada la limitación
+  en `README.md` para no repetir el upgrade hasta que el soporte de PnP esté publicado en
+  una versión estable de TS7.
+
+### Changed — `src/mrpack/clases/**` (refactorización de `mrpack`)
+
+- **Deduplicación y división de módulos grandes**: extraído `ejecutarTablaInteractiva()`
+  compartido en `framework/gestor/index.ts`; extraído `ejecutarConLoginRetry<T>()` en
+  `paquete/storage.ts`; tipado completo de `auto-doc.ts` (sin `any` explícitos, nuevo tipo
+  `JSONValue`/`IEsquema*`); `init.ts` dividido en 8 submódulos bajo `clases/init/` (`git.ts`,
+  `legacy.ts`, `scripts.ts`, `dependencias.ts`, `symlinks.ts`, `yarnrc.ts`,
+  `config-workspaces.ts`); unificada la lógica duplicada de `getBundlerCoherente`/
+  `getBundlerNormalizado` (`workspace/service.ts` e `init.ts`) en `clases/bundler.ts`;
+  `workspace/service.ts` y `framework/gestor/tabla.ts` reducidos extrayendo funciones puras
+  de formateo/parsing (`workspace/service-log-utils.ts`) y de cálculo/renderizado de diff
+  (`framework/gestor/diff-render.ts`). De paso se corrigieron dos bugs reales: un bucle
+  infinito potencial en `extractFileRefs` (faltaba avanzar `match` en una rama con
+  `continue`) y una discrepancia entre las dos copias de `getBundlerCoherente` (una de ellas
+  no comprobaba `reflect-metadata`).
+- **Nuevo diseño de consola en `clases/log.ts`**: `Log.info`/`Log.error` escriben ahora
+  directamente vía `process.stdout.write`/`process.stderr.write` en vez de
+  `console.info`/`console.error`, evitando que `console.group()`/`console.groupEnd()`
+  indentara sus líneas y las mezclara de forma confusa con el prefijo
+  `[hora][tipo][etiqueta]` propio de `Log`. El anidamiento lógico de secciones (antes
+  representado con indentación) se representa ahora dentro de la propia etiqueta mediante
+  una pila interna (p.ej. `[init]` → `[init cliente]` → `[init cliente yarn]`, sin duplicar
+  cuando la etiqueta coincide con la del grupo más interno). Nuevos métodos `Log.group(cfg,
+  ...txt)`/`Log.groupEnd()` sustituyen al patrón previo `Log.info(...); console.group();
+  ...; console.groupEnd();` en `init.ts` y submódulos, `yarn.ts` y `framework/cliente.ts`.
+  Los corchetes `[ ]` del prefijo se colorean en morado para diferenciarlos del contenido.
+- **Limpieza de imports**: eliminados imports sin usar (`IConfigServices` en `devel.ts`,
+  `Manifest` en `workspace/service.ts`) y convertidos a `import type` los imports usados
+  solo como tipo (`auto-doc.ts`, `workspace/compilar.ts`, `workspace/i18n.ts`,
+  `workspace/service.ts`, `mrpack.ts`, `modulo.ts`).
+- **Segunda pasada de limpieza de imports/`type` y parámetros no usados**: revisión completa
+  de `mrpack/` con `tsc --noEmit --noUnusedLocals --noUnusedParameters --isolatedModules
+  --verbatimModuleSyntax`. Eliminados imports sin usar en `manifest/workspace/legacy.ts`;
+  convertidos a `import type`/especificador `type` los imports usados solo como tipo en
+  `deployment/imagen/index.ts`, `deployment/lambda/index.ts` y `modulos/auto-doc.ts`;
+  renombrados con prefijo `_` los parámetros no usados de `modulo.ts::parsePositionals` y
+  `mrpack.ts::parseParams`; eliminado el campo muerto `consolaEscribiendo` de `Paquete`
+  (se asignaba pero nunca se leía); eliminado un bloque de código comentado muerto en
+  `workspace/i18n.ts`. `horaLocal`/`fechaHoraLocal`, duplicadas entre `clases/log.ts` y
+  `workspace/service-log-utils.ts`, se extrajeron al nuevo `utiles/fecha.ts`.
+- **División de `paquete/index.ts`** (1073 → 847 líneas), con el mismo criterio de extraer
+  solo las partes puras/de bajo acoplamiento aplicado antes a `Service`/`GestorTabla`:
+  nuevo `paquete/consola.ts` (clase `PaqueteConsola` + `ConsolaEstado`/`STATUS`/`IConsola`,
+  encapsula el estado de renderizado de la consola de progreso, antes 7 campos sueltos en
+  `Paquete`); nuevo `paquete/archivos-cambiados.ts` (`EstadoArchivo`/`OrigenArchivo`/
+  `IArchivoCambiado` + la función pura `combinarArchivosCambiados()`, reexportados desde
+  `paquete/index.ts` para no romper a `framework/gestor/tabla.ts`/`diff-render.ts`); y la
+  función `capturarDatosPush()` movida desde un método privado de `Paquete` a
+  `paquete/push-log.ts`. El resto de `Paquete` (`pull`/`push`/`reset`/`applyUpdate`) se deja
+  intacto por su fuerte acoplamiento a estado mutable y E/S real.
+
+---
+
+## 2026.7.2+8
+
+### Fixed — `src/mrpack/clases/manifest/workspace/build/index.ts`, `src/mrpack/clases/init.ts`
+
+- **`build.bundler` podía derivar en `esbuild` para workspaces con `reflect-metadata`**:
+  esbuild no emite `decoratorMetadata` (opción `emitDecoratorMetadata` de TypeScript), por
+  lo que los decoradores que dependen de `reflect-metadata` en tiempo de ejecución (p. ej.
+  DI basada en tipos) dejaban de funcionar en workspaces compilados con esbuild, aunque el
+  `tsconfig.json` tuviera `emitDecoratorMetadata`/`experimentalDecorators` activados.
+  - `ManifestWorkspaceBuildLoader.getBundler()` ahora recibe también las `dependencies` del
+    `package.json` del workspace y fuerza `rspack` (que sí soporta `decoratorMetadata` vía
+    `builtin:swc-loader`) cuando detecta `reflect-metadata`, tanto si el bundler se deriva
+    automáticamente como si viene informado explícitamente como `esbuild` en `mrpack.json`.
+  - Existía una segunda implementación independiente de esta misma lógica en `init.ts`
+    (`getBundlerCoherente`/`getBundlerNormalizado`, usada por `checkScripts` en `yarn mrpack
+    init`) que no conocía esta excepción y revertía el bundler a `esbuild` (y el script
+    `packd` de `package.json` a `yarn g:esbuild`) en cada ejecución de `init`. Se ha
+    aplicado la misma corrección ahí, propagando `paquete.dependencies` desde
+    `loadConfig()`/`initWorkspace()`.
+
+### Changed — `README.md`
+
+- Documentada la excepción de `reflect-metadata` en la normalización de `build.bundler`.
+
+---
+
+## 2026.7.2+7
+
+### Fixed — `src/mrpack/clases/init.ts`
+
+- **Detección de puerto legacy de Next.js incompleta al migrar `scripts.dev`**: la
+  expresión regular usada para preservar el puerto de invocaciones previas exigía
+  literalmente `yarn run next dev -p <n>`, por lo que variantes igualmente válidas no se
+  reconocían y el puerto se perdía (se aplicaba `8080` por defecto). Por ejemplo, con el
+  script `"yarn run next dev -p 13797"` el problema no se reproducía, pero sí con formas
+  habituales como `"next dev -p 13797"` (sin `yarn run` delante, ejecutando el binario
+  directamente) o `"yarn run next dev --port 13797"` (usando `--port` en vez de `-p`).
+  - La detección ahora usa `/next\s+dev\b.*?(?:-p|--port)[=\s]+(\d+)/`, que reconoce el
+    puerto independientemente de si el script empieza por `yarn`, `yarn run` o nada,
+    admite tanto `-p` como `--port` (con espacio o `=`), y tolera flags adicionales antes o
+    después del puerto (p. ej. `--turbo`).
+
+### Changed — `README.md`
+
+- Actualizada la descripción de la preservación de puerto en `scripts.dev` para reflejar
+  el nuevo patrón de detección, más permisivo con las variantes de invocación de `next dev`.
+
+---
+
+## 2026.7.2+6
+
+### Changed — `src/mrpack/clases/workspace/service.ts`
+
+- **`mrpack devel` ya no escribe en disco al detectar cambios en `mrpack.json`**: el
+  watcher de workspace (`Service.updatePackageFile`) normalizaba `build.bundler` y
+  reescribía `scripts` de `package.json` (vía `Service.applyScripts`/
+  `updateWorkspaceScripts`) en **cada** evento de `change` sobre `mrpack.json` durante la
+  ejecución de `devel`, no solo en la primera lectura. Esto provocaba escrituras
+  recurrentes en `package.json` mientras el proceso estaba en marcha, además de duplicar
+  (con matices) la normalización que ya hace `mrpack init`.
+  - `updatePackageFile()` ahora usa `ManifestWorkspaceLoader.loadSync()` (lectura pura, sin
+    persistencia) en lugar de `load()`, y ya no llama a `config.save()` ni reescribe
+    `package.json`. Sigue detectando si el bundler coherente ha cambiado para reiniciar el
+    compilador cuando corresponde, y actualiza `this.config` en memoria para reflejar el
+    resto de cambios (p. ej. `enabled`), pero el fichero nunca se toca durante este ciclo.
+  - Eliminados `Service.applyScripts` y `updateWorkspaceScripts` (código muerto tras el
+    cambio anterior) y la interfaz `IPackageJsonWorkspace`, ya sin uso.
+  - La normalización de `scripts` de `package.json` (incluida la migración de puerto de
+    `g:nextjs`) sigue ocurriendo únicamente en la fase de primera lectura: `yarn mrpack init`
+    (`checkScripts` en `init.ts`).
+
+### Changed — `README.md`
+
+- Documentado que el watcher de `mrpack devel` solo observa `mrpack.json` (lectura en
+  memoria) y nunca escribe en él ni en `package.json`; esa normalización/escritura queda
+  reservada a la fase de primera lectura (arranque del proceso y `mrpack init`).
+
+---
+
+## 2026.7.2+5
+
+### Fixed — `src/mrpack/clases/manifest/index.ts`, `src/mrpack/clases/workspace/service.ts`
+
+- **Reseteo destructivo de `mrpack.json` al editarlo a mano durante `mrpack devel`**: el
+  watcher de workspace (`Service.initWatcher`) reacciona a cada evento de `change` sobre
+  `mrpack.json` invocando `ManifestWorkspaceLoader.load()`. Si el fichero se guardaba en un
+  estado transitorio con JSON sintácticamente inválido (habitual mientras se edita a mano),
+  `ManifestLoader.load()` capturaba **cualquier** error de `readJSON` —incluido un
+  `SyntaxError` de parseo— y lo trataba igual que un fichero inexistente: reseteaba el
+  manifest a los valores por defecto y los persistía inmediatamente en disco, destruyendo
+  toda la personalización del `mrpack.json` en curso de edición.
+  - `ManifestLoader.load()` ahora distingue el código de error: solo si es `ENOENT`
+    (fichero inexistente) se resetea a los valores por defecto y se guarda. Para cualquier
+    otro error (JSON inválido) se **rechaza la promesa** sin tocar el manifest en memoria
+    ni escribir el fichero.
+  - `Service.updatePackageFile()` ya capturaba los errores del watcher (`initWatcher` hace
+    `.catch(err => Log.error(...))` sobre `updatePackageFile()`), por lo que ahora, ante un
+    `mrpack.json` temporalmente inválido, el error se registra en el log y el workspace
+    conserva la configuración previa (`anterior`) sin sobrescribir nada; la siguiente
+    escritura válida del fichero se recoge con normalidad en el próximo evento `change`.
+  - Se añade `this.config.catch(() => undefined)` en el constructor de `Service` para evitar
+    un aviso de `unhandledRejection` si `mrpack.json` ya es inválido al arrancar el proceso,
+    sin alterar el rechazo real que reciben quienes hagan `await this.config`.
+
+---
+
+## 2026.7.2+4
+
+### Fixed — `src/mrpack/clases/init.ts`, `src/mrpack/clases/workspace/service.ts`, `package.json`
+
+- **Migración de `scripts.dev` para Next.js preservando puerto**: al normalizar workspaces
+  `node+nextjs`, `mrpack init` y el watcher de `mrpack devel` detectan el puerto previo en
+  `scripts.dev` tanto en formato `NEXTJS_PORT=<n>` como en formato legacy
+  `yarn run next dev -p <n>`, y lo convierten a `NEXTJS_PORT=<n> yarn g:nextjs`.
+  Si no hay puerto previo detectable, se usa `8080` por defecto.
+- **`g:nextjs` ahora respeta `NEXTJS_PORT`** en el script raíz: ejecuta
+  `cd "$INIT_CWD" && yarn run next dev -p ${NEXTJS_PORT:-8080}`, permitiendo fijar el puerto
+  desde `scripts.dev`, shell o CI sin perder el fallback.
+
+### Changed — `README.md`
+
+- Documentada la nueva normalización de `scripts.dev` para Next.js, la preservación de puertos
+  legacy y el fallback a `8080`.
+
+---
+
+## 2026.7.2+3
+
+### Fixed — `src/mrpack/utiles/merge.ts`, `package.json` (sustitución de `diff3` por `node-diff3`)
+
+- **`ReferenceError: ed is not defined` al fusionar ficheros con `applyUpdate`**: la librería
+  `diff3@0.0.4` (`onp.js`, algoritmo O(NP)) asigna la variable `ed` sin declararla
+  (`ed = delta + 2 * p;`), lo que funciona como global implícita en scripts sueltos pero lanza
+  `ReferenceError` en el contexto estricto en el que se ejecuta el CLI compilado. El fallo
+  ocurría dentro de `Object.compose` (`onp.js`) → `diff3MergeIndices`/`diff3Merge`
+  (`diff3/diff3.js`) → `merge3` (`utiles/merge.ts`) → `PaqueteFile.mezclar`/`checkCambios`
+  → `PaqueteDirectoryRoot.actualizarVersion` → `Paquete.applyUpdate`, abortando la actualización
+  de cualquier framework que requiriese un merge de 3 vías. Este error solo se hizo visible
+  gracias al fix anterior (`2026.7.2+2`) que persiste `Paquete.error` en el log.
+  - `diff3@0.0.4` está sin mantenimiento (última publicación en 2016) y el bug no puede
+    corregirse mediante `yarn patch` de forma portable, ya que el patch se aplica solo en
+    el propio monorepo (no viaja con la dependencia a otros proyectos que consuman `@mr/cli`).
+    En su lugar se ha sustituido por [`node-diff3`](https://www.npmjs.com/package/node-diff3)
+    (mantenimiento activo, incluye sus propios tipos TypeScript), eliminando `diff3` y
+    `@types/diff3` de `package.json` y añadiendo `node-diff3` como devDependency.
+  - `utiles/merge.ts` ahora importa `{diff3Merge}` desde `node-diff3` en lugar del default
+    export de `diff3`. La forma del resultado (`{ok: string[]} | {conflict: {a,o,b,...}}`) es
+    compatible, por lo que el resto de la lógica de `merge3()` no ha cambiado.
+  - También se ha eliminado la dependencia (no utilizada) `diff3`/`@types/diff3` de
+    `framework/services-comun/package.json`, que quedó huérfana tras una refactorización
+    anterior (`merge3` se movió a `@mr/cli/src/mrpack/utiles/merge.ts`).
+
+---
+
+## 2026.7.2+2
+
+### Fixed — `framework/gestor/acciones.ts`, `framework/gestor/logs.ts`, `paquete/index.ts`
+
+- **El error de `applyUpdate` no se veía reflejado en ningún sitio**: cuando la actualización
+  de un framework fallaba (excepción durante la descarga o el merge), `applyUpdate` devolvía
+  `entradas: []`, por lo que `ejecutarAcciones` nunca invocaba `escribirLog` y el log
+  `tmp/log/<paquete>.pull.md` no se generaba (o quedaba con el contenido de una ejecución
+  anterior). El usuario solo veía `[ERROR]` en la tabla de progreso sin ninguna pista adicional.
+  - `Paquete` ahora expone `public error: string|undefined`, poblado en el `catch` de
+    `applyUpdate` con `err.stack ?? err.message`.
+  - `escribirLog()` acepta un nuevo parámetro opcional `error` y, si está presente, añade una
+    sección `## Error` al log (antes de `## Salida del proceso`) con el mensaje/stack completo.
+  - `ejecutarAcciones` ahora escribe el log también cuando `info.paquete.error !== undefined`
+    (aunque `entradas` esté vacío) en los tres flujos de actualización (`instalar`, `actualizar`
+    y `actualizar+enviar`), y añade un aviso `⚠` con la ruta al log. En `actualizar+enviar`,
+    además, se omite el `push` del paquete si la actualización falló.
+
+### Changed — `README.md`, `CODEMAP.md`
+
+- Documentada la nueva sección `## Error` en los logs de actualización y el campo
+  `Paquete.error`/parámetro `escribirLog(..., error)`.
+
+---
+
+## 2026.7.2
+
+### Changed — `init.ts` · `workspace/service.ts`
+
+- **Normalización de `build.bundler` con override manual permitido en Node**: cuando
+  las reglas de coherencia dan como valor por defecto `esbuild`, `mrpack init` y el
+  watcher de `mrpack.json` en `mrpack devel` ya no fuerzan el cambio si el usuario ha
+  puesto `rspack` explícitamente. Se siguen forzando los casos estrictos:
+  `browser -> rspack`, `php/cfworker -> none`, `node+nextjs -> none`, `node+componentes -> rspack`.
+
+### Changed — `README.md`
+
+- Se actualiza la documentación de `devel` para indicar que el modo watch usa el bundler
+  configurado (`rspack` o `esbuild`) y la de `init` para reflejar las reglas de
+  normalización de `build.bundler` con soporte de override manual a `rspack` en los
+  escenarios Node cuyo valor por defecto sería `esbuild`.
+
+---
+
+## 2026.7.1+1
+
+### Fixed — `framework/gestor/index.ts`
+
+- **`actualizarTodo` solo muestra en la tabla los paquetes con update disponible**: en modo
+  interactivo, `GestorTabla` recibía la lista completa de paquetes instalados (incluyendo los
+  que ya estaban al día), mostrando filas innecesarias con la acción fija en `nada`. Ahora,
+  siguiendo el mismo patrón que `enviarTodo` y `resetearTodo`, se filtra `infos` a los paquetes
+  con `instalado && tieneUpdate` antes de construir la tabla, y las acciones elegidas se
+  remapean al array completo para `ejecutarAcciones`. Afecta tanto a `yarn mrpack devel -c`
+  (chequeo automático de frameworks) como a `yarn mrpack framework --update`.
+
+### Changed — `README.md`
+
+- Corregida la tabla de "Modos de tabla" (`--update` ahora indica "Solo con update disponible"
+  en vez de "Todos") y ampliada la nota sobre `devel -c` para reflejar que la tabla de
+  actualización de frameworks solo lista los paquetes con update pendiente.
+- Añadida nota sobre el filtrado previo de `infos` en `actualizarTodo`, `enviarTodo` y
+  `resetearTodo` en la sección de referencia de `GestorTabla`.
+
+---
+
+## 2026.6.30+3
+
+### Fixed — `init.ts`
+
+- **Limpieza de `@mr/cli/bin/mrdev.js` durante `mrpack init`**: en la fase de borrado de
+  archivos innecesarios (`deleteFiles`) se añade `@mr/cli/bin/mrdev.js` a la lista de
+  artefactos legacy eliminables (junto a `@mr/cli/status.json`), para evitar que permanezca
+  tras inicializar el monorepo.
+
+### Changed — `README.md`
+
+- Documentada la limpieza de artefactos legacy de `@mr/cli` (`status.json` y `bin/mrdev.js`)
+  dentro de la sección del comando `mrpack init`.
+
+---
+
+## 2026.6.30+2
+
+### Fixed — `config/datos.ts` · `init.ts`
+
+- **Workspaces `nextjs` ahora aparecen en `devel.available` / `devel.disabled`**: la
+  condición `ejecutable` en `leerCapacidades` (`config/datos.ts`) y en la regeneración de
+  `config.workspaces.json` dentro de `mrpack init` (`init.ts`) requería erróneamente
+  `framework === "meteored"`, excluyendo los proyectos Next.js.
+  Se simplifica a `runtime === "node"`, alineándola con la lógica real de
+  `Service.checkEjecucion` que solo excluye los runtimes `browser`, `cfworker` y `php`.
+  Los proyectos Next.js con `deploy.runtime = "node"` ya aparecen en las listas y pueden
+  activarse o desactivarse desde `mrpack config` y al ejecutar `mrpack init`.
+
+### Changed — `config/workspaces.ts`
+
+- JSDoc de `filtrarPorClave` y `gestionarLista` actualizados para reflejar las nuevas
+  reglas de visibilidad de la lista `devel`.
+
+---
+
+## 2026.6.30+1
+
+### Fixed — `framework/gestor/tabla.ts` · `utiles/tty.ts`
+
+- **Bordes descuadrados en el panel diff cuando el autor contiene acentos**: en macOS,
+  git puede devolver nombres de autor en forma NFD (Unicode descompuesto), donde p.ej.
+  `í` = `i` + combining acute → `.length` = 2 pero ocupa 1 columna en el terminal.
+  Se añade `anchoVisible(str)` en `utiles/tty.ts` (elimina códigos ANSI y normaliza a NFC
+  antes de contar) y se usa en todos los puntos de cálculo de padding: `bordeado`,
+  `indicadorScroll`, `panelMagenta.filaColoreada`, `panelMagenta.fila`, `filaTit` y
+  `Render.contarFisicas`.
+
+### Changed — `workspace/service.ts`
+
+- **`PAUSABLES` incluye `BuildFW.nextjs`**: los workspaces con framework `nextjs` activan
+  ahora el timeout de pausa del compilador (5 minutos de inactividad), igual que los
+  workspaces con framework `meteored`. Antes solo los workspaces `meteored` se pausaban
+  automáticamente.
+
+- **`checkEjecucion` excluye `Runtime.php`**: los workspaces con `deploy.runtime = "php"`
+  ya no pueden arrancarse en modo ejecución (`devel -e`). Se añade `Runtime.php` a la
+  lista de runtimes excluidos junto a `Runtime.browser` y `Runtime.cfworker`, en
+  coherencia con las reglas de visibilidad que ya aplicaban `mrpack config` y `mrpack init`.
+
+---
+
+## 2026.6.26+6
+
+### Fixed — `init.ts`
+
+- **Corrección de Dockerfile según runtime** (`src/mrpack/clases/init.ts`): durante
+  `mrpack init`, la inserción de `ENV NODE_ENV=production` junto a `COPY ./yarn.lock ./`
+  se aplica únicamente cuando `deploy.runtime === "node"`.
+
+### Changed — Log HTML de push (`push-log.ts`)
+
+- **Campo `proyecto` en el bloque de autoría HTML**: `IPushLogData` tiene el nuevo campo
+  `proyecto: string`, rellenado con `getProyectoUrl(this.basedir)` (URL del remoto git sin
+  credenciales) en paralelo con el procesado de ficheros dentro de `capturarDatosPush`.
+  Se renderiza como enlace clicable en la tabla de metadatos del HTML.
+  `getProyectoUrl` pasa a ser `export` en `root.ts` para permitir su reutilización.
+
+- **Fecha en hora local con zona horaria**: la fecha del push ya no se muestra en UTC sino
+  en la hora local del servidor que realizó el push, con zona horaria IANA y offset explícito.
+  Ejemplo: `2026-06-26 14:32:07 Europe/Madrid (UTC+02:00)`.
+  La lógica se extrajo a la función `formatearFechaLocal(fecha: Date): string`.
+
+- **Logo Meteored en el bloque de autoría**: el header del HTML incluye el logo de Meteored
+  (`https://www.meteored.com/img/web/meteored.svg`) en la esquina superior derecha, alineado
+  con el título mediante flex (`header-top`).
+
+- **Header sticky con compactación al scroll**: el bloque de autoría es `position: sticky;
+  top: 0` y se compacta (solo muestra título y logo) al hacer scroll. El colapso se
+  gestiona mediante `IntersectionObserver` sobre un `<div id="scroll-sentinel">` de altura 0
+  situado justo debajo del header (evita el feedback loop del scroll anchoring).
+  `body { overflow-anchor: none }` desactiva el scroll anchoring para prevenir oscilaciones.
+
+- **Botón "volver arriba"**: `<button id="back-top">` fijo en la esquina inferior-derecha,
+  visible solo cuando el header está compacto; hace `scrollTo({top:0, behavior:'smooth'})`.
+
+- **Exclusión de `bin/min/*` de los diffs**: los ficheros en `bin/min/` no se incluyen en
+  la sección de detalle de cambios, igual que hace `GestorTabla.esDiffable` en `tabla.ts`.
+  El array `diffables` (cambiados sin bin/min) se usa para el TOC y los diffs. El array
+  `cambiados` completo sigue apareciendo en el contador y la lista de ficheros modificados,
+  pero los ficheros `bin/min/*` no tienen enlace (se usa `diffIndexMap` para el mapeo).
+
+- **Ruta GCS simplificada**: de `logs/{fw}/{YYYY-MM-DD}/{dt}_{ver}_{autor}.html` a
+  `logs/{framework}/{version}.html` (nombre fw sanitizado, `+` → `_` en la versión).
+
+- **Límite de líneas**: de 500 a 2000 líneas por fichero para el diff HTML
+  (`MAX_DIFF_LINES_HTML`).
+
+- **Links en lista de ficheros modificados**: cada ítem en la sección "Ficheros modificados"
+  enlaza a su bloque `<details id="diff-N">` correspondiente; los ficheros sin diff
+  (bin/min) aparecen sin enlace.
+
+### Refactored — `push-log.ts`
+
+- **`pad2`** extraída a nivel de módulo (antes definida inline dentro de `generarHtmlPush`).
+- **`formatearFechaLocal`** nueva función de módulo que encapsula el formateo de fecha local.
+- **`CSS_HTML_PUSH`** nueva constante de módulo con la hoja de estilos; `generarHtmlPush`
+  referencia la constante en lugar de declarar `const css = \`…\`` en cada llamada.
+- **`renderizarListaSimple`**: parámetro `conEnlaces: boolean` reemplazado por
+  `diffIndexMap?: Map<string, number>`, permitiendo enlazar solo los ficheros con diff y
+  dejando sin enlace los que están en `bin/min/`.
+
+### Changed — exclusión de diffs adicionales
+
+- **`CHANGELOG.md` y `CODEMAP.md` excluidos de los diffs HTML**: la función `esDiffable`
+  (antes una expresión inline que solo filtraba `bin/min/`) se extrae como función de módulo
+  y amplía los criterios de exclusión: `bin/min/**`, `**/CHANGELOG.md` y `**/CODEMAP.md`.
+  Estos ficheros siguen apareciendo en el contador y la lista de "Ficheros modificados",
+  pero sin enlace ni bloque de diff.
+
+### Fixed — CODEMAP.md
+
+- Eliminada la **duplicación completa** del fichero (todo el contenido aparecía dos veces).
+- Sección `push-log.ts` actualizada: `IPushLogData` con `proyecto`, ruta GCS corregida,
+  helpers internos documentados.
+- Sección `root.ts` actualizada: `getProyectoUrl` exportada, campo `proyecto` en
+  `IPaqueteDirectoryRoot` y en la clase.
+- Grafo de dependencias y notas de convención actualizados con la ruta GCS real y la
+  exclusión de `bin/min/*`.
+
+---
+
+## 2026.6.26+2
+
+### Added
+
+- **Log HTML de push** (`src/mrpack/clases/paquete/push-log.ts` — nuevo fichero):
+  al hacer `send` de un framework, `mrpack` genera un fichero HTML auto-contenido con el
+  detalle del push (autor, versiones, ficheros creados / eliminados / modificados y diff
+  unificado de cada fichero cambiado) y lo sube al mismo bucket de GCS en la ruta:
+
+  ```
+  logs/{framework}/{YYYY-MM-DD}/{datetime}_{version}_{autor}.html
+  ```
+
+  El nombre del framework se sanitiza eliminando `@` y `/` para no crear subjerarquías
+  en el bucket. El diff usa el algoritmo LCS con contexto de 3 líneas y se renderiza con
+  CSS inline para Chrome; los bloques de autoría (`.ts`) se excluyen del diff.
+
+  Método público añadido en `Paquete`:
+  ```ts
+  public async subirLogHtml(): Promise<void>
+  ```
+  llamado automáticamente desde `ejecutarAcciones` en las rutas de envío directo
+  (`aEnviar`) y de actualizar+enviar (`aEnviarConUpdate`).
+
+### Refactored
+
+- **Algoritmo LCS centralizado en `utiles/diff.ts`** (nuevo fichero):
+  el código LCS (`O(m·n)` DP + backtracking) estaba duplicado tres veces:
+  en `GestorTabla.lcsOps`, en `GestorTabla.calcularDiff` y en `push-log.ts`.
+  Ahora el núcleo se reside en:
+
+  ```ts
+  // utiles/diff.ts
+  export function calcularDiffOps(aLines, bLines, maxLineas): IDiffRawOp[] | null
+  export function indicesConContexto(ops, contexto?): Set<number>
+  ```
+
+  `tabla.ts` y `push-log.ts` llaman a estas funciones y solo añaden su propio
+  formato de salida (ANSI para terminal, HTML para logs).
+
+- **Primitivas TTY centralizadas en `utiles/tty.ts`** (nuevo fichero):
+  la clase `Render` (dibujar/limpiar bloque de líneas con borrado preciso) y las
+  funciones `prepararTTY`/`restaurarTTY` estaban definidas en `config/menu.ts` y
+  duplicadas de forma interna en `GestorTabla._dibujarLineas`. Ahora:
+
+  ```ts
+  // utiles/tty.ts
+  export class Render { dibujar(lineas): void; limpiar(): void; }
+  export function prepararTTY(): void
+  export function restaurarTTY(): void
+  ```
+
+  `menu.ts` los importa directamente desde `utiles/tty.ts`.
+  `GestorTabla` usa `this.render: Render` en lugar de `_dibujarLineas` interna
+  (eliminando ~30 líneas de lógica duplicada).
+
+- **CODEMAP.md actualizado**: refleja `push-log.ts`, `diff.ts`, `tty.ts`,
+  `elegirUno` (reemplaza la antigua `conmutar`, que ya no existe) y el diagrama
+  de dependencias actualizado con los nuevos flujos.
+
+---
+
+## 2026.6.26+1
+
+### Added
+
+- **Campo `Proyecto` en el bloque de autoría de ficheros `.ts`** (`src/mrpack/clases/paquete/file.ts`,
+  `directory.ts`, `root.ts`):
+  al hacer `send` de un framework, `mrpack` obtiene la URL del repositorio git remoto
+  (`git remote get-url origin`) y la añade como nueva línea al bloque de cabecera de
+  cada fichero `.ts` modificado, eliminando previamente cualquier credencial embebida
+  (`https://token@host` → `https://host`). Si el repositorio no tiene remoto configurado,
+  la línea se omite sin error.
+
+  El bloque resultante:
+
+  ```typescript
+  /**
+   * Editor: José Antonio Jiménez
+   * Fecha: Fri, 26 Jun 2026 08:00:00 GMT
+   * Hash: abc123…
+   * Versión: 2026.6.26+1-josantoniojimnez
+   * Anterior: 2026.6.25+5-josantoniojimnez
+   * Proyecto: https://github.com/alpred/meteored-web-www.git
+   */
+  ```
+
+  `PATRON_AUTORIA` actualizado para reconocer (y excluir del hash) la nueva línea opcional.
+
+- **Campo `proyecto` en `status.json`** (`src/mrpack/clases/paquete/root.ts`):
+  el mismo valor se persiste en el `status.json` incluido dentro del ZIP subido a GCS.
+  El campo solo aparece cuando la URL no está vacía. Al leer un ZIP antiguo sin el campo,
+  `proyecto` se inicializa a cadena vacía y el ZIP se deserializa sin error.
+
+  ```json
+  {
+    "autor": "José Antonio Jiménez",
+    "fecha": "2026-06-26T08:00:00.000Z",
+    "hash": "abc123…",
+    "hijos": { "…": "…" },
+    "version": "2026.6.26+1-josantoniojimnez",
+    "proyecto": "https://github.com/alpred/meteored-web-www.git"
+  }
+  ```
+
+---
+
+## 2026.6.25+10
+
+### Changed
+
+- **`mrpack devel -c` — `patch:apply` siempre antes de compilar** (`src/mrpack/clases/devel.ts`):
+  anteriormente los patches solo se aplicaban cuando `actualizarTodo` o `init` devolvían
+  cambios (frameworks actualizados / instalados). Ahora `aplicarPatches(basedir)` se
+  invoca **siempre** al final del bloque de inicialización, antes de arrancar los
+  compiladores de los workspaces.
+
+  Esto garantiza que, aunque no haya actualización de frameworks, los patches pendientes
+  (detectados por la propiedad `config.patch` en `config.workspaces.json`) se apliquen
+  en cada arranque de desarrollo. Si `patch:apply` detecta que el estado ya está al día,
+  finaliza de inmediato sin trabajo adicional.
+
+---
+
+## 2026.6.25+9
+
+### Added
+
+- **Nuevo módulo `mrpack config`**: gestor interactivo de `config.workspaces.json`.
+  Abre un menú TUI (modo raw, redibujado sin scroll) con dos opciones principales:
+
+  #### Gestionar workspaces
+
+  Submenú con tres acciones:
+
+  | Acción | Descripción |
+  |--------|-------------|
+  | **Compilar** | Lista de checkboxes (↑↓ + Espacio) de los workspaces gestionables. Marcado → `packd.available` (se compila); desmarcado → `packd.disabled` (no se compila). |
+  | **Ejecutar** | Ídem para `devel.available` / `devel.disabled`. |
+  | **Generar i18n** | Selector de radio ON/OFF para `config.i18n`. Solo aparece habilitado si el directorio `i18n` existe en el monorepo. |
+
+  **Reglas de visibilidad** (aplicadas también al inicializar con `mrpack init`):
+  - Un workspace solo aparece en **Compilar** si `deploy.runtime !== "php"`.
+  - Un workspace solo aparece en **Ejecutar** si `build.framework === "meteored"` **y** `deploy.runtime === "node"`.
+  - Los workspaces que no cumplen la condición se eliminan de ambas listas al guardar.
+
+  #### Gestionar frameworks
+
+  Submenú con dos acciones:
+
+  | Acción | Descripción |
+  |--------|-------------|
+  | **Autoupdates** | Selector de radio (`all` / `daily` / `weekly`) para `framework.updates`. El cursor arranca sobre el valor actualmente configurado. |
+  | **Sistema de Patches** | Muestra el último patch aplicado (`config.patch`) y permite eliminarlo para forzar que `patch:apply` lo reaaplique en el próximo arranque. La opción "Eliminar patch" aparece deshabilitada si no hay ningún patch registrado. |
+
+  #### Primitivas TUI reutilizables (`clases/config/menu.ts`)
+
+  | Primitiva | Navegación | Uso |
+  |-----------|-----------|-----|
+  | `seleccionar<T>` | ↑↓, Intro confirmar, Esc/← cancelar | Menús de navegación |
+  | `elegirUno<T>` | ↑↓, Intro/Espacio confirmar, Esc/← cancelar | Selectores de radio (◉/○) con descripciones tabuladas |
+  | `alternarLista` | ↑↓, Espacio alternar, a/n todos/ninguno, Intro confirmar, Esc cancelar | Listas de checkboxes |
+
+- **`mrpack init` — filtrado consistente de `config.workspaces.json`**: al inicializar o
+  regenerar el fichero, se aplican las mismas reglas de visibilidad que en `mrpack config`:
+  workspaces con `runtime = "php"` no se añaden a las listas de `packd`, y los de
+  `framework ≠ "meteored"` o `runtime ≠ "node"` no se añaden a las listas de `devel`.
+  Los `disabled` importados del fichero previo también se filtran por las mismas reglas.
+
+---
+
+## 2026.6.25+3
+
+### Fixed
+
+- `src/mrpack/clases/framework/gestor/acciones.ts` — la verificación de dependencias
+  de frameworks (`add()`) ahora se realiza sobre **todos** los frameworks instalados
+  antes de ejecutar `yarn install`, en lugar de solo sobre los modificados en el run
+  actual (`aModificados`).
+
+  **Causa raíz:** el bloque de resolución de deps solo revisaba `aInstalar`,
+  `aActualizar` y `aResetear`. Si un framework ya instalado tenía una dep `@mr/*`
+  faltante (p.ej. porque el run anterior se interrumpió antes de instalarla, o porque
+  se añadió al package.json del framework sin que este se actualizara en este run),
+  esa dep nunca se detectaba antes del `yarn install`, causando un error de dependencias.
+
+  **Solución:** el bucle ahora itera sobre `infos.filter(i => i.instalado)` — todos
+  los frameworks presentes en disco — y pasa sus deps a `add()`, que internamente
+  descarta los que ya existan en disco y solo descarga los realmente faltantes.
+
+---
+
+## 2026.6.25+2
+
+### Changed
+
+- `src/mrpack/clases/init.ts` — se eliminan las entradas obsoletas `gaxios` y
+  `node-fetch` del campo `resolutions`. `mrpack init` ya no inyecta ninguna
+  resolución de compatibilidad para estas librerías.
+
+- `package.json` (raíz del monorepo) — eliminada la entrada `resolutions` ya
+  que no contiene entradas activas.
+
+### Notes
+
+- El problema con `node-fetch@2.x` (`ERR_STREAM_PREMATURE_CLOSE`) que afectaba a
+  Node.js 24.0–24.17 quedó resuelto en **Node.js 24.18**. El shim provisional
+  `shims/node-fetch/` introducido durante el desarrollo en 24.17 ha sido eliminado.
+  Ver historial de la versión `2026.6.25+1` para los detalles técnicos de las
+  incompatibilidades que resolvía.
+
+---
+
+## 2026.6.25+1 *(retirado — Node.js 24.18 resuelve el problema en el runtime)*
+
+### Added *(revertido en +2)*
+
+- `shims/node-fetch/` — shim CJS que re-exporta el `fetch` nativo de Node.js 18+
+  con la misma interfaz que esperan `node-fetch@2.x`, `gaxios@6.x` y `teeny-request`.
+  Solucionaba cinco incompatibilidades entre `node-fetch@2.x` y Node.js 24.0–24.17:
+
+  | Problema | Causa |
+  |----------|-------|
+  | `ERR_STREAM_PREMATURE_CLOSE` | Node.js 24 emite este evento en streams Gunzip aunque todos los datos se recibieron; `node-fetch@2.x` rechaza la promesa |
+  | `TypeError: responseStream.on is not a function` | Native fetch devuelve `response.body` como WHATWG `ReadableStream`; `teeny-request` y otros esperan Node.js Readable |
+  | `Body is unusable: Body has already been read` | `teeny-request@9.x` hace `Object.assign(res.body, {...})` y luego llama `res.text()`; `Readable.fromWeb()` bloqueaba el stream al acceder a `.body` |
+  | `RequestInit: Expected signal to be an instance of AbortSignal` | `gaxios@6.x` deep-clona el `AbortSignal` a `{}` con `extend()` |
+  | `RequestInit: duplex option is required when sending a body` | Undici exige `duplex:'half'` y no acepta `Node.js Readable` directamente |
+
+---
+
+## 2026.6.24+3
+
+### Fixed
+
+- `bin/mrpack.js`, `bin/mrlang.js` — `MRPACK_ROOT` ahora se calcula desde `__dirname`
+  en lugar de depender de `process.cwd()`.
+
+  **Causa raíz:** Yarn PnP puede arrancar los bin-scripts desde el directorio del
+  workspace (`@mr/cli/`) en lugar de desde la raíz del monorepo. Con `process.cwd()`
+  como fuente de `MRPACK_ROOT`, `this.root` apuntaba a `@mr/cli/` y todas las rutas
+  construidas como `${root}/@mr/cli/package.json` se duplicaban, produciendo
+  `ENOENT: .../web-www/@mr/cli/@mr/cli/package.json`.
+
+  **Solución:** los bins fijan `MRPACK_ROOT` antes de cargar `lib.js`:
+  ```js
+  process.env.MRPACK_ROOT = require("path").resolve(__dirname, "../../..");
+  ```
+  `__dirname` es siempre `@mr/cli/bin`; tres niveles arriba siempre es la raíz del
+  monorepo, con independencia del cwd con que Yarn haya invocado el proceso.
+
+---
+
+## 2026.6.24+2
+
+### Fixed
+
+- `.run/update.run.xml`, `.run/push.run.xml`, `.run/tools.run.xml` — convertidos de
+  `ShConfigurationType` (shell `/bin/zsh`) a `js.build_tools.npm` para corregir un error
+  al ejecutarlos desde JetBrains cuando otro proyecto estaba activo simultáneamente:
+
+  **Causa raíz:** con `ShConfigurationType`, `$PROJECT_DIR$` se resuelve al proyecto
+  enfocado en ese momento en JetBrains. Si ese proyecto era otro (p.ej. `mr-tiempo`),
+  `yarn mrpack update` se ejecutaba desde ese directorio; el `process.chdir('../..')`
+  de `main.ts` aterrizaba dentro de la caché PnP de Yarn en lugar de en `web-www`, y
+  todas las llamadas a `yarn` subsiguientes fallaban (`ERR_MODULE_NOT_FOUND`).
+
+  **Solución:** `js.build_tools.npm` con `package-json` explícito ancla siempre el
+  proyecto a `$PROJECT_DIR$/@mr/cli/package.json` y usa el intérprete Node configurado
+  para el workspace (con PnP y nvm/fnm correctamente inicializados), igual que ya hacían
+  `devel.run.xml` y `packd.run.xml`.
+
+### Changed
+
+- `.run/tools.run.xml` — script actualizado de `compile --watch` (rspack) a
+  `compile:watch` (esbuild), en línea con la migración de bundler de `2026.6.24+1`.
+
+---
+
+## 2026.6.24+1
+
+### Changed
+
+- `src/esbuild.config.mjs` — el bundler de `@mr/cli` pasa de **rspack** a **esbuild**:
+  - Tiempo de compilación: de ~2.8 s a **~0.85 s** (×3.3); esbuild puro tarda ~70 ms,
+    el tiempo restante corresponde a `tsc --noEmit` que corre en paralelo.
+  - Tamaño de `bin/min/mrpack-run.js`: de ~3.6 MB a **169 kB** (×21 más pequeño).
+    La reducción se debe a que `typescript.js` (9 MB de fuente) ya no se bundlea
+    inline — se marca como external igual que hacía `rspack.config.mjs`.
+  - `target` actualizado a `node24`.
+  - Sin chunks intermedios (`plugins/`, `482-run.js`): cada ejecutable queda en un
+    único fichero autocontenido.
+  - **Type checking en paralelo**: `tsc --noEmit` se lanza simultáneamente con el
+    bundling. En modo build, el script falla (`exitCode = 1`) si tsc detecta errores
+    de tipos. En modo watch, `tsc --noEmit --watch --preserveWatchOutput` corre como
+    proceso hijo independiente mostrando errores en tiempo real.
+  - `minify` desactivado en modo watch para acelerar los rebuilds.
+
+- `package.json` — scripts de compilación actualizados:
+
+  | Script | Comando | Descripción |
+  |--------|---------|-------------|
+  | `compile` | `node src/esbuild.config.mjs` | Build de producción con esbuild + tsc |
+  | `compile:watch` | `node src/esbuild.config.mjs --watch` | Watch: rebuild automático + tsc --watch |
+  | `compile:rspack` | `yarn rspack --config src/rspack.config.mjs` | Fallback al bundler anterior |
+
+- `package.json` — añadida devDependency `esbuild@^0.28.1`.
+
+---
+
+## 2026.6.17+4
+
+### Changed
+
+- `src/mrpack/clases/workspace/service.ts` — formato del log `output/compilar.md` completamente renovado
+  y extensión de funcionalidad respecto a la versión inicial (`2026.6.17+3`):
+  - `appendLogCompilar(linea, tipo)` sustituido por `appendChunkLogCompilar(lineas, tipo)`:
+    en lugar de añadir una entrada por línea, cada evento `data` del compilador (stdout o stderr)
+    genera un único bloque fenced Markdown con todas sus líneas juntas.
+  - Cada bloque va encabezado por la hora local en negrita (`**HH:MM:SS**`) seguido del
+    bloque de código y un separador `---`.
+  - Nuevo método privado `extractFileRefs(lineas)`: detecta referencias a ficheros de código
+    (`.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.scss`, `.css`, `.html`) con número de fila y
+    columna opcionales, resuelve sus rutas absolutas (teniendo en cuenta que rspack corre desde
+    `{root}/@mr/core/dev`), deduplica por ruta resuelta y ordena por nombre/fila/columna.
+    - En el `.md`: los ficheros detectados se listan como enlaces relativos al final de cada bloque.
+    - En el stdout: las rutas absolutas con `archivo:línea:columna` se imprimen vía `Log.info`
+      para que sean clicables directamente desde la consola.
+  - Las fechas y horas del `.md` (`iniciarLogCompilar`, `appendChunkLogCompilar`) usan
+    **hora local** en lugar de UTC, mediante los helpers estáticos privados `horaLocal(d)` y
+    `fechaHoraLocal(d)`.
+
+- `src/mrpack/clases/log.ts` — el timestamp `[HH:MM:SS]` que precede a cada mensaje en la
+  consola (`stdout`/`stderr`) usa ahora **hora local** en lugar de UTC:
+  - Eliminada la dependencia de `Fecha.generarHora` (de `services-comun`).
+  - Nueva función módulo privada `horaLocal(d)` que formatea con `getHours()` / `getMinutes()` /
+    `getSeconds()` (métodos locales), con relleno de ceros con `padStart(2, "0")`.
+  - `generarFechaLog` llama a `horaLocal(new Date())` en lugar de `Fecha.generarHora(new Date(), false)`.
+
+---
+
+## 2026.6.17+3
+
+### Added
+
+- `src/mrpack/clases/workspace/service.ts` — la salida del compilador en modo `devel -c` se
+  persiste ahora en `output/compilar.md` dentro del workspace correspondiente, además de
+  seguir mostrándose por consola:
+  - Nuevo campo `logCompilarInicio: Promise<void> | undefined` para coordinar la escritura.
+  - `iniciarLogCompilar()` — rota los ficheros antes de iniciar cada sesión:
+    si existe `compilar-old.md` lo elimina, luego renombra `compilar.md` a `compilar-old.md`
+    y crea el nuevo `compilar.md` con la fecha/hora de inicio. Así se conservan siempre
+    la compilación actual y la anterior.
+  - `appendLogCompilar(linea, tipo)` — añade cada línea de `stdout` tal cual (sin prefijo) y
+    cada línea de `stderr` con el prefijo `[ERR] `, en ambos casos sin códigos ANSI.
+  - El log se reinicia (sobreescribe) cada vez que el compilador arranca de nuevo.
+
+---
+
+## 2026.6.17+2
+
+### Added
+
+- `src/mrpack/clases/workspace/service.ts` — coordinación de dependencias de compilación en modo `devel -c`.
+  Cuando un workspace declara `build.deps` en su `mrpack.json`, su compilador no arranca hasta que todos
+  los workspaces de los que depende hayan emitido su primera compilación exitosa:
+  - Nuevos campos privados: `depsPendientes: Set<string>`, `compilarListeners: (() => void)[]`,
+    `primeraCompilacionEmitida: boolean`.
+  - Nuevos métodos públicos: `registrarListenerCompilacion(cb)`, `inicializarDeps(serviciosPorNombre)`,
+    `estaListoParaCompilar()`.
+  - Nuevos métodos privados: `notificarCompilacionExitosa()`, `depResuelta(depNombre)`.
+  - `checkCompilar()` devuelve `false` (con log `Esperando dependencias: …`) mientras `depsPendientes` no esté vacío.
+  - El handler `stdout` del compilador detecta las líneas de éxito de rspack (`✓ Built in` / `✓ Compiled in` /
+    `compiled successfully`) y dispara `notificarCompilacionExitosa()` una sola vez.
+  - El handler `close` del compilador actúa de fallback: si el proceso termina sin haber emitido la señal de éxito,
+    también llama a `notificarCompilacionExitosa()` para no bloquear indefinidamente a los dependientes.
+
+- `src/mrpack/clases/devel.ts` — `ejecutarServices` reestructurada en tres fases para activar la coordinación:
+  1. **Fase 1:** crear todas las instancias de `Service` (constructor, sin `init()` aún).
+  2. **Fase 2:** `inicializarDeps()` para todos en paralelo → conecta el grafo de dependencias.
+  3. **Fase 3:** `init()` para todos en paralelo → los compiladores con `build.deps` pendientes esperan automáticamente.
+
+### Changed
+
+- `src/mrpack/modulos/devel.ts` — `mrpack devel` muestra la ayuda si no se pasa `-c` ni `-e`
+  (antes arrancaba `run()` sin argumentos útiles).
+
+---
+
+## 2026.6.17+1
+
+### Changed
+
+- `src/mrlang/clases-v2/modulo/translation/literal.ts`, `src/mrlang/clases-v2/modulo/translation/map.ts` y `src/mrlang/clases-v2/modulo/translation/set.ts` — la generacion de valores de tipo `plural` deja de importar reglas desde `make-plural/cardinals` y pasa a construirlas con `pluralBuilder(...)` de `services-comun/modules/traduccion/v2/util/plural-function-builder`, unificando la resolucion de pluralizacion con `Intl.PluralRules` y sus fallbacks.
+
+- `src/mrlang/clases/init.ts` — el `package.json` generado para el workspace de i18n ya no anade `make-plural` en `devDependencies`.
+
+- `bin/hash.md5` — actualizado el hash del binario del CLI tras recompilar con estos cambios.
+
+---
+
+## 2026.6.16+5
+
+### Changed
+
+- `src/mrlang/clases-v2/lang/assets/langs.json` — actualización de mantenimiento del catálogo de idiomas: el código del serbio en alfabeto cirílico se normaliza de `sr-Cyr` a `sr-Cyrl`, y se ajusta también su `path` asociado para mantener la coherencia con el identificador corregido.
+
+---
+
+## 2026.6.16+4
+
+### Fixed
+
+- `src/mrlang/clases-v2/modulo/translation/literal.ts` y `src/mrlang/clases-v2/modulo/translation/set.ts` — los generadores de traducciones ya no mantienen una copia desactualizada de `pascalCase`. Ahora reutilizan `src/mrlang/clases-v2/util/case.ts`, de modo que los identificadores con dígitos conservan el mismo comportamiento corregido en todas las salidas generadas.
+
+---
+
+## 2026.6.16+3
+
+### Fixed
+
+- `src/mrlang/clases-v2/util/case.ts` — `pascalCase` ya no trata los dígitos como separadores al usar su regex por defecto. Ahora conserva fragmentos numéricos dentro de cada palabra, evitando salidas incorrectas al convertir cadenas como `v2` o `api-2026` a PascalCase.
+
+---
+
+## 2026.6.16+2
+
+### Added
+
+- `deployment/std/cloud-run-job.yml` — añadida la variable de entorno `CLOUD_RUN_REGION` para permitir que los jobs de Cloud Run accedan a la región de ejecución.
+- `deployment/std/cloud-run-service.yml` — añadida la variable de entorno `CLOUD_RUN_REGION` para permitir que los servicios de Cloud Run accedan a la región de ejecución.
+- `deployment/std/kustomizar.sh` — exportación de la variable de entorno `CLOUD_RUN_REGION` para que esté disponible en los manifiestos de despliegue.
+
+---
+
+## 2026.6.16+1
+
+### Fixed
+
+- `deployment/std/kustomizar.sh` — corregida la URI de Cloud Scheduler para ejecutar jobs de Cloud Run: se elimina el sufijo `-${ZONA}` del nombre del job en la ruta (`${KUSTOMIZER}-${SERVICIO}`), alineándolo con el identificador real usado en `jobs/...:run` y evitando invocaciones a recursos inexistentes.
+
+---
+
+## 2026.6.12+2
+
+### Fixed
+
+- **Windows — `spawn yarn ENOENT`**: todos los `spawn` que invocan `yarn` (y otros ejecutables
+  instalados como wrappers `.cmd`) ahora pasan `shell: process.platform === "win32"` para que
+  `CreateProcess` los encuentre sin necesidad de shell en Linux/macOS. Afecta a:
+  `clases/comando.ts`, `clases/yarn.ts`, `clases/workspace/service.ts`,
+  `clases/workspace/i18n.ts`, `clases/framework/cliente.ts`, `clases/patches.ts` y `bin/lib.js`.
+
+- **Windows — enlace simbólico `.github` (`EPERM`)**: los enlaces de directorio requieren
+  privilegios de administrador en Windows. `clases/init.ts` crea ahora una **junction** en
+  Windows (con ruta absoluta) y un symlink relativo en el resto de plataformas. La detección
+  del enlace existente usa `readlink()` en lugar de `lstat().isSymbolicLink()` porque las
+  junctions devuelven `false` en esa propiedad.
+
+- **Windows — detección de cambios en frameworks (Google Cloud Storage `invalid_grant`)**:
+  `paquete/storage.ts` — el método `getZIP()` no tenía lógica de reautenticación; cuando el
+  token de ADC expiraba en Windows, la solicitud fallaba con `status 400 / invalid_grant` y el
+  error quedaba silenciado (`.catch(() => false)`), haciendo que `checkCambiosLocales` siempre
+  devolviera `false`. Solución:
+  - Nuevo método estático `esErrorDeAuth()` que reconoce todos los patrones conocidos de error
+    de credenciales: `"storage.objects.get"`, `"invalid_grant"`, `"UNAUTHENTICATED"`,
+    `"default credentials"` y `"PERMISSION_DENIED"`.
+  - Nuevo método estático `login()` con promesa singleton compartida (`_loginPromise`) para
+    evitar múltiples procesos `gcloud auth` simultáneos.
+  - Nuevo método privado `_getZIPConLogin()` con el mismo patrón de reintento que ya tenía
+    `_fetchListaConLogin()`.
+
+- **Node 24 — aviso `DEP0190`**: suprimido en `bin/lib.js` junto al ya existente `DEP0040`
+  (pasar un array de argumentos con `shell: true` emite este aviso en Node ≥ 24).
+
+- **Envío de frameworks — autoría git**: `clases/framework/cliente.ts` hace ahora fallback
+  escalonado para resolver el autor (`git config user.name` local, luego global y por último
+  `GIT_AUTHOR_NAME`/`USERNAME`). Si no encuentra ningún valor, muestra además instrucciones
+  explícitas para configurar `git config --global user.name` antes de reintentar.
+
+- **Envío de frameworks — check preventivo de autor**: `clases/framework/gestor/acciones.ts`
+  valida la autoría git al inicio cuando hay acciones `enviar`/`enviar+update`, para fallar
+  rápido antes de ejecutar instalaciones, updates, resets o recompilaciones.
+
+---
+
+## 2026.6.12+1
+
+### Added
+
+- `paquete/root.ts` — nuevo método público `getAutorArchivo(relativePath)` que recorre el árbol
+  del `status.json` y devuelve el `autor` del fichero indicado (o `undefined` si no está
+  registrado). Funciona para todos los tipos de fichero, no solo `.ts`.
+
+- `paquete/index.ts` — `getDiffFichero` y `getDiffFicheroDesdeRemoto` devuelven ahora también
+  el campo `autor: string`, obtenido del `status.json` del ZIP correspondiente (base o remoto).
+
+- `tabla.ts` — el título del visor de diff muestra el nombre del autor del cambio:
+  - Diff local (`enviar`): autor del ZIP base (quien publicó la versión base).
+  - Diff remoto (`actualizar`): autor del ZIP remoto (quien introdujo el cambio entrante).
+  - Diff side-by-side (`ambos`): autor del lado remoto.
+
+  El nombre del fichero se muestra en magenta brillante y el autor en `·  por <nombre>` en
+  cyan/dim a continuación. La funcionalidad cubre todos los tipos de fichero, no solo `.ts`,
+  ya que la fuente es `status.json` y no el bloque de autoría del fichero.
+
+### Fixed
+
+- `paquete/root.ts` / `paquete/directory.ts` / `paquete/file.ts` — corregido bug por el que el
+  campo `autor` de todos los ficheros modificados quedaba como `"check"` en el `status.json`
+  generado al publicar mediante la ruta con snapshot (`checkCambiosLocales` + `push`):
+
+  1. `paquete/directory.ts` — nuevo método `corregirAutoresHashCambio(autor)` que recorre
+     recursivamente todos los nodos con `hashCambio === true` y les asigna el autor real.
+  2. `paquete/root.ts` — `actualizarAutor(versionBase, autor)` llama ahora a
+     `corregirAutoresHashCambio(autor)`, reemplazando el `"check"` provisional dejado por el
+     escaneo previo de `checkCambiosLocales`. La ruta sin snapshot no tenía el bug porque
+     `calcularHashCambiado(status, autor)` ya recibía el autor real.
+  3. `paquete/file.ts` — `inyectarAutoria` actualiza también `this.autor = autor`, de modo
+     que los ficheros `.ts` queden correctamente sellados antes de empaquetar.
+
+- `tabla.ts` — la tecla `d` (ver cambios) ya no se activa sobre frameworks no instalados.
+  Su `tieneUpdate` podía ser `true` (versión base `0.0.0+0`, siempre detrás del remoto), pero
+  sin directorio local la operación no tiene sentido y devolvía una lista vacía.
+
+- `tabla.ts` — `_dibujarLineas` usa ahora **filas físicas** en lugar de líneas lógicas para
+  calcular cuánto subir el cursor entre redibujos. Cuando el contenido supera el ancho del
+  terminal y las líneas hacen wrap automático, la cuenta de filas lógicas era menor que las
+  filas físicas reales: el cursor quedaba corto en uno o más filas y la primera línea del
+  dibujo anterior no se sobreescribía, apareciendo "duplicada" en cada interacción. Ahora se
+  calcula `ceil(longitudVisible / anchoTerminal)` por línea para obtener las filas físicas
+  reales. Se añade también `\r` antes del `Colors.up` inicial para garantizar que el cursor
+  está en columna 0 antes de subir, mejorando la consistencia entre terminales.
+
+### Changed
+
+- `tabla.ts` — en el modo `"todos"` (`yarn mrpack framework` sin parámetros), la acción por
+  defecto es ahora siempre `nada`. Antes se preseleccionaba `actualizar` cuando había update
+  disponible (igual que en el modo `--update`). El modo `--update` mantiene su comportamiento
+  de preselección automática según la política `frameworkUpdates`.
+
+---
+
+## 2026.6.11+2-josantoniojimnez
+
+### Fixed
+
+- `src/mrpack/clases/framework/gestor/acciones.ts` — la resolución de dependencias
+  `@mr/*` tras operaciones de framework ahora cubre también los paquetes **actualizados**
+  (`aActualizar`) y **reseteados** (`aResetear`), no solo los recién instalados
+  (`aInstalar`). Una actualización o reset puede introducir nuevas `devDependencies`
+  `@mr/*` que antes no existían; si alguna no está presente localmente se descarga e
+  instala antes de ejecutar `yarn install`.
+
+---
+
+## 2026.6.11+1-josantoniojimnez
+
+### Added
+
+- `src/mrpack/clases/framework/cliente.ts` — nuevas funciones exportadas para gestión
+  de dependencias:
+
+  - **`leerDepsMrFramework(localDir)`**: lee el `package.json` del directorio indicado y
+    devuelve la lista de sus `devDependencies` de tipo `@mr/*` convertidas al formato
+    argumento de `add()` (`@mr/core/X`, `@mr/user/X`).
+
+  - **`encontrarWorkspacesConDep(basedir, npmName)`**: expande los patrones de workspaces
+    del `package.json` raíz y devuelve los directorios que declaran `npmName` en
+    `dependencies`, `devDependencies` o `peerDependencies` (excluyendo el propio paquete).
+
+  - **`limpiarDevDepsConsumidores(basedir, npmNames)`**: elimina los npm names indicados
+    de las `devDependencies` de todos los workspaces consumidores del monorepo
+    (`services/`, `cronjobs/`, `jobs/`, `packages/`). Si `devDependencies` queda vacío,
+    lo elimina del objeto.
+
+- `src/mrpack/clases/framework/cliente.ts` — función privada auxiliar
+  `encontrarDirsWorkspace(basedir)`: expande los patrones de workspaces del
+  `package.json` raíz (`@mr/core/*`, `services/*`, etc.) y devuelve los directorios
+  absolutos que contienen un `package.json`.
+
+### Changed
+
+- `src/mrpack/clases/framework/cliente.ts` — `add(basedir, frameworks, visitados?)`:
+  - Acepta ahora un tercer parámetro opcional `visitados: Set<string>` para rastrear
+    los paquetes ya procesados y evitar ciclos en la resolución de dependencias.
+  - Tras cada `pullPackage` exitoso, lee las `devDependencies` `@mr/*` del framework
+    recién instalado con `leerDepsMrFramework` y llama recursivamente a `add()` para
+    instalar las que falten (y las suyas propias a su vez).
+
+- `src/mrpack/clases/framework/gestor/acciones.ts` — `ejecutarAcciones`:
+
+  - **Resolución de dependencias al instalar**: tras el bloque paralelo de instalaciones
+    y antes de `yarn install`, recorre los paquetes recién instalados con
+    `leerDepsMrFramework` y llama a `add()` para instalar las dependencias `@mr/*`
+    ausentes, con resolución recursiva de sus transitivas.
+
+  - **Validación y limpieza al desinstalar** (reemplaza la lógica anterior):
+    1. Construye el mapa inverso de dependencias entre todos los frameworks instalados
+       leyendo sus `package.json` en paralelo.
+    2. Calcula iterativamente qué frameworks pueden desinstalarse: un framework puede
+       desinstalarse si todos los frameworks que dependen de él también se van a
+       desinstalar. Se repite hasta estabilidad para propagar bloqueos en cadena.
+    3. Muestra aviso `⚠` para los frameworks bloqueados.
+    4. Para los que pasan la validación: llama a `limpiarDevDepsConsumidores` para
+       eliminar sus entradas de `devDependencies` en `services/`, `cronjobs/`, `jobs/`
+       y `packages/`, y a continuación elimina sus directorios.
+
+  - **`necesitaInstall`**: ahora usa `realmDesinstalar.length` (desinstalaciones que
+    pasaron la validación) en lugar de `aDesinstalar.length`, evitando un `yarn install`
+    innecesario cuando todos los intentos de desinstalación fueron bloqueados.
+
+- `src/mrpack/clases/framework/index.ts` — re-exporta las nuevas funciones
+  `leerDepsMrFramework`, `encontrarWorkspacesConDep` y `limpiarDevDepsConsumidores`.
+
+---
+
+## 2026.6.4+1-josantoniojimnez
+
+### Added
+
+- `.vscode/` (dentro de `@mr/cli`) — nuevas configuraciones compartidas de VS Code (`tasks.json` y `launch.json`) integradas para el multi-root workspace. Permiten ejecutar las tareas de `mrpack` y depurar el CLI de manera unificada.
+
+### Changed
+
+- `src/mrpack/clases/init/ignore.ts` — eliminada la exclusión de directorios `.vscode` (`**/.vscode/**`) de la plantilla del `.gitignore` generado, permitiendo compartir cómodamente estas configuraciones de desarrollo entre diferentes proyectos.
+
+---
+
+## 2026.6.3+3
+
+
+### Added
+
+- `src/mrpack/clases/patches.ts` — nuevo módulo compartido con la función exportada
+  `aplicarPatches(basedir)`, que ejecuta `yarn run patch:apply` con `stdio: "inherit"`
+  (la salida se muestra en tiempo real durante la ejecución).
+
+### Changed
+
+- `src/mrpack/clases/framework/gestor/acciones.ts` — `ejecutarAcciones` ahora llama
+  a `aplicarPatches` de forma automática en dos puntos del flujo, siempre **antes**
+  de `recompilarCliente` para que la compilación del CLI incorpore ya los cambios
+  introducidos por los patches:
+  1. Tras `yarn install` del flujo principal (instalar, actualizar, resetear o desinstalar).
+  2. Tras `yarn install` del flujo de resolución de conflictos de merge.
+
+- `src/mrpack/clases/update.ts` — eliminada la función local `patchApply` (que capturaba
+  la salida con `Comando` y la imprimía al final). Ahora importa y usa `aplicarPatches`
+  desde `./patches`, unificando el comportamiento con el gestor de frameworks.
+
+---
+
+## 2026.6.3+2
+
+### Changed
+
+- `src/mrpack/clases/workspace/service.ts` — `IConfigServices` añade el campo opcional
+  `patch?: string` para persistir el último patch aplicado en `config.workspaces.json`.
+
+- `src/mrpack/clases/init.ts` — al regenerar `config.workspaces.json`, ahora conserva
+  el cursor `patch` (si existe y cumple formato `RXXX`) en lugar de descartarlo.
+
+---
+
+## 2026.6.3+1
+
+### Changed
+
+- Documentación operativa de monorepo actualizada para explicitar que los workspaces
+  `@mr/cli`, `@mr/core/*`, `@mr/user/*` y `framework/*` se consideran **frameworks** y que
+  su ciclo de actualización/publicación se realiza con `yarn mrpack framework` y
+  `yarn mrpack framework --send`.
+
+---
+
+## 2026.6.1+2
+
+### Added
+
+- `src/mrlang/clases-v2/lang/assets/langs.json` — nuevo catálogo de idiomas con la cadena de
+  herencia (`parent_code`) para resolver fallback por jerarquía.
+
+- `src/mrlang/clases-v2/lang/lang.ts` — nueva clase `Lang` para cargar el catálogo en memoria,
+  resolver idioma por código y navegar al idioma padre.
+
+### Changed
+
+- `src/mrlang/clases-v2/generate.ts` — en la generación de literales, el valor ya no se resuelve
+  solo con `lang` y `defecto`: ahora recorre la jerarquía (`lang` -> `parent` -> ...) antes de
+  aplicar el fallback final a `defecto`.
+
+- `src/mrlang/clases-v2/generate.ts` y `src/mrlang/clases-v2/lang/lang.ts` — añadida documentación
+  TSDoc en clase, métodos y estructuras usadas por el flujo de generación de traducciones.
+
+---
+
+## 2026.6.1+1
+
+### Fixed
+
+- `deployment/std/kustomizar.sh` — corregida la asignación de la anotación
+  `run.googleapis.com/network-interfaces` en `yq`: el valor JSON ya no se inyecta
+  con comillas simples (que rompían el lexer de `yq` con `invalid input text`),
+  sino vía variable de entorno + `strenv(...)`, evitando errores de parseo cuando
+  `network`/`subnetwork` contienen texto válido.
+
+---
+
 ## 2026.5.27+3
 
 ### Changed

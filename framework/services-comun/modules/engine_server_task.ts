@@ -1,16 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 22 May 2026 10:14:33 GMT
- * Hash: 9d9790efe6641042564798dffa58f5cb
- * Versión: 2026.5.22+4-josantoniojimnez
+ * Fecha: Wed, 17 Jun 2026 11:25:23 GMT
+ * Hash: f7f62ad3d1c8e42364324c4fd481bc9a
+ * Versión: 2026.6.17+5-josantoniojimnez
+ * Anterior: 2026.6.17+3-josantoniojimnez
  */
 
-import {ConfiguracionNet} from "@mr/core-network/server/http/config/config";
+import type {ConfiguracionNet} from "@mr/core-workload/config/net";
+import {Engine as EngineServer} from "@mr/core-workload/engine/server";
 
-import {EngineServer} from "./engine_server";
 import {error, info} from "./utiles/log";
 
-abstract class EngineServerTask<T extends ConfiguracionNet=ConfiguracionNet> extends EngineServer<T> {
+export abstract class EngineServerTask<T extends ConfiguracionNet=ConfiguracionNet> extends EngineServer<T> {
     /* STATIC */
 
     /* INSTANCE */
@@ -53,5 +54,3 @@ abstract class EngineServerTask<T extends ConfiguracionNet=ConfiguracionNet> ext
     protected abstract checkDatosDelay(): number;
     protected abstract checkDatosEjecutar(): Promise<void>;
 }
-
-export {EngineServerTask};

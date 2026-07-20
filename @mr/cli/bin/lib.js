@@ -1,13 +1,18 @@
 const {spawn} = require("child_process");
 
 // Suprimir DEP0040 (módulo built-in `punycode` deprecado en Node 24).
-// Origen: dd-trace y @google-cloud/storage instrumentan / importan node-fetch@2.7.0,
+// Origen: dd-trace y @google-cloud/storage instrumentan / importan node-fetch@2.x,
 // que carga whatwg-url@5.0.0 → tr46@0.0.3 → require('punycode').
-// Actualizar tr46@0.0.3 requeriría romper node-fetch@2.x (dependencia de gaxios/teeny-request).
+//
+// Suprimir DEP0190 (args con shell:true) en Windows.
+// En Windows, yarn es un wrapper .cmd que requiere shell:true para ser resuelto por CreateProcess.
+// Los argumentos pasados son siempre literales hardcoded (sin entrada de usuario), por lo que
+// el riesgo de inyección es nulo. En Linux/macOS shell:false sigue activo, sin este warning.
 {
     const _emit = process.emit.bind(process);
+    const SUPPRESSED = new Set(["DEP0040", "DEP0190"]);
     process.emit = function(event, ...args) {
-        if (event === "warning" && args[0]?.code === "DEP0040") {
+        if (event === "warning" && SUPPRESSED.has(args[0]?.code)) {
             return true;
         }
         return _emit(event, ...args);
@@ -62,7 +67,7 @@ class Modulo {
     async spawn(cmd, args) {
         const deferred = new Deferred();
 
-        spawn(cmd, args, {stdio: ["ignore", "ignore", "inherit"]}).on("exit", (code) => {
+        spawn(cmd, args, {stdio: ["ignore", "ignore", "inherit"], shell: process.platform === "win32"}).on("exit", (code) => {
             deferred.resolve(code);
         });
 
@@ -71,6 +76,13 @@ class Modulo {
 }
 
 module.exports = (modulo) => {
+    // MRPACK_ROOT lo fija el bin invocante (mrpack.js / mrlang.js) desde __dirname,
+    // garantizando que apunta a la raíz del monorepo con independencia del cwd con que
+    // Yarn PnP haya arrancado el proceso. El fallback a process.cwd() existe solo como
+    // salvaguarda por si lib.js fuera llamado de forma no estándar.
+    if (!process.env.MRPACK_ROOT) {
+        process.env.MRPACK_ROOT = process.cwd();
+    }
     process.chdir(`${__dirname}/..`);
     new Modulo(modulo)
         .ejecutar()

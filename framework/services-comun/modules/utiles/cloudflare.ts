@@ -1,4 +1,11 @@
-import {Conexion} from "../net/conexion";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:22:11 GMT
+ * Hash: 37ed8b946a7f98086ecc2f061e63ab30
+ * Versión: 2026.6.17+4-josantoniojimnez
+ */
+
+import type {Conexion} from "@mr/core-network/server/http/conexion";
 
 /**
  * Devuelve el código de país de la petición de CloudFlare.

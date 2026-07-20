@@ -1,3 +1,5 @@
+**/.claude/settings.local.json
+.codex/
 .DS_Store
 .dev.vars
 .idea/copilot/
@@ -33,5 +35,4 @@ vendor/
 **/.env*.local
 **/.env*.test
 **/coverage/**
-**/.vscode/**
 vscode.code-workspace

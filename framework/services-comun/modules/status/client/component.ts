@@ -1,5 +1,13 @@
-import {IPodInfo} from "../../utiles/config";
-import {IComponent} from "../common/interface";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: da19c6f698edd816fc919b12eb7edcf6
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
+import type {IPodInfo} from "@mr/core-workload/config/pod";
+
+import type {IComponent} from "../common/interface";
 import {Monitor} from "./monitor";
 
 export class Component {

@@ -1,8 +1,5 @@
-import {
-    ConfigGenerico, Configuracion as ConfiguracionBase,
-    type IConfigGenerico,
-    type IConfiguracion as IConfiguracionBase
-} from "services-comun/modules/utiles/config";
+import {Configuracion as ConfigGenerico, type IConfiguracion as IConfigGenerico} from "@mr/core-utils/config";
+import {Configuracion as ConfiguracionBase, type IConfiguracion as IConfiguracionBase} from "@mr/core-workload/config";
 
 export interface IStatusConfig extends IConfigGenerico {
     enabled: boolean;

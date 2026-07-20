@@ -1,7 +1,15 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: a28b6a43231e02b202fe7048baf08915
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
+import type {Configuracion} from "@mr/core-workload/config";
+
 import {SendDAO} from "./send/send-d-a-o";
 import {ElasticSendDAO} from "./send/impl/elastic-send-d-a-o";
 import elastic from "../../../utiles/elastic";
-import {Configuracion} from "../../utiles/config";
 import {EventDAO} from "./event/event-d-a-o";
 import {ElasticEventDAO} from "./event/impl/elastic-event-d-a-o";
 import {ReceiverDAO} from "./receiver/receiver-d-a-o";

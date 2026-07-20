@@ -1,8 +1,11 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: e04416d9b43b2a45f1a59d2e8a905163
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 3a6638f3f40fc7138fa4266c52eb2a44
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-export {add, checkCliente, getAutor, getClienteHash, getClienteMD5, pullPackage, recompilarCliente, remove} from "./cliente";
+export {add, checkCliente, encontrarWorkspacesConDep, getAutor, getClienteHash, getClienteMD5, leerDepsMrFramework, limpiarDevDepsConsumidores, pullPackage, recompilarCliente} from "./cliente";
 export {actualizarTodo, enviarTodo, gestionar, resetearTodo} from "./gestor";

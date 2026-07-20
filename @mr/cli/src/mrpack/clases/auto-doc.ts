@@ -1,14 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 19c6461daeb348a54b09ed7bb6ef788a
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: c4bfcf1db136ec51552af95036d57d3f
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import ts from "typescript";
 
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
-import {isDir, readDir} from "services-comun/modules/utiles/fs";
-import {
+import type {
     IHTTPMethod,
     IItems,
     IOpenAPI,
@@ -19,7 +20,30 @@ import {
 import type {Manifest} from "@mr/core-dev/manifest";
 import {MySQL} from "services-comun/modules/database/mysql";
 
+import {isDir, readDir} from "../../utiles/fs";
+import {Log} from "./log";
 import {ManifestWorkspaceLoader} from "./manifest/workspace";
+
+/** Valor JSON genérico devuelto por la conversión de literales AST de TypeScript a JSON. */
+type JSONValue = string | number | boolean | null | JSONValue[] | {[key: string]: JSONValue};
+
+/**
+ * Definición de un campo de esquema de validación (`query`/`post`/`headers`/`response`),
+ * tal y como se declaran en los `RouteGroup` de `services-comun` (p.ej. `{type: "string", regex: ...}`).
+ * Se obtiene interpretando el AST de TypeScript, por lo que su forma no está garantizada en
+ * tiempo de compilación; se asume de confianza por convención del proyecto.
+ */
+interface IEsquemaCampo {
+    type?: string;
+    regex?: string;
+    opcional?: boolean;
+    required?: boolean;
+    description?: string;
+    items?: IEsquemaCampo;
+    properties?: IEsquema;
+}
+
+type IEsquema = Record<string, IEsquemaCampo>;
 
 type Component = {
     name: string;
@@ -29,10 +53,10 @@ type Component = {
 type Endpoint = {
     path: string;
     method: string;
-    querySchema?: any;
-    postSchema?: any;
-    responseSchema?: any;
-    headerSchema?: any;
+    querySchema?: IEsquema;
+    postSchema?: IEsquema;
+    responseSchema?: IEsquema;
+    headerSchema?: IEsquema;
 }
 
 type Service = {
@@ -66,7 +90,7 @@ export function run(basedir: string, config: IConfigEjecucion): void {
         })
         .catch((err)=>{
             if (err!=undefined) {
-                console.error(err);
+                Log.error({type: Log.label_base, label: "autodoc"}, "Error generando la documentación", err);
             }
         });
 }
@@ -193,8 +217,8 @@ function docService(basedir: string, service: string, manifest: Manifest): IOpen
                         resumen = resumenProperty.initializer.text;
                     }
 
-                    const toJSON = (prop: ts.PropertyAssignment | undefined) =>
-                        prop ? tsToJSON(prop.initializer, typeChecker) : undefined;
+                    const toJSON = (prop: ts.PropertyAssignment | undefined): IEsquema | undefined =>
+                        prop ? tsToJSON(prop.initializer, typeChecker) as IEsquema : undefined;
 
                     metodos.forEach(metodo => {
                         component.endpoints.push({
@@ -215,9 +239,9 @@ function docService(basedir: string, service: string, manifest: Manifest): IOpen
     return services.map(s => buildOpenAPI(components, s));
 }
 
-function tsToJSON(node: ts.Node, typeChecker: ts.TypeChecker): any {
+function tsToJSON(node: ts.Node, typeChecker: ts.TypeChecker): JSONValue {
     if (ts.isObjectLiteralExpression(node)) {
-        const obj: any = {};
+        const obj: {[key: string]: JSONValue} = {};
         node.properties.forEach(prop => {
             if (ts.isPropertyAssignment(prop)) {
                 const key = ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name)
@@ -228,7 +252,7 @@ function tsToJSON(node: ts.Node, typeChecker: ts.TypeChecker): any {
                 }
             } else if (ts.isSpreadAssignment(prop)) {
                 const spread = tsToJSON(prop.expression, typeChecker);
-                if (spread && typeof spread === "object") {
+                if (spread && typeof spread === "object" && !Array.isArray(spread)) {
                     Object.assign(obj, spread);
                 }
             } else if (ts.isShorthandPropertyAssignment(prop)) {
@@ -253,7 +277,7 @@ function tsToJSON(node: ts.Node, typeChecker: ts.TypeChecker): any {
     return null;
 }
 
-function resolveIdentifier(node: ts.Identifier, typeChecker: ts.TypeChecker): any {
+function resolveIdentifier(node: ts.Identifier, typeChecker: ts.TypeChecker): JSONValue {
     let symbol = typeChecker.getSymbolAtLocation(node);
     if (symbol && (symbol.flags & ts.SymbolFlags.Alias)) {
         symbol = typeChecker.getAliasedSymbol(symbol);
@@ -300,13 +324,14 @@ function buildOpenAPI(components: Component[], service: Service): IOpenAPI {
             } else if (endpoint.method === "post") {
                 path.post = { ...pathMethod, description: `Auto-generated POST endpoint for ${endpoint.path}`, tags: [component.name] };
                 if (endpoint.postSchema) {
+                    const postSchema = endpoint.postSchema;
                     const schema: ISchema = { type: "object", properties: {}, required: [] };
-                    Object.keys(endpoint.postSchema).forEach(propName => {
+                    Object.keys(postSchema).forEach(propName => {
                         schema.properties![propName] = {
-                            type: typeof endpoint.postSchema[propName].regex === "string" ? "string" : endpoint.postSchema[propName].type,
-                            description: endpoint.postSchema[propName].description || "",
+                            type: typeof postSchema[propName].regex === "string" ? "string" : postSchema[propName].type ?? "string",
+                            description: postSchema[propName].description || "",
                         };
-                        if (endpoint.postSchema[propName].required) {
+                        if (postSchema[propName].required) {
                             schema.required!.push(propName);
                         }
                     });
@@ -321,17 +346,17 @@ function buildOpenAPI(components: Component[], service: Service): IOpenAPI {
     return doc;
 }
 
-function buildParameters(spec: any, type: "query"|"header"): IParameter[] {
+function buildParameters(spec: IEsquema, type: "query"|"header"): IParameter[] {
     return Object.keys(spec).map(paramName => ({
         name: paramName,
         in: type,
         required: !spec[paramName].opcional,
-        schema: { type: typeof spec[paramName].regex === "string" ? "string" : spec[paramName].type },
+        schema: { type: typeof spec[paramName].regex === "string" ? "string" : spec[paramName].type ?? "string" },
         description: spec[paramName].description || "",
     }));
 }
 
-function buildSchemaFromResponseObject(spec: any): ISchema {
+function buildSchemaFromResponseObject(spec: IEsquema): ISchema {
     const schema: ISchema = { type: "object", properties: {}, required: [] };
 
     Object.keys(spec).forEach(propName => {
@@ -345,7 +370,7 @@ function buildSchemaFromResponseObject(spec: any): ISchema {
                 };
                 break;
             case "object": {
-                const nested = buildSchemaFromResponseObject(propSpec.properties);
+                const nested = buildSchemaFromResponseObject(propSpec.properties ?? {});
                 schema.properties![propName] = {
                     type: "object",
                     description: propSpec.description,
@@ -355,7 +380,7 @@ function buildSchemaFromResponseObject(spec: any): ISchema {
                 break;
             }
             default:
-                schema.properties![propName] = { type: propSpec.type, description: propSpec.description || "" };
+                schema.properties![propName] = { type: propSpec.type ?? "string", description: propSpec.description || "" };
                 break;
         }
         if (propSpec.required) {

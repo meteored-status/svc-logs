@@ -1,15 +1,18 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: e33481aa73fa06f93e7f911df98bb689
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 424e73314c46ccee629c123f38016a2e
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import chokidar from "chokidar";
 
 import {Colors} from "services-comun/modules/utiles/colors";
-import {isFile, readJSON} from "services-comun/modules/utiles/fs";
 
-import {Idiomas, type TIdiomas} from "./";
+import {isFile, readJSON} from "../../../utiles/fs";
+import {Idiomas, type TIdiomas} from ".";
 import db from "../../mysql";
 
 interface IIdiomaMySQL {

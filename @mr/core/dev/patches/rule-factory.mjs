@@ -17,6 +17,26 @@
  * no el ID, por lo que el salto de digitos no tiene ningun impacto funcional.
  */
 
+/**
+ * Directorios que se ignoran al recorrer el monorepo en busca de ficheros
+ * a parchear. Se exporta para que tanto el runner principal (index.mjs) como
+ * las workspace-rules (p.ej. sync-mr-devdeps.mjs) usen exactamente el mismo
+ * conjunto sin duplicacion.
+ */
+export const SKIP_DIRS = new Set([
+    ".git",
+    ".idea",
+    ".vscode",
+    ".yarn",
+    "deprecated",
+    "node_modules",
+    "output",
+    "dist",
+    "build",
+    "coverage",
+    "tmp",
+]);
+
 /** Regexp que detecta el inicio de un comentario en una linea. */
 const COMMENT_RE = /^\s*(\/\/|\/\*|\*)/;
 
@@ -181,6 +201,32 @@ export function createLineRegexRule({
 }
 
 /**
+ * Crea una regla que opera a nivel de workspace (directorio con package.json),
+ * en lugar de a nivel de fichero individual.
+ *
+ * Las workspace-rules se ejecutan siempre que haya algun patch pendiente y
+ * reciben la ruta raiz del monorepo. A diferencia de las reglas normales, no
+ * modifican el contenido de ficheros .ts sino que pueden leer multiples
+ * ficheros y actualizar package.json.
+ *
+ * @param {object} options
+ * @param {string} options.id      - Identificador unico de la regla.
+ * @param {string} options.summary - Descripcion corta para el informe.
+ * @param {(rootDir: string) => Promise<{changed: number}>} options.run
+ *   Funcion asincrona que recibe la raiz del monorepo y devuelve el numero
+ *   de cambios realizados (entradas añadidas en package.json, etc.).
+ * @returns {{id: string, summary: string, type: "workspace", run: Function}}
+ */
+export function createWorkspaceRule({id, summary, run}) {
+    return {
+        id,
+        summary,
+        type: "workspace",
+        run,
+    };
+}
+
+/**
  * Crea una regla de migracion que divide una sentencia de import en varias
  * sentencias, cada una apuntando a un modulo distinto.
  *
@@ -262,6 +308,54 @@ export function createSplitRule({id, summary, source, targets}) {
                 return parts.join("\n");
             }).join("\n");
 
+            return {content: next, replacements};
+        },
+    };
+}
+
+/**
+ * Crea una regla que renombra un especificador dentro de los imports nombrados
+ * de un modulo concreto.
+ *
+ * Util para migraciones breaking en las que un export cambia de nombre pero
+ * el modulo fuente no cambia, p.ej.:
+ *   `{DominioTiempo}` → `{Dominio as DominioTiempo}`
+ *
+ * Colapsa automaticamente imports multilinea antes de procesar.
+ *
+ * @param {object} options
+ * @param {string} options.id          - Identificador unico de la regla.
+ * @param {string} options.summary     - Descripcion corta para el informe.
+ * @param {string} options.module      - Substring del path del modulo a vigilar.
+ * @param {string} options.detect      - Substring rapido para filtrar lineas (normalmente el nombre antiguo del simbolo).
+ * @param {RegExp} options.regex       - Regex (con flag /g) aplicada sobre la linea.
+ * @param {string} options.replacement - Cadena de reemplazo para String.replace.
+ * @returns {{id: string, summary: string, apply: Function}}
+ */
+export function createSpecifierRenameRule({id, summary, module, detect, regex, replacement}) {
+    return {
+        id,
+        summary,
+        apply(content) {
+            let replacements = 0;
+            const collapsed = collapseMultilineImports(content, module);
+            const lines = collapsed.split("\n");
+            const next = lines.map((line) => {
+                if (!isModuleLine(line)) {
+                    return line;
+                }
+                if (!line.includes(module)) {
+                    return line;
+                }
+                if (!line.includes(detect)) {
+                    return line;
+                }
+                const replaced = line.replace(regex, replacement);
+                if (replaced !== line) {
+                    replacements += 1;
+                }
+                return replaced;
+            }).join("\n");
             return {content: next, replacements};
         },
     };

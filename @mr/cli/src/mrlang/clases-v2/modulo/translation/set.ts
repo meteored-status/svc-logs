@@ -1,18 +1,16 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: e6ad92a3d477c257836d4685424ee462
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 1ce5ab334abd7345976dc8fbe6b938a2
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {JSONItem, JSONValorSet, JSONValuePlural, JSONValueSingular} from "../../data";
 import {Definition} from "../definition";
 import {definitionModulePath, LANG_REGEXPS} from "./common";
 import {ModuloJSON} from "../json";
-
-const pascalCase = (str: string, regex: RegExp = /[^a-zA-Z]/) => {
-    const words = str.split(regex);
-    return words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
-}
+import {pascalCase} from "../../util/case.ts";
 
 export default (lang: string, value: JSONValorSet, item: JSONItem, module: ModuloJSON, definition: Definition) => {
 
@@ -53,7 +51,7 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
                 break;
             case "plural":
                 const pluralValue = value as JSONValuePlural;
-                imports.add(`import {${langKey}} from "make-plural/cardinals";`)
+                imports.add(`import pluralBuilder from "services-comun/modules/traduccion/v2/util/plural-function-builder";`)
                 imports.add(`import {PluralValue} from "services-comun/modules/traduccion/v2/value/plural-value";`);
                 imports.add(`import {TPluralKey} from "services-comun/modules/traduccion/v2/value";`);
                 if (item.params && item.params.length > 0) {
@@ -69,10 +67,10 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
                 block2.push('};');
 
                 if (item.params && item.params.length > 0) {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, ${langKey}, ["${item.params.join("\", \"")}"]);`);
+                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, pluralBuilder('${langKey}'), ["${item.params.join("\", \"")}"]);`);
                     definition.addParamDefinition(paramDefinition, item.params);
                 } else {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue(values${valueCount}, ${langKey});`);
+                    block2.push(`const pluralValue${valueCount} = new PluralValue(values${valueCount}, pluralBuilder('${langKey}'));`);
                 }
                 values.push(`pluralValue${valueCount}`);
                 break;

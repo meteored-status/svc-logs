@@ -86,11 +86,11 @@ download_tool yq https://github.com/mikefarah/yq/releases/latest/download/yq_lin
 #############################
 #### DESCARGAR KUSTOMIZE ####
 #############################
-download_tool kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz
+download_tool kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.8.1/kustomize_v5.8.1_linux_amd64.tar.gz
 
 #############################
 #### DESCARGAR SQLPROXY ####
 #############################
 if [[ -n "$_MYSQL" ]]; then
-  download_tool cloud_sql_proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.4/cloud-sql-proxy.linux.amd64 cloud_sql_proxy
+  download_tool cloud_sql_proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.22.0/cloud-sql-proxy.linux.amd64 cloud_sql_proxy
 fi

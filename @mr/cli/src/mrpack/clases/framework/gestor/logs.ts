@@ -1,15 +1,30 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 65f0ce475cc185ca55e07157c626879c
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: c20f28329fb286d6f8f4661468f07674
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.3+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import path from "node:path";
 
-import {mkdir, readDir, safeWrite} from "services-comun/modules/utiles/fs";
-
+import {mkdir, readDir, safeWrite} from "../../../../utiles/fs";
+import type {IEntradaActualizacion} from "../../paquete/file";
 import type {IPaqueteGestion} from "./datos";
+
+/** Prefijo de rutas de artefactos binarios que se excluyen de los logs (igual que en el TUI). */
+const PREFIJO_BINARIO = "bin/min";
+
+/**
+ * Genera un identificador de anclaje Markdown estable a partir de la ruta de un archivo.
+ *
+ * @param archivo - Ruta relativa del archivo.
+ * @returns Identificador válido para usar como ancla `#conflicto-...`.
+ */
+function anclaConflicto(archivo: string): string {
+    return `conflicto-${archivo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
+}
 
 /**
  * Escribe el log de una actualización en `{basedir}/tmp/log/{nombre}.pull.md`.
@@ -19,11 +34,12 @@ import type {IPaqueteGestion} from "./datos";
  * @param info     - Información del paquete actualizado.
  * @param entradas - Listado de ficheros afectados con su estado.
  * @param logsRaw  - Salida de consola capturada durante la actualización.
+ * @param error    - Mensaje/stack del error que interrumpió la actualización, si lo hubo.
  * @returns Ruta absoluta del fichero de log escrito.
  */
-export async function escribirLog(basedir: string, info: IPaqueteGestion, entradas: {archivo: string; estado: "ok" | "error"}[], logsRaw: string[]): Promise<string> {
+export async function escribirLog(basedir: string, info: IPaqueteGestion, entradas: IEntradaActualizacion[], logsRaw: string[], error?: string): Promise<string> {
     const logDir = `${basedir}/tmp/log`;
-    await mkdir(logDir, true);
+    await mkdir(logDir);
 
     const safeNombre = info.npmName.replace(/[@/]/g, "-").replace(/^-+/, "");
     const logPath    = `${logDir}/${safeNombre}.pull.md`;
@@ -31,6 +47,9 @@ export async function escribirLog(basedir: string, info: IPaqueteGestion, entrad
     const fecha     = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
     const versionDe = info.versionLocal ?? "no instalado";
     const versionA  = info.versionLatest ?? "desconocido";
+
+    const entradasFiltradas = entradas.filter(e => !e.archivo.startsWith(PREFIJO_BINARIO));
+    const entradasConConflicto = entradasFiltradas.filter(e => e.conflictos !== undefined && e.conflictos.length > 0);
 
     const lineas: string[] = [
         `# Update ${info.npmName}`,
@@ -45,12 +64,49 @@ export async function escribirLog(basedir: string, info: IPaqueteGestion, entrad
         "|---|---|",
     ];
 
-    for (const entrada of entradas) {
-        const estado = entrada.estado === "ok" ? "OK" : "Error";
+    for (const entrada of entradasFiltradas) {
+        const archivo = entrada.archivo.replace(/\|/g, "\\|");
+        const estado = entrada.conflictos !== undefined && entrada.conflictos.length > 0
+            ? `[Conflicto](#${anclaConflicto(entrada.archivo)})`
+            : (entrada.estado === "ok" ? "OK" : "Error");
         const absPath = path.resolve(info.localDir, entrada.archivo);
         const relPath = path.relative(logDir, absPath).replace(/\\/g, "/");
-        const archivo = entrada.archivo.replace(/\|/g, "\\|");
         lineas.push(`| ${estado} | [\`${archivo}\`](${relPath}) |`);
+    }
+
+    if (error) {
+        lineas.push("");
+        lineas.push("## Error");
+        lineas.push("");
+        lineas.push("```text");
+        lineas.push(error);
+        lineas.push("```");
+    }
+
+    if (entradasConConflicto.length > 0) {
+        lineas.push("");
+        lineas.push("## Conflictos");
+
+        for (const entrada of entradasConConflicto) {
+            const archivo = entrada.archivo.replace(/\|/g, "\\|");
+            lineas.push("");
+            lineas.push(`### \`${archivo}\` {#${anclaConflicto(entrada.archivo)}}`);
+
+            entrada.conflictos!.forEach((bloque, indice) => {
+                lineas.push("");
+                lineas.push(`**Sección ${indice + 1}**`);
+                lineas.push("");
+                lineas.push("```text");
+                lineas.push("<<<<<<< LOCAL");
+                lineas.push(...bloque.local);
+                lineas.push("||||||| BASE");
+                lineas.push(...bloque.base);
+                lineas.push("=======");
+                lineas.push(...bloque.remote);
+                lineas.push(">>>>>>> REMOTE");
+                lineas.push("```");
+            });
+        }
     }
 
     if (logsRaw.length > 0) {
@@ -78,12 +134,14 @@ export async function escribirLog(basedir: string, info: IPaqueteGestion, entrad
  */
 export async function escribirLogPush(basedir: string, info: IPaqueteGestion, archivos: string[]): Promise<string> {
     const logDir = `${basedir}/tmp/log`;
-    await mkdir(logDir, true);
+    await mkdir(logDir);
 
     const safeNombre = info.npmName.replace(/[@/]/g, "-").replace(/^-+/, "");
     const logPath    = `${logDir}/${safeNombre}.push.md`;
     const fecha      = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
     const version    = info.paquete.versionPublica;
+
+    const archivosFiltrados = archivos.filter(a => !a.startsWith(PREFIJO_BINARIO));
 
     const lineas: string[] = [
         `# Push ${info.npmName}`,
@@ -93,7 +151,7 @@ export async function escribirLogPush(basedir: string, info: IPaqueteGestion, ar
         "",
         "## Archivos enviados",
         "",
-        ...archivos.map((archivo) => {
+        ...archivosFiltrados.map((archivo) => {
             const absPath = path.resolve(info.localDir, archivo);
             const relPath = path.relative(logDir, absPath).replace(/\\/g, "/");
             return `- [\`${archivo}\`](${relPath})`;

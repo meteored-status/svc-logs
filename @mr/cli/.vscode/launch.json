@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug mrpack (Current File or Arg)",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/bin/mrpack.js",
+      "args": [],
+      "cwd": "${workspaceFolder}/..",
+      "runtimeArgs": ["--no-warnings"],
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to Running Service (Inspector)",
+      "port": 9229,
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

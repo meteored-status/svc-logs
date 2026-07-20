@@ -1,9 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 11:38:09 GMT
- * Hash: c231c0dca3d6fc036c6bf48be32ac83e
- * Versión: 2026.5.27+6-josantoniojimnez
- * Anterior: 2026.5.27+2-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 12195ec0458be0bfc8acddc3762241b7
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/core-dev/manifest/deployment";
@@ -19,10 +20,10 @@ import ManifestWorkspaceDeploymentKustomizeLoader from "./kustomize";
 import ManifestWorkspaceDeploymentLambdaLoader from "./lambda";
 import ManifestWorkspaceDeploymentStorageLoader from "./storage";
 
-type IManifestDeploymentUpdate1 = Exclude<IManifestDeployment, "kustomize"> & {
+type IManifestDeploymentUpdate1 = Omit<IManifestDeployment, "kustomize"> & {
     kustomize?: string;
 }
-type IManifestDeploymentUpdate2 = Exclude<IManifestDeployment, "kustomize"> & {
+type IManifestDeploymentUpdate2 = Omit<IManifestDeployment, "kustomize"> & {
     kustomize: {
         legacy: string;
     };
@@ -233,15 +234,11 @@ class ManifestWorkspaceDeploymentLoader {
                     credenciales = ManifestWorkspaceDeploymentCredencialesLoader.fromLegacy(config);
                     kustomize = names.map(name=>ManifestWorkspaceDeploymentKustomizeLoader.fromLegacy(config, name));
                     break;
-                case RuntimeLegacy.browser:
-                    type = ManifestDeploymentKind.BROWSER;
-                    storage = ManifestWorkspaceDeploymentStorageLoader.fromLegacy(config);
-                    break;
                 case RuntimeLegacy.cfworker:
                     type = ManifestDeploymentKind.WORKER;
                     break;
                 default:
-                    throw new Error(`ManifestDeployment: framework no soportado "${config.framework}"`);
+                    throw new Error(`ManifestDeployment: framework no soportado "${config.runtime}"`);
             }
         }
         let runtime: Runtime;

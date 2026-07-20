@@ -5,7 +5,7 @@
     <scripts>
       <script value="mrpack" />
     </scripts>
-    <arguments value="devel -c -f" />
+    <arguments value="devel -c -f -w" />
     <node-interpreter value="project" />
     <envs />
     <method v="2" />
