@@ -2,6 +2,56 @@
 
 ---
 
+## 2026.7.13 — [Jose]
+
+### Changed
+
+- **`package.json`** — `dd-trace` actualizado de `^5.113.0` a `^6.2.0`. Revisado el
+  *changelog* oficial del major: los *breaking changes* de la v6 (Node.js ≥22 como mínimo
+  soportado, retirada de APIs ya deprecadas de AppSec/plugins y cambios en Test Optimization)
+  no afectan al uso actual en `server/http/conexion.ts`, `server/websocket/index.ts` y
+  `client/websocket/index.ts` (`tracer` como default export, `type Span`, `formats` de
+  `dd-trace/ext`). Sin cambios de código necesarios.
+
+---
+
+## 2026.6.16 — [Jose]
+
+### Removed
+
+- **`server/http/handlers/admin.ts`**, **`server/http/handlers/error.ts`**, **`server/http/handlers/favicon.ts`** —
+  los tres handlers predefinidos se han trasladado a `@mr/core-workload/handlers/`.
+  La razón es que `Admin` y `ErrorHandler` dependen de `Engine` (de `@mr/core-workload/engine/server`),
+  creando una dependencia circular inversa si permanecían en `@mr/core-network`.
+  - Los imports deben actualizarse:
+    ```ts
+    // Antes
+    import Admin   from "@mr/core-network/server/http/handlers/admin";
+    import ErrorH  from "@mr/core-network/server/http/handlers/error";
+    import Favicon from "@mr/core-network/server/http/handlers/favicon";
+
+    // Ahora
+    import Admin   from "@mr/core-workload/handlers/admin";
+    import ErrorH  from "@mr/core-workload/handlers/error";
+    import Favicon from "@mr/core-workload/handlers/favicon";
+    ```
+
+---
+
+## 2026.6.10+1 — [Jose]
+
+### Added
+
+- **`route/index.ts`** *(nuevo)* — módulo de routing HTTP transferido desde `@mr/core-templates/seccion`.
+  Exporta la clase `Route` (antes `Seccion`) y los tipos `IRoute`, `IRouteOptions`, `IRouteBuilderOptions`,
+  `TRouteRunner`, `TParams` y `crearExactGET`.
+  - `Route` agrupa la configuración de URLs por idioma, las expresiones de routing y la lógica de ejecución
+    de handlers de petición (método `run<C, P>`).
+  - `crearExactGET` es la función de conveniencia para crear rutas de URL exacta con método `GET`.
+- **`route/README.md`** *(nuevo)* — documentación completa del módulo `route`.
+
+---
+
 ## 2026.5.22+3 — [Jose]
 
 ### Changed

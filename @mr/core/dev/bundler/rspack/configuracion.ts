@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 2b15f8defd053a50c0fa1a4ee0ba5d80
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
+ * Hash: 12300770a8f9e8e4f3ed7f5ee2b565e1
+ * Versión: 2026.7.17+1-josantoniojimnez
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {type Configuration} from "@rspack/core";
@@ -28,6 +30,7 @@ import plugins from "./plugins.ts";
  * @property bundle       - Configuración del bundle (`mrpack.json → build.bundle`).
  * @property dependencies - Dependencias del `package.json` del workspace.
  * @property entorno      - Nombre del entorno activo (`"desarrollo"`, `"test"`, `"produccion"`…).
+ * @property watch        - Si `true`, activa el modo watch de rspack. Por defecto compila una única vez.
  * @property framework    - Framework de compilación (`meteored`, `nextjs`).
  * @property runtime      - Runtime del bundle (`node`, `browser`…).
  * @property database     - Nombre de la BD activa para el entorno (inyectado como `DATABASE`).
@@ -38,6 +41,7 @@ interface IConfiguracionConfig {
     bundle: ManifestBuildBundleBase;
     dependencies: Record<string, string>;
     entorno: string;
+    watch: boolean;
     framework: BuildFW;
     runtime: Runtime;
     database?: string;
@@ -47,15 +51,15 @@ interface IConfiguracionConfig {
 /**
  * Construye la configuración completa de rspack para un bundle individual.
  *
- * - En modo **desarrollo** activa `watch` con un `aggregateTimeout` de 1 segundo
- *   e ignora los directorios que no contienen código TypeScript.
+ * - Si `watch` está activo en modo **desarrollo**, activa `watch` con un `aggregateTimeout` de 1
+ *   segundo e ignora los directorios que no contienen código TypeScript.
  * - Las variables globales (`PRODUCCION`, `TEST`, `DESARROLLO`, etc.) se inyectan
  *   mediante `DefinePlugin` (ver `plugins.ts`).
  *
  * @param config - Parámetros del bundle.
  * @returns Configuración de rspack lista para exportar desde `rspack.config.ts`.
  */
-export default ({basedir, bundle, dependencies, entorno, framework, runtime, database, rules}: IConfiguracionConfig): Configuration => {
+export default ({basedir, bundle, dependencies, entorno, watch, framework, runtime, database, rules}: IConfiguracionConfig): Configuration => {
     const desarrollo = !["produccion", "test"].includes(entorno);
     const test = ["desarrollo", "test"].includes(entorno);
     const mode = desarrollo ? "development" : "production";
@@ -101,7 +105,7 @@ export default ({basedir, bundle, dependencies, entorno, framework, runtime, dat
         target: Target(runtime),
     };
 
-    if (desarrollo) {
+    if (desarrollo && watch) {
         salida.watch = true;
         salida.watchOptions = {
             aggregateTimeout: 1000,

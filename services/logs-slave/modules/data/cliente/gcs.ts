@@ -1,4 +1,4 @@
-import type {Google} from "services-comun/modules/utiles/config";
+import {type Google} from "@mr/core-workload/config/google";
 import {Storage} from "services-comun/modules/fs/storage";
 
 import {ClienteError} from "./error";

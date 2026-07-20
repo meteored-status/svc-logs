@@ -1,11 +1,12 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: ab3d4b36fb546f58a2a176b5e4ce2e13
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: f9db6bc27a132aaf7337491f49e80d7c
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {isFile, readJSON} from "services-comun/modules/utiles/fs";
-
+import {isFile, readJSON} from "../../../utiles/fs";
 import {IModulo, type IModuloConfig as IModuloConfigBase, Modulo} from ".";
 import {JSONItem} from "../data";
 import {pascalCase} from "../util/case";

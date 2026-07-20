@@ -1,3 +1,11 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Fri, 03 Jul 2026 06:33:38 GMT
+ * Hash: 91166193aa509d6b7a336f2469401863
+ * Versión: 2026.7.3+1-juancmartinez
+ * Proyecto: git@github.com:alpred/meteored-svc-translation.git
+ */
+
 import {TransactionManager} from "./transaction-manager";
 import {error, info} from "../../utiles/log";
 import {md5} from "../../utiles/hash";
@@ -41,10 +49,8 @@ export type TransactionOptions = {
 }
 
 export const transactional = (getTM: () => TransactionManager, {name, isolationLevel}: TransactionOptions = {}): Function => {
-    return function (_target: Object | Function, _propertyKey: string, _descriptor: PropertyDescriptor): void {
-        const originalMethod = _descriptor.value;
-
-        _descriptor.value = async function (this: any, ...args: any[]): Promise<any> {
+    return (originalMethod: any, _context: ClassMethodDecoratorContext) => {
+        return async function (this: any, ...args: any[]): Promise<any> {
             let t = args.find(arg => arg instanceof Transaction);
             const initial = t === undefined;
             if (!t) {

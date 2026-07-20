@@ -1,0 +1,548 @@
+[
+  {
+    "code": "am",
+    "name": "Amharic",
+    "parent_code": "en",
+    "path": "am.en.en-US"
+  },
+  {
+    "code": "ar",
+    "name": "Arabic",
+    "parent_code": "en",
+    "path": "ar.en.en-US"
+  },
+  {
+    "code": "az",
+    "name": "Azerbaijani",
+    "parent_code": "en",
+    "path": "az.en.en-US"
+  },
+  {
+    "code": "bg",
+    "name": "Bulgarian",
+    "parent_code": "en",
+    "path": "bg.en.en-US"
+  },
+  {
+    "code": "bn",
+    "name": "Bengali",
+    "parent_code": "en",
+    "path": "bn.en.en-US"
+  },
+  {
+    "code": "bs",
+    "name": "Bosnian",
+    "parent_code": "en",
+    "path": "bs.en.en-US"
+  },
+  {
+    "code": "ca",
+    "name": "Catalan",
+    "parent_code": "es-ES",
+    "path": "ca.es-ES.es.en.en-US"
+  },
+  {
+    "code": "ca-ES",
+    "name": "Catalan (Spain)",
+    "parent_code": "ca",
+    "path": "ca-ES.ca.es-ES.es.en.en-US"
+  },
+  {
+    "code": "cs",
+    "name": "Czech",
+    "parent_code": "en",
+    "path": "cs.en.en-US"
+  },
+  {
+    "code": "da",
+    "name": "Danish",
+    "parent_code": "en",
+    "path": "da.en.en-US"
+  },
+  {
+    "code": "da-DK",
+    "name": "Danish (Denmark)",
+    "parent_code": "da",
+    "path": "da-DK.da.en.en-US"
+  },
+  {
+    "code": "de",
+    "name": "German",
+    "parent_code": "en",
+    "path": "de.en.en-US"
+  },
+  {
+    "code": "de-AT",
+    "name": "German (Austria)",
+    "parent_code": "de",
+    "path": "de-AT.de.en.en-US"
+  },
+  {
+    "code": "de-DE",
+    "name": "German (Germany)",
+    "parent_code": "de",
+    "path": "de-DE.de.en.en-US"
+  },
+  {
+    "code": "el",
+    "name": "Greek",
+    "parent_code": "en",
+    "path": "el.en.en-US"
+  },
+  {
+    "code": "el-GR",
+    "name": "Greek (Greece)",
+    "parent_code": "el",
+    "path": "el-GR.el.en.en-US"
+  },
+  {
+    "code": "en",
+    "name": "English",
+    "parent_code": "en-US",
+    "path": "en.en-US"
+  },
+  {
+    "code": "en-AU",
+    "name": "English (Australia)",
+    "parent_code": "en",
+    "path": "en-AU.en.en-US"
+  },
+  {
+    "code": "en-CA",
+    "name": "English (Canada)",
+    "parent_code": "en",
+    "path": "en-CA.en.en-US"
+  },
+  {
+    "code": "en-GB",
+    "name": "English (United Kingdom)",
+    "parent_code": "en",
+    "path": "en-GB.en.en-US"
+  },
+  {
+    "code": "en-IE",
+    "name": "English (Ireland)",
+    "parent_code": "en",
+    "path": "en-IE.en.en-US"
+  },
+  {
+    "code": "en-IN",
+    "name": "English (India)",
+    "parent_code": "en",
+    "path": "en-IN.en.en-US"
+  },
+  {
+    "code": "en-US",
+    "name": "English (United States)",
+    "parent_code": null,
+    "path": "en-US"
+  },
+  {
+    "code": "es",
+    "name": "Spanish",
+    "parent_code": "en",
+    "path": "es.en.en-US"
+  },
+  {
+    "code": "es-419",
+    "name": "Spanish (Latin America)",
+    "parent_code": "es-AR",
+    "path": "es-419.es-AR.es.en.en-US"
+  },
+  {
+    "code": "es-AR",
+    "name": "Spanish (Argentina)",
+    "parent_code": "es",
+    "path": "es-AR.es.en.en-US"
+  },
+  {
+    "code": "es-BO",
+    "name": "Spanish (Bolivia)",
+    "parent_code": "es",
+    "path": "es-BO.es.en.en-US"
+  },
+  {
+    "code": "es-CL",
+    "name": "Spanish (Chile)",
+    "parent_code": "es",
+    "path": "es-CL.es.en.en-US"
+  },
+  {
+    "code": "es-CR",
+    "name": "Spanish (Costa Rica)",
+    "parent_code": "es",
+    "path": "es-CR.es.en.en-US"
+  },
+  {
+    "code": "es-DO",
+    "name": "Spanish (Dominican Republic)",
+    "parent_code": "es",
+    "path": "es-DO.es.en.en-US"
+  },
+  {
+    "code": "es-EC",
+    "name": "Spanish (Ecuador)",
+    "parent_code": "es",
+    "path": "es-EC.es.en.en-US"
+  },
+  {
+    "code": "es-ES",
+    "name": "Spanish (Spain)",
+    "parent_code": "es",
+    "path": "es-ES.es.en.en-US"
+  },
+  {
+    "code": "es-HN",
+    "name": "Spanish (Honduras)",
+    "parent_code": "es",
+    "path": "es-HN.es.en.en-US"
+  },
+  {
+    "code": "es-MX",
+    "name": "Spanish (Mexico)",
+    "parent_code": "es",
+    "path": "es-MX.es.en.en-US"
+  },
+  {
+    "code": "es-PA",
+    "name": "Spanish (Panama)",
+    "parent_code": "es",
+    "path": "es-PA.es.en.en-US"
+  },
+  {
+    "code": "es-PE",
+    "name": "Spanish (Peru)",
+    "parent_code": "es",
+    "path": "es-PE.es.en.en-US"
+  },
+  {
+    "code": "es-PY",
+    "name": "Spanish (Paraguay)",
+    "parent_code": "es",
+    "path": "es-PY.es.en.en-US"
+  },
+  {
+    "code": "es-UY",
+    "name": "Spanish (Uruguay)",
+    "parent_code": "es",
+    "path": "es-UY.es.en.en-US"
+  },
+  {
+    "code": "es-VE",
+    "name": "Spanish (Venezuela)",
+    "parent_code": "es",
+    "path": "es-VE.es.en.en-US"
+  },
+  {
+    "code": "eu",
+    "name": "Basque",
+    "parent_code": "es-ES",
+    "path": "eu.es-ES.es.en.en-US"
+  },
+  {
+    "code": "eu-ES",
+    "name": "Basque (Spain)",
+    "parent_code": "eu",
+    "path": "eu-ES.eu.es-ES.es.en.en-US"
+  },
+  {
+    "code": "fa",
+    "name": "Farsi",
+    "parent_code": "en",
+    "path": "fa.en.en-US"
+  },
+  {
+    "code": "fi",
+    "name": "Finnish",
+    "parent_code": "en",
+    "path": "fi.en.en-US"
+  },
+  {
+    "code": "fil",
+    "name": "Filipino",
+    "parent_code": "en",
+    "path": "fil.en.en-US"
+  },
+  {
+    "code": "fr",
+    "name": "French",
+    "parent_code": "en",
+    "path": "fr.en.en-US"
+  },
+  {
+    "code": "fr-FR",
+    "name": "French (France)",
+    "parent_code": "fr",
+    "path": "fr-FR.fr.en.en-US"
+  },
+  {
+    "code": "gl",
+    "name": "Galician",
+    "parent_code": "es-ES",
+    "path": "gl.es-ES.es.en.en-US"
+  },
+  {
+    "code": "gl-ES",
+    "name": "Galician (Spain)",
+    "parent_code": "gl",
+    "path": "gl-ES.gl.es-ES.es.en.en-US"
+  },
+  {
+    "code": "he",
+    "name": "Hebrew",
+    "parent_code": "en",
+    "path": "he.en.en-US"
+  },
+  {
+    "code": "hi",
+    "name": "Hindi",
+    "parent_code": "en",
+    "path": "hi.en.en-US"
+  },
+  {
+    "code": "hr",
+    "name": "Croatian",
+    "parent_code": "en",
+    "path": "hr.en.en-US"
+  },
+  {
+    "code": "hu",
+    "name": "Hungarian",
+    "parent_code": "en",
+    "path": "hu.en.en-US"
+  },
+  {
+    "code": "id",
+    "name": "Indonesian",
+    "parent_code": "en",
+    "path": "id.en.en-US"
+  },
+  {
+    "code": "it",
+    "name": "Italian",
+    "parent_code": "en",
+    "path": "it.en.en-US"
+  },
+  {
+    "code": "it-IT",
+    "name": "Italian (Italy)",
+    "parent_code": "it",
+    "path": "it-IT.it.en.en-US"
+  },
+  {
+    "code": "ja",
+    "name": "Japanese",
+    "parent_code": "en",
+    "path": "ja.en.en-US"
+  },
+  {
+    "code": "ka",
+    "name": "Georgian",
+    "parent_code": "en",
+    "path": "ka.en.en-US"
+  },
+  {
+    "code": "km",
+    "name": "Khmer (Cambodia)",
+    "parent_code": "en",
+    "path": "km.en.en-US"
+  },
+  {
+    "code": "ko",
+    "name": "Korean",
+    "parent_code": "en",
+    "path": "ko.en.en-US"
+  },
+  {
+    "code": "ky",
+    "name": "Kyrgyz",
+    "parent_code": "en",
+    "path": "ky.en.en-US"
+  },
+  {
+    "code": "lo",
+    "name": "Lao",
+    "parent_code": "en",
+    "path": "lo.en.en-US"
+  },
+  {
+    "code": "mk",
+    "name": "Macedonian",
+    "parent_code": "en",
+    "path": "mk.en.en-US"
+  },
+  {
+    "code": "mn",
+    "name": "Mongolian (Cirilic alphabet)",
+    "parent_code": "en",
+    "path": "mn.en.en-US"
+  },
+  {
+    "code": "ms",
+    "name": "Malay",
+    "parent_code": "en",
+    "path": "ms.en.en-US"
+  },
+  {
+    "code": "my",
+    "name": "Burmese",
+    "parent_code": "en",
+    "path": "my.en.en-US"
+  },
+  {
+    "code": "nb",
+    "name": "Norwegian Bokmål",
+    "parent_code": "no",
+    "path": "nb.no.en.en-US"
+  },
+  {
+    "code": "ne",
+    "name": "Nepali",
+    "parent_code": "en",
+    "path": "ne.en.en-US"
+  },
+  {
+    "code": "nl",
+    "name": "Dutch",
+    "parent_code": "en",
+    "path": "nl.en.en-US"
+  },
+  {
+    "code": "nl-NL",
+    "name": "Dutch (Netherlands)",
+    "parent_code": "nl",
+    "path": "nl-NL.nl.en.en-US"
+  },
+  {
+    "code": "no",
+    "name": "Norwegian",
+    "parent_code": "en",
+    "path": "no.en.en-US"
+  },
+  {
+    "code": "pl",
+    "name": "Polish",
+    "parent_code": "en",
+    "path": "pl.en.en-US"
+  },
+  {
+    "code": "pt",
+    "name": "Portuguese",
+    "parent_code": "en",
+    "path": "pt.en.en-US"
+  },
+  {
+    "code": "pt-BR",
+    "name": "Portuguese (Brazil)",
+    "parent_code": "pt",
+    "path": "pt-BR.pt.en.en-US"
+  },
+  {
+    "code": "pt-PT",
+    "name": "Portuguese (Portugal)",
+    "parent_code": "pt",
+    "path": "pt-PT.pt.en.en-US"
+  },
+  {
+    "code": "ro",
+    "name": "Romanian",
+    "parent_code": "en",
+    "path": "ro.en.en-US"
+  },
+  {
+    "code": "ru",
+    "name": "Russian",
+    "parent_code": "en",
+    "path": "ru.en.en-US"
+  },
+  {
+    "code": "ru-RU",
+    "name": "Russian (Russia)",
+    "parent_code": "ru",
+    "path": "ru-RU.ru.en.en-US"
+  },
+  {
+    "code": "sk",
+    "name": "Slovak",
+    "parent_code": "en",
+    "path": "sk.en.en-US"
+  },
+  {
+    "code": "sq",
+    "name": "Albanian",
+    "parent_code": "en",
+    "path": "sq.en.en-US"
+  },
+  {
+    "code": "sr",
+    "name": "Serbian (Latin alphabet)",
+    "parent_code": "en",
+    "path": "sr.en.en-US"
+  },
+  {
+    "code": "sr-Cyrl",
+    "name": "Serbian (Cirilic alphabet)",
+    "parent_code": "sr",
+    "path": "sr-Cyrl.sr.en.en-US"
+  },
+  {
+    "code": "sv",
+    "name": "Swedish",
+    "parent_code": "en",
+    "path": "sv.en.en-US"
+  },
+  {
+    "code": "sw",
+    "name": "Swahili",
+    "parent_code": "en",
+    "path": "sw.en.en-US"
+  },
+  {
+    "code": "tg",
+    "name": "Tajik",
+    "parent_code": "en",
+    "path": "tg.en.en-US"
+  },
+  {
+    "code": "th",
+    "name": "Thai",
+    "parent_code": "en",
+    "path": "th.en.en-US"
+  },
+  {
+    "code": "tl",
+    "name": "Tagalog",
+    "parent_code": "fil",
+    "path": "tl.fil.en.en-US"
+  },
+  {
+    "code": "tr",
+    "name": "Turkish",
+    "parent_code": "en",
+    "path": "tr.en.en-US"
+  },
+  {
+    "code": "uk",
+    "name": "Ukrainian",
+    "parent_code": "en",
+    "path": "uk.en.en-US"
+  },
+  {
+    "code": "ur",
+    "name": "Urdu",
+    "parent_code": "en",
+    "path": "ur.en.en-US"
+  },
+  {
+    "code": "uz",
+    "name": "Uzbek",
+    "parent_code": "en",
+    "path": "uz.en.en-US"
+  },
+  {
+    "code": "vi",
+    "name": "Vietnamese",
+    "parent_code": "en",
+    "path": "vi.en.en-US"
+  }
+]

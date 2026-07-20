@@ -1,16 +1,19 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 5749b91687449f3b6e4be9ade75a335f
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 21396080e736f88c8be7b3e541774d7e
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.1+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import path from "node:path";
 
-import {BuildFW} from "@mr/core-dev/manifest/build";
+import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 import {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
+import {md5} from "services-comun/modules/utiles/hash";
+
 import {
     isDir,
     isFile,
@@ -20,11 +23,10 @@ import {
     readJSON,
     safeWrite,
     unlink,
-} from "services-comun/modules/utiles/fs";
-import {md5} from "services-comun/modules/utiles/hash";
-
+} from "../../../utiles/fs";
 import {Comando} from "../comando";
-import {IPackageJson} from "../packagejson";
+import {Log} from "../log";
+import type {IPackageJson} from "../packagejson";
 import type {Manifest as ManifestRoot} from "../../../../manifest";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
@@ -53,7 +55,7 @@ export class Compilar {
     public static async build(basedir: string, name: string, path: string): Promise<Compilar|null> {
         const dir = `${basedir}/${path}/${name}`;
         if (!await isDir(dir) || !await isFile(`${dir}/package.json`)) {
-            console.error(name, "[ERROR]", "Servicio no válido");
+            Log.error({type: Log.label_compilar, label: name}, "Servicio no válido");
             return null;
         }
         const json = await readJSON<IPackageJson>(`${dir}/package.json`);
@@ -134,7 +136,7 @@ export class Compilar {
             delete this.pendientes[compilar.name];
             const keys = Object.keys(this.pendientes);
             if (keys.length>0) {
-                console.log(this.name, "[     ]", "Esperando dependencias:", keys.join(", "));
+                Log.info({type: Log.label_compilar, label: this.name}, "Esperando dependencias:", keys.join(", "));
                 return;
             }
         }
@@ -143,11 +145,11 @@ export class Compilar {
             await this.mantenerVersion(env, manifest);
 
             if (this.dependencias.length==0) {
-                console.log(this.name, "[OK   ]", "Servicio desactivado para despliegue");
+                Log.info({type: Log.label_compilar, label: this.name}, "Servicio desactivado para despliegue");
                 return;
             }
 
-            console.warn(this.name, "[WARN ]", "Servicio desactivado para despliegue. Hay servicios dependientes que podrían no generarse correctamente:", this.dependencias.map((dependencia)=>dependencia.name).join(", "));
+            Log.info({type: Log.label_compilar, label: this.name}, "Servicio desactivado para despliegue. Hay servicios dependientes que podrían no generarse correctamente:", this.dependencias.map((dependencia)=>dependencia.name).join(", "));
             return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, {compilar: this}))).then(() => undefined);
         }
 
@@ -162,10 +164,10 @@ export class Compilar {
                     await this.packNextJS(env, manifest);
                     break;
             }
-            console.log(this.name, "[OK   ]", "Servicio compilado");
+            Log.info({type: Log.label_compilar, label: this.name}, "Servicio compilado");
         } else {
             await this.mantenerVersion(env, manifest);
-            console.log(this.name, "[OK   ]", "Versión mantenida");
+            Log.info({type: Log.label_compilar, label: this.name}, "Versión mantenida");
         }
 
         if (this.dependencias.length==0) {
@@ -178,13 +180,17 @@ export class Compilar {
     private async packMeteored(env: string, manifest: ManifestRoot): Promise<void> {
         switch(this.config.deploy.runtime) {
             case Runtime.browser: {
-                    await this.webpack(env);
+                    await this.rspack(env);
                     await this.checkVersionBrowser();
                 }
                 break;
             case Runtime.node: {
                     const customDockerfile = await isFile(`${this.dir}/Dockerfile`);
-                    await this.webpack(env);
+                    if (this.config.build.bundler===BuildBundler.rspack) {
+                        await this.rspack(env);
+                    } else {
+                        await this.esbuild(env);
+                    }
                     const checks: string[] = [
                         `${this.basedir}/.yarnrc.yml`,
                     ];
@@ -233,13 +239,19 @@ export class Compilar {
         }
     }
 
-    private async webpack(env: string): Promise<void> {
+    private async rspack(env: string): Promise<void> {
         const {status, stdout, stderr} = await Comando("yarn", ["workspace", "@mr/core-dev", "rspack", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`, "--config", `bundler/rspack/rspack.config.ts`], {cwd: this.basedir, colores: false});
         if (status != 0) {
-            console.error(this.name, "[KO   ]", "Error compilando:");
-            console.error(stdout);
-            console.error(stderr);
-            return Promise.reject();
+            Log.error({type: Log.label_compilar, label: this.name}, "Error compilando:", stdout, stderr);
+            throw new Error(`Error compilando "${this.name}" con rspack`);
+        }
+    }
+
+    private async esbuild(env: string): Promise<void> {
+        const {status, stdout, stderr} = await Comando("yarn", ["workspace", "@mr/core-dev", "node", "bundler/esbuild/esbuild.config.mjs", "--env", `entorno=${env}`, "--env", `dir="${this.dir}"`], {cwd: this.basedir, colores: false});
+        if (status != 0) {
+            Log.error({type: Log.label_compilar, label: this.name}, "Error compilando:", stdout, stderr);
+            throw new Error(`Error compilando "${this.name}" con esbuild`);
         }
     }
 
@@ -250,16 +262,15 @@ export class Compilar {
         } else if (! await isFile(`${this.dir}/.env.local`)) {
             await safeWrite(`${this.dir}/.env.local`, `ENV=${env}`, true, true);
         } else {
-            console.log(`Existe el fichero .env.local, se mantiene tal cual.`);
+            Log.info({type: Log.label_compilar, label: this.name}, "Existe el fichero .env.local, se mantiene tal cual.");
         }
 
         {
             // todo falta añadir la fecha del commit (this.fecha)
-            const {status, stderr} = await Comando("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {NODE_OPTIONS: '--max_old_space_size=8192', ZONA: nodeEnv}, colores: false});
+            const {status, stderr} = await Comando("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {NODE_OPTIONS: '--max_old_space_size=10240', ZONA: nodeEnv}, colores: false});
             if (status != 0) {
-                console.error(this.name, "[KO   ]", "Error compilando:");
-                console.error(stderr);
-                return Promise.reject();
+                Log.error({type: Log.label_compilar, label: this.name}, "Error compilando:", stderr);
+                throw new Error(`Error compilando "${this.name}" con next`);
             }
         }
         await this.checkVersionService(env, manifest, [
@@ -395,7 +406,7 @@ export class Compilar {
     }
 
     private async prepararCredenciales(): Promise<void> {
-        await mkdir(`${this.dir}/files/credenciales/`, true);
+        await mkdir(`${this.dir}/files/credenciales/`);
 
         let mysql: string|undefined;
         if (await isFile(`${this.basedir}/mysql.txt`)) {
@@ -407,7 +418,7 @@ export class Compilar {
                 if (await isFile(`${this.basedir}/kustomizar/tmp/credenciales/${source}`)) {
                     const data = await readFileString(`${this.basedir}/kustomizar/tmp/credenciales/${source}`);
                     const destino = path.resolve(`${this.dir}/files/credenciales/${target}`);
-                    await mkdir(path.dirname(destino), true);
+                    await mkdir(path.dirname(destino));
                     await safeWrite(destino, data);
 
                     if (mysql != undefined && target == "mysql.json") {

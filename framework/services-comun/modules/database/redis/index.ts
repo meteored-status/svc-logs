@@ -1,8 +1,18 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Mon, 29 Jun 2026 12:58:11 GMT
+ * Hash: d6c220faf092a044f90e696d2b03c871
+ * Versión: 2026.6.29+1-juancmartinez
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: git@github.com:alpred/meteored-svc-data-alertas.git
+ */
+
 import process from "node:process";
+
+import type {IPodInfo} from "@mr/core-workload/config/pod";
+
 import {error, info, warning} from "../../utiles/log";
 import {createClient, type RedisClientType} from "redis";
-import {PromiseTimeout} from "../../utiles/promise";
-import {IPodInfo} from "../../utiles/pod";
 import {readJSON} from "../../utiles/fs";
 import {md5} from "../../utiles/hash";
 import {random} from "../../utiles/random";
@@ -26,7 +36,7 @@ export type IRedisOptions = {
 type IRedis = IRedisHost;
 
 type IRedisCluster = {
-    primary: IRedis;
+    primary: IRedis|IRedis[];
     read?: IRedis;
 }
 
@@ -45,12 +55,32 @@ type IInsert = {
     sharedKey?: boolean;
 }
 
-export class Redis implements Disposable {
+/**
+ * Cliente Redis con namespace por servicio y utilidades de acceso comunes.
+ *
+ * Gestiona internamente una conexión al clúster (lectura/escritura) y ofrece
+ * operaciones de lectura, escritura, serialización JSON y locks distribuidos.
+ */
+export class Redis implements AsyncDisposable {
     /* STATIC */
 
-    private static readonly MAX_REDIS_GET_CLIENT_MS: number = 50;
-    private static readonly MAX_REDIS_GET_MS: number = 10;
+    /**
+     * Construye un `Error` enriquecido con contexto de operación y causa original.
+     *
+     * @param message Mensaje contextual de la operación que ha fallado.
+     * @param err Error capturado durante la operación asíncrona.
+     * @returns Instancia de `Error` con detalle contextual y de causa.
+     */
+    private static buildPromiseError(message: string, err: unknown): Error {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        return new Error(`${message}. Causa: ${errorMessage}`);
+    }
 
+    /**
+     * Crea una instancia de cliente Redis.
+     *
+     * @param config Parámetros de creación del cliente.
+     */
     public static build({pod, credenciales = 'files/credenciales/redis.json', options}: IRedisBuild): Redis {
         return new this(pod, credenciales, options);
     }
@@ -64,11 +94,13 @@ export class Redis implements Disposable {
     ) {
     }
 
-    public [Symbol.dispose](): void {
+    /**
+     * Libera el clúster Redis asociado a la instancia.
+     */
+    public async [Symbol.asyncDispose](): Promise<void> {
         if (this._cluster) {
-            this._cluster.then(cluster => {
-                cluster[Symbol.dispose]();
-            });
+            const cluster = await this._cluster;
+            await cluster[Symbol.asyncDispose]();
             info(`Desconectado de REDIS (cluster)`);
         }
     }
@@ -76,11 +108,15 @@ export class Redis implements Disposable {
     private get cluster(): Promise<RedisCluster> {
         if (!this._cluster) {
             this._cluster = readJSON<IRedis|IRedisCluster>(this.credenciales).then(data => {
-                let primary: IRedis;
+                let primaries: IRedis[];
                 let read: IRedis|undefined;
 
                 if ("primary" in data) {
-                    primary = data.primary;
+                    if (Array.isArray(data.primary)) {
+                        primaries = data.primary;
+                    } else {
+                        primaries = [data.primary];
+                    }
 
                     if ("read" in data) {
                         read = data.read;
@@ -88,19 +124,28 @@ export class Redis implements Disposable {
                         read = undefined;
                     }
                 } else {
-                    primary = data;
+                    primaries = [data];
                 }
 
-                return new RedisCluster(primary, read);
+                return new RedisCluster(primaries, read, this.options);
             });
         }
         return this._cluster;
     }
 
+    /**
+     * Obtiene uno o varios valores desde Redis.
+     *
+     * @param key Clave única o lista de claves.
+     * @param options Opciones de consulta.
+     * @returns Buffer, lista de buffers o `null` si no existe valor o hay error.
+     */
     public async get(key: string|string[], {shared}: QueryOptions = {}): Promise<Buffer|Buffer[]|null> {
         try {
             const cluster = await this.cluster;
-            const client = await PromiseTimeout(cluster.read, this.options.clientTimeout||Redis.MAX_REDIS_GET_CLIENT_MS);
+            const client = await cluster.read.catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para get", err);
+            });
 
             if (Array.isArray(key)) {
                 const theKeys = key.map(k => this.buildKey(k, shared||false));
@@ -108,11 +153,15 @@ export class Redis implements Disposable {
                 const multi = client.multi();
                 theKeys.forEach(k => multi.get(k));
 
-                const data = await PromiseTimeout(multi.exec(), this.options.timeout||Redis.MAX_REDIS_GET_MS);
+                const data = await multi.exec().catch(err => {
+                    throw Redis.buildPromiseError("Error obteniendo datos para get (multi)", err);
+                });
                 return data.map(item => !!item ? Buffer.from(item as unknown as string, 'utf-8') : null) as Buffer[];
             } else {
                 const theKey = this.buildKey(key, shared||false);
-                const data: string|null = await PromiseTimeout(client.get(theKey), this.options.timeout||Redis.MAX_REDIS_GET_MS) as string|null;
+                const data: string|null = await client.get(theKey).catch(err => {
+                    throw Redis.buildPromiseError("Error obteniendo datos para get (single)", err);
+                }) as string|null;
                 if (data) {
                     return Buffer.from(data, 'utf-8');
                 }
@@ -123,28 +172,46 @@ export class Redis implements Disposable {
         return null;
     }
 
+    /**
+     * Guarda un valor en Redis.
+     *
+     * @param key Clave a persistir.
+     * @param data Valor en formato `Buffer`.
+     * @param options Opciones de guardado.
+     */
     public async set(key: string, data: Buffer, {shared, ttl}: SaveOptions = {}): Promise<void> {
         try {
             const cluster = await this.cluster;
 
-            const client = await PromiseTimeout(cluster.primary, this.options.clientTimeout||Redis.MAX_REDIS_GET_CLIENT_MS);
+            const primaryClients = await Promise.all(cluster.primaries).catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para set", err);
+            });
 
             const theKey = this.buildKey(key, shared||false);
 
-            const multi = client.multi()
-                .set(theKey, data.toString('utf-8'))
-            ;
+            await Promise.all(primaryClients.map(async client => {
+                const multi = client.multi()
+                    .set(theKey, data.toString('utf-8'))
+                ;
 
-            if (ttl !== undefined && ttl>=0) {
-                multi.expire(theKey, ttl);
-            }
+                if (ttl !== undefined && ttl>=0) {
+                    multi.expire(theKey, ttl);
+                }
 
-            await multi.exec();
+                await multi.exec();
+            }));
         } catch (e) {
             warning(`Error guardando ${key} en REDIS`, e);
         }
     }
 
+    /**
+     * Carga y deserializa JSON desde Redis.
+     *
+     * @param key Clave única o lista de claves.
+     * @param options Opciones de consulta.
+     * @returns Entidad tipada, lista tipada o `null`.
+     */
     public async loadJSON<T=any>(key: string|string[], {shared}: QueryOptions = {}): Promise<T|T[]|null> {
         const data = await this.get(key, {shared});
 
@@ -158,34 +225,58 @@ export class Redis implements Disposable {
         return null;
     }
 
+    /**
+     * Serializa y guarda JSON en Redis.
+     *
+     * @param key Clave a persistir.
+     * @param data Estructura serializable a JSON.
+     * @param options Opciones de guardado.
+     */
     public async saveJSON(key: string, data: any, {shared, ttl}: SaveOptions = {}): Promise<void> {
         await this.set(key, Buffer.from(JSON.stringify(data), 'utf-8'), {shared, ttl});
     }
 
+    /**
+     * Inserta múltiples registros en una única transacción Redis.
+     *
+     * @param items Conjunto de inserciones con su TTL.
+     */
     public async bulkSet(items: IInsert[]): Promise<void> {
         const cluster = await this.cluster;
 
-        const client = await cluster.primary;
+        // const client = await cluster.primary;
+        const primaryClients = await Promise.all(cluster.primaries);
 
-        const multi = client.multi();
+        await Promise.all(primaryClients.map(async client => {
+            const multi = client.multi();
 
-        for (const item of items) {
-            const theKey = this.buildKey(item.key, item.sharedKey??false);
-            multi.set(theKey, item.value);
+            for (const item of items) {
+                const theKey = this.buildKey(item.key, item.sharedKey??false);
+                multi.set(theKey, item.value);
 
-            if (item.ttl !== undefined && item.ttl>=0) {
-                multi.expire(theKey, item.ttl);
+                if (item.ttl !== undefined && item.ttl>=0) {
+                    multi.expire(theKey, item.ttl);
+                }
             }
-        }
 
-        await multi.exec();
+            await multi.exec();
+        }));
     }
 
+    /**
+     * Busca claves por patrón.
+     *
+     * @param pattern Patrón Redis (p. ej. `prefijo:*`).
+     * @param options Opciones de consulta.
+     * @returns Lista de claves que cumplen el patrón.
+     */
     public async searchKeys(pattern: string, {shared}: QueryOptions = {}): Promise<string[]> {
         try {
             const cluster = await this.cluster;
 
-            const client = await PromiseTimeout(cluster.read, this.options.clientTimeout||Redis.MAX_REDIS_GET_CLIENT_MS);
+            const client = await cluster.read.catch((err: unknown) => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para searchKeys", err);
+            });
 
             return await client.keys(this.buildKey(pattern, shared??false));
         } catch (e) {
@@ -194,6 +285,13 @@ export class Redis implements Disposable {
         return [];
     }
 
+    /**
+     * Intenta adquirir un lock distribuido para un conjunto de claves.
+     *
+     * @param keys Claves que participan en el lock.
+     * @param options Opciones del lock (namespace compartido y TTL).
+     * @returns Identificador de lock, cadena vacía si ya está bloqueado, o `null` en error.
+     */
     public async aquireLock(keys: string[], {shared, ttl}: SaveOptions = {}): Promise<string|null> {
         if (keys.length === 0) {
             return null;
@@ -202,7 +300,9 @@ export class Redis implements Disposable {
         try {
             const cluster = await this.cluster;
 
-            const client = await PromiseTimeout(cluster.primary, Redis.MAX_REDIS_GET_CLIENT_MS);
+            const primaryClients = await Promise.all(cluster.primaries).catch((err: unknown) => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para aquireLock", err);
+            });
 
             const theKeys = keys.map(k => this.buildKey(k, shared ?? false));
 
@@ -225,21 +325,30 @@ export class Redis implements Disposable {
                 return 1
             `;
 
-            const result = await client.eval(scriptLUA, {
-                keys: theKeys,
-                arguments: [
-                    lockID,
-                    ttl !== undefined && ttl>=0 ? `${ttl * 1000}` : '-1',
-                ],
-            });
+            const results = await Promise.all(primaryClients.map(async client => {
+                return await client.eval(scriptLUA, {
+                    keys: theKeys,
+                    arguments: [
+                        lockID,
+                        ttl !== undefined && ttl>=0 ? `${ttl * 1000}` : '-1',
+                    ],
+                });
+            }));
 
-            return result === 1 ? lockID : '';
+            return results.every(result => result === 1) ? lockID : '';
         } catch (e) {
             warning(`Error adquiriendo lock para keys ${keys.join(', ')} en REDIS`, e);
         }
         return null;
     }
 
+    /**
+     * Libera un lock distribuido solo si coincide el `lockId` esperado.
+     *
+     * @param keys Claves bloqueadas.
+     * @param lockId Identificador devuelto en la adquisición del lock.
+     * @param options Opciones de consulta.
+     */
     public async releaseLock(keys: string[], lockId: string, {shared}: QueryOptions = {}): Promise<void> {
         if (keys.length === 0) {
             return;
@@ -248,7 +357,9 @@ export class Redis implements Disposable {
         try {
             const cluster = await this.cluster;
 
-            const client = await PromiseTimeout(cluster.primary, Redis.MAX_REDIS_GET_CLIENT_MS);
+            const primaryClients = await Promise.all(cluster.primaries).catch((err: unknown) => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para releaseLock", err);
+            });
 
             const theKeys = keys.map(k => this.buildKey(k, shared ?? false));
 
@@ -263,12 +374,14 @@ export class Redis implements Disposable {
                 return released
             `;
 
-            await client.eval(scriptLUA, {
-                keys: theKeys,
-                arguments: [
-                    lockId,
-                ],
-            });
+            await Promise.all(primaryClients.map(async client => {
+                return await client.eval(scriptLUA, {
+                    keys: theKeys,
+                    arguments: [
+                        lockId,
+                    ],
+                });
+            }));
         } catch (e) {
             warning(`Error liberando lock para keys ${keys.join(', ')} en REDIS`, e);
         }
@@ -285,41 +398,60 @@ export class Redis implements Disposable {
 }
 
 
-class RedisCluster implements Disposable {
+class RedisCluster implements AsyncDisposable {
     /* STATIC */
+    private static readonly MAX_REDIS_GET_CLIENT_MS: number = 50;
+    private static readonly MAX_REDIS_GET_MS: number = 10;
     private static readonly MAX_RECONNECT_TRIES: number = 3;
 
     /* INSTANCE */
-    private _primaryClient?: Promise<RedisClientType>|null;
+    private _primaryClients?: (Promise<RedisClientType>[])|null;
     private _readClient?: Promise<RedisClientType>|null;
-    public constructor(private readonly _primary: IRedis, private readonly _read?: IRedis) {
+    public constructor(private readonly _primaries: IRedis[], private readonly _read?: IRedis, private readonly options: IRedisOptions = {}) {
     }
 
-    public [Symbol.dispose](): void {
-        if (this._primaryClient) {
-            this._primaryClient.then(client => {
-                client.quit();
-                info(`Desconectado de REDIS (primary)`);
-            });
-        }
-        if (this._readClient && this._readClient !== this._primaryClient) {
-            this._readClient.then(client => {
-                client.quit();
-                info(`Desconectado de REDIS (read)`);
-            });
-        }
-    }
+    public async [Symbol.asyncDispose](): Promise<void> {
+        // Si el cliente de lectura es distinto del primero de los primarios, lo desconectamos también
+        const distinctReadInstance = this._readClient && this._readClient !== this._primaryClients?.[0];
 
-    private async disconnectPrimary(): Promise<void> {
-        if (this._primaryClient) {
-            const includeRead = this._readClient && this._readClient === this._primaryClient;
-            const client = await this._primaryClient;
-            await client.quit();
+        if (this._primaryClients) {
+            while (this._primaryClients.length > 0) {
+                const clientPromise = this._primaryClients.pop();
+                if (clientPromise) {
+                    const client = await clientPromise;
+                    await client.quit();
+                }
+            }
             info(`Desconectado de REDIS (primary)`);
-            this._primaryClient = undefined;
+        }
+        if (distinctReadInstance) {
+            const client = await this._readClient;
+            await client?.quit();
+            info(`Desconectado de REDIS (read)`);
+        } else {
+            await this.disconnectRead();
+        }
+    }
 
+    private async disconnectPrimaries(): Promise<void> {
+        if (this._primaryClients) {
+            // Si el cliente de lectura es el mismo que el primero de los primarios, no lo desconectamos aquí
+            const includeRead = this._readClient && this._readClient === this._primaryClients[0];
+
+            while (this._primaryClients.length > 0) {
+                const clientPromise = this._primaryClients.pop();
+                if (clientPromise) {
+                    const client = await clientPromise;
+                    await client.quit();
+                }
+            }
+            info(`Desconectado de REDIS (primary)`);
+            this._primaryClients = undefined;
+
+            // Si el cliente de lectura es el mismo que el primero de escritura, lo marcamos como desconectado también
             if (includeRead) {
-                await this.disconnectRead();
+                info(`Desconectado de REDIS (read)`);
+                this._readClient = undefined;
             }
         }
     }
@@ -333,20 +465,22 @@ class RedisCluster implements Disposable {
         }
     }
 
-    public get primary(): Promise<RedisClientType> {
-        if (!this._primaryClient) {
-            this._primaryClient = this.buildClient(this._primary, 'primary', () => this.disconnectPrimary()).then(client => {
-                if (client) {
-                    return client;
-                }
-                return Promise.reject(new Error(`Imposible conectar con REDIS (primary)`));
-            }).catch(err => {
-                warning(`Error al conectar a REDIS. Reseteando cliente`, err);
-                this._primaryClient = undefined;
-                throw err;
+    public get primaries(): Promise<RedisClientType>[] {
+        if (!this._primaryClients) {
+            this._primaryClients = this._primaries.map(primary => {
+                return this.buildClient(primary, 'primary', () => this.disconnectPrimaries()).then(client => {
+                    if (client) {
+                        return client;
+                    }
+                    return Promise.reject(new Error(`Imposible conectar con REDIS (primary)`));
+                }).catch(err => {
+                    warning(`Error al conectar a REDIS. Reseteando cliente`, err);
+                    this._primaryClients = undefined;
+                    throw err;
+                });
             });
         }
-        return this._primaryClient;
+        return this._primaryClients;
     }
 
     public get read(): Promise<RedisClientType> {
@@ -363,7 +497,7 @@ class RedisCluster implements Disposable {
                     throw err;
                 });
             } else {
-                this._readClient = this.primary;
+                this._readClient = this.primaries[0];
             }
         }
         return this._readClient;
@@ -373,6 +507,7 @@ class RedisCluster implements Disposable {
         const client: RedisClientType = createClient({
             url: `redis://${config.host}:${config.port}`,
             socket: {
+                connectTimeout: this.options.clientTimeout||RedisCluster.MAX_REDIS_GET_CLIENT_MS,
                 reconnectStrategy: (retries) => {
                     if (retries > RedisCluster.MAX_RECONNECT_TRIES) {
                         error(`Imposible conectar con REDIS (${type})`);
@@ -382,7 +517,9 @@ class RedisCluster implements Disposable {
                     warning(`Reintentando conectar con redis (${type})...${retries}/${RedisCluster.MAX_RECONNECT_TRIES}`);
                     return delay;
                 },
-
+            },
+            commandOptions: {
+                timeout: this.options.timeout||RedisCluster.MAX_REDIS_GET_MS,
             }
         });
 

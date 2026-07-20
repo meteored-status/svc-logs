@@ -2,6 +2,7 @@ require("source-map-support").install();
 
 process.env.CLIENTE ??= "";
 process.env.ENTORNO ??= "desarrollo";
+process.env.SIDECAR ??= "true";
 process.env.ZONA ??= "desarrollo";
 
 if (process.env["DATADOG"]==="true") {

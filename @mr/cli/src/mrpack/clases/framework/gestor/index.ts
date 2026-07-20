@@ -1,11 +1,14 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: fbab196adcca9af16bbf44cca005aff9
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 11e1a99434cc607d9935665d8a8a7bfe
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.1+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Colors} from "../../colors";
+import {Log} from "../../log";
 import {FrameworkUpdates} from "../../workspace/service";
 import {ejecutarAcciones} from "./acciones";
 import {Accion, construirInfoPaquetes, type IPaqueteGestion} from "./datos";
@@ -56,6 +59,34 @@ interface IResetearTodoConfig {
 }
 
 /**
+ * Muestra la tabla interactiva `GestorTabla` para el subconjunto `filtrados` de paquetes
+ * y traduce el resultado (indexado sobre `filtrados`) de vuelta a un array de acciones
+ * indexado sobre la lista completa `infos` (con `Accion.Nada` para los no mostrados).
+ *
+ * @param filtrados   - Subconjunto de paquetes a mostrar en la tabla.
+ * @param infos       - Lista completa de paquetes (define el orden/índices del resultado).
+ * @param tablaConfig - Configuración de `GestorTabla` (`modo`, `frameworkUpdates`).
+ * @param runConfig   - Configuración de `tabla.run()` (p.ej. `autoConfirmMs`).
+ * @returns Array de acciones indexado sobre `infos`, o `null` si el usuario cancela.
+ */
+async function ejecutarTablaInteractiva(filtrados: IPaqueteGestion[], infos: IPaqueteGestion[], tablaConfig: {modo: "update"|"send"|"reset", frameworkUpdates?: FrameworkUpdates}, runConfig?: {autoConfirmMs?: number}): Promise<Accion[] | null> {
+    console.log("");
+    const tabla = new GestorTabla(filtrados, tablaConfig);
+    const resultado = await tabla.run(runConfig);
+    console.log("");
+
+    if (resultado === null) {
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "Cancelado"));
+        return null;
+    }
+
+    return infos.map((info: IPaqueteGestion) => {
+        const idx = filtrados.indexOf(info);
+        return idx === -1 ? Accion.Nada : resultado[idx];
+    });
+}
+
+/**
  * Gestor interactivo de frameworks.
  *
  * Muestra una tabla completa de los paquetes `@mr/cli`, `@mr/core/*` y `@mr/user/*`
@@ -72,12 +103,12 @@ interface IResetearTodoConfig {
  */
 export async function gestionar(basedir: string, config: IGestionarConfig = {}): Promise<boolean> {
     const {reiniciar = true} = config;
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
     let infos = await construirInfoPaquetes(basedir);
 
     while (true) {
         if (infos.length === 0) {
-            console.log(Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
+            Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
             return false;
         }
 
@@ -87,7 +118,7 @@ export async function gestionar(basedir: string, config: IGestionarConfig = {}):
         console.log("");
 
         if (accionesArr === null) {
-            console.log(Colors.colorize([Colors.FgYellow], "Cancelado"));
+            Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "Cancelado"));
             return false;
         }
 
@@ -107,7 +138,7 @@ export async function gestionar(basedir: string, config: IGestionarConfig = {}):
             )).some(Boolean);
 
             if (hayConflicto) {
-                console.log(Colors.colorize([Colors.FgYellow, Colors.Bright],
+                Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow, Colors.Bright],
                     "⚠  La versión remota ha cambiado desde que se cargó la tabla. Recargando..."));
                 infos = await construirInfoPaquetes(basedir);
                 continue;
@@ -132,17 +163,17 @@ export async function gestionar(basedir: string, config: IGestionarConfig = {}):
  */
 export async function actualizarTodo(basedir: string, config: IActualizarTodoConfig = {}): Promise<boolean> {
     const {forzar = false, reiniciar = true, frameworkUpdates = FrameworkUpdates.all} = config;
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
     const infos = await construirInfoPaquetes(basedir, {checkCambios: false, bucket: "meteored-yarn-packages", soloInstalados: true});
 
     if (infos.length === 0) {
-        console.log(Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
         return false;
     }
 
     const hayUpdate = infos.some(info => info.instalado && info.tieneUpdate);
     if (!hayUpdate) {
-        console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], "Todos los paquetes están al día"));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "Todos los paquetes están al día"));
         return false;
     }
 
@@ -153,13 +184,9 @@ export async function actualizarTodo(basedir: string, config: IActualizarTodoCon
             info.instalado && info.tieneUpdate ? Accion.Actualizar : Accion.Nada,
         );
     } else {
-        console.log("");
-        const tabla = new GestorTabla(infos, {modo: "update", frameworkUpdates});
-        const resultado = await tabla.run({autoConfirmMs: 5000});
-        console.log("");
-
+        const filtrados = infos.filter(info => info.instalado && info.tieneUpdate);
+        const resultado = await ejecutarTablaInteractiva(filtrados, infos, {modo: "update", frameworkUpdates}, {autoConfirmMs: 5000});
         if (resultado === null) {
-            console.log(Colors.colorize([Colors.FgYellow], "Cancelado"));
             return false;
         }
         accionesArr = resultado;
@@ -167,11 +194,11 @@ export async function actualizarTodo(basedir: string, config: IActualizarTodoCon
 
     const n = accionesArr.filter(a => a === Accion.Actualizar || a === Accion.Instalar).length;
     if (n === 0) {
-        console.log(Colors.colorize([Colors.FgYellow], "No se seleccionaron paquetes para actualizar"));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "No se seleccionaron paquetes para actualizar"));
         return false;
     }
 
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], `Actualizando ${n} paquete(s)...`));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], `Actualizando ${n} paquete(s)...`));
     return ejecutarAcciones(basedir, infos, accionesArr, {reiniciar});
 }
 
@@ -188,11 +215,11 @@ export async function actualizarTodo(basedir: string, config: IActualizarTodoCon
  */
 export async function enviarTodo(basedir: string, config: IEnviarTodoConfig = {}): Promise<boolean> {
     const {forzar = true, reiniciar = true} = config;
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
     const infos = await construirInfoPaquetes(basedir, {checkCambios: true, bucket: "meteored-yarn-packages", soloInstalados: true});
 
     if (infos.length === 0) {
-        console.log(Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
         return false;
     }
 
@@ -207,33 +234,23 @@ export async function enviarTodo(basedir: string, config: IEnviarTodoConfig = {}
     } else {
         const filtrados = infos.filter(i => GestorTabla.tieneEnviar(i) || GestorTabla.tieneEnviarConUpdate(i));
         if (filtrados.length === 0) {
-            console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], "No hay paquetes con cambios locales pendientes de enviar"));
+            Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "No hay paquetes con cambios locales pendientes de enviar"));
             return false;
         }
-        console.log("");
-        const tabla = new GestorTabla(filtrados, {modo: "send"});
-        const resultado = await tabla.run();
-        console.log("");
-
+        const resultado = await ejecutarTablaInteractiva(filtrados, infos, {modo: "send"});
         if (resultado === null) {
-            console.log(Colors.colorize([Colors.FgYellow], "Cancelado"));
             return false;
         }
-
-        accionesArr = infos.map((info: IPaqueteGestion) => {
-            const idx = filtrados.indexOf(info);
-            if (idx === -1) { return Accion.Nada; }
-            return resultado[idx];
-        });
+        accionesArr = resultado;
     }
 
     const n = accionesArr.filter(a => a === Accion.Enviar || a === Accion.EnviarConUpdate).length;
     if (n === 0) {
-        console.log(Colors.colorize([Colors.FgGreen, Colors.Bright], "No hay paquetes con cambios locales pendientes de enviar"));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgGreen, Colors.Bright], "No hay paquetes con cambios locales pendientes de enviar"));
         return false;
     }
 
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], `Enviando ${n} paquete(s)...`));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], `Enviando ${n} paquete(s)...`));
     return ejecutarAcciones(basedir, infos, accionesArr, {reiniciar});
 }
 
@@ -249,11 +266,11 @@ export async function enviarTodo(basedir: string, config: IEnviarTodoConfig = {}
  */
 export async function resetearTodo(basedir: string, config: IResetearTodoConfig = {}): Promise<boolean> {
     const {forzar = true, reiniciar = true} = config;
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], "Cargando paquetes..."));
     const infos = await construirInfoPaquetes(basedir, {checkCambios: false, bucket: "meteored-yarn-packages", soloInstalados: true});
 
     if (infos.length === 0) {
-        console.log(Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "No se encontraron paquetes"));
         return false;
     }
 
@@ -266,33 +283,23 @@ export async function resetearTodo(basedir: string, config: IResetearTodoConfig 
     } else {
         const filtrados = infos.filter(i => i.instalado);
         if (filtrados.length === 0) {
-            console.log(Colors.colorize([Colors.FgYellow], "No hay paquetes instalados para resetear"));
+            Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "No hay paquetes instalados para resetear"));
             return false;
         }
-        console.log("");
-        const tabla = new GestorTabla(filtrados, {modo: "reset"});
-        const resultado = await tabla.run();
-        console.log("");
-
+        const resultado = await ejecutarTablaInteractiva(filtrados, infos, {modo: "reset"});
         if (resultado === null) {
-            console.log(Colors.colorize([Colors.FgYellow], "Cancelado"));
             return false;
         }
-
-        accionesArr = infos.map((info: IPaqueteGestion) => {
-            const idx = filtrados.indexOf(info);
-            if (idx === -1) { return Accion.Nada; }
-            return resultado[idx];
-        });
+        accionesArr = resultado;
     }
 
     const n = accionesArr.filter(a => a === Accion.Resetear).length;
     if (n === 0) {
-        console.log(Colors.colorize([Colors.FgYellow], "No hay paquetes instalados para resetear"));
+        Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgYellow], "No hay paquetes instalados para resetear"));
         return false;
     }
 
-    console.log(Colors.colorize([Colors.FgCyan, Colors.Bright], `Reseteando ${n} paquete(s)...`));
+    Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgCyan, Colors.Bright], `Reseteando ${n} paquete(s)...`));
     return ejecutarAcciones(basedir, infos, accionesArr, {reiniciar});
 }
 

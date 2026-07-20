@@ -1,22 +1,23 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 92ec4efb34aa477a5102fc5a452bf4ab
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Mon, 20 Jul 2026 06:26:44 GMT
+ * Hash: e72ea3e20d42c67c5237161ed758e7ec
+ * Versión: 2026.7.20+1-josantoniojimnez
+ * Anterior: 2026.7.17+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {ChildProcessWithoutNullStreams, spawn} from "node:child_process";
+import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
 import chokidar from "chokidar";
-import treeKill from "tree-kill";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
 
 import {Colors} from "../colors";
-import {IConfigServices} from "./service";
-import {IWorkspace, Workspace} from "../workspace";
+import type {IConfigServices} from "./service";
+import {type IWorkspace, Workspace} from "../workspace";
 import {Log} from "../log";
-import {readJSON} from "services-comun/modules/utiles/fs";
-import {IPackageJson} from "../packagejson";
+import {readJSON} from "../../../utiles/fs";
+import type {IPackageJson} from "../packagejson";
 
 export interface IService extends IWorkspace {
     pad: number;
@@ -45,7 +46,7 @@ export class I18N extends Workspace {
         const nombre = data.nombre.padEnd(data.pad);
         const color = Colors.nextColor();
 
-        this.compilar = data.global.i18n;
+        this.compilar = data.global.workspaces?.i18n?.enabled ?? true;
 
         this.label = Colors.colorize(color, nombre);
     }
@@ -100,7 +101,7 @@ export class I18N extends Workspace {
      * @param global - Nueva configuración global leída de `config.workspaces.json`.
      */
     public updateGlobal(global: IConfigServices): void {
-        this.compilar = global.i18n;
+        this.compilar = global.workspaces?.i18n?.enabled ?? true;
 
         this.run()
             .then(()=>undefined)
@@ -148,7 +149,9 @@ export class I18N extends Workspace {
 
     private async initCompilar(): Promise<void> {
 
-        this.setTimeoutCompilador();
+        if (this.watch) {
+            this.setTimeoutCompilador();
+        }
 
         if (this.compilador!==undefined) {
             return;
@@ -169,11 +172,11 @@ export class I18N extends Workspace {
             label: this.label,
         }, `Usando versión ${version} del generador de idiomas`);
 
-        this.compilador = spawn("yarn", ["run", "i18n", "run", "generate", `-${version}`, "--watch"], {
+        this.compilador = spawn("yarn", ["run", "i18n", "run", "generate", `-${version}`, ...(this.watch ? ["--watch"] : [])], {
             cwd: this.root,
             env: { ...process.env, FORCE_COLOR: "1" },
             stdio: "pipe",
-            shell: false,
+            shell: process.platform === "win32",
         });
 
         const deferred = new Deferred<void>();
@@ -213,45 +216,25 @@ export class I18N extends Workspace {
             }, Colors.colorize([Colors.FgRed, Colors.Bright], "Error de generación de idiomas"), error);
         });
 
-        // this.compilador.on("close", ()=>{
-        //     console.log("Terminado")
-        // });
+        this.compilador.on("close", ()=>{
+            // Sin `--watch`, `mrlang generate` puede terminar sin haber escrito nada por
+            // stdout/stderr (ver `mrlang/clases/generate.ts::Generate.run()`, que solo loguea
+            // si `watch===true`) — sin este handler, `deferred` nunca se resolvería y
+            // `initCompilar()` (y quien lo espera, p.ej. `devel.ts`) se quedaría bloqueado.
+            if (!inicializado) {
+                inicializado = true;
+                deferred.resolve();
+            }
+        });
 
         await deferred.promise;
     }
 
     private async stopCompilar(): Promise<void> {
-        return new Promise((resolve, reject)=>{
-            if (this.compilador==undefined) {
-                resolve();
-                return;
-            }
-
-            Log.info({
-                type: Log.label_compilar,
-                label: this.label,
-            }, `Deteniendo generación de idiomas (`, this.compilador.pid, ")");
-            if (this.compilador.pid == undefined) {
-                resolve();
-                return;
-            }
-
-            treeKill(this.compilador.pid, (err) => {
-                if (err) {
-                    Log.error({
-                        type: Log.label_compilar,
-                        label: this.label,
-                    }, `Deteniendo generación de idiomas => KO`, err);
-                    reject(err);
-                } else {
-                    Log.info({
-                        type: Log.label_compilar,
-                        label: this.label,
-                    }, `Deteniendo generación de idiomas => OK`);
-                    this.compilador = undefined;
-                    resolve();
-                }
-            });
-        });
+        return this.detenerProceso(this.compilador, {
+            type: Log.label_compilar,
+            label: this.label,
+            accion: "generación de idiomas",
+        }, () => { this.compilador = undefined; });
     }
 }

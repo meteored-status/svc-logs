@@ -1,9 +1,17 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: 8d9b7f3111da97034e267c32eb78a53a
+ * Versión: 2026.6.17+3-josantoniojimnez
+ * Anterior: 2026.6.2+2-juancmartinez
+ */
+
 import {Conexion} from "@mr/core-network/server/http/conexion";
+import type {Configuracion} from "@mr/core-workload/config";
 import {TDevice} from "@mr/core-network/server/http/config/device";
 
 import {INetCache, INetCacheV1, IRouteGroupCache, NetCache} from ".";
 import {IRedisOptions, Redis} from "../../database/redis";
-import {Configuracion} from "../../utiles/config";
 import {md5} from "../../utiles/hash";
 
 export class NetCacheRedis extends NetCache {
@@ -15,7 +23,7 @@ export class NetCacheRedis extends NetCache {
             this.REDIS_CLIENT = Redis.build({
                 pod: config.pod,
                 credenciales,
-                ...options,
+                options,
             });
         }
         return this.REDIS_CLIENT;

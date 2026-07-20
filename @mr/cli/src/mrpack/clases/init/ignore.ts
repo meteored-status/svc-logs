@@ -1,11 +1,15 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 26 May 2026 12:02:26 GMT
- * Hash: ad667199f510b646125988bbd754f86d
- * Versión: 2026.5.26+1-josantoniojimnez
+ * Fecha: Fri, 17 Jul 2026 12:09:53 GMT
+ * Hash: 8d9d654f9c8cca6abdfd7bb371d6a52c
+ * Versión: 2026.7.17+3-josantoniojimnez
+ * Anterior: 2026.7.17+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 export default `
+**/.claude/settings.local.json
+.codex/
 .DS_Store
 .dev.vars
 .idea/copilot/
@@ -41,6 +45,5 @@ vendor/
 **/.env*.local
 **/.env*.test
 **/coverage/**
-**/.vscode/**
 vscode.code-workspace
 `.trimStart();

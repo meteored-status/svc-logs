@@ -1,4 +1,11 @@
-import {IPodInfo} from "../../utiles/config";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: 52de4b5d56a5740ccf20b7a28d6eb859
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
+import type {IPodInfo} from "@mr/core-workload/config/pod";
 import {Component} from "./component";
 import {Client} from "./client";
 

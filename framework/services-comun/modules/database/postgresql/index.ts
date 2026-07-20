@@ -1,3 +1,11 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Wed, 17 Jun 2026 07:58:02 GMT
+ * Hash: 9986be48e620822f2a82ee5af68aee02
+ * Versión: 2026.6.17+1-juancmartinez
+ * Anterior: 2026.6.16+1-juancmartinez
+ */
+
 import {Pool, PoolConfig, QueryResult} from "pg";
 import {FSWatcher, watch} from "node:fs";
 import {Transaction} from "./transaction";
@@ -9,19 +17,29 @@ import {Notify} from "./notify/notify";
 import {Lock} from "./lock/lock";
 import {md5} from "../../utiles/hash";
 
-interface IPostgreSQLHost {
-    host: string;
-    port: number;
-    ssl?: IPostgreSQLSSL;
+export interface IPostgreSQLConnectionOptions {
+    max?: number;
+    idleTimeoutMillis?: number;
+    connectionTimeoutMillis?: number;
 }
 
-interface IPostgreSQLCommon {
+interface IPostgreSQLCommon extends IPostgreSQLConnectionOptions {
     user?: string;
     password?: string;
     database?: string;
 }
 
-export interface IPostgreSQL extends IPostgreSQLHost, IPostgreSQLCommon {
+interface IPostgreSQLHost extends IPostgreSQLCommon {
+    host: string;
+    port: number;
+    ssl?: IPostgreSQLSSL;
+}
+
+interface IPostgreSQLSocket {
+    socketPath: string;
+}
+
+export interface IPostgreSQL extends IPostgreSQLHost, IPostgreSQLSocket, IPostgreSQLCommon {
 }
 
 interface IPostgreSQLSSL {
@@ -40,6 +58,7 @@ interface IPostgreSQLCluster {
 export interface IPostgreSQLBuild {
     credenciales?: string;
     database?: string;
+    options?: IPostgreSQLConnectionOptions;
 }
 
 export type TipoRegistro = any;
@@ -129,10 +148,12 @@ class PostgreSQLCluster {
                 ca,
                 cert,
                 key,
-                rejectUnauthorized: false, // TODO
+                rejectUnauthorized: false, // TODO,
             };
         } else {
-            if (PRODUCCION) {
+            const hostIsSocketPath = host.host.includes("/") || host.host.includes("\\");
+            info(`Cargando host de PostgreSQL: ${host.host} (socket: ${hostIsSocketPath})`);
+            if (PRODUCCION && !hostIsSocketPath) {
                 config.ssl = {
                     rejectUnauthorized: false,
                 }
@@ -160,17 +181,17 @@ class PostgreSQLCluster {
     }
 }
 
-export class PostgreSQL implements Disposable {
+export class PostgreSQL implements AsyncDisposable {
     /* STATIC */
 
-    public static build({credenciales=`files/credenciales/postgresql.json`, database=DATABASE}: IPostgreSQLBuild = {}): PostgreSQL {
+    public static build({credenciales=`files/credenciales/postgresql.json`, database=DATABASE, options}: IPostgreSQLBuild = {}): PostgreSQL {
         if (database != undefined) {
             database = database
                 .replaceAll("{CLIENTE}", process.env["CLIENTE"] ?? "")
             ;
         }
 
-        return new this(credenciales, database);
+        return new this(credenciales, database, options);
     }
 
     /* INSTANCE */
@@ -180,12 +201,12 @@ export class PostgreSQL implements Disposable {
 
     private watcher?: FSWatcher;
 
-    protected constructor(protected readonly credenciales: string, public readonly database?: string) {
+    protected constructor(protected readonly credenciales: string, public readonly database?: string, private readonly options?: IPostgreSQLConnectionOptions) {
     }
 
-    public [Symbol.dispose](): void {
+    public async [Symbol.asyncDispose](): Promise<void> {
         this.stopWatcher();
-        this.reset().then(()=>undefined).catch((err)=>error(err));
+        await this.reset().catch(async err =>error(err));
     }
 
     private get cluster(): Promise<PostgreSQLCluster> {
@@ -220,24 +241,36 @@ export class PostgreSQL implements Disposable {
                 cluster.add("primary", {
                     ...data.primary,
                     ...common,
+                    ...this.options,
                 });
             }
             if (data.read) {
                 cluster.add("read", {
                     ...data.read,
                     ...common,
+                    ...this.options,
                 });
             }
             if (data.notify) {
                 cluster.add("notify", {
                     ...data.notify,
                     ...common,
+                    ...this.options,
                 });
             }
         } else {
-            cluster.add("primary", data as IPostgreSQLHost);
-            cluster.add("read", data as IPostgreSQLHost);
-            cluster.add("notify", data as IPostgreSQLHost);
+            cluster.add("primary", {
+                ...data,
+                ...this.options,
+            } as IPostgreSQLHost);
+            cluster.add("read", {
+                ...data,
+                ...this.options,
+            } as IPostgreSQLHost);
+            cluster.add("notify", {
+                ...data,
+                ...this.options,
+            } as IPostgreSQLHost);
         }
 
         this.startWatcher();

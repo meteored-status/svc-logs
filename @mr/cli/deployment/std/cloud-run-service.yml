@@ -27,6 +27,10 @@ spec:
               value: "${ENTORNO}"
             - name: ZONA
               value: "${ZONA}"
+            - name: CLOUD_RUN_REGION
+              value: "${REGION}"
+            - name: SIDECAR
+              value: "false"
           ports:
             - containerPort: 8080
           startupProbe:

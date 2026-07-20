@@ -1,4 +1,4 @@
-import {EngineServer} from "services-comun/modules/engine_server";
+import {Engine as EngineServer} from "@mr/core-workload/engine/server";
 import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import {Configuracion} from "./utiles/config";

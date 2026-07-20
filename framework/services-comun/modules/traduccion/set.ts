@@ -1,4 +1,11 @@
-import {type ITranslation, type TParams, Translation} from "./index";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 13:19:30 GMT
+ * Hash: a5d70904463cfb1e4b52899f3a77adc8
+ * Versión: 2026.6.17+7-josantoniojimnez
+ */
+
+import {type ITranslation, type TParams, Translation} from ".";
 
 export type TValor = string | null;
 

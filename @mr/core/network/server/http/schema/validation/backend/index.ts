@@ -1,3 +1,12 @@
+/**
+ * Editor: Juanmi
+ * Fecha: Wed, 08 Jul 2026 05:34:12 GMT
+ * Hash: 3ff77ed62cfa9daa806d2e507c3da3a0
+ * Versión: 2026.7.8+1-juanmi
+ * Anterior: 2026.6.11+2-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ */
+
 import {error} from "services-comun/modules/utiles/log";
 
 import {Conexion} from "../../../conexion";
@@ -27,9 +36,8 @@ import type {CustomSpecification, FieldDefinition} from "../../spec";
  * @returns Decorador de método compatible con TypeScript.
  */
 export const validate = <T extends CustomSpecification>(schema: T): Function => {
-    return function (_target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor): void {
-        const originalMethod = descriptor.value as (...args: any[]) => Promise<unknown>;
-        descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+    return (originalMethod: any, _context: ClassMethodDecoratorContext) => {
+        return async function (this: any, ...args: any[]): Promise<any> {
             const connection = args.find(arg => arg instanceof Conexion) as Conexion | undefined;
 
             if (connection?.metodo === 'POST') {

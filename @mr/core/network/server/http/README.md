@@ -25,7 +25,7 @@ con WebSocket y helpers de respuesta estandarizados.
 | [Schema](#schema) | `…/schema/spec` | `buildSpecification` · `FieldDefinition` |
 | [Schema → tipo TS](#schema--tipo-ts) | `…/schema/spec-to-type` | `SchemedType<T>` — inferencia de tipo desde esquema |
 | [Validación backend](#validación-backend) | `…/schema/validation/backend` | `@validate` — decorador de validación de body |
-| [ConfiguracionNet](#configuraciónnet) | `…/config/config` | `ConfiguracionNet` — configuración de servicio con red |
+| [ConfiguracionNet](#configuracionnet-movido-a-mr-core-workload) | `@mr/core-workload/config/net` | `ConfiguracionNet` — configuración de servicio con red |
 | [Service](#service) | `…/service` | `Service` — registro de servicios con puertos deterministas |
 | [TDevice](#tdevice) | `…/config/device` | Enum de tipo de dispositivo |
 | [Dominio](#dominio) | `…/config/dominio` | Gestión de dominios, subdominios y redirecciones |
@@ -777,51 +777,28 @@ Fusiona `defecto` con las sobreescrituras parciales de `user`. Todos los campos 
 
 ## Handlers predefinidos
 
-El directorio `handlers/` contiene grupos listos para usar y ejemplos de referencia.
-
-```ts
-import adminHandler   from "@mr/core-network/server/http/handlers/admin";
-import errorHandler   from "@mr/core-network/server/http/handlers/error";
-import faviconHandler from "@mr/core-network/server/http/handlers/favicon";
-
-const handlerError = errorHandler(config);
-const routes = new Routes(
-    [
-        adminHandler(config, engine),
-        faviconHandler(config),
-        miGrupo,
-    ],
-    handlerError,
-);
-```
-
-Cada factory devuelve un singleton: llamadas múltiples retornan la misma instancia.
-
-### `adminHandler(config, engine)` — rutas de administración
-
-Ninguna ruta de este grupo se incluye en la documentación pública.
-
-| Ruta | Descripción |
-|------|-------------|
-| `GET /admin/started/` | ¿Ha arrancado el servicio? (`engine.started()`) |
-| `GET /admin/ready/` | ¿Está listo para recibir tráfico? (`engine.ready()`) |
-| `GET /admin/live/` | Liveness probe. (`engine.okAll()`) |
-| `GET /admin/check/` | Alias de `/admin/live/`. |
-| `GET /admin/doc/` | Lista de rutas documentables del servicio en JSON. |
-
-### `errorHandler(config)` — handler de error por defecto
-
-Implementa `IErrorHandler`. Responde con `404` a cualquier URL no reconocida y
-gestiona todos los errores HTTP propagados devolviendo una respuesta JSON estándar:
-
-```json
-{"ok": false, "expiracion": 1234567890, "info": {"message": "Not found", "extra": null}}
-```
-
-### `faviconHandler(config)` — favicon
-
-- `GET /favicon.ico` — sirve `assets/favicon.ico` con caché de 1 mes.
-  Responde con `404 no-cache` si el fichero no existe.
+> **⚠️ Movidos a `@mr/core-workload`.**
+>
+> Los handlers predefinidos (`admin`, `error`, `favicon`) se han trasladado al paquete
+> [`@mr/core-workload/handlers/`](../../../../workload/CODEMAP.md) para evitar una
+> dependencia circular: `Admin` y `ErrorHandler` dependen de `Engine`
+> (`@mr/core-workload/engine/server`), que a su vez depende de `@mr/core-network`.
+>
+> Actualizar los imports:
+>
+> ```ts
+> // Antes
+> import Admin   from "@mr/core-network/server/http/handlers/admin";
+> import ErrorH  from "@mr/core-network/server/http/handlers/error";
+> import Favicon from "@mr/core-network/server/http/handlers/favicon";
+>
+> // Ahora
+> import Admin   from "@mr/core-workload/handlers/admin";
+> import ErrorH  from "@mr/core-workload/handlers/error";
+> import Favicon from "@mr/core-workload/handlers/favicon";
+> ```
+>
+> Consulta la documentación completa en [`@mr/core-workload` CODEMAP](../../../../workload/CODEMAP.md).
 
 ---
 

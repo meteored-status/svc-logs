@@ -3,7 +3,7 @@ import {
     type IConfiguracion as IConfiguracionBase
 } from "services-comun-status/modules/config/service";
 import {GOOGLE} from "workers-base/modules/utiles/config";
-import {Google, type IGoogle} from "services-comun/modules/utiles/config";
+import {Google, type IGoogle} from "@mr/core-workload/config/google";
 
 interface IConfiguracion extends IConfiguracionBase {
     google: IGoogle;

@@ -1,4 +1,4 @@
-import {Main} from "services-comun/main";
+import {Main} from "@mr/core-workload";
 
 import {Configuracion} from "./modules/utiles/config";
 import {Engine} from "./modules/engine";

@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: a315906c3b884acb096cea7b6f088d24
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Fri, 03 Jul 2026 07:12:34 GMT
+ * Hash: 2d50fefd45ed0e6087ec51c2843fa585
+ * Versión: 2026.7.3+1-josantoniojimnez
+ * Anterior: 2026.7.1+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-ads.git
  */
 
 import {type IManifest, Manifest} from "@mr/core-dev/manifest";
@@ -52,11 +54,12 @@ export class ManifestWorkspaceLoader extends ManifestLoader<IManifest, Manifest>
             names = [paquete.servicio];
             delete paquete.servicio;
         }
+        const deploy = ManifestWorkspaceDeploymentLoader.fromLegacy(config, names);
         this.manifest = new Manifest(this.check({
             enabled: config.generar ?? true,
-            deploy: ManifestWorkspaceDeploymentLoader.fromLegacy(config, names),
+            deploy,
             devel: ManifestWorkspaceDevelopmentLoader.fromLegacy(config),
-            build: ManifestWorkspaceBuildLoader.fromLegacy(config),
+            build: ManifestWorkspaceBuildLoader.fromLegacy(config, {runtime: deploy.runtime, dependencies: paquete?.dependencies}),
         }, paquete));
 
         return this;
@@ -86,7 +89,7 @@ export class ManifestWorkspaceLoader extends ManifestLoader<IManifest, Manifest>
         }
         data.deploy = ManifestWorkspaceDeploymentLoader.check(manifest.deploy, names);
         data.devel = ManifestWorkspaceDevelopmentLoader.check(manifest.devel);
-        data.build = ManifestWorkspaceBuildLoader.check(manifest.build);
+        data.build = ManifestWorkspaceBuildLoader.check(manifest.build, {runtime: data.deploy.runtime, dependencies: paquete?.dependencies});
 
         return data;
     }

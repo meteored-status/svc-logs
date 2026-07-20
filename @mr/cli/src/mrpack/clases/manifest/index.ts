@@ -1,14 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 26d4042574f9c5d45cbf989eaeba6546
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 7635f1293c61986a3af668d0794c8aed
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.2+4-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import type {ManifestRoot} from "@mr/core-dev/manifest/root";
-import {readJSON, readJSONSync, safeWrite} from "services-comun/modules/utiles/fs";
 import {md5} from "services-comun/modules/utiles/hash";
 
+import {readJSON, readJSONSync, safeWrite} from "../../../utiles/fs";
+import {Log} from "../log";
 import type {IPackageJsonLegacy} from "../packagejson";
 
 type ManifestDefault<T> = {default: T};
@@ -27,7 +30,7 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
      * @param basedir - Directorio del workspace o raíz del monorepo.
      * @returns Ruta absoluta al fichero `mrpack.json`.
      */
-    public static getFile(basedir: string): string {
+    protected static getFile(basedir: string): string {
         return `${basedir}/mrpack.json`;
     }
 
@@ -72,7 +75,12 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
 
                 return hashInicial!==hashFinal;
             })
-            .catch(() => {
+            .catch((err) => {
+                if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") {
+                    // El fichero existe pero no es JSON válido (p. ej. edición manual en curso):
+                    // no se resetea a los valores por defecto ni se sobrescribe el fichero.
+                    return Promise.reject(err);
+                }
                 this.manifest = new this.Manifest(this.defecto.default);
                 return true;
             });
@@ -118,7 +126,7 @@ export abstract class ManifestLoader<T, K extends ManifestRoot<T>> {
         try {
             await safeWrite(this.file, JSON.stringify(this.toJSON(), null, 4), true);
         } catch (err) {
-            console.log("Error guardando manifest", err);
+            Log.error({type: Log.label_base, label: "manifest"}, "Error guardando manifest", err);
         } finally {
             this.guardando = false;
         }

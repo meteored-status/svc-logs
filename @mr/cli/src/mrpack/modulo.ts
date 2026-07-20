@@ -1,11 +1,13 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 0ff3d71d35dfe973b00ec4f3517ab25f
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 939ef3bf1dad55bf5ffa9c83a1fc5b89
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.25+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {parseArgs, ParseArgsConfig} from "node:util";
+import {parseArgs, type ParseArgsConfig} from "node:util";
 
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 
@@ -38,10 +40,8 @@ export abstract class Modulo<T extends IModuloConfig> {
         PromiseDelayed()
             .then(async ()=>modulo.run())
             .catch((err)=>{
-                if (err!=undefined) {
-                    console.error(err)
-                // } else {
-                //     modulo.mostrarAyuda();
+                if (err!==undefined) {
+                    console.error(err);
                 }
             });
     }
@@ -50,7 +50,7 @@ export abstract class Modulo<T extends IModuloConfig> {
     public readonly root: string;
 
     protected constructor(protected config: T) {
-        this.root = process.cwd();
+        this.root = process.env["MRPACK_ROOT"] ?? process.cwd();
     }
 
     /**
@@ -69,7 +69,7 @@ export abstract class Modulo<T extends IModuloConfig> {
      *
      * @param positionals - Lista de argumentos posicionales de la línea de comandos.
      */
-    protected async parsePositionals(positionals: string[]): Promise<void> {
+    protected async parsePositionals(_positionals: string[]): Promise<void> {
 
     }
 

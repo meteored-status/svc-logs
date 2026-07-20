@@ -2,6 +2,8 @@
 
 Tipos y utilidades de internacionalización compartidos por todos los paquetes del monorepo.
 
+**Código fuente:** ver [`CODEMAP.md`](./CODEMAP.md).
+
 Proporciona la definición canónica de los idiomas soportados por el sistema, incluyendo
 códigos cortos (ISO 639-1) y largos (BCP 47), la lista completa de variantes activas y
 dos helpers de uso frecuente: `soportado()` y `corto()`.
@@ -114,4 +116,3 @@ corto("en");    // "en"
 ## Changelog
 
 Consulta [`CHANGELOG.md`](./CHANGELOG.md) para el historial de cambios del paquete.
-

@@ -1,17 +1,18 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 4f22c677f44d748063d2d147096c2dfd
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 99eff19f5af804c5ad60c00f6e5d41bc
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.7.1+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import type {IManifestDeploymentCredenciales} from "@mr/core-dev/manifest/deployment/credenciales";
 import type {IManifestDeploymentKustomize} from "@mr/core-dev/manifest/deployment/kustomize";
 import type {IManifestDeploymentStorage} from "@mr/core-dev/manifest/deployment/storage";
 import {ManifestDeploymentKind, Runtime} from "@mr/core-dev/manifest/deployment";
-import type {IManifestBuildDatabase} from "@mr/core-dev/manifest/build/database";
 import type {IManifestBuildBundle} from "@mr/core-dev/manifest/build/bundle";
-import {BuildFW} from "@mr/core-dev/manifest/build";
-import type {IManifestDeploymentImagenEntorno} from "@mr/core-dev/manifest/deployment/imagen/entorno";
+import type {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 
 export interface IManifestLegacyStorage {
     buckets: string[];
@@ -76,6 +77,7 @@ export interface IManifestLegacy {
 export interface IManifestBuildLegacy {
     deps?: string[];
     framework: BuildFW;
+    bundler?: BuildBundler;
     database?: string;
     bundle?: IManifestBuildBundle;
 }

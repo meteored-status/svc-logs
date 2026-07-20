@@ -1,4 +1,11 @@
-import {type ITranslation, type TParams, Translation} from "./index";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 13:19:30 GMT
+ * Hash: aa785c0eb47286090b6a0f1e1cb58ff6
+ * Versión: 2026.6.17+7-josantoniojimnez
+ */
+
+import {type ITranslation, type TParams, Translation} from ".";
 
 export class TraduccionLiteral<T extends TParams={}> extends Translation<T> {
     /* INSTANCE */

@@ -1,18 +1,16 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 682e25bc46f34c7a4705720022f5740c
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 91f4b642fab7d8406d098a6dce08eb86
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {JSONItem, JSONValue, JSONValuePlural, JSONValueSingular} from "../../data";
 import {Definition} from "../definition";
 import {definitionModulePath, LANG_REGEXPS} from "./common";
 import {ModuloJSON} from "../json";
-
-const pascalCase = (str: string, regex: RegExp = /[^a-zA-Z]/) => {
-    const words = str.split(regex);
-    return words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
-}
+import {pascalCase} from "../../util/case.ts";
 
 export default (lang: string, value: JSONValue, item: JSONItem, module: ModuloJSON, definition: Definition) => {
 
@@ -53,8 +51,8 @@ export default (lang: string, value: JSONValue, item: JSONItem, module: ModuloJS
             }
             break;
         case "plural":
+            fileLines.push(`import pluralBuilder from "services-comun/modules/traduccion/v2/util/plural-function-builder";`)
             const pluralValue = value as JSONValuePlural;
-            fileLines.push(`import {${langKey}} from "make-plural/cardinals";`)
             fileLines.push(`import {PluralValue} from "services-comun/modules/traduccion/v2/value/plural-value";`);
             fileLines.push(`import {TPluralKey} from "services-comun/modules/traduccion/v2/value";`);
             if (item.params && item.params.length > 0) {
@@ -70,13 +68,13 @@ export default (lang: string, value: JSONValue, item: JSONItem, module: ModuloJS
             fileLines.push('');
 
             if (item.params && item.params.length > 0) {
-                fileLines.push(`const pluralValue = new PluralValue<${paramDefinition}>(values, ${langKey}, ["${item.params.join("\", \"")}"]);`);
+                fileLines.push(`const pluralValue = new PluralValue<${paramDefinition}>(values, pluralBuilder('${langKey}'), ["${item.params.join("\", \"")}"]);`);
                 fileLines.push('');
                 fileLines.push(`const literal = new Literal<${paramDefinition}>(pluralValue);`);
                 fileLines.push(`export default (params: Partial<${paramDefinition}>) => literal.render(params);`);
                 definition.addParamDefinition(paramDefinition, item.params);
             } else {
-                fileLines.push(`const pluralValue = new PluralValue(values, ${langKey});`);
+                fileLines.push(`const pluralValue = new PluralValue(values, pluralBuilder('${langKey}'));`);
                 fileLines.push('');
                 fileLines.push(`const literal = new Literal(singularValue);`);
                 fileLines.push(`export default literal.render;`);

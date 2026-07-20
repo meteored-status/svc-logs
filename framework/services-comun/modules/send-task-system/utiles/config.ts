@@ -1,4 +1,11 @@
-import {ConfigGenerico, IConfigGenerico} from "../../utiles/config";
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: 4695866e6051e7e4b7e0d753b745de36
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
+import {Configuracion as ConfigGenerico, type IConfiguracion as IConfigGenerico} from "@mr/core-utils/config";
 
 export interface IElasticSearch extends IConfigGenerico {
     sendIndex: string;

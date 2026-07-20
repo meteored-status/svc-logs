@@ -10,26 +10,27 @@
   },
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "scripts": {
-    "packd": "yarn g:packd",
+    "packd": "yarn g:esbuild",
     "devel": "yarn g:devel"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.4.2",
     "chokidar": "^5.0.0",
-    "dd-trace": "^5.104.0",
+    "dd-trace": "^6.4.0",
     "formidable": "^3.5.4",
     "hexoid": "^2.0.0",
-    "mysql2": "^3.22.4",
-    "qs": "^6.15.2",
+    "mysql2": "^3.23.0",
+    "qs": "^6.15.3",
     "source-map-support": "^0.5.21",
     "tslib": "^2.8.1",
-    "ws": "^8.21.0"
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
     "@mr/core-i18n": "workspace:*",
     "@mr/core-network": "workspace:*",
-    "@types/node": "^24.12.4",
+    "@mr/core-workload": "workspace:*",
+    "@types/node": "^24.13.3",
     "logs-services": "workspace:*",
     "logs-status-base": "workspace:*",
     "services-comun": "workspace:*",

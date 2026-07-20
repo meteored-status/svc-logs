@@ -53,7 +53,8 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
         "enabled": true
     },
     "build": {
-        "framework": "meteored"
+        "framework": "meteored",
+        "bundler": "esbuild"
     }
 }
 ```
@@ -261,6 +262,7 @@ Ejemplo:
 | Campo | Tipo | Obligatorio | Descripción |
 |-------|------|:-----------:|-------------|
 | `framework` | `BuildFW` | ✅ | Framework de compilación. |
+| `bundler` | `BuildBundler` | ✅ | Bundler efectivo de compilación. |
 | `deps` | `string[]` | — | Workspaces del monorepo requeridos en tiempo de build. |
 | `database` | `IManifestBuildDatabase` | — | Nombre de BD MySQL por entorno. |
 | `bundle` | `IManifestBuildBundle` | — | Configuración del empaquetado de assets. |
@@ -271,6 +273,16 @@ Ejemplo:
 |-------|-------------|
 | `"meteored"` | Framework propio Meteored (rspack). |
 | `"nextjs"` | Next.js. |
+
+---
+
+#### `BuildBundler`
+
+| Valor | Descripción |
+|-------|-------------|
+| `"rspack"` | Bundler rspack de `@mr/core-dev`. |
+| `"esbuild"` | Bundler esbuild. |
+| `"none"` | Sin fase de bundling. |
 
 ---
 

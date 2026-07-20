@@ -1,7 +1,15 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
+ * Hash: 8246f79083f591b0e272225ef1edeed0
+ * Versión: 2026.6.17+3-josantoniojimnez
+ */
+
 import {GlideClient, GlideClusterClient, Logger, TimeUnit} from "@valkey/valkey-glide";
 import process from "node:process";
 
-import type {IPodInfo} from "../../utiles/pod";
+import type {IPodInfo} from "@mr/core-workload/config/pod";
+
 import {PromiseTimeout} from "../../utiles/promise";
 import {readJSON} from "../../utiles/fs";
 import {info, warning} from "../../utiles/log";

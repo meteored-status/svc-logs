@@ -1,14 +1,16 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 6236346fe5af4a5d78aec92bd5893a3a
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 2bb04cb27564aa4d205821629ddd329a
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import chokidar from "chokidar";
 
 import {Fecha} from "services-comun/modules/utiles/fecha";
-import {isDir, isFile, mkdir, readDir, readJSON, safeWrite, unlink} from "services-comun/modules/utiles/fs";
 
+import {isDir, isFile, mkdir, readDir, readJSON, safeWrite, unlink} from "../../../utiles/fs";
 import {Colors} from "../../../mrpack/clases/colors";
 import type {Idiomas, TIdiomas} from "../idioma";
 import {type IModuloConfig as IModuloConfigBase, type IPackageConfig, Modulo} from ".";
@@ -236,7 +238,7 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
         const valores = this.valoresFinales;
 
         const interfaceDir = `${classdir}/${this.id.replaceAll("-", "_").replaceAll(".", "/")}`;
-        await mkdir(interfaceDir, true);
+        await mkdir(interfaceDir);
         const langs: Record<string, string[]> = {};
         const mapping: Record<string, string> = {};
         for (const lang of this.config.config.langs) {
@@ -325,7 +327,7 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
         const promesas: Promise<void|boolean>[] = [];
         for (const lang of [...idiomas]) {
             const dir = `${classdir}/.src/${lang.replace("-", "")}/${this.jerarquia.join("/").replaceAll("-", "_")}`;
-            await mkdir(dir, true);
+            await mkdir(dir);
 
             promesas.push(safeWrite(`${dir}/index.ts`, contenido, true));
             const jerarquia = this.getJerarquiaIdiomas(lang);

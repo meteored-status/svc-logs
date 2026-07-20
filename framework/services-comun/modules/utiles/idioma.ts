@@ -1,5 +1,12 @@
+/**
+ * Editor: Fran García
+ * Fecha: Fri, 19 Jun 2026 07:29:05 GMT
+ * Hash: 1097c2a6f48381c7ed9e379e1bd47220
+ * Versión: 2026.6.19+1-frangarcia
+ */
+
 //Funcion para parsear el idioma cuando venga en formato largo con numeros
-import type {Idioma, IdiomaCorto} from "../net/i18n";
+import type {Idioma, IdiomaCorto} from "@mr/core-i18n/langs";
 
 export function parseIdioma(idioma: string): Idioma {
     if(idioma.match(/[a-z]{2}_[0-9]+$/) || idioma.match(/[a-z]{2}-[0-9]+$/)){

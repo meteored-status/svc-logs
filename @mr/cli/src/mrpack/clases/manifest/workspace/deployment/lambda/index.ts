@@ -1,12 +1,13 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 11:32:46 GMT
- * Hash: 7f37486bd1669b122e31d6aa5d084700
- * Versión: 2026.5.27+5-josantoniojimnez
- * Anterior: 2026.5.27+4-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 242fc0261988608453574ab767662423
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.5.27+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {Egress, Ingress, IManifestDeploymentLambda} from "@mr/core-dev/manifest/deployment/lambda";
+import {Egress, Ingress, type IManifestDeploymentLambda} from "@mr/core-dev/manifest/deployment/lambda";
 
 /**
  * Normaliza la sección `deploy.lambda` del `mrpack.json` de un workspace.

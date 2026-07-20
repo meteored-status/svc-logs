@@ -1,17 +1,22 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 44bd976d2a2abb16bc688ac6f7307376
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 040c768e98b6fabb1fc009ba9c6423d9
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.6.30+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import readline from "node:readline";
 
 import {maquetarVersion, parsearFechaVersion} from "../../../utiles/version";
 import {interceptarSalida} from "../../../utiles/output-capture";
+import {anchoVisible, Render} from "../../../utiles/tty";
 import {Colors} from "../../colors";
+import {EstadoArchivo, OrigenArchivo, type IArchivoCambiado} from "../../paquete";
 import {FrameworkUpdates} from "../../workspace/service";
 import {Accion, type IPaqueteGestion} from "./datos";
+import {calcularDiff, calcularDiffSideBySide, esDiffable, panelMagenta} from "./diff-render";
 
 /**
  * Modo de operación de `GestorTabla`.
@@ -64,12 +69,25 @@ export class GestorTabla {
     private readonly hayEnviar: boolean;
     private readonly hayEnviarConUpdate: boolean;
     private readonly anchoEnviar: number;
-    private lineasDibujadas: number;
     private _dibujando: boolean;
+    private _procesandoTecla: boolean;
+    private _vista: "tabla" | "lista" | "diff";
+    private _listaCambios: IArchivoCambiado[];
+    private _listaFila: number;
+    private _listaInfo: IPaqueteGestion | null;
+    private _diffLineas: string[];
+    private _diffScroll: number;
+    private _diffArchivo: string;
+    private _diffAutor: string;
+    private _listaModo: "enviar" | "actualizar" | "ambos";
+    private _listaLatest: string;
+    private _listaScroll: number;
+    private _tablaScroll: number;
     private readonly modo: GestorModo;
     private segundosRestantes: number | undefined;
     private readonly slots: {key: Accion; ancho: number}[];
     private readonly frameworkUpdates: FrameworkUpdates;
+    private readonly render: Render;
 
     public constructor(infos: IPaqueteGestion[], config: IGestorTablaConfig = {}) {
         const {modo = "todos", frameworkUpdates = FrameworkUpdates.all, defaultAcciones} = config;
@@ -87,8 +105,21 @@ export class GestorTabla {
         this.hayEnviarConUpdate = (modo === "todos" || modo === "send") ? infos.some(i => GestorTabla.tieneEnviarConUpdate(i)) : false;
         this.hayEnviar          = (modo === "todos" || modo === "send") ? (this.hayEnviarConUpdate || infos.some(i => GestorTabla.tieneEnviar(i))) : false;
         this.anchoEnviar        = this.hayEnviarConUpdate ? "actualizar+enviar".length : "enviar".length;
-        this.lineasDibujadas    = 0;
         this._dibujando         = false;
+        this._procesandoTecla   = false;
+        this._vista             = "tabla";
+        this._listaCambios      = [];
+        this._listaFila         = 0;
+        this._listaInfo         = null;
+        this._diffLineas        = [];
+        this._diffScroll        = 0;
+        this._diffArchivo       = "";
+        this._diffAutor         = "";
+        this._listaModo         = "enviar";
+        this._listaLatest       = "";
+        this._listaScroll       = 0;
+        this._tablaScroll       = 0;
+        this.render             = new Render();
 
         this.slots = (() => {
             switch (modo) {
@@ -153,8 +184,9 @@ export class GestorTabla {
                 if (GestorTabla.tieneEnviarConUpdate(info)) { return Accion.EnviarConUpdate; }
                 if (GestorTabla.tieneEnviar(info)) { return Accion.Enviar; }
                 return Accion.Nada;
-            case "update":
             case "todos":
+                return Accion.Nada;
+            case "update":
             default:
                 if (!info.instalado || !info.tieneUpdate) { return Accion.Nada; }
                 return this.debeActualizar(info) ? Accion.Actualizar : Accion.Nada;
@@ -361,15 +393,87 @@ export class GestorTabla {
         ].join(` ${SEP} `);
     }
 
-    private dibujar(): void {
-        const lineas: string[] = [];
-        lineas.push(this.renderCabecera());
-        lineas.push(Colors.colorize([Colors.Dim],
-            "─".repeat(4 + this.maxTipo + 3 + this.maxNombre + 3 + 14 + 3 + 14 + 3 + this.anchoAcciones)));
-        for (let i = 0; i < this.infos.length; i++) {
-            lineas.push(this.renderFila(i));
+    /** Ajusta `_tablaScroll` para que `fila` quede siempre dentro del viewport visible. */
+    private sincronizarScrollTabla(): void {
+        const viewport = Math.max(3, (process.stdout.rows ?? 24) - 10);
+        if (this.fila < this._tablaScroll) {
+            this._tablaScroll = this.fila;
+        } else if (this.fila >= this._tablaScroll + viewport) {
+            this._tablaScroll = this.fila - viewport + 1;
         }
-        lineas.push("");
+    }
+
+    private dibujar(): void {
+        // Ancho visible de cada fila de datos:
+        // 2 (indicador+espacio) + maxTipo + 3 (" │ ") + maxNombre + 3 + 13 (versión) + 3 + 13 + 3 + anchoAcciones
+        const anchoContenido = 40 + this.maxTipo + this.maxNombre + this.anchoAcciones;
+
+        // Helpers de borde en cyan (distinto del panel de cambios en magenta).
+        const BOR = (s: string) => Colors.colorize([Colors.FgCyan], s);
+        const borH  = "─".repeat(anchoContenido);
+        const top   = BOR(`┌${borH}┐`);
+        const mid   = BOR(`├${borH}┤`);
+        const bot   = BOR(`└${borH}┘`);
+
+        // Añade borde izquierdo y derecho a una línea ya coloreada,
+        // rellenando con espacios hasta el ancho correcto.
+        const bordeado = (line: string): string => {
+            const visible = anchoVisible(line);
+            const padding = " ".repeat(Math.max(0, anchoContenido - visible));
+            return `${BOR("│")}${line}${padding}${BOR("│")}`;
+        };
+        const bordeadoVacio = (): string => bordeado(" ".repeat(anchoContenido));
+        const indicadorScroll = (texto: string): string => {
+            const visible = anchoVisible(texto);
+            const padding = " ".repeat(Math.max(0, anchoContenido - visible));
+            return `${BOR("│")}${texto}${padding}${BOR("│")}`;
+        };
+
+        // Viewport: filas disponibles menos los elementos fijos.
+        // top+header+mid + ↑+↓ + bot+help = 7. Con countdown = 8. Usamos -10 para garantizar
+        // que lineas.length ≤ rows-2 incluso con la línea de countdown, evitando que el \n
+        // final cause scroll en el terminal en cada redibujado.
+        const viewport      = Math.max(3, (process.stdout.rows ?? 24) - 10);
+        const necesitaScroll = this.infos.length > viewport;
+        const inicio        = necesitaScroll ? this._tablaScroll : 0;
+        const infosVis      = necesitaScroll ? this.infos.slice(inicio, inicio + viewport) : this.infos;
+
+        const lineas: string[] = [];
+        lineas.push(top);
+        lineas.push(bordeado(this.renderCabecera()));
+        lineas.push(mid);
+
+        // Indicador superior fijo cuando hay scroll
+        if (necesitaScroll) {
+            lineas.push(indicadorScroll(
+                inicio > 0
+                    ? Colors.colorize([Colors.FgCyan, Colors.Dim], "  ↑ ··· más elementos arriba ···")
+                    : "",
+            ));
+        }
+
+        for (let i = 0; i < infosVis.length; i++) {
+            lineas.push(bordeado(this.renderFila(inicio + i)));
+        }
+        // Rellenar huecos al final para mantener altura constante
+        if (necesitaScroll) {
+            for (let i = infosVis.length; i < viewport; i++) {
+                lineas.push(bordeadoVacio());
+            }
+        }
+
+        // Indicador inferior fijo cuando hay scroll
+        if (necesitaScroll) {
+            lineas.push(indicadorScroll(
+                inicio + viewport < this.infos.length
+                    ? Colors.colorize([Colors.FgCyan, Colors.Dim], "  ↓ ··· más elementos abajo ···")
+                    : "",
+            ));
+        }
+
+        lineas.push(bot);
+
+        // Los atajos van fuera del recuadro para evitar problemas de ancho variable.
         const SEP_AYUDA = Colors.colorize([Colors.FgWhite, Colors.Dim], "│");
         const atajo = (tecla: string, desc: string) =>
             `${Colors.colorize([Colors.FgWhite, Colors.Bright], tecla)}  ${Colors.colorize([Colors.FgWhite, Colors.Dim], desc)}`;
@@ -389,6 +493,10 @@ export class GestorTabla {
         if ((this.modo === "todos" || this.modo === "send") && this.hayEnviar) {
             atajos.push(atajo("e", "enviar todos"));
         }
+        if ((this.modo === "todos" || this.modo === "update" || this.modo === "send") &&
+                (this.hayEnviar || this.hayActualizar)) {
+            atajos.push(atajo("d", "ver cambios"));
+        }
         lineas.push(atajos.join(`  ${SEP_AYUDA}  `));
 
         if (this.segundosRestantes !== undefined) {
@@ -396,16 +504,327 @@ export class GestorTabla {
                 `  Auto-confirma en ${this.segundosRestantes}s — pulsa cualquier tecla para cancelar`));
         }
 
-        this._dibujando = true;
-        if (this.lineasDibujadas > 0) {
-            process.stdout.write(Colors.up(this.lineasDibujadas));
-        }
-        for (const linea of lineas) {
-            process.stdout.write(`\r\x1b[K${linea}\n`);
-        }
-        this._dibujando = false;
-        this.lineasDibujadas = lineas.length;
+        this._dibujarLineas(lineas);
     }
+
+    // ── Vista: lista de ficheros cambiados ────────────────────────────────────────
+
+    private sincronizarScrollLista(): void {
+        const viewport = Math.max(3, (process.stdout.rows ?? 24) - 11);
+        if (this._listaFila < this._listaScroll) {
+            this._listaScroll = this._listaFila;
+        } else if (this._listaFila >= this._listaScroll + viewport) {
+            this._listaScroll = this._listaFila - viewport + 1;
+        }
+    }
+
+    /** Mueve el cursor una o varias posiciones arriba o abajo, pasando por todos los items. */
+    private navegarLista(dir: 1 | -1, {paso = 1}: {paso?: number} = {}): void {
+        const n = this._listaCambios.length;
+        if (n === 0) { return; }
+        const nueva = Math.max(0, Math.min(n - 1, this._listaFila + dir * paso));
+        if (nueva !== this._listaFila) {
+            this._listaFila = nueva;
+            this.sincronizarScrollLista();
+            this.dibujarLista();
+        }
+    }
+
+    /** Dibuja el panel de lista de ficheros con el cursor de selección activo. */
+    private dibujarLista(): void {
+        const info     = this._listaInfo!;
+        const archivos = this._listaCambios;
+        const titulo   = this._listaModo === "ambos"
+            ? `Cambios locales y remotos — ${info.npmName} (→ ${this._listaLatest})`
+            : this._listaModo === "actualizar"
+            ? `Cambios del update — ${info.npmName} (→ ${this._listaLatest})`
+            : `Cambios locales — ${info.npmName}`;
+        // En modo "ambos" cada línea lleva un prefijo extra "[L] " de 4 chars
+        const extraOrigen = this._listaModo === "ambos" ? 4 : 0;
+        const maxLen   = archivos.reduce((m, f) => Math.max(m, f.archivo.length + 9 + extraOrigen), titulo.length);
+        const innerWidth = Math.max(maxLen, 40) + 4;
+        const {top, mid, bot, fila, filaColoreada} = panelMagenta(innerWidth);
+
+        // Viewport: filas disponibles menos los elementos fijos del panel.
+        // top+titulo+mid + ↑+↓ + mid+count+bot+help = 9. Usamos -11 para garantizar
+        // total ≤ rows-2 y evitar que el \n final provoque scroll en el terminal.
+        const viewport      = Math.max(3, (process.stdout.rows ?? 24) - 11);
+        const necesitaScroll = archivos.length > viewport;
+        const inicio        = necesitaScroll ? this._listaScroll : 0;
+        const archivosVis   = necesitaScroll ? archivos.slice(inicio, inicio + viewport) : archivos;
+
+        const lineas: string[] = [];
+        lineas.push(top);
+        lineas.push(fila(titulo, s => Colors.colorize([Colors.FgMagenta, Colors.Bright], s)));
+        lineas.push(mid);
+
+        if (archivos.length === 0) {
+            lineas.push(fila("(sin cambios detectados)", s => Colors.colorize([Colors.FgYellow], s)));
+        } else {
+            // Indicador superior (slot fijo para mantener altura constante)
+            if (necesitaScroll) {
+                lineas.push(filaColoreada(
+                    inicio > 0
+                        ? Colors.colorize([Colors.FgCyan, Colors.Dim], "  ↑ ··· más elementos arriba ···")
+                        : "",
+                ));
+            }
+
+            for (let i = 0; i < archivosVis.length; i++) {
+                const idx    = inicio + i;
+                const item   = archivosVis[i];
+                const activo = idx === this._listaFila;
+                const diffable = esDiffable(item);
+
+                // Prefijo de origen — solo en modo "ambos"
+                let origenPrefix = "";
+                if (this._listaModo === "ambos") {
+                    const [origenText, origenCodes] = item.origen === OrigenArchivo.Ambos
+                        ? ["[X]", [Colors.FgMagenta, Colors.Bright]]
+                        : item.origen === OrigenArchivo.Local
+                        ? ["[L]", [Colors.FgBlue,    Colors.Bright]]
+                        : ["[R]", [Colors.FgBlue,    Colors.Bright]];
+                    origenPrefix = `${Colors.colorize(origenCodes, origenText)} `;
+                }
+
+                // Etiqueta de estado [C]/[N]/[D]/[!]
+                const labelText  = item.conflicto                              ? "[!]" :
+                    item.estado === EstadoArchivo.Nuevo     ? "[N]" :
+                    item.estado === EstadoArchivo.Eliminado ? "[D]" : "[C]";
+                const labelCodes = item.conflicto                              ? [Colors.FgMagenta, Colors.Bright] :
+                    item.estado === EstadoArchivo.Nuevo     ? [Colors.FgGreen,   Colors.Bright] :
+                    item.estado === EstadoArchivo.Eliminado ? [Colors.FgRed,     Colors.Bright] :
+                    [Colors.FgCyan, Colors.Bright];
+                const label = Colors.colorize(labelCodes, labelText);
+
+                if (diffable) {
+                    const indicador = activo
+                        ? Colors.colorize([Colors.FgGreen, Colors.Bright], "►")
+                        : " ";
+                    const nombre = Colors.colorize(
+                        activo ? [Colors.FgGreen, Colors.Bright] : [Colors.FgGreen],
+                        `● ${item.archivo}`,
+                    );
+                    lineas.push(filaColoreada(` ${origenPrefix}${label} ${indicador} ${nombre}`));
+                } else {
+                    const indicador = activo ? Colors.colorize([Colors.Dim], "►") : " ";
+                    const nombre = Colors.colorize([Colors.Dim], `○ ${item.archivo}`);
+                    lineas.push(filaColoreada(` ${origenPrefix}${label} ${indicador} ${nombre}`));
+                }
+            }
+            // Rellenar huecos sobrantes para mantener altura constante al hacer scroll
+            if (necesitaScroll) {
+                for (let i = archivosVis.length; i < viewport; i++) {
+                    lineas.push(filaColoreada(""));
+                }
+            }
+
+            // Indicador inferior (slot fijo)
+            if (necesitaScroll) {
+                lineas.push(filaColoreada(
+                    inicio + viewport < archivos.length
+                        ? Colors.colorize([Colors.FgCyan, Colors.Dim], "  ↓ ··· más elementos abajo ···")
+                        : "",
+                ));
+            }
+
+            lineas.push(mid);
+            const scroll = necesitaScroll
+                ? ` (${inicio + 1}–${Math.min(inicio + viewport, archivos.length)}/${archivos.length})`
+                : "";
+            lineas.push(fila(`${archivos.length} fichero(s) modificado(s)${scroll}`,
+                s => Colors.colorize([Colors.FgWhite, Colors.Dim], s)));
+        }
+
+        lineas.push(bot);
+
+        const SEP = Colors.colorize([Colors.FgWhite, Colors.Dim], "│");
+        const at  = (t: string, d: string) =>
+            `${Colors.colorize([Colors.FgWhite, Colors.Bright], t)}  ${Colors.colorize([Colors.FgWhite, Colors.Dim], d)}`;
+        const hayDiffables = archivos.some(f => esDiffable(f));
+        lineas.push([
+            at("↑ ↓", "navegar"),
+            ...(hayDiffables ? [at("Intro / →", "ver diff")] : []),
+            at("Esc / ←", "volver a la tabla"),
+        ].join(`  ${SEP}  `));
+
+        this._dibujarLineas(lineas);
+    }
+
+    /** Transiciona a la vista de lista de ficheros. */
+    private async iniciarLista(info: IPaqueteGestion): Promise<void> {
+        let archivos: IArchivoCambiado[] | null;
+        let modo: "enviar" | "actualizar" | "ambos";
+        let latest: string;
+
+        if (info.tieneCambiosLocales && info.tieneUpdate && info.versionLatest !== undefined) {
+            archivos = await info.paquete.getArchivosCambiadosCombinados(info.versionLatest);
+            modo     = "ambos";
+            latest   = info.versionLatest;
+        } else if (info.tieneCambiosLocales) {
+            archivos = await info.paquete.getArchivosCambiados();
+            modo     = "enviar";
+            latest   = "";
+        } else if (info.tieneUpdate && info.versionLatest !== undefined) {
+            archivos = await info.paquete.getArchivosModificadosPorUpdate(info.versionLatest);
+            modo     = "actualizar";
+            latest   = info.versionLatest;
+        } else {
+            this._procesandoTecla = false;
+            return;
+        }
+
+        this._listaInfo    = info;
+        this._listaCambios = archivos ?? [];
+        this._listaModo    = modo;
+        this._listaLatest  = latest;
+        this._listaScroll  = 0;
+        this._listaFila    = 0;
+        this.sincronizarScrollLista();
+        this._vista = "lista";
+        this.dibujarLista();
+        this._procesandoTecla = false;
+    }
+
+    // ── Vista: diff de un fichero ─────────────────────────────────────────────────
+
+    /** (Re)dibuja el panel de diff con el scroll actual. */
+    private dibujarDiff(): void {
+        const viewport  = Math.max(5, (process.stdout.rows ?? 24) - 10);
+        const total     = this._diffLineas.length;
+        const inicio    = this._diffScroll;
+        const lineasVis = this._diffLineas.slice(inicio, inicio + viewport);
+
+        const anchoTerminal = process.stdout.columns ?? 80;
+        const innerWidth    = Math.max(Math.min(anchoTerminal - 4, 140), 60);
+        const {top, mid, bot, filaColoreada} = panelMagenta(innerWidth);
+
+        const filaTit = (() => {
+            const BOR       = (s: string) => Colors.colorize([Colors.FgMagenta], s);
+            const maxTit    = innerWidth - 2;
+            const archivoPart = `Diff — ${this._diffArchivo}`.normalize("NFC");
+            const autorPart   = this._diffAutor ? `  ·  ${this._diffAutor}`.normalize("NFC") : "";
+            const archivoTrunc = archivoPart.slice(0, maxTit);
+            const autorTrunc   = autorPart.slice(0, Math.max(0, maxTit - archivoTrunc.length));
+            const relleno      = " ".repeat(Math.max(0, maxTit - archivoTrunc.length - autorTrunc.length));
+            return `${BOR("║")}  ${Colors.colorize([Colors.FgMagenta, Colors.Bright], archivoTrunc)}${Colors.colorize([Colors.FgCyan, Colors.Dim], autorTrunc)}${relleno}${BOR("║")}`;
+        })();
+
+        const lineas: string[] = [];
+        lineas.push(top);
+        lineas.push(filaTit);
+        lineas.push(mid);
+
+        // Reservar siempre el slot de indicadores cuando el contenido no cabe en un viewport,
+        // de modo que el número total de líneas sea constante durante el scroll.
+        const necesitaIndicadores = total > viewport;
+        if (necesitaIndicadores) {
+            lineas.push(filaColoreada(
+                inicio > 0
+                    ? Colors.colorize([Colors.FgCyan, Colors.Dim], "  ↑ ··· más líneas arriba ···")
+                    : "",
+            ));
+        }
+        for (const l of lineasVis) {
+            lineas.push(filaColoreada(l));
+        }
+        if (necesitaIndicadores) {
+            lineas.push(filaColoreada(
+                inicio + viewport < total
+                    ? Colors.colorize([Colors.FgCyan, Colors.Dim], "  ↓ ··· más líneas abajo ···")
+                    : "",
+            ));
+        }
+
+        lineas.push(bot);
+
+        const SEP    = Colors.colorize([Colors.FgWhite, Colors.Dim], "│");
+        const at     = (t: string, d: string) =>
+            `${Colors.colorize([Colors.FgWhite, Colors.Bright], t)}  ${Colors.colorize([Colors.FgWhite, Colors.Dim], d)}`;
+        const scroll = total > viewport ? ` (${inicio + 1}–${Math.min(inicio + viewport, total)}/${total})` : "";
+        lineas.push([
+            at("↑ ↓", `desplazar${scroll}`),
+            at("Esc / ←", "volver a la lista"),
+        ].join(`  ${SEP}  `));
+
+        this._dibujarLineas(lineas);
+    }
+
+    /** Transiciona a la vista de diff para el fichero indicado. */
+    private async iniciarDiff(info: IPaqueteGestion, item: IArchivoCambiado): Promise<void> {
+        const {archivo} = item;
+        const origen    = this._listaModo === "ambos" ? item.origen
+            : this._listaModo === "actualizar" ? OrigenArchivo.Remoto
+            : OrigenArchivo.Local;
+        const termW     = process.stdout.columns ?? 80;
+        const innerW    = Math.max(Math.min(termW - 4, 140), 60);
+        const maxLineWidth = innerW - 2;
+
+        if (origen === OrigenArchivo.Ambos) {
+            const [resLocal, resRemoto] = await Promise.all([
+                info.paquete.getDiffFichero(archivo),
+                info.paquete.getDiffFicheroDesdeRemoto(archivo, this._listaLatest),
+            ]);
+            // Para side-by-side mostramos el autor del lado "actualizar" (remoto) en el título
+            this._diffAutor = resRemoto?.autor ? `por ${resRemoto.autor}` : "";
+            if (resLocal !== null && resRemoto !== null) {
+                const colWidth = Math.floor((innerW - 5) / 2);
+                this._diffLineas = calcularDiffSideBySide(
+                    resLocal.original,
+                    resLocal.nuevo,
+                    resRemoto.nuevo,
+                    {
+                        offsetBase:   resLocal.offsetOriginal,
+                        offsetLocal:  resLocal.offsetNuevo,
+                        offsetRemoto: resRemoto.offsetNuevo,
+                        colWidth,
+                    },
+                );
+            } else {
+                // fallback: diff dual secuencial si alguno no está disponible
+                const calc = (res: {original: string; nuevo: string; offsetOriginal: number; offsetNuevo: number} | null, msg: string) =>
+                    res !== null
+                        ? calcularDiff(res.original, res.nuevo, {offsetA: res.offsetOriginal, offsetB: res.offsetNuevo, maxLineWidth})
+                        : [Colors.colorize([Colors.FgYellow], `  ⚠  ${msg}`)];
+                this._diffLineas = [
+                    Colors.colorize([Colors.FgYellow, Colors.Bright], "  @@ ── Cambios locales (publicado → local) ──"),
+                    ...calc(resLocal,  "No se pudo obtener el diff local"),
+                    Colors.colorize([Colors.FgYellow, Colors.Bright], "  @@ ── Cambios del update (local → remoto) ──"),
+                    ...calc(resRemoto, "No se pudo obtener el diff remoto"),
+                ];
+            }
+        } else {
+            const resultado = origen === OrigenArchivo.Remoto
+                ? await info.paquete.getDiffFicheroDesdeRemoto(archivo, this._listaLatest)
+                : await info.paquete.getDiffFichero(archivo);
+            this._diffAutor = resultado?.autor ? `por ${resultado.autor}` : "";
+            if (resultado === null) {
+                this._diffLineas = [Colors.colorize([Colors.FgYellow], "  ⚠  No se pudo obtener el contenido original")];
+            } else {
+                this._diffLineas = calcularDiff(resultado.original, resultado.nuevo, {
+                    offsetA: resultado.offsetOriginal,
+                    offsetB: resultado.offsetNuevo,
+                    maxLineWidth,
+                });
+            }
+        }
+        this._diffScroll  = 0;
+        this._diffArchivo = archivo;
+        this._vista       = "diff";
+        this.dibujarDiff();
+        this._procesandoTecla = false;
+    }
+
+    // ── Helper de renderizado ─────────────────────────────────────────────────────
+
+    /** Limpia las líneas anteriores en pantalla y escribe las nuevas. */
+    private _dibujarLineas(lineas: string[]): void {
+        this._dibujando = true;
+        this.render.dibujar(lineas);
+        this._dibujando = false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
 
     /**
      * Muestra la tabla interactiva y espera la confirmación del usuario.
@@ -465,7 +884,66 @@ export class GestorTabla {
 
             const onKeypress = (_str: unknown, key: {name: string; ctrl: boolean; sequence: string}) => {
                 if (key == null) { return; }
+                if (this._procesandoTecla) { return; }
 
+                // ── Vista diff: navegar / volver a lista ──────────────────────
+                if (this._vista === "diff") {
+                    const viewport = Math.max(5, (process.stdout.rows ?? 24) - 10);
+                    if (key.name === "escape" || key.name === "left" || (key.ctrl && key.name === "c")) {
+                        this._vista = "lista";
+                        this.dibujarLista();
+                    } else if (key.name === "up") {
+                        this._diffScroll = Math.max(0, this._diffScroll - 1);
+                        this.dibujarDiff();
+                    } else if (key.name === "down") {
+                        this._diffScroll = Math.min(
+                            Math.max(0, this._diffLineas.length - viewport),
+                            this._diffScroll + 1,
+                        );
+                        this.dibujarDiff();
+                    } else if (key.name === "pageup") {
+                        this._diffScroll = Math.max(0, this._diffScroll - viewport);
+                        this.dibujarDiff();
+                    } else if (key.name === "pagedown") {
+                        this._diffScroll = Math.min(
+                            Math.max(0, this._diffLineas.length - viewport),
+                            this._diffScroll + viewport,
+                        );
+                        this.dibujarDiff();
+                    }
+                    return;
+                }
+
+                // ── Vista lista: navegar / ver diff / volver a tabla ──────────
+                if (this._vista === "lista") {
+                    if (key.name === "escape" || key.name === "left" || (key.ctrl && key.name === "c")) {
+                        this._vista = "tabla";
+                        this.dibujar();
+                    } else if (key.name === "up") {
+                        this.navegarLista(-1);
+                    } else if (key.name === "down") {
+                        this.navegarLista(1);
+                    } else if (key.name === "pageup") {
+                        const viewport = Math.max(3, (process.stdout.rows ?? 24) - 11);
+                        this.navegarLista(-1, {paso: viewport});
+                    } else if (key.name === "pagedown") {
+                        const viewport = Math.max(3, (process.stdout.rows ?? 24) - 11);
+                        this.navegarLista(1, {paso: viewport});
+                    } else if ((key.name === "return" || key.name === "right") && this._listaInfo !== null) {
+                        const item = this._listaCambios[this._listaFila];
+                        const info = this._listaInfo;
+                        if (item !== undefined && esDiffable(item)) {
+                            this._procesandoTecla = true;
+                            this.iniciarDiff(info, item).catch(() => {
+                                this._procesandoTecla = false;
+                                this._vista = "lista";
+                            });
+                        }
+                    }
+                    return;
+                }
+
+                // ── Vista tabla: comportamiento original ──────────────────────
                 cancelarTimer();
 
                 if ((key.ctrl && key.name === "c") || key.name === "escape") {
@@ -476,9 +954,21 @@ export class GestorTabla {
                     resolve([...this.acciones]);
                 } else if (key.name === "up") {
                     this.fila = Math.max(0, this.fila - 1);
+                    this.sincronizarScrollTabla();
                     this.dibujar();
                 } else if (key.name === "down") {
                     this.fila = Math.min(this.infos.length - 1, this.fila + 1);
+                    this.sincronizarScrollTabla();
+                    this.dibujar();
+                } else if (key.name === "pageup") {
+                    const viewport = Math.max(3, (process.stdout.rows ?? 24) - 10);
+                    this.fila = Math.max(0, this.fila - viewport);
+                    this.sincronizarScrollTabla();
+                    this.dibujar();
+                } else if (key.name === "pagedown") {
+                    const viewport = Math.max(3, (process.stdout.rows ?? 24) - 10);
+                    this.fila = Math.min(this.infos.length - 1, this.fila + viewport);
+                    this.sincronizarScrollTabla();
                     this.dibujar();
                 } else if (key.name === "right" || key.sequence === " ") {
                     this.ciclarAccion(1);
@@ -505,6 +995,15 @@ export class GestorTabla {
                         }
                     }
                     this.dibujar();
+                } else if (key.name === "d" && (this.modo === "todos" || this.modo === "update" || this.modo === "send")) {
+                    const info = this.infos[this.fila];
+                    if (info.instalado && (info.tieneCambiosLocales || (info.tieneUpdate && info.versionLatest !== undefined))) {
+                        this._procesandoTecla = true;
+                        this.iniciarLista(info).catch(() => {
+                            this._procesandoTecla = false;
+                            this._vista = "tabla";
+                        });
+                    }
                 }
             };
 

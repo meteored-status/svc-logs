@@ -1,11 +1,13 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: 368314139e0823b96a7ec9c8efa6e50c
- * Versión: 2026.5.27+1-josantoniojimnez
+ * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
+ * Hash: 8403c3f7cf512bedb675300ada6b9b22
+ * Versión: 2026.7.14+1-josantoniojimnez
+ * Anterior: 2026.5.27+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {IModulo, IModuloConfig, Modulo} from "../modulo";
+import {type IModulo, type IModuloConfig, Modulo} from "../modulo";
 import {Colors} from "../clases/colors";
 import {run} from "../clases/auto-doc";
 

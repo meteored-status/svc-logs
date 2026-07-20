@@ -1,9 +1,9 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 09:00:52 GMT
- * Hash: af68b54bdf493d155c063c8684192f43
- * Versión: 2026.5.27+1-josantoniojimnez
- * Anterior: 2026.5.21+1-josantoniojimnez
+ * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
+ * Hash: 00f7109ad64e8e42ba0f804253ad6563
+ * Versión: 2026.6.25+5-josantoniojimnez
+ * Anterior: 2026.6.25+4-josantoniojimnez
  */
 
 import {spawn as spawnProcess} from "node:child_process";
@@ -31,7 +31,7 @@ export interface IComandoSalida {
 }
 
 export async function Comando(comando: string, params: string[] = [], config: IComandoConfig = {}): Promise<IComandoSalida> {
-    const {cwd, env = {}, shell = false, colores = true} = config;
+    const {cwd, env = {}, shell = process.platform === "win32", colores = true} = config;
     const proceso = spawnProcess(comando, params, {
         cwd,
         env: {
