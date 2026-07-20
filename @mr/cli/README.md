@@ -636,14 +636,19 @@ Entre otras acciones:
 - En la autocorrección de `Dockerfile` por workspace, solo inserta `ENV NODE_ENV=production`
   (junto a `COPY ./yarn.lock ./`) cuando `deploy.runtime = "node"`.
 - Normaliza `build.bundler` en `mrpack.json` según runtime/framework:
-  `browser -> rspack`, `php/cfworker -> none`, `node+nextjs -> none`, `node+componentes -> rspack`.
+  `browser -> rspack`, `php/cfworker -> none`, `node+nextjs -> none`, `node+componentes -> rspack`,
+  `node+bundle.web -> rspack`. La condición de `componentes` mira tanto el bundle principal
+  (`build.bundle.componentes`) como cualquier entrada de `build.bundle.web[]`; la de `bundle.web`
+  se cumple con que exista al menos un bundle web adicional, tenga o no `componentes`, ya que
+  esbuild no soporta `bundle.web` en absoluto (solo compila una única entrada Node).
   En los casos `node` donde el valor por defecto es `esbuild`, si el usuario establece
   manualmente `rspack` se respeta (no se corrige automáticamente).
-  Excepción: si el workspace declara `reflect-metadata` en `dependencies`, se fuerza
-  `rspack` aunque el runtime/framework apunte a `esbuild` o el manifest lo indique
-  explícitamente, ya que esbuild no emite `decoratorMetadata` (necesario para que
-  `reflect-metadata` funcione en tiempo de ejecución) mientras que rspack sí lo soporta
-  vía `builtin:swc-loader`.
+  Excepción: si el workspace declara `reflect-metadata` en `dependencies`, o declara algún
+  `build.bundle.web[]`, se fuerza `rspack` aunque el runtime/framework apunte a `esbuild` o el
+  manifest lo indique explícitamente, ya que esbuild no emite `decoratorMetadata` (necesario
+  para que `reflect-metadata` funcione en tiempo de ejecución) ni soporta `bundle.web`,
+  mientras que rspack sí soporta ambos (`decoratorMetadata` vía `builtin:swc-loader`, y
+  `bundle.web` generando una configuración de bundle adicional por cada entrada).
 - En workspaces `node+nextjs`, normaliza `scripts.dev` a `NEXTJS_PORT=<puerto> yarn g:nextjs`
   preservando el puerto legacy detectado en el script anterior: `NEXTJS_PORT=<n>` o
   cualquier invocación que contenga `next dev` seguido de `-p <n>` / `--port <n>` /
