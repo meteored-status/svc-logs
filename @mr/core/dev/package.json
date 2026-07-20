@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-dev",
-  "version": "2026.7.17+3-josantoniojimnez",
+  "version": "2026.7.20+1-josantoniojimnez",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "typings": "./types.d.ts",

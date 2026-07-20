@@ -1,8 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 11:42:00 GMT
- * Hash: 628a92acb3c603a375997e8e81f3d3f1
- * Versión: 2026.6.25+10-josantoniojimnez
+ * Fecha: Mon, 20 Jul 2026 06:26:44 GMT
+ * Hash: ec07c09dab4d12b1342d3ff0539260f7
+ * Versión: 2026.7.20+1-josantoniojimnez
+ * Anterior: 2026.6.25+10-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {seleccionar} from "./menu";

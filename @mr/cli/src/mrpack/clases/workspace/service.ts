@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Sat, 18 Jul 2026 19:01:45 GMT
- * Hash: 082166b7aa582f8672b684449fdba678
- * Versión: 2026.7.18+1-bixus
- * Anterior: 2026.7.17+1-josantoniojimnez
- * Proyecto: https://github.com/bixus/bixloader
+ * Editor: José Antonio Jiménez
+ * Fecha: Mon, 20 Jul 2026 06:26:44 GMT
+ * Hash: a507fec0373b54725fb7ff75f1f31bb8
+ * Versión: 2026.7.20+1-josantoniojimnez
+ * Anterior: 2026.7.18+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
