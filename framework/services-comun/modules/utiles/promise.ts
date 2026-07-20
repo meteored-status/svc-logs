@@ -1,13 +1,14 @@
 /**
- * Editor: miguel
- * Fecha: Mon, 22 Jun 2026 08:02:44 GMT
- * Hash: ff96c2ac867bd97ba365eeae149c6596
- * Versión: 2026.6.22+1-miguel
- * Anterior: 2026.6.17+1-juancmartinez
+ * Editor: José Antonio Jiménez
+ * Fecha: Mon, 20 Jul 2026 07:24:33 GMT
+ * Hash: aa6a216ad6629a040aad1a1872981eb3
+ * Versión: 2026.7.20+1-josantoniojimnez
+ * Anterior: 2026.6.22+1-miguel
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 export async function PromiseDelayed(delay: number = 0): Promise<void> {
-    return new Promise<void>((resolve: Function) => {
+    return new Promise<void>((resolve) => {
         setTimeout(() => {
             resolve();
         }, delay);

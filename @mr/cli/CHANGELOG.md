@@ -2,6 +2,28 @@
 
 ---
 
+## 2026.7.20
+
+### Fixed — `src/mrpack/clases/bundler.ts`, `src/mrpack/clases/manifest/workspace/build/index.ts`
+
+- [Jose] **`build.bundler` podía derivar en (o mantenerse en) `esbuild` para workspaces con
+  `build.bundle.web[]`**: esbuild solo compila una única entrada Node (`main.ts`) y no tiene
+  ningún concepto de `bundle.web` — a diferencia de rspack, que genera una configuración de
+  bundle adicional por cada entrada de `manifest.build.bundle.web` (ver
+  `@mr/core-dev/bundler/rspack/rspack.config.ts`). La condición existente que fuerza `rspack`
+  cuando hay `componentes` solo miraba el bundle principal (`build.bundle.componentes`),
+  ignorando por completo las entradas de `build.bundle.web[]`.
+  - `getBundlerCoherente()` (`bundler.ts`, usado por `mrpack init`/`checkScripts`) y
+    `ManifestWorkspaceBuildLoader.getBundler()` (usado en el camino real de compilación,
+    `Compilar.build()`) ahora comprueban también `componentes` dentro de cada entrada de
+    `bundle.web[]`, no solo en el bundle principal.
+  - Además, la sola presencia de cualquier entrada en `bundle.web[]` (tenga o no
+    `componentes`) fuerza `rspack` por sí misma, ya que esbuild no podría compilarla en
+    absoluto. `ManifestWorkspaceBuildLoader.check()` aplica esta corrección (nueva
+    `forceBundlerBundleWeb()`) incluso cuando `build.bundler: "esbuild"` viene informado
+    explícitamente en `mrpack.json`, con el mismo criterio que ya existía para
+    `reflect-metadata` (`forceBundlerReflectMetadata()`): esa combinación nunca es válida.
+
 ## 2026.7.17
 
 ### Added — `src/mrpack/clases/init/ignore.ts`

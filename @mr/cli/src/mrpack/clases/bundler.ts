@@ -1,14 +1,32 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: ff199309b07db8038852180e75156744
- * Versión: 2026.7.14+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Fecha: Mon, 20 Jul 2026 07:17:20 GMT
+ * Hash: 357819bc83b2e5fb134e261960daf382
+ * Versión: 2026.7.20+2-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-cmp.git
  */
 
 import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
+import type {ManifestBuildBundle} from "@mr/core-dev/manifest/build/bundle";
 import type {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
+
+/**
+ * Determina si el bundle requiere `rspack`: porque el bundle principal declara un pipeline de
+ * `componentes` no vacío, o porque hay algún bundle web adicional (`bundle.web[]`) — esbuild no
+ * soporta ninguno de los dos casos.
+ *
+ * @param bundle - Configuración de bundle del workspace (principal + `web[]`).
+ * @returns `true` si el bundle principal tiene `componentes`, o si `web[]` tiene alguna entrada.
+ */
+function bundleRequiereRspack(bundle: ManifestBuildBundle): boolean {
+    const principal = bundle.toJSON();
+    if (principal?.componentes!=undefined && Object.keys(principal.componentes).length>0) {
+        return true;
+    }
+    return bundle.web.length>0;
+}
 
 /**
  * Determina el bundler que debería usarse según el runtime/framework/build del workspace,
@@ -30,7 +48,7 @@ export function getBundlerCoherente(config: Manifest, dependencies?: Record<stri
             if (config.build.framework===BuildFW.nextjs) {
                 return BuildBundler.none;
             }
-            if (config.build.bundle.toJSON()?.componentes!=undefined && Object.keys(config.build.bundle.toJSON()?.componentes ?? {}).length>0) {
+            if (bundleRequiereRspack(config.build.bundle)) {
                 return BuildBundler.rspack;
             }
             if (dependencies?.["reflect-metadata"]!=undefined) {
