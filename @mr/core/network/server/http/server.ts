@@ -1,20 +1,26 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: 48ee3d20b2ea8bf248df1f81ba92c3d3
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Fri, 07 Aug 2026 08:55:42 GMT
+ * Hash: cdb1673094b59c386a3e0b6e4eeae654
+ * Versión: 2026.8.7+2-bixus
+ * Anterior: 2026.7.27+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
  */
 
 import formidable, {type Fields, type Files} from "formidable";
 import {parse, stringify, type IParseOptions} from "qs";
+import type {Duplex} from "node:stream";
 import type {Socket} from "node:net";
 import tls, {type SecureContext} from "node:tls";
 import http from "node:http";
 import https from "node:https";
+import inspector from "node:inspector";
 
 import {error, formatTiempo, info, warning} from "services-comun/modules/utiles/log";
 import {isDir, readDir, readFile, readJSON} from "services-comun/modules/utiles/fs";
+import {Deferred} from "services-comun/modules/utiles/promise";
 
+import {abortUpgrade, buildUpgradeContext, type IUpgradeHandler, matchUpgradeHandler, protegerSocket} from "./upgrade";
 import {Conexion} from "./conexion";
 import type {Net} from "./config/net";
 import {metricas} from "./metrics";
@@ -41,6 +47,60 @@ const QS_PARSE_OPTIONS: IParseOptions = {
 };
 
 /**
+ * Ruta admin (solo fuera de producción) que le pide a la instancia que ocupa el
+ * puerto HTTP que lo ceda temporalmente a una sesión de depuración.
+ * Ver {@link Server.cederPuertoParaDebug}.
+ */
+export const RUTA_DEBUG_HANDOFF = "/admin/debug-handoff/";
+
+/** Intervalo de reintento de escucha para el proceso que quiere el puerto para depurar (prioridad alta). */
+const INTERVALO_REINTENTO_DEBUG_MS = 300;
+
+/** Intervalo de reintento de escucha para el proceso que espera recuperar el puerto tras la depuración. */
+const INTERVALO_REINTENTO_NORMAL_MS = 2000;
+
+/**
+ * Indica si el proceso actual corre bajo un depurador de Node.js. PhpStorm inyecta
+ * `--inspect`/`--inspect-brk` vía `NODE_OPTIONS` (o `execArgv` en lanzamientos
+ * directos) al ejecutar una configuración en modo Debug.
+ */
+function esModoDebug(): boolean {
+    if (inspector.url() !== undefined) {
+        return true;
+    }
+    if (process.execArgv.some((arg) => arg.includes("--inspect"))) {
+        return true;
+    }
+    return (process.env["NODE_OPTIONS"] ?? "").includes("--inspect");
+}
+
+/**
+ * Avisa a la instancia que ya tiene el puerto HTTP ocupado para que lo libere
+ * temporalmente (ver {@link Server.cederPuertoParaDebug}). Nunca rechaza: si la
+ * petición falla o no hay nadie escuchando, el intervalo de reintento insistirá.
+ */
+function avisarInstanciaEnEjecucion(puerto: number): Promise<void> {
+    const deferred = new Deferred<void>();
+    const peticion = http.request({
+        method: "POST",
+        host: "127.0.0.1",
+        port: puerto,
+        path: RUTA_DEBUG_HANDOFF,
+        timeout: 2000,
+    }, (respuesta) => {
+        respuesta.resume();
+        deferred.resolve();
+    });
+    peticion.addListener("error", () => deferred.resolve());
+    peticion.addListener("timeout", () => {
+        peticion.destroy();
+        deferred.resolve();
+    });
+    peticion.end();
+    return deferred.promise;
+}
+
+/**
  * Gestiona los servidores HTTP y HTTPS del servicio.
  *
  * Crea y configura instancias de `http.Server` y `https.Server` de Node.js,
@@ -65,12 +125,16 @@ export class Server {
     private serverHTTPS: https.Server|null;
     private _shuttingDown: boolean;
     private signalsAttached: boolean;
+    private netHTTP: Net|null;
+    private esperandoPuertoHTTP: NodeJS.Timeout|null;
 
     public constructor() {
         this.serverHTTP = null;
         this.serverHTTPS = null;
         this._shuttingDown = false;
         this.signalsAttached = false;
+        this.netHTTP = null;
+        this.esperandoPuertoHTTP = null;
     }
 
     /**
@@ -194,28 +258,101 @@ export class Server {
      *
      * @param requestHandlers - Tabla de rutas que procesará las peticiones.
      * @param config          - Configuración de red (puertos, timeouts, límites…).
+     * @param upgrades        - Descriptores de upgrade (`Upgrade:` HTTP/1.1) recogidos de los
+     *   grupos de rutas. Si la lista está vacía no se registra listener de `'upgrade'`, de modo
+     *   que el comportamiento de un servicio que no los use queda intacto.
      * @returns La instancia de `http.Server` en escucha.
      */
-    public iniciarHTTP(requestHandlers: Routes, config: Net): http.Server {
+    public iniciarHTTP(requestHandlers: Routes, config: Net, upgrades: IUpgradeHandler[] = []): http.Server {
         if (this.serverHTTP === null) {
             const server = http.createServer((request: http.IncomingMessage, response: http.ServerResponse) => {
                 this.onRequest(request, response, requestHandlers, config, false);
             });
-            server.addListener("error", (err) => {
+            if (upgrades.length > 0) {
+                server.addListener("upgrade", this.crearListenerUpgrade(server, upgrades, config, false));
+            }
+            server.addListener("error", (err: NodeJS.ErrnoException) => {
+                if (!PRODUCCION && err.code === "EADDRINUSE") {
+                    this.gestionarPuertoOcupadoHTTP(server, config);
+                    return;
+                }
                 error("Error de servidor HTTP", err);
             });
-            server.listen(config.puertos.http, () => {
-                if (!PRODUCCION) {
+            // Listener persistente (no `once` vía el callback de `.listen()`): se registra
+            // una única vez aquí para que los reintentos de `escucharHTTP` (fuera de
+            // producción, tras un `EADDRINUSE`) no acumulen un listener `once` colgado por
+            // cada intento fallido (el evento `"error"`, no `"listening"`, es el que dispara
+            // en esos intentos, así que el `once` nunca se consume y se queda huérfano).
+            server.addListener("listening", () => {
+                if (this.esperandoPuertoHTTP !== null) {
+                    clearInterval(this.esperandoPuertoHTTP);
+                    this.esperandoPuertoHTTP = null;
+                    info(`Puerto HTTP ${config.puertos.http} recuperado; servidor web reanudado en:`, config.endpoints.http);
+                } else if (!PRODUCCION) {
                     info("Servidor Web iniciado en:", config.endpoints.http);
                 }
             });
+            this.escucharHTTP(server, config);
             this.configurarServidor(server, config);
             this.attachSignals(config);
 
             this.serverHTTP = server;
+            this.netHTTP = config;
         }
 
         return this.serverHTTP;
+    }
+
+    /**
+     * Arranca (o reintenta) la escucha del servidor HTTP en el puerto configurado.
+     * El resultado se notifica vía el listener persistente `"listening"` registrado
+     * una única vez en `iniciarHTTP` (no aquí), precisamente para que los reintentos
+     * sucesivos no acumulen un listener `once` por cada intento fallido.
+     */
+    private escucharHTTP(server: http.Server, config: Net): void {
+        server.listen(config.puertos.http);
+    }
+
+    /**
+     * Gestiona un puerto HTTP ocupado (`EADDRINUSE`) fuera de producción. Si este
+     * proceso corre bajo un depurador (ver {@link esModoDebug}), avisa a la
+     * instancia en ejecución para que ceda el puerto y reintenta la escucha con
+     * un intervalo corto; si no, asume que el puerto lo tiene una sesión de
+     * depuración propia y reintenta con un intervalo más largo hasta recuperarlo.
+     */
+    private gestionarPuertoOcupadoHTTP(server: http.Server, config: Net): void {
+        const debug = esModoDebug();
+        if (debug) {
+            avisarInstanciaEnEjecucion(config.puertos.http).finally(() => undefined);
+        }
+        if (this.esperandoPuertoHTTP !== null) {
+            return;
+        }
+        const intervalo = debug ? INTERVALO_REINTENTO_DEBUG_MS : INTERVALO_REINTENTO_NORMAL_MS;
+        warning(`Puerto HTTP ${config.puertos.http} ocupado; esperando a que quede libre (reintento cada ${intervalo}ms)...`);
+        this.esperandoPuertoHTTP = setInterval(() => {
+            this.escucharHTTP(server, config);
+        }, intervalo);
+    }
+
+    /**
+     * Cierra el servidor HTTP para cederle el puerto a una sesión de depuración y
+     * queda reintentando la escucha en el mismo puerto hasta recuperarlo cuando esa
+     * sesión termine. Solo tiene efecto fuera de producción; la invoca el endpoint
+     * `/admin/debug-handoff/`.
+     */
+    public async cederPuertoParaDebug(): Promise<void> {
+        if (PRODUCCION || this.serverHTTP === null || this.netHTTP === null || this.esperandoPuertoHTTP !== null) {
+            return;
+        }
+        const server = this.serverHTTP;
+        const config = this.netHTTP;
+        info(`Cediendo puerto HTTP ${config.puertos.http} a sesión de depuración...`);
+        const deferred = new Deferred<void>();
+        server.close(() => deferred.resolve());
+        server.closeAllConnections?.();
+        await deferred.promise;
+        this.gestionarPuertoOcupadoHTTP(server, config);
     }
 
     /**
@@ -226,9 +363,11 @@ export class Server {
      *
      * @param requestHandlers - Tabla de rutas que procesará las peticiones.
      * @param config          - Configuración de red (puertos, timeouts, límites…).
+     * @param upgrades        - Descriptores de upgrade (`Upgrade:` HTTP/1.1) recogidos de los
+     *   grupos de rutas. Ver {@link iniciarHTTP}.
      * @returns La instancia de `https.Server` en escucha.
      */
-    public async iniciarHTTPs(requestHandlers: Routes, config: Net): Promise<https.Server> {
+    public async iniciarHTTPs(requestHandlers: Routes, config: Net, upgrades: IUpgradeHandler[] = []): Promise<https.Server> {
         if (PRODUCCION) {
             // En producción TLS lo termina Istio/ASM y la app habla HTTP plano dentro del
             // pod, por lo que `iniciarHTTPs` no debe usarse: lanzar un servidor TLS aquí
@@ -263,6 +402,9 @@ export class Server {
             }, (request: http.IncomingMessage, response: http.ServerResponse) => {
                 this.onRequest(request, response, requestHandlers, config, true);
             });
+            if (upgrades.length > 0) {
+                server.addListener("upgrade", this.crearListenerUpgrade(server, upgrades, config, true));
+            }
             server.addListener("error", (err) => {
                 error("Error de servidor HTTPS", err);
             });
@@ -278,6 +420,55 @@ export class Server {
         }
 
         return this.serverHTTPS;
+    }
+
+    /**
+     * Construye el listener del evento nativo `'upgrade'` para un servidor concreto.
+     *
+     * Node destruye el socket por defecto cuando llega una petición con cabecera `Upgrade:`
+     * y nadie escucha ese evento; este listener es el punto de entrada que permite atenderla
+     * o reenviarla a otro backend (ver `upgrade.ts`).
+     *
+     * Convive con otros listeners de `'upgrade'` sin pisarlos: si ningún descriptor hace match
+     * pero hay más listeners registrados (el caso típico es el servidor WebSocket de `ws`, que
+     * se engancha después de arrancar el servidor HTTP), no se toca el socket y se le deja
+     * responder a él. La combinación inversa —un descriptor que hace match en un servicio que
+     * *además* termina WebSockets propios— sí produciría dos respuestas sobre el mismo socket,
+     * porque un listener no puede cancelar la emisión del evento a los demás; por eso el
+     * `Engine` avisa por log cuando un servicio declara ambas cosas a la vez.
+     *
+     * @param server   - Servidor nativo al que se asocia el listener.
+     * @param upgrades - Descriptores declarados por los grupos de rutas, en orden.
+     * @param config   - Configuración de red (se usa `trustProxy` para resolver el host).
+     * @param seguro   - `true` si el servidor es el HTTPS.
+     */
+    private crearListenerUpgrade(server: http.Server|https.Server, upgrades: IUpgradeHandler[], config: Net, seguro: boolean): (request: http.IncomingMessage, socket: Duplex, head: Buffer) => void {
+        return (request: http.IncomingMessage, socket: Duplex, head: Buffer): void => {
+            // Antes que nada: el socket llega sin listener de error y cualquier corte del
+            // cliente durante la negociación derribaría el proceso.
+            protegerSocket(socket);
+
+            const contexto = buildUpgradeContext(request, socket, head, {
+                https: seguro,
+                trustProxy: config.trustProxy,
+            });
+
+            const handler = matchUpgradeHandler(upgrades, contexto);
+            if (handler === undefined) {
+                if (server.listenerCount("upgrade") > 1) {
+                    return;
+                }
+                warning("Upgrade sin handler", contexto.dominio, contexto.path);
+                abortUpgrade(socket, 404, "Not Found");
+                return;
+            }
+
+            handler.handler(contexto)
+                .catch((err: unknown) => {
+                    error("Error atendiendo upgrade", handler.resumen, contexto.dominio, contexto.path, err);
+                    abortUpgrade(socket, 502, "Bad Gateway");
+                });
+        };
     }
 
     /**

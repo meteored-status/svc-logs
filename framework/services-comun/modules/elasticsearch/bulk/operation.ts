@@ -1,18 +1,33 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
+ * Hash: 9c424a1c4f3e2fab26feb0bbf4374c1a
+ * Versión: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ */
+
 import type {BulkOperationContainer, ESBulkOperation, Script} from "..";
 import {Deferred} from "../../utiles/promise";
 
+/**
+ * Operación individual encolada en {@link "./base.ts".BulkBase}. Extiende directamente
+ * {@link Deferred} (en vez de envolver una): así cada operación *es* la promesa que se resuelve
+ * o rechaza cuando {@link "./index.ts".Bulk} procesa el item de la respuesta que le corresponde.
+ */
 abstract class BulkOperation extends Deferred {
     /* INSTANCE */
     protected constructor(protected op: BulkOperationContainer) {
         super();
     }
 
+    /** Líneas que aporta esta operación al array `operations` de una petición bulk. */
     public get operations(): ESBulkOperation<any>[] {
         return [
             this.op,
         ];
     }
 
+    /** Tamaño en bytes de esta operación serializada, usado solo para logging. */
     public get size(): number {
         return JSON.stringify(this.operations).length;
     }
@@ -33,6 +48,7 @@ abstract class BulkOperationDoc<T> extends BulkOperation {
     }
 }
 
+/** Operación `create`: crea el documento, fallando si ya existe uno con el mismo id. */
 export class BulkOperationCreate<T extends object> extends BulkOperationDoc<T> {
     /* STATIC */
     public static build<T extends object>(index: string, doc: T, id?: string): BulkOperationCreate<T> {
@@ -50,6 +66,7 @@ export class BulkOperationCreate<T extends object> extends BulkOperationDoc<T> {
     }
 }
 
+/** Operación `delete`: elimina el documento por id. */
 export class BulkOperationDelete extends BulkOperation {
     /* STATIC */
     public static build(index: string, id: string): BulkOperationDelete {
@@ -67,6 +84,7 @@ export class BulkOperationDelete extends BulkOperation {
     }
 }
 
+/** Operación `index`: crea el documento o lo reemplaza por completo si ya existe. */
 export class BulkOperationIndex<T extends object> extends BulkOperationDoc<T> {
     /* STATIC */
     public static build<T extends object>(index: string, doc: T, id?: string): BulkOperationIndex<T> {
@@ -84,6 +102,7 @@ export class BulkOperationIndex<T extends object> extends BulkOperationDoc<T> {
     }
 }
 
+/** Operación de actualización mediante script, con `retry_on_conflict` alto para tolerar updates concurrentes. Su respuesta llega bajo la clave `update`. */
 export class BulkOperationScript<T extends object|undefined> extends BulkOperationDoc<T|undefined> {
     /* STATIC */
     public static build<T extends object|undefined>(index: string, id: string, script: Script, doc?: T): BulkOperationScript<T> {
@@ -112,6 +131,11 @@ export class BulkOperationScript<T extends object|undefined> extends BulkOperati
     }
 }
 
+/**
+ * Operación `update`: actualiza parcialmente el documento. Sin `upsert`, si `crear` es `true` usa
+ * `doc_as_upsert` (inserta el propio `doc` si no existe); con `upsert`, inserta ese documento
+ * completo en su lugar cuando no existe.
+ */
 export class BulkOperationUpdate<T extends object> extends BulkOperationDoc<Partial<T>> {
     /* STATIC */
     public static build<T extends object>(index: string, id: string, doc: Partial<T>, crear=false, upsert?: T, retry_on_conflict?: number): BulkOperationUpdate<T> {

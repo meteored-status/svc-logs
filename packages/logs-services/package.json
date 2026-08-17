@@ -10,7 +10,7 @@
   },
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "devDependencies": {
-    "@elastic/elasticsearch": "^9.4.2",
+    "@elastic/elasticsearch": "^9.5.0",
     "@types/node": "^24.13.3",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",

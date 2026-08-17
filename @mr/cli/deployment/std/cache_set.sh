@@ -10,8 +10,8 @@ if [[ -f "GENERAR.txt" ]]; then
   parseBucket() {
     BUCKET="${1}"
 
-    [ -d ".yarn/cache" ] && gsutil -m -q rm -r "gs://${BUCKET}/cache/${TRIGGER_NAME}/cache/" || echo "No hay caché"
-    [ -d ".yarn/cache" ] && gsutil -m -q cp -r .yarn/cache "gs://${BUCKET}/cache/${TRIGGER_NAME}/"
+    [ -d ".yarn/cache" ] && gcloud storage --no-user-output-enabled rm -r "gs://${BUCKET}/cache/${TRIGGER_NAME}/cache/" || echo "No hay caché"
+    [ -d ".yarn/cache" ] && gcloud storage --no-user-output-enabled cp -r .yarn/cache "gs://${BUCKET}/cache/${TRIGGER_NAME}/"
   }
 
   export -f parseBucket

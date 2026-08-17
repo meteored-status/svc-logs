@@ -36,7 +36,7 @@
     "statics/*",
     "tests/*"
   ],
-  "packageManager": "yarn@4.17.1",
+  "packageManager": "yarn@4.18.0",
   "bin": {
     "mrlang": "@mr/cli/bin/mrlang.js",
     "mrpack": "@mr/cli/bin/mrpack.js"

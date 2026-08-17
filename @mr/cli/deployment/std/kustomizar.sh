@@ -172,6 +172,23 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
     fi
 
+    # Comprobar que exista la entrada deploy.env
+    ENV_VARS=$(configw "${RUTA}" '.deploy.env // empty')
+    if [[ -n "${ENV_VARS}" ]]; then
+      ENV_JSON='[]'
+      for KEY in $(echo "${ENV_VARS}" | jq -r 'keys[]'); do
+        VALUE=$(echo "${ENV_VARS}" | jq -r --arg key "${KEY}" '.[$key]')
+        ENV_ENTRY=$(jq -n --arg name "${KEY}" --arg value "${VALUE}" '{name: $name, value: $value}')
+        ENV_JSON=$(echo "${ENV_JSON}" | jq ". + [${ENV_ENTRY}]")
+      done
+
+      if [[ "${TYPE}" == "service" ]]; then
+        yq eval ".spec.template.spec.containers[0].env += ${ENV_JSON}" "${CLOUD_RUN_YAML}" -i
+      else
+        yq eval ".spec.template.spec.template.spec.containers[0].env += ${ENV_JSON}" "${CLOUD_RUN_YAML}" -i
+      fi
+    fi
+
     VOLUMES_JSON='[]'
     MOUNTS_JSON='[]'
     CREDENTIALS=$(configw "${RUTA}" '.deploy.credenciales // []')

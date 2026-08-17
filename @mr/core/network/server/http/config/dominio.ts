@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 22 May 2026 07:13:37 GMT
- * Hash: 57393dd78bba15740272aba264778e76
- * Versión: 2026.5.22+3-josantoniojimnez
+ * Editor: Diego Jesús Ramos Rodríguez
+ * Fecha: Wed, 05 Aug 2026 08:27:07 GMT
+ * Hash: 2c5da40be546d2b80d9d871e26134787
+ * Versión: 2026.8.5+2-diegojesusramosrodriguez
+ * Anterior: 2026.5.22+3-josantoniojimnez
+ * Proyecto: https://github.com/estadiodeportivo/svc-www-v2.git
  */
 
 /**
@@ -95,7 +97,7 @@ export class Dominio {
     private readonly hosts: Map<string, string>;
     private readonly redirecciones: Map<string, string>;
 
-    protected constructor(config: IDominioConfig) {
+    protected constructor(config: IDominioConfig, {local="local", test="test"}: {local?: string, test?: string} = {}) {
         this.SUBDOMINIO_BASE = Dominio.BASE;
         this.SUBDOMINIO_WWW  = Dominio.WWW;
         this.BASE = this.SUBDOMINIO_BASE.nombre;
@@ -111,11 +113,11 @@ export class Dominio {
         let coletillaGuion = "";
         let coletillaPunto = "";
         if (DESARROLLO) {
-            coletillaGuion = "local-";
-            coletillaPunto = "local.";
+            coletillaGuion = `${local}-`;
+            coletillaPunto = `${local}.`;
         } else if (TEST) {
-            coletillaGuion = "test-";
-            coletillaPunto = "test.";
+            coletillaGuion = `${test}-`;
+            coletillaPunto = `${test}.`;
         }
 
         const habilitados = [this.WWW, ...config.subdominios?.habilitados ?? []];

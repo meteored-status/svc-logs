@@ -2,6 +2,102 @@
 
 ---
 
+## 2026.8.7 — [Jose]
+
+### Added
+
+- **`server/http/upgrade.ts`** *(nuevo)* — mecanismo genérico de reenvío de peticiones HTTP/1.1
+  con cabecera `Upgrade:` (WebSocket de aplicación, HMR de bundlers como Next.js/webpack/Vite).
+  Resuelve que ni `Server` ni ningún `RouteGroup` escuchaban antes el evento nativo `'upgrade'`,
+  por lo que Node destruía siempre el socket del handshake.
+  - `IUpgradeContext` — normaliza los argumentos del evento `'upgrade'` (`request`, `socket`,
+    `head`, `dominio`, `path`, `https`); `buildUpgradeContext()` lo construye respetando
+    `trustProxy` con el mismo criterio que `RequestContext.dominio`.
+  - `IUpgradeHandler` — descriptor (`resumen`, `dominios?`, `prefix?`, `handler`) con matching
+    ligero (host exacto + prefijo de path); **no** reutiliza los `Checker` del router HTTP porque
+    un `'upgrade'` no trae `ServerResponse` y por tanto no puede construirse una `Conexion`.
+    `matchUpgradeHandler()` aplica la semántica "primer match gana".
+  - `protegerSocket()` — registra el listener mínimo de `'error'` sobre el socket crudo que
+    entrega el evento `'upgrade'`. Sin él, un `ECONNRESET` del cliente durante la negociación con
+    el backend sería un `'error'` sin manejar y derribaría el proceso.
+  - `abortUpgrade()` — serializa a mano una línea de estado HTTP/1.1 sobre el socket crudo y lo
+    cierra (ya no existe `ServerResponse` a estas alturas).
+  - `proxyUpgrade()` — abre `http`/`https.request` con `agent: false`, reescribe el `101` del
+    backend usando `rawHeaders` (preserva orden/mayúsculas/cabeceras repetidas) y hace pipe
+    bidireccional entre ambos sockets. El `head` del cliente se escribe al backend después del
+    handshake. Si el backend responde con un status normal en vez de `101`, reenvía ese status
+    real al cliente y resuelve igualmente (el upgrade se ha atendido, aunque no haya túnel).
+  - Documentación completa en [`server/http/README.md#upgrade`](./server/http/README.md#upgrade).
+
+### Changed
+
+- **`server/http/server.ts`** — `iniciarHTTP(requestHandlers, config, upgrades?)` /
+  `iniciarHTTPs(..., upgrades?)` aceptan un nuevo tercer parámetro `IUpgradeHandler[]` (por
+  defecto `[]`). Nuevo método privado `crearListenerUpgrade()` que construye el listener del
+  evento `'upgrade'`; **solo se registra si `upgrades.length > 0`**, de modo que el
+  comportamiento de un servicio que no los use queda intacto. Si ningún descriptor hace match
+  pero el servidor tiene más listeners de `'upgrade'` (típicamente el servidor WebSocket de
+  `ws`, enganchado después), el socket no se toca; si es el único, se loggea `warning` y se
+  responde `404`.
+- **`server/http/routes/group/index.ts`** — nuevo método público overrideable
+  `RouteGroup.getUpgradeHandlers(): IUpgradeHandler[]` (por defecto `[]`), hermano de
+  `getWSHandlers()`. A diferencia de este, que **termina** el WebSocket en el servicio, los
+  descriptores de `getUpgradeHandlers()` reciben el socket crudo y son libres de reenviarlo a
+  otro backend con `proxyUpgrade`.
+
+---
+
+## 2026.8.6 — [Jose]
+
+### Added
+
+- **`server/http/routes/group/block.ts`** — nuevo campo opcional `dominios?: string[]` en
+  `IRouteGroup`. Cuando se define, `RouteGroupBlock.parseExpresiones()` lo aplica como valor
+  por defecto a cada `IExpresion` del bloque cuyo propio `dominios` no esté definido (tanto en
+  la construcción inicial vía `build()` como en cada recarga dinámica del `updater`), sin mutar
+  los objetos `IExpresion` originales.
+- **`server/http/routes/group/index.ts`** — nueva propiedad opcional `dominios?: string[]` en
+  `RouteGroup` (expuesta también en `IRouteGroupParams`, por defecto `undefined`). Se aplica con
+  el mismo principio de herencia: en el constructor, cada `IRouteGroup` devuelto por
+  `getHandlers()` que no defina su propio `dominios` recibe el del grupo antes de construirse
+  vía `RouteGroupBlock.build()`, sin mutar los objetos `IRouteGroup` originales.
+
+## 2026.7.24 — [Jose]
+
+### Added
+
+- **`server/http/server.ts`** — handoff automático de puerto HTTP para depuración local,
+  activo solo fuera de producción (`!PRODUCCION`):
+  - `esModoDebug()` *(interno)* — detecta si el proceso corre bajo el depurador de
+    Node (`inspector.url()`, `--inspect`/`--inspect-brk` en `execArgv`, o `NODE_OPTIONS`,
+    que es lo que PhpStorm inyecta al lanzar una configuración npm en modo Debug).
+  - El listener de error de `iniciarHTTP` detecta `EADDRINUSE` fuera de producción:
+    si el proceso está en modo debug, avisa por HTTP a la instancia que ocupa el puerto
+    (`avisarInstanciaEnEjecucion()`, interno) y reintenta la escucha cada 300ms; si no,
+    asume que el puerto lo tiene una sesión de depuración y reintenta cada 2000ms.
+  - Nuevo método público `cederPuertoParaDebug()` — cierra el servidor HTTP (sin afectar
+    a `close()`/`isShuttingDown()`, que siguen reservados al shutdown graceful real de
+    `SIGTERM`/`SIGINT`) y entra en el mismo bucle de reintento para recuperar el puerto
+    en cuanto la sesión de depuración termina.
+  - Nueva constante exportada `RUTA_DEBUG_HANDOFF = "/admin/debug-handoff/"`, consumida
+    por el nuevo endpoint en `@mr/core-workload/handlers/admin.ts`.
+
+  Resuelve el flujo manual que antes requería parar a mano el servicio en `mrpack devel`
+  antes de lanzar el depurador de PhpStorm sobre el mismo workspace, y volver a
+  arrancarlo al terminar.
+
+  - **Fix (detectado en pruebas reales):** `escucharHTTP()` pasaba un callback directo
+    a `server.listen(puerto, callback)`, que internamente registra un `once("listening", …)`.
+    Como cada reintento fallido dispara `"error"` (`EADDRINUSE`), no `"listening"`, ese
+    listener nunca se consumía y quedaba huérfano; tras ~255 reintentos (2000ms cada uno,
+    ≈8,5 min) Node emitía `MaxListenersExceededWarning`, y al recuperarse el puerto **todos**
+    los listeners acumulados disparaban a la vez (decenas de líneas duplicadas de "Servidor
+    Web iniciado en"). Solución: el callback de éxito se registra una única vez como
+    listener persistente (`server.addListener("listening", …)`) en `iniciarHTTP`, y
+    `escucharHTTP()` pasa a llamar a `server.listen(puerto)` sin callback en cada reintento.
+
+---
+
 ## 2026.7.13 — [Jose]
 
 ### Changed

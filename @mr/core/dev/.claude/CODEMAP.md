@@ -10,8 +10,14 @@
 
 ```txt
 .claude/
-├── .mr-ignore               Excluye settings.local.json del envío del framework
-├── settings.json            Declara el hook Stop -> hooks/check-codemap.mjs
+├── .mr-ignore                    Excluye settings.local.json del envío del framework
+├── settings.json                 Declara el hook Stop -> hooks/check-codemap.mjs
+│                                  y permisos (ask sobre Agent(model:opus))
+├── delegacion-multimodelo.md     Política de delegación a subagentes (importada desde CLAUDE.md)
+├── agents/                       Subagentes de modelo fijo usados por la delegación
+│   ├── opus-planner.md           model: opus — planificación, ambigüedad, revisión final
+│   ├── sonnet-builder.md         model: sonnet — implementación estándar
+│   └── haiku-mechanic.md         model: haiku — tareas mecánicas (tools restringidas)
 └── hooks/
     └── check-codemap.mjs    Heurística de mantenimiento CODEMAP.md/CHANGELOG.md
 ```
@@ -48,6 +54,31 @@ Un único hook `Stop` (sin `matcher` — no soportado/ignorado por este evento) 
 `node "$CLAUDE_PROJECT_DIR/.claude/hooks/check-codemap.mjs"`. Invocar siempre vía `node`
 (nunca ejecutar el `.mjs` directamente) evita depender de que el transporte GCS/zip de
 `mrpack framework` preserve el bit ejecutable.
+
+También declara `permissions.ask: ["Agent(model:opus)"]`: pide confirmación solo cuando se
+invoque un subagente cuyo frontmatter declare `model: opus` (ver `agents/` más abajo), para dar
+visibilidad sobre el gasto en Opus sin interrumpir las llamadas a `sonnet-builder`/
+`haiku-mechanic`.
+
+---
+
+## `delegacion-multimodelo.md` y `agents/`
+
+Política de delegación multi-modelo, importada desde `CLAUDE.md` raíz (`@.claude/
+delegacion-multimodelo.md`). Define tres subagentes de modelo fijo en `agents/` para controlar
+coste sin pedir cambios manuales de modelo:
+
+- **`opus-planner`** (`model: opus`) — planificación de tareas complejas, ambigüedad,
+  arquitectura, seguridad, debugging difícil y revisión final antes de cerrar una tarea.
+- **`sonnet-builder`** (`model: sonnet`) — implementación estándar, refactors medios, tests,
+  integración; agente por defecto una vez el plan está claro.
+- **`haiku-mechanic`** (`model: haiku`, `tools: Read, Edit, Grep, Glob` — sin `Bash`
+  deliberadamente) — tareas mecánicas deterministas de riesgo nulo (formateo, imports,
+  búsqueda/reemplazo literal acotado).
+
+Cada subagente se invoca desde el hilo principal con la herramienta `Agent`; el modelo lo fija
+el `model:` del frontmatter de cada `.md`, no un parámetro pasado en la llamada. Orden de
+prioridad si hay conflicto: calidad del código > ausencia de errores > coste.
 
 ---
 

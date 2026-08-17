@@ -1,10 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Fri, 17 Jul 2026 12:09:53 GMT
- * Hash: 47c578b8d6d7c66bf7a8be021d32e517
- * Versión: 2026.7.17+3-josantoniojimnez
- * Anterior: 2026.7.17+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Fecha: Wed, 05 Aug 2026 11:08:26 GMT
+ * Hash: 29b273da3c921fca65af7d48a58334bc
+ * Versión: 2026.8.5+1-josantoniojimnez
+ * Anterior: 2026.7.17+3-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-estaticos
  */
 
 import {md5} from "services-comun/modules/utiles/hash";
@@ -36,7 +36,7 @@ import {getBundlerNormalizado} from "./bundler";
 import {checkScripts} from "./init/scripts";
 import {corregirGITs} from "./init/git";
 import {limpiarLegacy} from "./init/legacy";
-import {initGithub, initAgents, initClaude, initClaudeDir} from "./init/symlinks";
+import {initGithub, initAgents, initClaude, initClaudeDir, initContributing} from "./init/symlinks";
 import {initYarnRC} from "./init/yarnrc";
 import {initConfig, type IWorkspaces} from "./init/config-workspaces";
 import {initRun} from "./init/run";
@@ -68,6 +68,7 @@ export async function init(basedir: string): Promise<boolean> {
     await initGithub(basedir);
     await initAgents(basedir);
     await initClaude(basedir);
+    await initContributing(basedir);
     await initClaudeDir(basedir);
 
     if (await isDir(`${basedir}/i18n`)) {
