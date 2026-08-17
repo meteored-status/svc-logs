@@ -7,7 +7,7 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 ```text
 @mr/core/workload/
 ├─ config/
-│  ├─ index.ts        — Configuracion base + IConfiguracion (pod/env)
+│  ├─ index.ts        — Configuracion base + IConfiguracion (pod/env); cargar() sobreescribe defecto con files/config.json
 │  ├─ pod.ts          — creacion de IPodInfo
 │  └─ net.ts          — ConfiguracionNet + IConfiguracionNet (config de red)
 ├─ engine/
@@ -111,16 +111,33 @@ hooks de salud que los handlers de admin necesitan.
   - Hook de ciclo de vida:
     - `init()` — monta el watcher de `chokidar` sobre `files/tmp/admin/shutdown.lock`
   - Métodos de arranque (protegidos):
-    - `initWebServer(handlers, net, config?)` — HTTP; añade Admin+Favicon, crea Routes, arranca HTTP+WS
+    - `initWebServer(handlers, net, config?)` — HTTP; añade Admin+Favicon, crea Routes, arranca
+      HTTP+WS pasando también los descriptores de upgrade a `server.iniciarHTTP`
     - `initWebServerS(handlers, net, config?)` — HTTPS fire-and-forget; idéntico con TLS SNI
   - Métodos privados:
-    - `iniciar(handlers, config)` — lógica compartida de inicialización: i18n, Admin, Favicon, caché, WS handlers
+    - `iniciar(handlers, config)` → `IHandlersAuxiliares {webSockets, upgrades}` *(interno, no
+      exportado)* — lógica compartida de inicialización: i18n, Admin, Favicon, caché, recoge los
+      `IWSHandler` (`getWSHandlers()`) y los `IUpgradeHandler` (`getUpgradeHandlers()`) de todos
+      los grupos. Avisa por `warning` si un servicio declara ambos a la vez (ver
+      `Server.crearListenerUpgrade` en `@mr/core-network`)
   - Hooks de salud sobreescribibles:
     - `started()` — probe de arranque (`/admin/started/`); delega en `ok()`
     - `ready()` — probe de disponibilidad de tráfico (`/admin/ready/`); delega en `ok()`
     - `okAll()` — liveness probe (`/admin/live/`); verifica `handler.ok` de todos los grupos + `ok()`
     - `ok()` *(protegido)* — comprobación genérica personalizable; no-op en la base
     - `shutdown()` *(protegido)* — apagado graceful al detectar `shutdown.lock`; no-op en la base
+
+### `config/index.ts`
+
+- `interface IConfiguracion extends IConfigGenerico` (de `@mr/core-utils/config`)
+  - `pod?: IPodInfo` — se rellena automáticamente en `cargar()`; se puede omitir en el fichero de configuración
+- `class Configuracion<T extends IConfiguracion = IConfiguracion> extends ConfigGenerico<T>`
+  - Propiedad: `pod: IPodInfo` (readonly)
+  - `protected static async cargar<S>(defecto: S)` → `Promise<Configuracion<S>>`
+    - En paralelo: `crearPodInfo()` + lectura de `files/config.json` (si existe; si no, `{}`)
+    - `files/config.json` **no es autocontenido**: solo sobreescribe campo a campo el
+      `defecto` que cada subclase define en su propio `load()` (`new this(defecto, cfg)`,
+      merge `user ?? defecto` en el constructor de la subclase)
 
 ### `config/net.ts`
 
@@ -147,6 +164,7 @@ Grupo de rutas de administración interna. Ninguna aparece en la documentación 
 | `GET /admin/check/` | Alias de `/admin/live/` |
 | `GET /admin/doc/` | Lista de rutas documentables en JSON |
 | `GET /admin/metrics/` | Métricas en formato Prometheus (`text/plain; version=0.0.4`) |
+| `POST /admin/debug-handoff/` | Solo fuera de producción: `server.cederPuertoParaDebug()` — cede el puerto HTTP a una sesión de depuración. 404 en producción. |
 
 ```ts
 import Admin from "@mr/core-workload/handlers/admin";
@@ -214,9 +232,9 @@ engine.init()
      si aparece shutdown.lock → this.abort() + this.shutdown()
 
 engine.initWebServer(handlers, net, config?)
-  -> iniciar(handlers, config)     ← añade Admin + Favicon, setCache, recoge WSHandlers
+  -> iniciar(handlers, config)     ← añade Admin + Favicon, setCache, recoge WSHandlers + upgrades
   -> Routes(handlers, errorHandler)
-  -> server.iniciarHTTP(routes, net)
+  -> server.iniciarHTTP(routes, net, upgrades)
   -> si hay WSHandlers: webSocket(http, ws)
 ```
 

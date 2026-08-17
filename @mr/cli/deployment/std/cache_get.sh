@@ -9,7 +9,7 @@ source @mr/cli/deployment/std/aliases.sh
 parseBucket() {
   BUCKET="${1}"
 
-  gsutil -m -q cp -r "gs://${BUCKET}/cache/${TRIGGER_NAME}/cache" .yarn || echo "No hay caché"
+  gcloud storage --no-user-output-enabled cp -r "gs://${BUCKET}/cache/${TRIGGER_NAME}/cache" .yarn || echo "No hay caché"
 }
 
 export -f parseBucket

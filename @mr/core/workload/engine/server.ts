@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 5c41bd9fd1f66d9b869b0cea7f510d06
- * Versión: 2026.6.17+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Fri, 07 Aug 2026 08:55:42 GMT
+ * Hash: 5d2dbd6e2f5348a8ae4be7cd38040783
+ * Versión: 2026.8.7+1-bixus
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
  */
 
 import chokidar from "chokidar";
@@ -15,8 +17,9 @@ import {NetCacheDisk} from "services-comun/modules/net/cache/disk";
 import {Respuesta} from "@mr/core-network/server/http/respuesta";
 import {RouteGroup, type RouteGroupError} from "@mr/core-network/server/http/routes/group";
 import {Routes} from "@mr/core-network/server/http/routes";
+import type {IUpgradeHandler} from "@mr/core-network/server/http/upgrade";
 import type {IWSHandler} from "@mr/core-network/server/websocket/handler";
-import {error, info} from "services-comun/modules/utiles/log";
+import {error, info, warning} from "services-comun/modules/utiles/log";
 import {isDir, mkdir} from "services-comun/modules/utiles/fs";
 import server from "@mr/core-network/server/http/server";
 import webSocket from "@mr/core-network/server/websocket";
@@ -41,6 +44,18 @@ export interface IConfig {
     error?: RouteGroupError;
     idiomas?: IIdiomas;
     cache?: NetCache;
+}
+
+/**
+ * Handlers auxiliares recolectados de los {@link RouteGroup} al preparar el servidor web.
+ *
+ * @property webSockets - Handlers WebSocket que terminan en este servicio (`getWSHandlers`).
+ * @property upgrades   - Descriptores de upgrade que atiende o reenvía el propio servidor
+ *   HTTP/HTTPS (`getUpgradeHandlers`).
+ */
+interface IHandlersAuxiliares {
+    webSockets: IWSHandler[];
+    upgrades: IUpgradeHandler[];
 }
 
 /**
@@ -157,13 +172,15 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
      * 1. Inicializa i18n si `config.idiomas` está definido.
      * 2. Añade los handlers `Admin` y `Favicon` al final de la lista.
      * 3. Aplica la caché (`config.cache` o {@link NetCacheDisk}) a cada handler.
-     * 4. Recoge los {@link IWSHandler} de todos los grupos para el servidor WebSocket.
+     * 4. Recoge los {@link IWSHandler} de todos los grupos para el servidor WebSocket y los
+     *    {@link IUpgradeHandler} para el listener `'upgrade'` del servidor HTTP/HTTPS.
      *
      * @param handlers - Grupos de rutas del servicio (sin Admin ni Favicon).
      * @param config   - Opciones de arranque ({@link IConfig}).
      */
-    private iniciar(handlers: RouteGroup[], config: IConfig): IWSHandler[] {
+    private iniciar(handlers: RouteGroup[], config: IConfig): IHandlersAuxiliares {
         const webSockets: IWSHandler[] = [];
+        const upgrades: IUpgradeHandler[] = [];
 
         if (config.idiomas !== undefined) {
             Idioma.inicializar(config.idiomas);
@@ -176,19 +193,30 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
         for (const actual of handlers) {
             actual.setCache(cache);
             webSockets.push(...actual.getWSHandlers());
+            upgrades.push(...actual.getUpgradeHandlers());
         }
 
         this.handlers = handlers;
 
-        return webSockets;
+        if (webSockets.length > 0 && upgrades.length > 0) {
+            // Ambos mecanismos se enganchan al mismo evento nativo `'upgrade'` y ningún
+            // listener puede cancelar la emisión a los demás: si un descriptor de upgrade
+            // hace match, el servidor de `ws` también intentará su handshake sobre el mismo
+            // socket. Ver `Server.crearListenerUpgrade`.
+            warning("El servicio declara handlers WebSocket y descriptores de upgrade a la vez; ambos verán los upgrades que hagan match");
+        }
+
+        return {webSockets, upgrades};
     }
 
     /**
      * Arranca el servidor HTTP.
      *
-     * 1. Llama a {@link iniciar} para completar la lista de handlers y recoger WS handlers.
+     * 1. Llama a {@link iniciar} para completar la lista de handlers y recoger los handlers
+     *    WebSocket y los descriptores de upgrade.
      * 2. Crea (o reutiliza) las {@link Routes} con el handler de error configurado.
-     * 3. Arranca el servidor HTTP con {@link server.iniciarHTTP}.
+     * 3. Arranca el servidor HTTP con {@link server.iniciarHTTP}, pasándole los descriptores
+     *    de upgrade para que registre el listener `'upgrade'` si hay alguno.
      * 4. Si hay handlers WebSocket, inicia el servidor WebSocket.
      *
      * @param handlers - Grupos de rutas del servicio (sin Admin ni Favicon).
@@ -198,13 +226,13 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
     protected initWebServer(handlers: RouteGroup[], net: Net, config: IConfig = {}): void {
         info("Iniciando Servidor Web");
 
-        const ws = this.iniciar(handlers, config);
+        const {webSockets, upgrades} = this.iniciar(handlers, config);
         this.routes ??= new Routes(handlers, config.error ?? ErrorHandler(this.configuracion));
 
-        const http = server.iniciarHTTP(this.routes, net);
-        if (ws.length > 0) {
+        const http = server.iniciarHTTP(this.routes, net, upgrades);
+        if (webSockets.length > 0) {
             info("Iniciando Web Socket");
-            webSocket(http, ws);
+            webSocket(http, webSockets);
         }
     }
 
@@ -223,14 +251,14 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
     protected initWebServerS(handlers: RouteGroup[], net: Net, config: IConfig = {}): void {
         info("Iniciando Servidor Web Seguro");
 
-        const ws = this.iniciar(handlers, config);
+        const {webSockets, upgrades} = this.iniciar(handlers, config);
         this.routes ??= new Routes(handlers, config.error ?? ErrorHandler(this.configuracion));
 
-        void server.iniciarHTTPs(this.routes, net)
+        void server.iniciarHTTPs(this.routes, net, upgrades)
             .then((http) => {
-                if (ws.length > 0) {
+                if (webSockets.length > 0) {
                     info("Iniciando Web Socket Seguro");
-                    webSocket(http, ws);
+                    webSocket(http, webSockets);
                 }
             })
             .catch((err: unknown) => {

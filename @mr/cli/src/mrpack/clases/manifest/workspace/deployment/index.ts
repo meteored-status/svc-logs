@@ -1,10 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 12195ec0458be0bfc8acddc3762241b7
- * Versión: 2026.7.14+1-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Fecha: Fri, 24 Jul 2026 06:25:35 GMT
+ * Hash: e4bd730b2e0f3e8cc91199b7f7362a44
+ * Versión: 2026.7.24+1-josantoniojimnez
+ * Anterior: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
  */
 
 import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/core-dev/manifest/deployment";
@@ -33,8 +33,9 @@ type IManifestDeploymentUpdate2 = Omit<IManifestDeployment, "kustomize"> & {
  * Normaliza la sección `deploy` del `mrpack.json` de un workspace.
  *
  * Además de aplicar defaults y compatibilidad con formatos legacy,
- * preserva overlays avanzados como `deploy.annotations` para que se
- * propaguen al modelo tipado final.
+ * preserva overlays avanzados como `deploy.annotations` o `deploy.env`
+ * (este último solo con `target: lambda`) para que se propaguen al
+ * modelo tipado final.
  */
 class ManifestWorkspaceDeploymentLoader {
     /* INSTANCE */
@@ -133,6 +134,9 @@ class ManifestWorkspaceDeploymentLoader {
                         data.lambda = ManifestWorkspaceDeploymentLambdaLoader.check(deploy.lambda);
                     } else {
                         data.lambda = ManifestWorkspaceDeploymentLambdaLoader.default;
+                    }
+                    if ("env" in deploy && deploy.env) {
+                        data.env = deploy.env;
                     }
                 }
                 if (data.type===ManifestDeploymentKind.CRONJOB) {

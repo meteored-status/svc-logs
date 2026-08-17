@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: d8f34b4107db350e2c07b3e2409b844c
- * Versión: 2026.6.17+1-josantoniojimnez
- * Anterior: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Fri, 07 Aug 2026 08:55:42 GMT
+ * Hash: 21f48aa51a7002cb23eb8d5728b2c798
+ * Versión: 2026.8.7+2-bixus
+ * Anterior: 2026.8.6+1-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
  */
 
 import type {Configuracion} from "@mr/core-utils/config";
@@ -15,15 +16,20 @@ import type {Checker} from "../../checkers";
 import type {Conexion, TMetodo} from "../../conexion";
 import type {IErrorHandler} from "../../router";
 import {type IRouteGroup, RouteGroupBlock} from "./block";
+import type {IUpgradeHandler} from "../../upgrade";
 import type {Respuesta} from "../../respuesta";
 
 /**
  * Parámetros de visibilidad de un grupo de rutas.
  *
  * @property documentable - Si `false`, ninguna ruta del grupo aparece en la documentación generada.
+ * @property dominios     - Dominios por defecto del grupo. Se aplica a cada {@link IRouteGroup} de
+ *   {@link RouteGroup.getHandlers} cuyo propio `dominios` no esté definido, con el mismo principio de
+ *   herencia que {@link IRouteGroup.dominios} aplica sobre `IExpresion`.
  */
 export interface IRouteGroupParams {
     documentable: boolean;
+    dominios?: string[];
 }
 
 /**
@@ -60,6 +66,12 @@ export abstract class RouteGroup<T extends Configuracion = Configuracion> {
     /** Parámetros de visibilidad del grupo. */
     public readonly params: IRouteGroupParams;
 
+    /**
+     * Dominios por defecto del grupo. Se aplica a cada {@link IRouteGroup} de
+     * {@link getHandlers} cuyo propio `dominios` no esté definido.
+     */
+    public readonly dominios?: string[];
+
     /** Configuración del servicio, accesible por las subclases. */
     protected readonly configuracion: T;
 
@@ -79,11 +91,16 @@ export abstract class RouteGroup<T extends Configuracion = Configuracion> {
 
     public constructor(configuracion: T, params?: Partial<IRouteGroupParams>) {
         this.configuracion = configuracion;
-        this.handlers = this.getHandlers().map(actual => RouteGroupBlock.build(actual));
         this.params = {
             documentable: true,
             ...params,
         };
+        this.dominios = this.params.dominios;
+        this.handlers = this.getHandlers().map(actual => RouteGroupBlock.build(
+            actual.dominios === undefined && this.dominios !== undefined
+                ? {...actual, dominios: this.dominios}
+                : actual,
+        ));
     }
 
     /**
@@ -97,6 +114,21 @@ export abstract class RouteGroup<T extends Configuracion = Configuracion> {
      * Por defecto devuelve un array vacío; las subclases pueden sobreescribirlo.
      */
     public getWSHandlers(): IWSHandler[] {
+        return [];
+    }
+
+    /**
+     * Devuelve los descriptores de upgrade (`Upgrade:` HTTP/1.1) asociados a este grupo de rutas.
+     * Por defecto devuelve un array vacío; las subclases pueden sobreescribirlo.
+     *
+     * A diferencia de {@link getWSHandlers}, que **termina** el WebSocket en este servicio
+     * (protocolo de mensajes propio, handlers por método), estos descriptores reciben el socket
+     * crudo y son libres de reenviarlo a otro backend con `proxyUpgrade`. Es el mecanismo que
+     * necesita un proxy para que funcione el HMR de los frontends que sirve.
+     *
+     * Un servicio no debería declarar ambas cosas a la vez: ver `Server.crearListenerUpgrade`.
+     */
+    public getUpgradeHandlers(): IUpgradeHandler[] {
         return [];
     }
 

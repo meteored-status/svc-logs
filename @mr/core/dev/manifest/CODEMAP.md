@@ -243,6 +243,7 @@ export interface IManifestDeployment {
     storage?:     IManifestDeploymentStorage;  // solo BROWSER
     annotations?: IManifestDeploymentAnnotations;
     lambda?:      IManifestDeploymentLambda;   // solo target=lambda
+    env?:         Record<string, string>;      // solo target=lambda; { NOMBRE: valor }
 }
 
 export class ManifestDeployment implements IManifestDeployment {
@@ -262,6 +263,7 @@ export class ManifestDeployment implements IManifestDeployment {
     public storage?:     ManifestDeploymentStorage
     public annotations?: ManifestDeploymentAnnotations
     public lambda?:      ManifestDeploymentLambda
+    public env?:         Record<string, string>
     public get cronjob(): boolean    // true si type === CRONJOB || JOB
     public toJSON(): IManifestDeployment
 }
@@ -437,5 +439,6 @@ Manifest
     ├── .storage?         → ManifestDeploymentStorage  (solo BROWSER)
     │   └── .buckets      → ManifestDeploymentStorageBuckets
     ├── .annotations?     → ManifestDeploymentAnnotations
-    └── .lambda?          → ManifestDeploymentLambda   (solo target=lambda)
+    ├── .lambda?          → ManifestDeploymentLambda   (solo target=lambda)
+    └── .env?             → Record<string, string>    (solo target=lambda)
 ```

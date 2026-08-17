@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-dev",
-  "version": "2026.7.20+1-josantoniojimnez",
+  "version": "2026.8.17+1-bixus",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "typings": "./types.d.ts",
@@ -43,25 +43,25 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@rspack/cli": "^2.1.4",
-    "@rspack/core": "^2.1.4",
-    "@tsconfig/node24": "^24.0.4",
+    "@rspack/cli": "^2.1.10",
+    "@rspack/core": "^2.1.10",
+    "@tsconfig/node24": "^24.0.5",
     "@tsconfig/recommended": "^1.0.13",
     "@types/node": "^24.13.3",
     "@types/source-map-support": "^0.5.10",
     "css-loader": "^7.1.4",
-    "esbuild": "^0.28.1",
+    "esbuild": "^0.28.2",
     "mini-css-extract-plugin": "^2.10.2",
-    "prettier": "^3.9.5",
+    "prettier": "^3.9.6",
     "pug": "^3.0.4",
     "pug3-loader": "^2.4.3",
     "rspack-manifest-plugin": "^5.2.2",
-    "sass-embedded": "^1.100.0",
+    "sass-embedded": "^1.102.0",
     "sass-loader": "^17.0.0",
     "source-map-loader": "^5.0.0",
     "style-loader": "^4.0.0",
     "to-string-loader": "^1.2.0",
-    "ts-checker-rspack-plugin": "^1.5.2",
+    "ts-checker-rspack-plugin": "^1.6.1",
     "typescript": "^6.0.3"
   }
 }

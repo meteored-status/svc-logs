@@ -4,6 +4,8 @@ Paquete de infraestructura de desarrollo compartida por todos los workspaces del
 Proporciona los **tipos globales de entorno**, las **configuraciones TypeScript base** (Node y browser)
 y el **modelo de manifiesto** (`mrpack.json`) que describe cómo se compila y despliega cada workspace.
 
+**Código fuente:** ver [`CODEMAP.md`](./CODEMAP.md).
+
 ---
 
 ## Contenido
@@ -17,6 +19,7 @@ y el **modelo de manifiesto** (`mrpack.json`) que describe cómo se compila y de
 | [Bundler rspack](#bundler-rspack) | `bundler/rspack/rspack.config.ts` | Configuración rspack compartida por todos los workspaces |
 | [Bundler esbuild](#bundler-esbuild) | `bundler/esbuild/esbuild.config.mjs` | Configuración esbuild compartida por todos los workspaces |
 | [Parches de migración](#parches-de-migración-mrpackpatch) | — | Autofix de imports deprecados; se aplica tras `yarn mrpack update` |
+| [CONTRIBUTING.md](#contributingmd) | `CONTRIBUTING.md` | Convenciones de ramas (git-flow), versionado y despliegue (Cloud Build) del monorepo |
 | [Hook CODEMAP/CHANGELOG](#hook-de-mantenimiento-codemapchangelog-claude-code) | `.claude/settings.json` | Hook `Stop` de Claude Code que fuerza mantener CODEMAP.md/CHANGELOG.md al día |
 
 ---
@@ -259,6 +262,22 @@ Los shorthands del `package.json` raíz mapean a:
 | Shorthand | Comando completo |
 |-----------|-----------------|
 | `yarn run patch:apply` | `yarn workspace @mr/core-dev mrpack:patch:apply` |
+
+---
+
+## CONTRIBUTING.md
+
+**Fichero:** `CONTRIBUTING.md`
+**Expuesto en la raíz de cada monorepo consumidor** mediante symlink (`initContributing()`,
+mismo patrón que `AGENTS.md`/`CLAUDE.md` — ver `@mr/cli/src/mrpack/clases/init/symlinks.ts`).
+
+Documenta las convenciones de ramas (git-flow del monorepo: `master`/`main`, `develop`,
+`hotfix/<nombre>`, `feature/<fecha>_<nombre>_<ticket>_<desc>`, `version/<desarrollador>`),
+versionado (paquetes de negocio vs. de framework) y despliegue (Google Cloud Build
+disparado por push a `develop`/`feature/test`/`master`).
+
+Enlazado desde `CLAUDE.md` (import `@CONTRIBUTING.md`) y desde
+`.github/copilot-instructions.md`, ambos resueltos desde la raíz del repo consumidor.
 
 ---
 

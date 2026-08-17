@@ -1,10 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Mon, 20 Jul 2026 07:24:33 GMT
- * Hash: aa6a216ad6629a040aad1a1872981eb3
- * Versión: 2026.7.20+1-josantoniojimnez
- * Anterior: 2026.6.22+1-miguel
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Fecha: Thu, 23 Jul 2026 10:11:20 GMT
+ * Hash: 630273dd7c6490a520c439fc97028753
+ * Versión: 2026.7.23+1-josantoniojimnez
+ * Anterior: 2026.7.20+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 export async function PromiseDelayed(delay: number = 0): Promise<void> {
@@ -95,15 +95,36 @@ export function PromiseMap<T, K>(array: K[], createPromise: PromiseCreateFunctio
     return promesas;
 }
 
+export type DeferredState = "pending"|"fulfilled"|"rejected";
+
 export class Deferred<T=void> {
     public promise: Promise<T>;
     public resolve!: (value: T | PromiseLike<T>) => void;
     public reject!: (reason?: any) => void;
 
+    private status: DeferredState;
+
+    // Refleja solo la primera liquidación: como en una Promise nativa, resolve/reject
+    // posteriores son ignorados y no cambian el estado ya fijado.
+    public get state(): DeferredState {
+        return this.status;
+    }
+
     public constructor() {
+        this.status = "pending";
         this.promise = new Promise<T>((resolve, reject) => {
-            this.resolve = resolve;
-            this.reject = reject;
+            this.resolve = (value) => {
+                if (this.status === "pending") {
+                    this.status = "fulfilled";
+                }
+                resolve(value);
+            };
+            this.reject = (reason) => {
+                if (this.status === "pending") {
+                    this.status = "rejected";
+                }
+                reject(reason);
+            };
         });
     }
 }

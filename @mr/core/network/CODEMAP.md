@@ -292,6 +292,7 @@ No contiene ficheros `.ts` propios; agrupa los dos sub-bloques siguientes.
 | `server/http/config/net.ts` | `Net`, `INet`, `INetService`, `INetServiceBase` |
 | `server/http/service.ts` | `Service` |
 | `server/http/metrics.ts` | `metricas` (Datadog histograma) |
+| `server/http/upgrade.ts` | `IUpgradeContext`, `TUpgradeRunner`, `IUpgradeHandler`, `IUpgradeContextConfig`, `IProxyUpgradeConfig`, `buildUpgradeContext()`, `matchUpgradeHandler()`, `protegerSocket()`, `abortUpgrade()`, `proxyUpgrade()` |
 | `server/http/error.ts` | `HttpError` |
 | `server/http/schema/spec.ts` | `ISchemaSpec`, tipos de esquema |
 | `server/http/schema/spec-to-type/` | conversión spec → tipo TS |
@@ -311,9 +312,10 @@ No contiene ficheros `.ts` propios; agrupa los dos sub-bloques siguientes.
 
 ```
 Server (singleton)
-  iniciarHTTP(routes, config)  → http.Server
-  iniciarHTTPs(routes, config) → Promise<https.Server>   (solo dev, TLS SNI multi-dominio)
+  iniciarHTTP(routes, config, upgrades?)  → http.Server
+  iniciarHTTPs(routes, config, upgrades?) → Promise<https.Server>   (solo dev, TLS SNI multi-dominio)
   close(timeoutMs)             → Promise<void>            (graceful shutdown, SIGTERM/SIGINT)
+  cederPuertoParaDebug()       → Promise<void>            (solo !PRODUCCION, ver abajo)
         │
         ▼
   route(handlers: Routes, conexion: Conexion)
@@ -327,8 +329,11 @@ Server (singleton)
         │
         ▼
   RouteGroup<T>  (abstracta)
-    getHandlers()   → IRouteGroup[]   (implementada por subclase)
-    getWSHandlers() → IWSHandler[]    (opcional; arranca el servidor WS)
+    dominios?: string[]  — pasado en params; heredado por cada IRouteGroup de getHandlers()
+                           que no defina el suyo propio (mismo principio que IRouteGroup.dominios)
+    getHandlers()         → IRouteGroup[]      (implementada por subclase)
+    getWSHandlers()       → IWSHandler[]       (opcional; arranca el servidor WS, termina el WS aquí)
+    getUpgradeHandlers()  → IUpgradeHandler[]  (opcional; recibe el socket crudo y puede reenviarlo)
     check(conexion) → Promise<boolean>
     sendRespuesta(conexion, opts)     → Promise<number>
     sendError(conexion, data?, opts?) → Promise<number>
@@ -338,8 +343,13 @@ Server (singleton)
     expresiones: Checker[]
     handler: (conexion, captures) → Promise<number>
     updater?: { interval?, exec }  — recarga dinámica de expresiones
+    dominios?: string[]  — heredado por cada IExpresion de `expresiones` que no defina el suyo propio
     check(conexion, metodo) → Promise<boolean>
 ```
+
+**`upgrades` no pasa por `Checker`:** el evento nativo `'upgrade'` no trae `ServerResponse`,
+por lo que no puede construirse una `Conexion`. El matching de `IUpgradeHandler` (host exacto +
+prefijo de path) vive directamente en `server/http/upgrade.ts` — ver más abajo.
 
 ### `Conexion`
 Representa la petición HTTP entrante y su respuesta. Compone `RequestContext` (inmutable) + `Respuesta` (envío).
@@ -365,6 +375,27 @@ Conexion extends Respuesta
   iniciado/preparando/transfiriendo/terminado()     — avance del ciclo de vida
   isTerminado()         → boolean
 ```
+
+### `upgrade.ts` — reenvío de peticiones `Upgrade:` HTTP/1.1
+
+Mecanismo genérico para atender/reenviar el evento nativo `'upgrade'` (WebSocket de aplicación,
+HMR de bundlers). Ver el detalle completo en
+[`server/http/README.md#upgrade`](./server/http/README.md#upgrade).
+
+```
+buildUpgradeContext(request, socket, head, {https?, trustProxy?}) → IUpgradeContext
+matchUpgradeHandler(handlers: IUpgradeHandler[], contexto)        → IUpgradeHandler|undefined
+protegerSocket(socket)                                            → void
+abortUpgrade(socket, status, mensaje)                             → void
+proxyUpgrade(contexto, base, {host?, headers?, timeout?})         → Promise<void>
+
+IUpgradeContext   request, socket, head, dominio, path, https
+IUpgradeHandler   resumen, dominios?, prefix?, handler: TUpgradeRunner
+```
+
+**Usado por:** `RouteGroup.getUpgradeHandlers()`, `Server.crearListenerUpgrade()` (privado, en
+`iniciarHTTP`/`iniciarHTTPs`), `Engine.iniciar()` de `@mr/core-workload` y, como consumidor final,
+`services/proxy` (`Proxy.buildUpgrade`/`proxyUpgradeEjecutar`).
 
 ### Checkers (`IExpresion` → `Checker`)
 

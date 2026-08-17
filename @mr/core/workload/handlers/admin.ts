@@ -1,14 +1,17 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 7cd7f6f875809ea3616c59a3fa10c9e3
- * Versión: 2026.6.17+1-josantoniojimnez
+ * Fecha: Mon, 27 Jul 2026 06:26:52 GMT
+ * Hash: e0ff33ddc69ebc21fdac049e8de57712
+ * Versión: 2026.7.27+1-josantoniojimnez
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 import type {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";
 import {RouteGroup} from "@mr/core-network/server/http/routes/group";
+import {error} from "services-comun/modules/utiles/log";
 import {metricas} from "@mr/core-network/server/http/metrics";
-import server from "@mr/core-network/server/http/server";
+import server, {RUTA_DEBUG_HANDOFF} from "@mr/core-network/server/http/server";
 
 import type {Configuracion} from "../config";
 import type {Engine} from "../engine/server";
@@ -22,6 +25,8 @@ import type {Engine} from "../engine/server";
  * - `GET /admin/live/`    — liveness probe.
  * - `GET /admin/check/`   — alias de `/admin/live/`.
  * - `GET /admin/doc/`     — devuelve la lista de rutas documentables del servicio.
+ * - `POST /admin/debug-handoff/` — fuera de producción, cede el puerto HTTP a una
+ *   sesión de depuración (ver `Server.cederPuertoParaDebug`); en producción responde 404.
  *
  * Ninguna de estas rutas se incluye en la documentación pública.
  */
@@ -80,6 +85,21 @@ class Admin extends RouteGroup {
                     .noCache()
                     .setContentType("text/plain; version=0.0.4; charset=utf-8")
                     .sendData(Buffer.from(metricas.formatPrometheus(), "utf-8")),
+            },
+            {
+                expresiones: [
+                    {metodos: ["POST"], exact: RUTA_DEBUG_HANDOFF, resumen: RUTA_DEBUG_HANDOFF, log: false},
+                ],
+                handler: async (conexion) => {
+                    if (PRODUCCION) {
+                        return conexion.error(404, "not found");
+                    }
+                    return this.sendRespuesta(conexion, {data: {cedido: true}})
+                        .finally(() => {
+                            server.cederPuertoParaDebug()
+                                .catch((err: unknown) => error("Error cediendo el puerto HTTP para depuración", err));
+                        });
+                },
             },
         ];
     }

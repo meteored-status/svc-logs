@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: 65524269dfc2b7853c3fdce300a6da7b
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Thu, 06 Aug 2026 08:53:31 GMT
+ * Hash: f3f763899c01b9f4587f86e852c5b9a3
+ * Versión: 2026.8.6+1-bixus
+ * Anterior: 2026.5.18+2-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-estaticos
  */
 
 import type {IRouteGroupCache, NetCache} from "services-comun/modules/net/cache";
@@ -51,6 +53,8 @@ type TUpdater = {
  * @property updater      - Configuración para la actualización dinámica de expresiones.
  * @property cache        - Configuración parcial de caché para el bloque.
  * @property documentable - Si `false`, el bloque no aparece en la documentación generada. Por defecto `true`.
+ * @property dominios      - Dominios por defecto para las expresiones del bloque. Se aplica a cada
+ *   {@link IExpresion} de `expresiones` cuyo propio `dominios` no esté definido.
  */
 export interface IRouteGroup {
     expresiones?: IExpresion[];
@@ -60,6 +64,7 @@ export interface IRouteGroup {
     updater?: TUpdater;
     cache?: Partial<IRouteGroupCache>;
     documentable?: boolean;
+    dominios?: string[];
 }
 
 /**
@@ -74,6 +79,7 @@ interface IRouteGroupFinal {
     updater?: TUpdater;
     cache: IRouteGroupCache;
     documentable: boolean;
+    dominios?: string[];
 }
 
 /**
@@ -96,7 +102,7 @@ export class RouteGroupBlock {
     public static build(data: IRouteGroup): RouteGroupBlock {
         data.handler ??= (conexion) => conexion.error(404, "No se ha definido manejador");
         const nuevo = new this({
-            expresiones: this.parseExpresiones(data.expresiones ?? []),
+            expresiones: this.parseExpresiones(data.expresiones ?? [], data.dominios),
             redireccion: data.redireccion,
             stop: data.stop ?? false,
             handler: data.handler,
@@ -110,6 +116,7 @@ export class RouteGroupBlock {
                 ...data.cache,
             },
             documentable: data.documentable ?? true,
+            dominios: data.dominios,
         });
 
         nuevo.initUpdater();
@@ -121,11 +128,20 @@ export class RouteGroupBlock {
      * Convierte una lista de {@link IExpresion} en instancias concretas de {@link Checker}.
      * Solo se instancia la primera estrategia de matching encontrada en cada expresión
      * (`regex` > `exact` > `prefix` > `comodin`).
-     * @param expresiones - Lista de configuraciones de expresión.
+     * @param expresiones     - Lista de configuraciones de expresión.
+     * @param dominiosDefault - Dominios del {@link IRouteGroup} contenedor, aplicados a las
+     *   expresiones que no definan su propio `dominios`.
      */
-    private static parseExpresiones(expresiones: IExpresion[]): Checker[] {
+    private static parseExpresiones(expresiones: IExpresion[], dominiosDefault?: string[]): Checker[] {
         const salida: Checker[] = [];
-        for (const expresion of expresiones) {
+        for (const expresionOriginal of expresiones) {
+            // No mutamos `expresionOriginal` (podría ser una constante reutilizada por
+            // varios bloques): si no define `dominios`, clonamos con el valor heredado
+            // del `IRouteGroup` contenedor.
+            const expresion = expresionOriginal.dominios === undefined && dominiosDefault !== undefined
+                ? {...expresionOriginal, dominios: dominiosDefault}
+                : expresionOriginal;
+
             // Aviso defensivo: solo se usa el primer matcher por prioridad
             // (regex > exact > prefix > comodin); cualquier otro definido se ignora.
             //
@@ -213,6 +229,9 @@ export class RouteGroupBlock {
     /** Configuración del updater con `interval` resuelto a `0` si no se especificó. */
     private readonly updater?: Required<TUpdater>;
 
+    /** Dominios por defecto del {@link IRouteGroup} contenedor, heredados por las expresiones del bloque. */
+    private readonly dominiosDefault?: string[];
+
     private constructor(data: IRouteGroupFinal) {
         this.ok = false;
         this.stop = data.stop;
@@ -229,6 +248,7 @@ export class RouteGroupBlock {
             ? undefined
             : { interval: 0, ...data.updater };
         this.documentable = data.documentable;
+        this.dominiosDefault = data.dominios;
     }
 
     /**
@@ -283,7 +303,7 @@ export class RouteGroupBlock {
      */
     private updaterExec(fnc: TUpdaterHandler): void {
         fnc(this).then((data) => {
-            this.expresiones = RouteGroupBlock.parseExpresiones(data);
+            this.expresiones = RouteGroupBlock.parseExpresiones(data, this.dominiosDefault);
             this.expresionesPorMetodo = RouteGroupBlock.indexarPorMetodo(this.expresiones);
             this.ok = true;
             this.updateando = false;

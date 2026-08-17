@@ -93,6 +93,7 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
 | `storage` | `IManifestDeploymentStorage` | — | BROWSER | Subida de assets a GCS. |
 | `annotations` | `IManifestDeploymentAnnotations` | — | SERVICE/CRONJOB/JOB | Anotaciones adicionales para recursos generados (K8s/Cloud Run). |
 | `lambda` | `IManifestDeploymentLambda` | — | SERVICE/CRONJOB/JOB + lambda | Configuración de red de Cloud Run (egress/ingress). |
+| `env` | `Record<string, string>` | — | SERVICE/CRONJOB/JOB + lambda | Variables de entorno adicionales a inyectar en el contenedor `{ NOMBRE: valor }`. |
 
 #### `ManifestDeploymentKind`
 
@@ -222,6 +223,31 @@ Ejemplo:
             "ingress": "all",
             "egress": "private-ranges-only",
             "vpc": true
+        }
+    }
+}
+```
+
+---
+
+### `env`
+
+Variables de entorno adicionales a inyectar en el contenedor, solo para despliegues con `target: "lambda"`. Por ahora no aplica al path k8s/kustomize.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `env` | `Record<string, string>` | Mapa `{ NOMBRE: valor }` de variables de entorno. |
+
+Ejemplo:
+
+```json
+{
+    "deploy": {
+        "type": "service",
+        "runtime": "node",
+        "target": "lambda",
+        "env": {
+            "MI_VARIABLE": "valor"
         }
     }
 }

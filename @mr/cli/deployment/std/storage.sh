@@ -21,8 +21,8 @@ if [[ -f "GENERAR.txt" ]]; then
     SUBDIR="${PREFIX}${PACKAGE}${POSTFIX}"
 
     HASH_NUEVO=$(cat "${DIRECTORIO}/${WORKSPACE}/output/hash.txt")
-    HASH_ANTIGUO=$(gsutil cat "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/hash.txt")
-    VERSION_ANTIGUA=$(gsutil cat "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/version.txt")
+    HASH_ANTIGUO=$(gcloud storage cat "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/hash.txt")
+    VERSION_ANTIGUA=$(gcloud storage cat "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/version.txt")
 
     if [ "${HASH_NUEVO}" = "${HASH_ANTIGUO}" ]; then
       echo "${WORKSPACE}: Sin cambios"
@@ -42,9 +42,9 @@ if [[ -f "GENERAR.txt" ]]; then
       fi
       echo "Version (${DIRECTORIO}/${WORKSPACE}): $(cat "${DIRECTORIO}/${WORKSPACE}/version.txt")"
 
-      gsutil -m cp -R "${DIRECTORIO}/${WORKSPACE}/output/${BUNDLE}*" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}" || exit 1
-      gsutil -m cp "${DIRECTORIO}/${WORKSPACE}/hash.txt" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/" || exit 1
-      gsutil -m cp "${DIRECTORIO}/${WORKSPACE}/version.txt" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/" || exit 1
+      gcloud storage cp -R "${DIRECTORIO}/${WORKSPACE}/output/${BUNDLE}*" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}" || exit 1
+      gcloud storage cp "${DIRECTORIO}/${WORKSPACE}/hash.txt" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/" || exit 1
+      gcloud storage cp "${DIRECTORIO}/${WORKSPACE}/version.txt" "gs://${BUCKET}/${_ENTORNO}/${SUBDIR}/" || exit 1
     fi;
   }
   export -f parseBucket

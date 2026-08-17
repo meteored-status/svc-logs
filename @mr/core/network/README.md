@@ -83,6 +83,7 @@ Documentación completa en [`server/README.md`](./server/README.md).
 Incluye:
 - **`server/websocket/`** — servidor WebSocket singleton, handlers (`IWSHandler`), respuestas en streaming, frames binarios, shutdown graceful y trazabilidad Datadog.
 - **`server/http/config/`** — tipos de configuración HTTP (`TDevice`).
+- **`server/http/upgrade.ts`** — reenvío genérico de peticiones con cabecera `Upgrade:` HTTP/1.1 (WebSocket de aplicación, HMR de bundlers); ver [`server/http/README.md#upgrade`](./server/http/README.md#upgrade).
 
 ```ts
 import createWSServer from "@mr/core-network/server/websocket";
