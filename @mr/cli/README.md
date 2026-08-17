@@ -7,7 +7,7 @@ CLI del monorepo `web-www`. Proporciona dos ejecutables:
 | `mrpack` | Gestión del ciclo de vida del proyecto (compilación, despliegue, frameworks…) |
 | `mrlang` | Utilidades de internacionalización |
 
-> **Código fuente:** ver [`src/mrpack/CODEMAP.md`](src/mrpack/CODEMAP.md) para el mapa completo de clases, funciones exportadas y grafo de dependencias del módulo `mrpack`.
+> **Código fuente:** ver [`CODEMAP.md`](CODEMAP.md) para el mapa completo del paquete (bin/, manifest/, deployment/, src/utiles/), con enlaces a [`src/mrpack/CODEMAP.md`](src/mrpack/CODEMAP.md) y [`src/mrlang/CODEMAP.md`](src/mrlang/CODEMAP.md) para el detalle de clases, funciones exportadas y grafo de dependencias de cada módulo.
 
 ---
 
@@ -623,6 +623,11 @@ Entre otras acciones:
   no lee ninguno de los dos automáticamente (ni siquiera de forma transitiva: la mención a
   `.github/copilot-instructions.md` dentro de `AGENTS.md` es texto entre backticks, no un
   import) y así reutiliza las mismas instrucciones sin duplicarlas.
+- Crea (o corrige) el enlace `CONTRIBUTING.md` → `@mr/core/dev/CONTRIBUTING.md` (nueva
+  `initContributing()`, mismo patrón que `initAgents()`/`initClaude()`). Ese fichero
+  canónico documenta las convenciones de ramas (git-flow del monorepo), versionado y
+  despliegue (Cloud Build) — enlazado desde `CLAUDE.md` (import `@CONTRIBUTING.md`) y
+  desde `.github/copilot-instructions.md`.
 - Por cada workspace en `services/`, `packages/`, `jobs/` y `cronjobs/`, propaga de forma
   recursiva las `dependencies` **y** `optionalDependencies` de producción de todos sus
   `devDependencies` de tipo `@mr/*` (incluidas las dependencias transitivas), resolviendo

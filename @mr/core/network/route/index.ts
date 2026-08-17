@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 2d299ad683f3814b3cc73e6b276b39c8
- * Versión: 2026.6.17+1-josantoniojimnez
- * Anterior: 2026.6.11+2-josantoniojimnez
+ * Editor: miguel
+ * Fecha: Mon, 20 Jul 2026 11:26:48 GMT
+ * Hash: 298d4288b1a4303bd82005129f7b8f00
+ * Versión: 2026.7.20+1-miguel
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 import {type Configuracion} from "@mr/core-workload/config";
@@ -15,6 +16,7 @@ import type {Dominio} from "../server/http/config/dominio";
 import type {Idioma as IdiomaNet} from "../server/http/i18n";
 import type {IExpresion} from "../server/http/checkers";
 import type {TDevice} from "../server/http/config/device";
+import type {IncomingHttpHeaders} from "node:http";
 
 interface IConfig {
     dominio: Dominio;
@@ -74,6 +76,7 @@ export interface IRouteBuilderOptions {
     url: string;
     device: TDevice;
     section: Route;
+    headers: IncomingHttpHeaders;
     params: Record<string, string|undefined>;
 }
 
@@ -233,6 +236,7 @@ export class Route {
                 url: conexion.get,
                 device: conexion.device,
                 section: this,
+                headers: conexion.getHeaders(),
                 params,
             });
         } catch (err) {

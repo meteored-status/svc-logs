@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Sat, 18 Jul 2026 19:01:45 GMT
- * Hash: 14d4c0cbf88528beba3ffa2b3f1da574
- * Versión: 2026.7.18+1-bixus
- * Anterior: 2026.7.17+3-josantoniojimnez
- * Proyecto: https://github.com/bixus/bixloader
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 05 Aug 2026 11:08:26 GMT
+ * Hash: 1135c727d24f95d5adaff72c34553143
+ * Versión: 2026.8.5+1-josantoniojimnez
+ * Anterior: 2026.7.18+1-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-estaticos
  */
 
 import {link, lstat, readlink, rename, stat, symlink} from "node:fs/promises";
@@ -134,6 +134,19 @@ export async function initAgents(basedir: string): Promise<void> {
  */
 export async function initClaude(basedir: string): Promise<void> {
     await initSymlinkFichero(basedir, "CLAUDE.md");
+}
+
+/**
+ * Verifica que `{basedir}/CONTRIBUTING.md` sea un symlink apuntando a
+ * `@mr/core/dev/CONTRIBUTING.md`. Ese fichero canónico documenta las convenciones de
+ * ramas, versionado y despliegue (git-flow del monorepo, Cloud Build) — enlazado desde
+ * `CLAUDE.md` (import `@CONTRIBUTING.md`) y desde `.github/copilot-instructions.md`,
+ * ambos resueltos desde la raíz del repo.
+ *
+ * @param basedir - Raíz absoluta del monorepo.
+ */
+export async function initContributing(basedir: string): Promise<void> {
+    await initSymlinkFichero(basedir, "CONTRIBUTING.md");
 }
 
 /**

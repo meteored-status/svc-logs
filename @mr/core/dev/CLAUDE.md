@@ -4,3 +4,5 @@
 
 @AGENTS.md
 @.github/copilot-instructions.md
+@.claude/delegacion-multimodelo.md
+@CONTRIBUTING.md

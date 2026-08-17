@@ -14,6 +14,7 @@ junto con los handlers predefinidos (`admin`, `error`, `favicon`) que dependen d
 | Módulo | Entrada | Descripción |
 |--------|---------|-------------|
 | [Main / IEngine / IConfiguracionLoader](#main--iengine) | `@mr/core-workload` | Orquestador de arranque, contrato de engine y contrato de loader |
+| [Configuracion base](#configuracion-base) | `@mr/core-workload/config` | Configuración con metadatos de pod y sobreescritura opcional desde `files/config.json` |
 | [ConfiguracionNet](#configuracionnet) | `@mr/core-workload/config/net` | Configuración base de servicio con red (`net`) |
 | [Engine base](#engine-base) | `@mr/core-workload/engine` | Clase base del engine: `build`, ciclo de vida, abort, métricas |
 | [Engine HTTP](#engine-http) | `@mr/core-workload/engine/server` | Engine HTTP/HTTPS abstracto con watcher de shutdown |
@@ -95,6 +96,46 @@ engine.ejecutar() → init()         — hook principal de arranque
 
 ---
 
+## Configuracion base
+
+**Entrada:** `@mr/core-workload/config`
+
+```ts
+import {Configuracion} from "@mr/core-workload/config";
+import type {IConfiguracion} from "@mr/core-workload/config";
+```
+
+Extiende `Configuracion` de `@mr/core-utils` añadiendo `pod: IPodInfo` (metadatos de pod
+resueltos en tiempo de arranque: host, servicio, zona, versión, replica, wire, deploy...).
+
+```ts
+class MiConfig extends Configuracion<IMiConfig> {
+    public static async load(): Promise<MiConfig> {
+        return this.cargar<IMiConfig>({
+            timeout: 5000,
+        }) as Promise<MiConfig>;
+    }
+}
+```
+
+### `cargar(defecto)`
+
+Método estático protegido que cada subclase invoca desde su propio `load()`. Combina en
+paralelo (`Promise.all`):
+
+1. Los metadatos del pod (`crearPodInfo()`).
+2. Las sobreescrituras de `files/config.json`, si el fichero existe; si no, `{}`.
+
+El resultado se construye como `new this(defecto, cfg)`: cada subclase aplica su propio
+merge `user ?? defecto` campo a campo en el constructor.
+
+> **`files/config.json` no es un fichero de configuración autocontenido.** Solo
+> sobreescribe, campo a campo, los valores por defecto que cada servicio define en su
+> propio código (el `defecto` que se pasa a `cargar`). Puede omitirse o dejarse vacío
+> (`{}`), en cuyo caso el servicio arranca con esos valores por defecto tal cual.
+
+---
+
 ## `ConfiguracionNet`
 
 **Entrada:** `@mr/core-workload/config/net`
@@ -158,10 +199,17 @@ class MiEngine extends Engine<MiConfig> {
 
 Ambos métodos:
 1. Llaman a `iniciar()` que añade automáticamente `Admin(config, this)` y `Favicon(config)`,
-   configura la caché en cada grupo y recoge los `IWSHandler`.
+   configura la caché en cada grupo y recoge tanto los `IWSHandler` (`getWSHandlers()`) como los
+   `IUpgradeHandler` (`getUpgradeHandlers()`) de todos los grupos.
 2. Crean `Routes(handlers, errorHandler)`.
-3. Arrancan el servidor HTTP (o HTTPS en `initWebServerS`).
+3. Arrancan el servidor HTTP (o HTTPS en `initWebServerS`), pasándole también los descriptores
+   de upgrade recogidos.
 4. Si hay WebSocket handlers, inician el servidor WebSocket.
+
+> Un servicio no debería declarar `getWSHandlers()` y `getUpgradeHandlers()` a la vez: ambos se
+> enganchan al mismo evento nativo `'upgrade'` y `iniciar()` avisa por `warning` si detecta la
+> combinación. Ver [`@mr/core-network/server/http/README.md#upgrade`](../network/server/http/README.md#upgrade)
+> para el mecanismo de reenvío (`proxyUpgrade`) que usan los descriptores de upgrade.
 
 ### Watcher de shutdown
 
@@ -189,8 +237,12 @@ Factory: `(config: Configuracion, engine: Engine) => Admin`
 | `GET /admin/check/` | Alias de `/admin/live/`. |
 | `GET /admin/doc/` | Devuelve la lista de rutas documentables en JSON. |
 | `GET /admin/metrics/` | Métricas en formato Prometheus (`text/plain; version=0.0.4`). |
+| `POST /admin/debug-handoff/` | Solo fuera de producción: cede el puerto HTTP a una sesión de depuración (`server.cederPuertoParaDebug()`). En producción responde 404. |
 
 Ninguna ruta aparece en `/admin/doc/` (todas tienen `documentable: false`).
+
+> **Handoff de puerto para depuración local:** ver la sección correspondiente en
+> [`@mr/core-network/server/http/README.md`](../network/server/http/README.md#handoff-de-puerto-para-depuración-local-solo-produccion).
 
 ---
 

@@ -2,6 +2,52 @@
 
 ---
 
+## 2026.8.7 — [Jose]
+
+### Changed
+
+- **`engine/server.ts`** — soporte para el nuevo mecanismo de reenvío de peticiones
+  `Upgrade:` HTTP/1.1 de `@mr/core-network` (ver su propio changelog):
+  - El método privado `iniciar(handlers, config)` recoge ahora también los `IUpgradeHandler`
+    (`getUpgradeHandlers()`) de cada `RouteGroup`, además de los `IWSHandler` de siempre. Su
+    tipo de retorno cambia de `IWSHandler[]` a la interfaz interna `IHandlersAuxiliares
+    {webSockets, upgrades}`.
+  - `initWebServer`/`initWebServerS` pasan los descriptores de upgrade recogidos a
+    `server.iniciarHTTP`/`iniciarHTTPs` (tercer parámetro, opcional, de `@mr/core-network`).
+  - `iniciar()` emite un `warning` si un servicio declara handlers WebSocket y descriptores de
+    upgrade a la vez: ambos mecanismos se enganchan al mismo evento nativo `'upgrade'` y ningún
+    listener puede cancelar la emisión a los demás.
+
+---
+
+## 2026.8.5 — [Jose]
+
+### Changed
+
+- **`README.md`** — nueva sección "Configuracion base" (`@mr/core-workload/config`)
+  documentando `cargar(defecto)` y el mecanismo de sobreescritura desde
+  `files/config.json`: no es un fichero de configuración autocontenido, solo
+  sobreescribe campo a campo los valores por defecto (`defecto`) que cada subclase
+  define en su propio `load()`; puede omitirse o dejarse vacío.
+- **`CODEMAP.md`** — nueva subsección `config/index.ts` con el detalle de
+  `IConfiguracion`, `Configuracion<T>` y `cargar()`, incluyendo el mismo comportamiento
+  de `files/config.json`.
+
+---
+
+## 2026.7.24 — [Jose]
+
+### Added
+
+- **`handlers/admin.ts`** — nueva ruta `POST /admin/debug-handoff/`: fuera de
+  producción invoca `server.cederPuertoParaDebug()` (de `@mr/core-network/server/http/server`)
+  para que la instancia normal en ejecución libere el puerto HTTP a favor de una sesión
+  de depuración de PhpStorm; en producción responde `404`. Forma parte del mecanismo de
+  handoff de puerto documentado en
+  [`@mr/core-network/server/http/README.md`](../network/server/http/README.md#handoff-de-puerto-para-depuración-local-solo-produccion).
+
+---
+
 ## 2026.6.17 — [Jose]
 
 ### Added

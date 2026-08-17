@@ -82,12 +82,12 @@ Descargas ──┬──> Labels ───────────────�
 | `Obtener Tags` | `gcloud`         | `tags.sh` | Descarga los tags Docker actuales de cada workspace (para decidir si hay que generar imagen). |
 | `Autorizar` | `gcloud`         | `autorizar.sh` | Añade la IP pública del worker a `masterAuthorizedNetworks` de cada cluster GKE. |
 | `Clonar Repositorios` | `git`            | `clone.sh` | Clona el repo de kustomize (rama `main` en producción, `develop` en otros entornos). Requiere el secreto `GITTOKEN`. |
-| `Iniciar Kustomize` | `gsutil`         | `init_kustomize.sh` | Ejecuta `kustomizar/init.sh` para preparar la estructura de overlays. |
-| `Descargar Cache Dependencias` | `gsutil`         | `cache_get.sh` | Restaura `.yarn/cache` desde GCS para acelerar `yarn install`. |
+| `Iniciar Kustomize` | `gcloud`         | `init_kustomize.sh` | Ejecuta `kustomizar/init.sh` para preparar la estructura de overlays. |
+| `Descargar Cache Dependencias` | `gcloud`         | `cache_get.sh` | Restaura `.yarn/cache` desde GCS (`gcloud storage cp`) para acelerar `yarn install`. |
 | `Instalar Dependencias` | `node:lts-alpine` | `yarn install --mode=skip-build` | Instala las dependencias del monorepo. |
 | `Compilar` | `docker`         | `compilar.sh` | Ejecuta `yarn mrpack deploy --env=$_ENTORNO` dentro de un contenedor; arranca/para `cloud_sql_proxy` si `_MYSQL` está definido. |
-| `Subir Cache Dependencias` | `gsutil`         | `cache_set.sh` | Sube `.yarn/cache` a GCS solo si el MD5 cambió respecto a la versión cacheada. |
-| `Subir Storage` | `gcloud`         | `storage.sh` | Sube bundles browser (assets) a GCS con control de versión incremental (`YYYY.MM.DD-N`). |
+| `Subir Cache Dependencias` | `gcloud`         | `cache_set.sh` | Sube `.yarn/cache` a GCS (`gcloud storage cp`/`rm`) solo si el MD5 cambió respecto a la versión cacheada. |
+| `Subir Storage` | `gcloud`         | `storage.sh` | Sube bundles browser (assets) a GCS (`gcloud storage cat`/`cp`) con control de versión incremental (`YYYY.MM.DD-N`). |
 | `Generar Contenedor` | `docker`         | `contenedor.sh` | Construye imágenes multiarch con `docker buildx` y las sube a Artifact Registry con tags `latest`, `$VERSION`, `$HASH`, `$ENTORNO` y `deployed_$ENTORNO`. |
 | `Kustomizar` | `gcloud`         | `kustomizar.sh` | Genera los manifiestos de despliegue para cada workspace × cluster/zona. Soporta targets `k8s` (GKE) y `lambda` (Cloud Run). |
 | `Desplegar` | `gke-deploy`     | `desplegar.sh` | Aplica manifiestos GKE con `gke-deploy run` y ejecuta los scripts `lambda-*.sh` de Cloud Run. |
@@ -186,6 +186,11 @@ Usadas por `kustomizar.sh` cuando el workspace tiene `deploy.target = "lambda"`:
 Los placeholders `${PROJECT_ID}`, `${KUSTOMIZER}`, `${IMAGEN}`, `${VERSION}`,
 `${ENTORNO}` y `${ZONA}` son sustituidos por `kustomizar.sh` con `sed` antes de
 aplicar la plantilla.
+
+Tras aplicar la plantilla, `parseWorkspaceLambdaZona()` añade las variables de
+`deploy.env` (si existen) al `env` del contenedor mediante `yq`, sumándose a las
+ya fijas de la plantilla (`DATADOG`, `ENTORNO`, `ZONA`, `CLOUD_RUN_REGION`,
+`SIDECAR`) sin pisarlas.
 
 ---
 

@@ -2,6 +2,74 @@
 
 ---
 
+## 2026.8.5
+
+### Added — `CONTRIBUTING.md`
+
+- [Jose] **Nuevo fichero canónico `CONTRIBUTING.md`** (renombrado desde el `SVC.md` inicial),
+  expuesto en la raíz de cada monorepo consumidor mediante symlink — nueva `initContributing()`
+  de `@mr/cli`, mismo patrón que `AGENTS.md`/`CLAUDE.md` (ver su changelog). Documenta las
+  convenciones de ramas del monorepo (git-flow: `master`/`main`, `develop`, `hotfix/<nombre>`
+  como rama personal empujada a `origin`, `feature/<fecha>_<nombre>_<ticket>_<desc>` mergeada
+  en `develop`, y `version/<desarrollador>` como rama de release efímera y local que nunca se
+  empuja, creada desde `develop` para promover su contenido a `master`), el esquema de
+  versionado (paquetes de negocio vía CI/CD de despliegue; paquetes de framework vía la
+  cabecera `Editor/Fecha/Hash/Versión` de `mrpack framework --send`) y el pipeline de
+  despliegue real: disparado por push a `develop`/`feature/test` (test) o `master`/`main`
+  (producción), ejecutado con Google Cloud Build sobre
+  `@mr/cli/deployment/std/build.yaml` (ver su changelog).
+
+### Changed — `CLAUDE.md`, `.github/copilot-instructions.md`, `README.md`
+
+- [Jose] `CLAUDE.md` importa ahora también `@CONTRIBUTING.md`, junto a `@AGENTS.md` y
+  `@.github/copilot-instructions.md`. La nota de cabecera de `copilot-instructions.md`
+  enlaza al nuevo fichero. `README.md` añade la entrada correspondiente en la tabla de
+  módulos y una nueva sección `## CONTRIBUTING.md`.
+
+## 2026.8.3
+
+### Added — `.claude/delegacion-multimodelo.md`, `.claude/agents/`
+
+- [Jose] **Nueva política de delegación multi-modelo basada en subagentes**, en sustitución del
+  protocolo anterior de pausas manuales de cambio de modelo (`protocolo-multimodelo.md`,
+  eliminado). En vez de detener el turno para que la persona cambie de modelo a mano, se definen
+  tres subagentes de **modelo fijo** en `@mr/core/dev/.claude/agents/`, invocados con la
+  herramienta `Agent`:
+  - **`opus-planner`** (`model: opus`) — planificación de tareas complejas, arquitectura,
+    ambigüedad, seguridad, debugging difícil y revisión final antes de cerrar una tarea.
+  - **`sonnet-builder`** (`model: sonnet`) — implementación estándar, refactors medios, tests,
+    integración; agente por defecto una vez el plan está claro.
+  - **`haiku-mechanic`** (`model: haiku`, `tools: Read, Edit, Grep, Glob` — sin `Bash`
+    deliberadamente) — tareas mecánicas deterministas de riesgo nulo.
+
+  `delegacion-multimodelo.md` documenta el criterio para decidir si una tarea necesita
+  planificación con `opus-planner`, cómo despachar subtareas a cada agente y cuándo cerrar con
+  una revisión final. Orden de prioridad si hay conflicto: calidad del código > ausencia de
+  errores > coste.
+- [Jose] `@mr/core/dev/.claude/settings.json` — añadida regla `permissions.ask:
+  ["Agent(model:opus)"]` para pedir confirmación solo al invocar el subagente con `model: opus`,
+  sin interrumpir las llamadas a `sonnet-builder`/`haiku-mechanic`.
+- [Jose] `@mr/core/dev/.claude/CODEMAP.md` actualizado con el árbol de `agents/` y una sección
+  que documenta los tres subagentes y la regla de permisos.
+
+### Changed — `CLAUDE.md`
+
+- [Jose] `@mr/core/dev/CLAUDE.md` deja de contener el protocolo embebido y pasa a importarlo con
+  `@.claude/delegacion-multimodelo.md`, manteniendo `@AGENTS.md` y
+  `@.github/copilot-instructions.md` como imports base.
+
+## 2026.7.22
+
+### Added — `manifest/deployment/index.ts`, `manifest/README.md`, `manifest/CODEMAP.md`
+
+- [Jose] **Nueva propiedad `deploy.env` en `mrpack.json`**: `IManifestDeployment`/`ManifestDeployment`
+  añaden `env?: Record<string, string>`, variables de entorno adicionales a inyectar en el
+  contenedor (`{ NOMBRE: valor }`). Por ahora solo aplica a workspaces `SERVICE`/`CRONJOB`/`JOB`
+  con `target: "lambda"` (Cloud Run) — el path k8s/kustomize no la consume todavía. Documentada
+  en `manifest/README.md` (tabla de `IManifestDeployment` + nueva sección `env` con ejemplo de
+  uso) y en `manifest/CODEMAP.md` (interfaz, clase y jerarquía de composición). Consumida por el
+  loader de workspace y por `kustomizar.sh` en `@mr/cli` (ver su changelog).
+
 ## 2026.7.17
 
 ### Fixed — `patches/index.mjs`
@@ -621,5 +689,3 @@
 - `tsconfig/node.json` / `tsconfig/browser.json` — añadida opción `noImplicitOverride: true`,
   `noImplicitReturns: true` y `noPropertyAccessFromIndexSignature: true`.
 - `tsconfig/browser.json` — añadida opción `resolveJsonModule: true`.
-
-

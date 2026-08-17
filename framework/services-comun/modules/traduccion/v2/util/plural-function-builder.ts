@@ -1,12 +1,14 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Wed, 17 Jun 2026 12:19:18 GMT
- * Hash: dafe729641022ff4e854b7be65a5ba57
- * Versión: 2026.6.17+6-juancmartinez
+ * Editor: miguel
+ * Fecha: Wed, 29 Jul 2026 07:22:10 GMT
+ * Hash: c30f1e7ff1ab19e12ed419c7070218eb
+ * Versión: 2026.7.29+1-miguel
+ * Anterior: 2026.6.17+6-juancmartinez
+ * Proyecto: https://github.com/alpred/meteored-workers
  */
 
 import {TPluralKey} from "../value";
-import {TPluralFunction} from "../value/plural-value.ts";
+import {TPluralFunction} from "../value/plural-value";
 
 const buildFunction = (lang: string): TPluralFunction => {
     let pluralRules;

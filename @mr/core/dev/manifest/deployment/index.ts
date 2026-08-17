@@ -1,9 +1,10 @@
 /**
  * Editor: José Antonio Jiménez
- * Fecha: Wed, 27 May 2026 11:12:48 GMT
- * Hash: 01b78b10db9db08fb50564dc30dfda52
- * Versión: 2026.5.27+2-josantoniojimnez
- * Anterior: 2026.5.21+5-josantoniojimnez
+ * Fecha: Fri, 24 Jul 2026 06:25:35 GMT
+ * Hash: 9794818a76a3a4c3b05132288124c9e9
+ * Versión: 2026.7.24+1-josantoniojimnez
+ * Anterior: 2026.5.27+2-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
  */
 
 import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations.ts";
@@ -105,6 +106,7 @@ interface IManifestDeploymentBuckets {
  * @property storage - Solo `BROWSER`. Configuración de subida de assets a GCS.
  * @property annotations - Solo `SERVICE`/`CRONJOB`/`JOB`. Anotaciones a añadir a los recursos Kubernetes y Cloud Run generados.
  * @property lambda - Solo `SERVICE`/`CRONJOB`/`JOB` + `target: lambda`. Configuración de red de Cloud Run (ingress, egress, VPC).
+ * @property env - Solo `SERVICE`/`CRONJOB`/`JOB` + `target: lambda`. Variables de entorno adicionales a inyectar en el contenedor: `{ NOMBRE: valor }`.
  */
 export interface IManifestDeployment {
     enabled: boolean;
@@ -122,6 +124,7 @@ export interface IManifestDeployment {
     storage?: IManifestDeploymentStorage;
     annotations?: IManifestDeploymentAnnotations;
     lambda?: IManifestDeploymentLambda;
+    env?: Record<string, string>;
 }
 
 /**
@@ -152,6 +155,7 @@ export class ManifestDeployment implements IManifestDeployment {
     public storage?: ManifestDeploymentStorage;
     public annotations?: ManifestDeploymentAnnotations;
     public lambda?: ManifestDeploymentLambda;
+    public env?: Record<string, string>;
 
     /**
      * `true` cuando el tipo de despliegue es `CRONJOB` o `JOB`.
@@ -177,6 +181,7 @@ export class ManifestDeployment implements IManifestDeployment {
         this.storage = ManifestDeploymentStorage.build(deploy.storage);
         this.annotations = deploy.annotations ? ManifestDeploymentAnnotations.build(deploy.annotations) : undefined;
         this.lambda = deploy.lambda ? ManifestDeploymentLambda.build(deploy.lambda) : undefined;
+        this.env = deploy.env;
     }
 
     public toJSON(): IManifestDeployment {
@@ -200,6 +205,7 @@ export class ManifestDeployment implements IManifestDeployment {
             storage: this.storage?.toJSON(),
             annotations: this.annotations?.toJSON(),
             lambda: this.lambda?.toJSON(),
+            env: this.env,
         };
     }
 }

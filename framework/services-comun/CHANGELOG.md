@@ -2,6 +2,38 @@
 
 ---
 
+## 2026.8.4
+
+### Added
+- [Jose] `modules/fs/assets.ts` — nueva función `resolveAsset(...partes)`: resuelve una ruta
+  relativa dentro de un directorio `assets/` (relativo al `cwd` del proceso) y comprueba que el
+  resultado no se escape de él, protegiendo contra path traversal (`../../etc/passwd`) en
+  handlers HTTP que construyen la ruta de un fichero local a partir de segmentos de la URL
+  (`regex`/`prefix`). Trasladado desde `services/estaticos` — donde surgió la necesidad al
+  auditar sus handlers de imágenes/estáticos — para que cualquier servicio del monorepo con la
+  misma convención de directorio `assets/` pueda reutilizarlo. Ver [`modules/fs/README.md`](./modules/fs/README.md).
+
+---
+
+## 2026.7.30
+
+### Changed
+- [Juan Carlos] `modules/database/redis/index.ts` — en la creación de clientes Redis (`RedisCluster.buildClient`) se añade `pingInterval: 10000` para enviar `PING` automático y `socket.keepAlive: true` para mantener vivo el socket de conexión.
+
+---
+
+## 2026.7.23
+
+### Added
+- [Jose] `modules/utiles/promise.ts` — `Deferred` expone ahora `state` (`DeferredState`:
+  `"pending"|"fulfilled"|"rejected"`), reflejando únicamente la primera liquidación
+  (`resolve`/`reject` posteriores son no-ops, igual que en una `Promise` nativa, y no
+  cambian el estado ya fijado). Permite a código que envuelve un `Deferred` (p. ej.
+  `Result.pipe` en `@mr/core-network`) comprobar si ya está liquidado antes de decidir
+  si lo rechaza o lo deja pendiente para un fallback.
+
+---
+
 ## 2026.7.14+1
 
 ### Removed

@@ -61,7 +61,7 @@ steps:
     #####
     # INIT KUSTOMIZE
     #####
-  - name: 'gcr.io/cloud-builders/gsutil'
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/init_kustomize.sh"
@@ -72,7 +72,7 @@ steps:
     #####
     # DESCARGAR LAS DEPENDENCIAS DESDE CACHE
     #####
-  - name: 'gcr.io/cloud-builders/gsutil'
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/cache_get.sh"
@@ -109,7 +109,7 @@ steps:
     #####
     # SUBIR LAS DEPENDENCIAS A CACHE
     #####
-  - name: 'gcr.io/cloud-builders/gsutil'
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/cache_set.sh"

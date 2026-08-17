@@ -8,7 +8,7 @@ Módulos de servidor compartidos por los servicios del monorepo.
 
 | Directorio | Descripción |
 |------------|-------------|
-| [`http/`](./http/README.md) | Tipos y configuración del servidor HTTP (`TDevice`) |
+| [`http/`](./http/README.md) | Servidor HTTP/HTTPS: routing declarativo, tipos y configuración (`TDevice`), reenvío de peticiones `Upgrade:` HTTP/1.1 |
 | [`websocket/`](./websocket/README.md) | Servidor WebSocket — singleton, handlers, streaming, shutdown graceful |
 
 ---

@@ -1,9 +1,9 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Mon, 29 Jun 2026 12:58:11 GMT
- * Hash: d6c220faf092a044f90e696d2b03c871
- * Versión: 2026.6.29+1-juancmartinez
- * Anterior: 2026.6.17+3-josantoniojimnez
+ * Editor: David Martínez Moya
+ * Fecha: Thu, 13 Aug 2026 09:14:19 GMT
+ * Hash: cfb8d8f8027650aafe64b44eeabe112a
+ * Versión: 2026.8.13+2-davidmartinezmoya
+ * Anterior: 2026.7.30+1-juancmartinez
  * Proyecto: git@github.com:alpred/meteored-svc-data-alertas.git
  */
 
@@ -50,6 +50,14 @@ type SaveOptions = QueryOptions & {
 
 type IInsert = {
     key: string;
+    value: string;
+    ttl: number;
+    sharedKey?: boolean;
+}
+
+type IHInsert = {
+    key: string;
+    field: string;
     value: string;
     ttl: number;
     sharedKey?: boolean;
@@ -173,11 +181,85 @@ export class Redis implements AsyncDisposable {
     }
 
     /**
-     * Guarda un valor en Redis.
+     * Lee un campo concreto de un hash contra el nodo de lectura. El valor almacenado es un
+     * envoltorio JSON `{expires, data}` escrito por `hSet`/`bulkHSet`, por lo que aquí se
+     * evalúa manualmente la caducidad (Redis < 7.4 no soporta `hExpire`): si el campo está
+     * caducado se trata como inexistente. La clave se usa tal cual, sin prefijo de namespace.
+     * Los errores no se propagan: se registran como aviso y se devuelve `null`.
      *
-     * @param key Clave a persistir.
-     * @param data Valor en formato `Buffer`.
-     * @param options Opciones de guardado.
+     * @param key Clave del hash.
+     * @param field Campo a recuperar.
+     * @returns Objeto `{[field]: valor}` con el contenido crudo, o `null` si no existe, está caducado o falla.
+     */
+    public async hGet(key: string, field: string): Promise<{[field: string]: string}|null> {
+        try {
+            const cluster = await this.cluster;
+            const client = await cluster.read.catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para hGet", err);
+            });
+
+            const response = await client.hGet(key, field).then(d => d ? JSON.parse(d) : null).catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo datos para hGet (single)", err);
+            });
+            if (response && (!response.expires || response.expires > 0 && response.expires < Date.now())) { // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
+                return {[field]: response.data} as unknown as { [field: string]: string };
+            }
+        } catch (e) {
+            warning(`Error obteniendo ${key} de REDIS`, e);
+        }
+        return null;
+    }
+
+    /**
+     * Recupera de una sola vez todos los campos de un hash contra el nodo de lectura,
+     * descartando los que estén caducados según el envoltorio `{expires, data}` (control
+     * manual de TTL por campo mientras no se disponga de `hExpire`). Devuelve los valores
+     * crudos sin deserializar; usa `loadHJSON` si esperas JSON. Los errores se registran
+     * como aviso y se devuelve `null`.
+     *
+     * @param key Clave del hash.
+     * @returns Mapa `campo → valor` con los campos vigentes (posiblemente vacío), o `null` si falla.
+     */
+    public async hGetAll(key: string): Promise<{[field: string]: string}|null> {
+        try {
+            const cluster = await this.cluster;
+            const client = await cluster.read.catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para get", err);
+            });
+
+            const response = await client.hGetAll(key).catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo datos para hGetAll (single)", err);
+            });
+
+            const fields = Object.keys(response)
+                .filter(field => {
+                    const value = JSON.parse(response[field]);
+                    return !value.expires || value.expires > 0 && value.expires < Date.now(); // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
+                });
+
+            return {
+                ...fields.reduce((acc, field) => {
+                    const value = JSON.parse(response[field]);
+                    acc[field] = value.data;
+                    return acc;
+                }, {} as {[field: string]: string})
+            } as {[field: string]: string}|null;
+        } catch (e) {
+            warning(`Error obteniendo ${key} de REDIS`, e);
+        }
+        return null;
+    }
+
+    /**
+     * Escribe una clave simple en **todos** los nodos primarios en paralelo, cada uno dentro
+     * de un `MULTI` que combina el `SET` y, si procede, el `EXPIRE`. La clave se prefija con
+     * `namespace:servicio:` salvo que se marque como compartida. Un `ttl` negativo o ausente
+     * deja la clave sin caducidad. La operación nunca lanza: los fallos se registran como
+     * aviso, por lo que conviene tratarla como escritura best-effort.
+     *
+     * @param key Clave lógica a persistir (sin prefijo).
+     * @param data Contenido a almacenar; se guarda como cadena UTF-8.
+     * @param options `shared` para omitir el namespace y `ttl` (segundos) para la caducidad.
      */
     public async set(key: string, data: Buffer, {shared, ttl}: SaveOptions = {}): Promise<void> {
         try {
@@ -206,6 +288,74 @@ export class Redis implements AsyncDisposable {
     }
 
     /**
+     * Escribe un campo de hash en todos los nodos primarios. Como Redis < 7.4 no permite
+     * caducidad por campo, el valor se envuelve en `{expires, data}` y la expiración se
+     * verifica en lectura (`hGet`/`hGetAll`); es decir, el campo no se elimina solo del
+     * servidor. La clave se prefija con `namespace:servicio:` salvo que sea compartida.
+     * Los errores se registran como aviso y no se propagan.
+     *
+     * @param key Clave lógica del hash (sin prefijo).
+     * @param data Contenido del campo; se guarda como cadena UTF-8 dentro del envoltorio.
+     * @param field Campo del hash a escribir.
+     * @param options `shared` para omitir el namespace y `ttl` (segundos) usado como marca de caducidad.
+     */
+    public async hSet(key: string, field: string, data: Buffer, {shared, ttl}: SaveOptions = {}): Promise<void> {
+        try {
+            const cluster = await this.cluster;
+
+            const primaryClients = await Promise.all(cluster.primaries).catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para set", err);
+            });
+
+            const theKey = this.buildKey(key, shared||false);
+
+            await Promise.all(primaryClients.map(async client => {
+                const multi = client.multi()
+                    .hSet(theKey, field, JSON.stringify({
+                        expires: ttl ? Date.now() + ttl * 1000 : undefined, // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
+                        data: data.toString('utf-8')
+                    }));
+
+                await multi.exec();
+            }));
+        } catch (e) {
+            warning(`Error guardando ${key} en REDIS`, e);
+        }
+    }
+
+    /**
+     * Añade o actualiza un miembro de un sorted set en todos los nodos primarios. Si el
+     * miembro ya existe, `ZADD` sustituye su puntuación, lo que permite usarlo como registro
+     * de "último valor" (por ejemplo, marcas de tiempo consultables luego con
+     * `searchMaxScore`). No admite TTL: `SaveOptions.ttl` se ignora aquí. Los errores se
+     * registran como aviso y no se propagan.
+     *
+     * @param key Clave lógica del sorted set (sin prefijo).
+     * @param member Miembro a insertar o actualizar.
+     * @param score Puntuación asociada al miembro; determina el orden.
+     * @param options `shared` para omitir el prefijo de namespace.
+     */
+    public async zAdd(key: string, member: string, score: number, {shared}: SaveOptions = {}): Promise<void> {
+        try {
+            const cluster = await this.cluster;
+
+            const primaryClients = await Promise.all(cluster.primaries).catch(err => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para set", err);
+            });
+
+            const theKey = this.buildKey(key, shared||false);
+            await Promise.all(primaryClients.map(async client => {
+                await client.zAdd(theKey, {
+                    score,
+                    value: member
+                });
+            }));
+        } catch (e) {
+            warning(`Error guardando ${key} en REDIS`, e);
+        }
+    }
+
+    /**
      * Carga y deserializa JSON desde Redis.
      *
      * @param key Clave única o lista de claves.
@@ -226,20 +376,78 @@ export class Redis implements AsyncDisposable {
     }
 
     /**
-     * Serializa y guarda JSON en Redis.
+     * Carga y deserializa JSON en un Hash desde Redis.
      *
-     * @param key Clave a persistir.
+     * @param key Clave única.
+     * @param field Campo del hash a persistir.
+     * @returns Entidad tipada, lista tipada o `null`.
+     */
+    public async loadHJSON<T=any>(key: string, field?: string): Promise<{ [p: string]: T }|null> {
+        const data = field ? await this.hGet(key as string, field) : await this.hGetAll(key);
+
+        if (data) {
+            const result: { [field: string]: T } = {};
+            if (field) {
+                result[field] = JSON.parse(data[field]) as T;
+            } else {
+                for (const field in data) {
+                    result[field] = JSON.parse(data[field]) as T;
+                }
+            }
+            return result;
+        }
+        return null;
+    }
+
+    /**
+     * Atajo de `set` que serializa la estructura con `JSON.stringify` antes de escribirla.
+     * Contrapartida de `loadJSON`; comparte su misma convención de claves y su naturaleza
+     * best-effort (los errores se registran, no se lanzan).
+     *
+     * @param key Clave lógica a persistir (sin prefijo).
      * @param data Estructura serializable a JSON.
-     * @param options Opciones de guardado.
+     * @param options `shared` para omitir el namespace y `ttl` (segundos) para la caducidad.
      */
     public async saveJSON(key: string, data: any, {shared, ttl}: SaveOptions = {}): Promise<void> {
         await this.set(key, Buffer.from(JSON.stringify(data), 'utf-8'), {shared, ttl});
     }
 
     /**
-     * Inserta múltiples registros en una única transacción Redis.
+     * Atajo de `hSet` que serializa la estructura a JSON y la guarda como campo de un hash.
+     * Contrapartida de `loadHJSON`. Recuerda que el `ttl` es una caducidad lógica evaluada
+     * en lectura, no un vencimiento real en el servidor.
      *
-     * @param items Conjunto de inserciones con su TTL.
+     * @param key Clave lógica del hash (sin prefijo).
+     * @param field Campo del hash a escribir.
+     * @param data Estructura serializable a JSON.
+     * @param options `shared` para omitir el namespace y `ttl` (segundos) como marca de caducidad.
+     */
+    public async saveHJSON(key: string, field: string, data: any, {shared, ttl}: SaveOptions = {}): Promise<void> {
+        await this.hSet(key, field, Buffer.from(JSON.stringify(data), 'utf-8'), {shared, ttl});
+    }
+
+    /**
+     * Atajo de `zAdd` para registrar un miembro puntuado en un sorted set. Pese al nombre no
+     * serializa nada a JSON: `member` y `score` se envían tal cual, ya que un sorted set
+     * almacena pares miembro/puntuación. No admite TTL.
+     *
+     * @param key Clave lógica del sorted set (sin prefijo).
+     * @param member Miembro a insertar o actualizar.
+     * @param score Puntuación asociada al miembro.
+     * @param options `shared` para omitir el prefijo de namespace.
+     */
+    public async saveZJSON(key: string, member: string, score: number, {shared}: SaveOptions = {}): Promise<void> {
+        await this.zAdd(key, member, score, {shared});
+    }
+
+    /**
+     * Escribe un lote de claves simples agrupando todos los comandos en un único `MULTI` por
+     * nodo primario, lo que reduce drásticamente los viajes de red frente a llamar a `set` en
+     * bucle. Cada elemento decide su propio prefijo (`sharedKey`) y su propio TTL; un `ttl`
+     * negativo deja la clave sin caducidad. A diferencia de `set`, **sí propaga los errores**,
+     * así que la llamada debe capturarlos.
+     *
+     * @param items Conjunto de inserciones, cada una con clave, valor, TTL y ámbito de clave.
      */
     public async bulkSet(items: IInsert[]): Promise<void> {
         const cluster = await this.cluster;
@@ -264,11 +472,46 @@ export class Redis implements AsyncDisposable {
     }
 
     /**
-     * Busca claves por patrón.
+     * Equivalente a `bulkSet` para campos de hash: agrupa todos los `HSET` en un `MULTI` por
+     * nodo primario y envuelve cada valor en `{expires, data}` para la caducidad lógica
+     * evaluada en lectura. Sale de inmediato si la lista está vacía y **propaga los errores**
+     * al llamante.
      *
-     * @param pattern Patrón Redis (p. ej. `prefijo:*`).
-     * @param options Opciones de consulta.
-     * @returns Lista de claves que cumplen el patrón.
+     * @param items Conjunto de inserciones, cada una con clave, campo, valor, TTL y ámbito de clave.
+     */
+    public async bulkHSet(items: IHInsert[]): Promise<void> {
+        if (items.length === 0) return;
+
+        const cluster = await this.cluster;
+
+        // const client = await cluster.primary;
+        const primaryClients = await Promise.all(cluster.primaries);
+
+        await Promise.all(primaryClients.map(async client => {
+            const multi = client.multi();
+
+            for (const item of items) {
+                const theKey = this.buildKey(item.key, item.sharedKey??false);
+                multi.hSet(theKey, item.field, JSON.stringify({
+                    expires: item.ttl ? Date.now() + item.ttl * 1000 : undefined, // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
+                    data: item.value
+                }));
+            }
+
+            await multi.exec();
+        }));
+    }
+
+    /**
+     * Recorre el espacio de claves con `SCAN` iterativo (lotes de 1000, tipo `string`) contra
+     * el nodo de lectura, evitando el bloqueo que provocaría `KEYS`. El patrón se prefija
+     * **siempre** con el namespace del servicio: `shared` se acepta por simetría pero se
+     * ignora; usa `searchField` si necesitas buscar en claves compartidas. Devuelve las claves
+     * completas, ya prefijadas.
+     *
+     * @param pattern Patrón de glob Redis relativo al servicio (p. ej. `prefijo:*`).
+     * @param options Opciones de consulta; `shared` no tiene efecto en este método.
+     * @returns Lista de claves coincidentes, o vacía si no hay resultados o se produce un error.
      */
     public async searchKeys(pattern: string, {shared}: QueryOptions = {}): Promise<string[]> {
         try {
@@ -278,11 +521,59 @@ export class Redis implements AsyncDisposable {
                 throw Redis.buildPromiseError("Error obteniendo cliente para searchKeys", err);
             });
 
-            return await client.keys(this.buildKey(pattern, shared??false));
+            const keys: string[] = [];
+            for await (const keysBatch of client.scanIterator({
+                TYPE: "string",
+                MATCH: this.buildKey(pattern, false),
+                COUNT: 1000,
+            })) {
+                if (keysBatch.length) {
+                    keys.push(...keysBatch);
+                }
+            }
+
+            return keys;
         } catch (e) {
             warning(`Error buscando keys con patrón ${pattern} en REDIS`, e);
         }
         return [];
+    }
+
+    /**
+     * Devuelve la puntuación más alta de un sorted set consultando el nodo de lectura con
+     * `ZRANGE ... REV BY SCORE LIMIT 0 1`, es decir, recuperando un único elemento en lugar de
+     * traer el conjunto entero. Útil para conocer la última marca registrada con
+     * `zAdd`/`saveZJSON`. Pese al nombre, `pattern` es una clave concreta (se prefija según
+     * `shared`), no un patrón de búsqueda.
+     *
+     * @param pattern Clave del sorted set a inspeccionar.
+     * @param options `shared` para omitir el prefijo de namespace.
+     * @returns Puntuación máxima, o `null` si el conjunto está vacío o se produce un error.
+     */
+    public async searchMaxScore(pattern: string, {shared}: QueryOptions = {}): Promise<number|null> {
+        try {
+            const cluster = await this.cluster;
+
+            const client = await cluster.read.catch((err: unknown) => {
+                throw Redis.buildPromiseError("Error obteniendo cliente para searchMaxScore", err);
+            });
+
+            const thePattern = this.buildKey(pattern, shared??false);
+            return await client.zRangeWithScores(thePattern, '+inf', '-inf', {
+                REV: true,
+                BY: 'SCORE',
+                LIMIT: {offset: 0, count: 1}
+            }).then(results => {
+                if (results.length > 0) {
+                    return results[0].score as number;
+                }
+                return null;
+            });
+        } catch (e) {
+            warning(`Error buscando max score con patrón ${pattern} en REDIS`, e);
+        }
+
+        return null;
     }
 
     /**
@@ -388,6 +679,16 @@ export class Redis implements AsyncDisposable {
 
     }
 
+    /**
+     * Calcula la clave física a partir de la lógica. Por defecto aísla cada servicio y
+     * entorno anteponiendo `<namespace>:<servicio>:`, donde el namespace sale de la variable
+     * `K8S_NAMESPACE` (`default` si no está definida) y se abrevia `meteored` como `mr`. Con
+     * `shared` la clave se devuelve intacta, lo que permite compartir datos entre servicios.
+     *
+     * @param key Clave lógica indicada por el llamante.
+     * @param shared Si es `true`, no se aplica ningún prefijo.
+     * @returns Clave final tal y como se envía a Redis.
+     */
     private buildKey(key: string, shared: boolean) {
         if (shared) {
             return key;
@@ -506,7 +807,9 @@ class RedisCluster implements AsyncDisposable {
     private async buildClient(config: IRedis, type: 'primary'|'read', onError: (err?: any) => void): Promise<RedisClientType|null> {
         const client: RedisClientType = createClient({
             url: `redis://${config.host}:${config.port}`,
+            pingInterval: 10000, // PING automático para mantener vivo el canal en GCP (10 segundos)
             socket: {
+                keepAlive: true, // Mantener vivo el socket
                 connectTimeout: this.options.clientTimeout||RedisCluster.MAX_REDIS_GET_CLIENT_MS,
                 reconnectStrategy: (retries) => {
                     if (retries > RedisCluster.MAX_RECONNECT_TRIES) {

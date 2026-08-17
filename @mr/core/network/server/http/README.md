@@ -18,6 +18,7 @@ con WebSocket y helpers de respuesta estandarizados.
 | [Routes](#routes) | `…/routes` | `Routes` — tabla ordenada de grupos de rutas |
 | [RouteGroup](#routegroup) | `…/routes/group` | `RouteGroup` / `RouteGroupError` — grupo de rutas + WebSocket |
 | [RouteGroupBlock](#routegroupblock) | `…/routes/group/block` | `RouteGroupBlock` — bloque atómico de rutas con caché y updater |
+| [Upgrade](#upgrade) | `…/upgrade` | Reenvío de peticiones `Upgrade:` HTTP/1.1 (WebSocket de aplicación / HMR de bundlers) |
 | [Checkers](#checkers) | `…/checkers` | `Checker*` — matchers de URL (regex, exact, prefix, comodín) |
 | [Query checkers](#query-checkers) | `…/checkers/query` | Validadores de parámetros de query string |
 | [Errores HTTP](#errores-http) | `…/error` | `HttpError*` — errores HTTP tipados (301, 404, 410, 500) |
@@ -48,8 +49,29 @@ import server from "@mr/core-network/server/http/server";
 
 | Método | Descripción |
 |--------|-------------|
-| `iniciarHTTP(routes, config)` | Crea el servidor HTTP y lo pone en escucha. Idempotente: devuelve la instancia existente si ya fue creado. |
-| `iniciarHTTPs(routes, config)` | Crea el servidor HTTPS con soporte SNI multi-dominio cargando certificados desde `files/ssl/<dominio>/`. Devuelve `Promise<https.Server>`. |
+| `iniciarHTTP(routes, config, upgrades?)` | Crea el servidor HTTP y lo pone en escucha. Idempotente: devuelve la instancia existente si ya fue creado. `upgrades` (`IUpgradeHandler[]`, por defecto `[]`) registra el listener del evento nativo `'upgrade'` solo si la lista no está vacía — ver [Upgrade](#upgrade). |
+| `iniciarHTTPs(routes, config, upgrades?)` | Crea el servidor HTTPS con soporte SNI multi-dominio cargando certificados desde `files/ssl/<dominio>/`. Devuelve `Promise<https.Server>`. Mismo tratamiento de `upgrades` que `iniciarHTTP`. |
+| `cederPuertoParaDebug()` | Solo fuera de producción. Cierra el servidor HTTP para cederle el puerto a una sesión de depuración y queda reintentando la escucha hasta recuperarlo. La invoca `POST /admin/debug-handoff/`. |
+
+### Handoff de puerto para depuración local (solo `!PRODUCCION`)
+
+Al lanzar un workspace ya arrancado por `yarn mrpack devel -e` con el depurador de
+Node de PhpStorm (`--inspect`/`--inspect-brk` vía `NODE_OPTIONS`), el segundo proceso
+colisiona con el mismo puerto HTTP (determinista por servicio, ver [`Service`](#service)).
+`Server` gestiona automáticamente ese `EADDRINUSE` fuera de producción:
+
+- El proceso que arranca en modo debug (detectado con `inspector.url()` /
+  `execArgv` / `NODE_OPTIONS`) avisa por `POST /admin/debug-handoff/` a la instancia que
+  ocupa el puerto y reintenta la escucha cada 300ms (prioridad alta).
+- La instancia normal que recibe el aviso cierra su servidor HTTP
+  (`cederPuertoParaDebug()`) y reintenta la escucha cada 2000ms hasta recuperar el
+  puerto cuando la sesión de depuración termina.
+- Un proceso normal que arranca y encuentra el puerto ocupado (p. ej. porque ya hay
+  una sesión de depuración corriendo) entra directamente en ese mismo bucle de espera,
+  sin avisar a nadie.
+
+No requiere ninguna acción manual: basta con lanzar la configuración de Debug de
+PhpStorm sobre el mismo workspace que ya está en `devel`.
 
 ### Arranque típico
 
@@ -284,6 +306,31 @@ class MiGrupo extends RouteGroup<MiConfig> {
 La instancia de configuración queda accesible en `this.configuracion` con el tipo `T`
 concreto, sin necesidad de cast.
 
+### Dominios por defecto (`dominios`)
+
+`IRouteGroupParams.dominios` (y la propiedad equivalente `RouteGroup.dominios`, expuesta tras
+construir el grupo) fija los dominios por defecto de todo el grupo, en cascada con
+`IRouteGroup.dominios` e `IExpresion.dominios`: cada nivel hereda del superior solo cuando **no**
+define el suyo propio.
+
+```ts
+class MiGrupo extends RouteGroup<MiConfig> {
+    public constructor(configuracion: MiConfig) {
+        super(configuracion, {dominios: ["api.meteored.com"]});
+    }
+
+    protected getHandlers(): IRouteGroup[] {
+        return [
+            {
+                // Sin `dominios` propio: hereda ["api.meteored.com"] del grupo.
+                expresiones: [{metodos: ["GET"], exact: "/api/usuarios/", resumen: "/api/usuarios/"}],
+                handler: async (conexion) => this.sendRespuesta(conexion, {data: await obtenerUsuarios()}),
+            },
+        ];
+    }
+}
+```
+
 ### Integración WebSocket
 
 Si el grupo maneja también peticiones WebSocket, sobreescribir `getWSHandlers()`.
@@ -305,6 +352,29 @@ Los `IWSHandler` devueltos se registran en el servidor WebSocket singleton a tra
 `createWSServer()` / `addHandlers()`. Consulta
 [`server/websocket/README.md`](../websocket/README.md) para la documentación del protocolo
 y la implementación de handlers WebSocket.
+
+### Integración Upgrade
+
+Si el grupo necesita **reenviar** peticiones con cabecera `Upgrade:` a otro backend en lugar de
+terminarlas en este servicio (el caso típico es un proxy que necesita dejar pasar el HMR de un
+frontend), sobreescribir `getUpgradeHandlers()`.
+
+```ts
+import type {IUpgradeHandler} from "@mr/core-network/server/http/upgrade";
+
+class MiGrupo extends RouteGroup {
+    protected getHandlers(): IRouteGroup[] { /* … */ }
+
+    public override getUpgradeHandlers(): IUpgradeHandler[] {
+        return [miDescriptorDeUpgrade];
+    }
+}
+```
+
+A diferencia de `getWSHandlers()`, que **termina** el WebSocket en este servicio, los
+descriptores de `getUpgradeHandlers()` reciben el socket crudo del evento nativo `'upgrade'` y
+son libres de reenviarlo a otro backend con `proxyUpgrade` — ver [Upgrade](#upgrade). Un
+servicio no debería declarar ambas cosas a la vez (ver la nota al final de esa sección).
 
 ### Helpers de respuesta (`protected`)
 
@@ -352,6 +422,7 @@ interface IRouteGroup {
     updater?: TUpdater;                // recarga dinámica de expresiones
     cache?: Partial<IRouteGroupCache>; // configuración de caché HTTP
     documentable?: boolean;            // visible en /admin/doc/ (defecto true)
+    dominios?: string[];               // por defecto para las IExpresion de `expresiones` que no lo definan
 }
 ```
 
@@ -373,6 +444,129 @@ Permite que las expresiones de un bloque se recarguen periódicamente (p. ej. de
 
 El bloque no acepta tráfico hasta que la primera carga complete (`ok = true`).
 Si la carga falla, reintenta tras 1 segundo.
+
+---
+
+## Upgrade
+
+**Entrada:** `@mr/core-network/server/http/upgrade`
+
+Mecanismo genérico de reenvío de peticiones HTTP/1.1 con cabecera `Upgrade:` — WebSocket de
+aplicación o HMR de bundlers (Next.js, webpack, Vite...). Necesario porque Node **destruye** el
+socket del handshake si nadie escucha el evento nativo `'upgrade'` del servidor.
+
+```ts
+import {
+    abortUpgrade,
+    buildUpgradeContext,
+    matchUpgradeHandler,
+    protegerSocket,
+    proxyUpgrade,
+    type IProxyUpgradeConfig,
+    type IUpgradeContext,
+    type IUpgradeContextConfig,
+    type IUpgradeHandler,
+    type TUpgradeRunner,
+} from "@mr/core-network/server/http/upgrade";
+```
+
+### Por qué no reutiliza los `Checker` del router HTTP
+
+Un evento `'upgrade'` no trae `ServerResponse`, así que no puede construirse la `Conexion` de la
+que dependen los matchers (`Exact`, `Prefix`, `Regex`, `Comodin`). El matching de
+`IUpgradeHandler` es deliberadamente ligero: host exacto (`dominios`) + prefijo de path (`prefix`).
+
+### `IUpgradeContext` y `buildUpgradeContext`
+
+Normaliza los argumentos del evento nativo `'upgrade'`:
+
+```
+IUpgradeContext
+  request: http.IncomingMessage
+  socket:  Duplex           — del cliente; nadie más escribe en él salvo el handler que lo tome
+  head:    Buffer           — bytes ya leídos del flujo tunelizado, no de la petición
+  dominio: string           — igual criterio que RequestContext.dominio (respeta trustProxy)
+  path:    string           — sin query string
+  https:   boolean
+
+buildUpgradeContext(request, socket, head, {https?, trustProxy?}) → IUpgradeContext
+```
+
+### `IUpgradeHandler` y `matchUpgradeHandler`
+
+```
+IUpgradeHandler
+  resumen:   string                     — identificador corto para logs
+  dominios?: string[]                   — hosts exactos; vacío/ausente = todos
+  prefix?:   string                     — prefijo de path; ausente = cualquier path
+  handler:   TUpgradeRunner             — (contexto: IUpgradeContext) => Promise<void>
+
+matchUpgradeHandler(handlers, contexto) → IUpgradeHandler | undefined   — primer match gana,
+                                                                           misma semántica que el router HTTP
+```
+
+Lo declara un `RouteGroup` sobreescribiendo `getUpgradeHandlers()` — ver
+[Integración Upgrade](#integración-upgrade).
+
+### `protegerSocket(socket)`
+
+Registra el listener mínimo de `'error'` sobre el socket del cliente. El evento `'upgrade'`
+entrega el socket **crudo**: Node ya no tiene ningún listener de error puesto sobre él, así que
+un `ECONNRESET` del cliente mientras se negocia con el backend se convertiría en un `'error'` sin
+manejar y **derribaría el proceso**. Debe invocarse antes de cualquier operación asíncrona sobre
+el socket; `Server.crearListenerUpgrade()` ya lo hace como primera instrucción.
+
+### `abortUpgrade(socket, status, mensaje)`
+
+Rechaza el upgrade serializando a mano una línea de estado HTTP/1.1 sobre el socket crudo y
+cerrándolo (no existe `ServerResponse` a estas alturas para construir una respuesta normal).
+
+### `proxyUpgrade(contexto, base, config?)`
+
+Reenvía el upgrade a `base` (`http://…` o `https://…`) y, si el backend responde `101`, deja los
+dos sockets unidos en tubería bidireccional hasta que cualquiera de los dos se cierre:
+
+- Abre la petición saliente con `agent: false` — un socket tunelizado nunca debe volver a un
+  pool keep-alive, o el agente intentaría reutilizar un socket que ya no habla HTTP.
+- Reenvía las cabeceras de la petición original tal cual (con `Host` reescrito): el handshake
+  WebSocket va firmado sobre `sec-websocket-key`.
+- Reescribe el `101` del backend usando `rawHeaders` (preserva orden, mayúsculas y cabeceras
+  repetidas — `sec-websocket-extensions`, `set-cookie`...).
+- El `head` del cliente se escribe al backend **después** de completar el handshake: son bytes
+  del flujo tunelizado, no de la petición, y enviarlos antes corrompería el protocolo.
+- Si el backend responde con un status normal en vez de `101` (p. ej. `404` porque su servidor
+  de HMR todavía no ha arrancado), reenvía ese status real al cliente y la promesa **resuelve**:
+  el upgrade se ha atendido, aunque no se haya establecido el túnel.
+- Una vez tunelizados, desactiva Nagle y el timeout de inactividad de ambos sockets
+  (`setNoDelay(true)`, `setTimeout(0)`): un socket de HMR pasa la mayor parte del tiempo inactivo
+  transportando mensajes muy pequeños, y ambos ajustes por defecto le perjudican.
+
+```
+IProxyUpgradeConfig
+  host?:    string                      — cabecera Host a enviar al backend; por defecto el host de `base`
+  headers?: http.OutgoingHttpHeaders    — se añaden/sobreescriben sobre las de la petición original
+  timeout?: number                      — ms para establecer el túnel (10000 por defecto); se
+                                           desactiva una vez establecido, para no cortar conexiones
+                                           legítimamente inactivas
+```
+
+### Integración en `Server`
+
+`Server.iniciarHTTP`/`iniciarHTTPs` aceptan un tercer parámetro `upgrades: IUpgradeHandler[]`
+(por defecto `[]`, ver [Servidor](#servidor)). El listener del evento `'upgrade'` **solo se
+registra si la lista no está vacía**, de modo que un servicio que no declare ninguno queda
+exactamente igual que antes.
+
+Si ningún descriptor hace match pero hay más listeners de `'upgrade'` registrados en el servidor
+(típicamente el servidor WebSocket de `ws`, que se engancha después de arrancar el HTTP), el
+socket no se toca y se deja que responda ese otro listener. Si es el único listener, se loggea
+un `warning` y se responde `404`.
+
+> Un servicio no debería declarar `getWSHandlers()` **y** `getUpgradeHandlers()` a la vez: ambos
+> mecanismos se enganchan al mismo evento nativo `'upgrade'` y ningún listener puede cancelar la
+> emisión a los demás, así que el servidor WS también intentaría su propio handshake sobre un
+> socket que ya haya tomado un descriptor de upgrade. `Engine.iniciar()` (`@mr/core-workload`)
+> avisa por log si detecta esta combinación.
 
 ---
 

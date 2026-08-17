@@ -11,5 +11,8 @@
                 ]
             }
         ]
+    },
+    "permissions": {
+        "ask": ["Agent(model:opus)"]
     }
 }

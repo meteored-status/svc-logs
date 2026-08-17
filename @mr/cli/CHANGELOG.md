@@ -2,6 +2,51 @@
 
 ---
 
+## 2026.8.5
+
+### Added — `src/mrpack/clases/init/symlinks.ts`, `src/mrpack/clases/init.ts`
+
+- [Jose] **`mrpack init` crea/corrige el enlace `CONTRIBUTING.md` → `@mr/core/dev/CONTRIBUTING.md`**:
+  nueva `initContributing()`, análoga a `initAgents()`/`initClaude()` (mismo helper compartido
+  `initSymlinkFichero`). Ese fichero canónico documenta las convenciones de ramas (git-flow
+  del monorepo), versionado y despliegue (Cloud Build) — enlazado desde `CLAUDE.md` (import
+  `@CONTRIBUTING.md`) y desde `.github/copilot-instructions.md`, ambos resueltos desde la raíz
+  del repo consumidor. Ver el changelog de `@mr/core-dev` para el contenido del propio fichero.
+
+## 2026.7.22
+
+### Added — `src/mrpack/clases/manifest/workspace/deployment/index.ts`, `deployment/std/kustomizar.sh`
+
+- [Jose] **`deploy.env` se propaga al manifest y se inyecta en el YAML de Cloud Run**:
+  `ManifestWorkspaceDeploymentLoader.check()` ahora preserva `deploy.env` (nueva propiedad de
+  `@mr/core-dev`, ver su changelog) cuando `target === "lambda"`, con el mismo criterio que ya
+  aplicaba a `deploy.lambda`/`deploy.cloudsql`.
+  `kustomizar.sh::parseWorkspaceLambdaZona()` añade un nuevo bloque que lee `.deploy.env` con
+  `configw`, construye un array `[{name, value}, ...]` con `jq` iterando sus claves, y lo añade
+  (`yq eval "... += ..."`) a `containers[0].env` del YAML de Cloud Run generado —
+  `.spec.template.spec.containers[0].env` para `service`, `.spec.template.spec.template.spec.containers[0].env`
+  para `job`/`cronjob`, mismo split que ya usan `volumes`/`volumeMounts`. Al usar `+=`, las
+  variables de `deploy.env` se suman a las ya fijas de la plantilla (`DATADOG`, `ENTORNO`, `ZONA`,
+  `CLOUD_RUN_REGION`, `SIDECAR`) sin pisarlas.
+
+## 2026.7.21
+
+### Changed — `deployment/std/build.yaml`, `deployment/std/cache_get.sh`, `deployment/std/cache_set.sh`, `deployment/std/storage.sh`, `deployment/README.md`
+
+- [Jose] **Migración de `gsutil` a `gcloud storage` en los steps de Cloud Build**: `gsutil` está
+  en proceso de deprecación en favor de `gcloud storage`, que ofrece el mismo conjunto de
+  operaciones (`cp`, `rm`, `cat`) bajo el CLI unificado de `gcloud`.
+  - `build.yaml`: los steps `Iniciar Kustomize`, `Descargar Cache Dependencias` y `Subir Cache
+    Dependencias` ahora usan la imagen `gcr.io/cloud-builders/gcloud` en lugar de
+    `gcr.io/cloud-builders/gsutil`.
+  - `cache_get.sh` y `cache_set.sh`: sustituidas las llamadas `gsutil -m -q cp/rm` por
+    `gcloud storage -m -q cp/rm` para restaurar/subir `.yarn/cache` a GCS.
+  - `storage.sh`: sustituidas las llamadas `gsutil cat`/`gsutil -m cp` por `gcloud storage
+    cat`/`gcloud storage -m cp` al comprobar y subir bundles browser (assets) a GCS.
+  - `deployment/README.md` actualizado para reflejar la imagen (`gcloud`) y el comando
+    (`gcloud storage`) usados por los steps `Iniciar Kustomize`, `Descargar Cache
+    Dependencias`, `Subir Cache Dependencias` y `Subir Storage`.
+
 ## 2026.7.20
 
 ### Fixed — `src/mrpack/clases/bundler.ts`, `src/mrpack/clases/manifest/workspace/build/index.ts`

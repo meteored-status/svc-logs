@@ -1,3 +1,11 @@
+/**
+ * Editor: José Antonio Jiménez
+ * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
+ * Hash: f920ac6f1e7b758facba9a86f58d9667
+ * Versión: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ */
+
 import {error} from "../../utiles/log";
 import {
     type BulkOperation,
@@ -6,8 +14,7 @@ import {
     BulkOperationScript,
     BulkOperationUpdate,
 } from "./operation";
-import type {Elasticsearch} from "..";
-import type {Script} from "..";
+import type {Elasticsearch, Script} from "..";
 
 interface IBulkParams {
     index?: string;
@@ -104,11 +111,13 @@ export class Bulk {
 
         this.cerrado = true;
 
-        return this.ok = await this.ejecutar(this.operaciones);
+        this.ok = await this.ejecutar(this.operaciones);
+
+        return this.ok;
     }
 
     private async ejecutar(operaciones: BulkOperation[]): Promise<boolean> {
-        if (operaciones.length==0) {
+        if (operaciones.length===0) {
             return true;
         }
 
@@ -130,8 +139,8 @@ export class Bulk {
         const reportados: string[] = [];
         for (let i=0, len=operaciones.length; i<len; i++) {
             const actual = data.items[i].create!;
-            if (actual.error!=undefined) {
-                if (actual.status==429) {
+            if (actual.error!==undefined) {
+                if (actual.status===429) {
                     repesca.push(operaciones[i]);
                 } else {
                     if (!reportados.includes(actual.error.type)) {
@@ -144,7 +153,7 @@ export class Bulk {
             }
         }
 
-        if (repesca.length==0) {
+        if (repesca.length===0) {
             return ok;
         }
 
