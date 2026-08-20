@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 17 Aug 2026 06:32:04 GMT
- * Hash: 0f3dda68776882c821f62d874a15f76d
- * Versión: 2026.8.17+1-bixus
- * Anterior: 2026.8.13+2-bixus
+ * Fecha: Thu, 20 Aug 2026 06:26:03 GMT
+ * Hash: b9164e5e8854dcd173486b6b870b11a3
+ * Versión: 2026.8.20+1-bixus
+ * Anterior: 2026.8.17+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -23,6 +23,7 @@ export type EPermission =
     "status.subscription.toggle"        |
     "status.component.delete"           |
     "status.log.list"                   |
+    "status.audit.read"                 |
     "status.user.list"                  |
     "status.user.edit"                  |
     "status.user.delete"                |

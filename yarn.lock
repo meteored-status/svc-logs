@@ -47,19 +47,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@datadog/flagging-core@npm:2.0.2":
-  version: 2.0.2
-  resolution: "@datadog/flagging-core@npm:2.0.2"
-  dependencies:
-    spark-md5: "npm:^3.0.2"
-  checksum: 10/210a02fdd0d27df4a1739ec69ec88ec136531b55c69646a0961b928ebc760a4e1659328fe460333440a4e88ac0fe16a0cba516900fd5e69fecab5758e8212ed0
-  languageName: node
-  linkType: hard
-
-"@datadog/libdatadog@npm:0.9.4":
-  version: 0.9.4
-  resolution: "@datadog/libdatadog@npm:0.9.4"
-  checksum: 10/64df8feb444a0e7620e2fbe9ef58f460cefb3bed7bf18c5eb4bb4f596474a573a7cd82209955ed7fabde14af3888c07d391d8abf2c3d99945559afc853240a38
+"@datadog/libdatadog@npm:0.12.1":
+  version: 0.12.1
+  resolution: "@datadog/libdatadog@npm:0.12.1"
+  checksum: 10/0a671dcab96faf99d0b665288cb12e962827519089f0bf3f69121d03f0a6979a8641a4fb307f1f55263d0c5656e5038ecfa5c29802b66f8a0661d2ae27561275
   languageName: node
   linkType: hard
 
@@ -94,38 +85,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@datadog/openfeature-node-server@npm:2.0.2":
-  version: 2.0.2
-  resolution: "@datadog/openfeature-node-server@npm:2.0.2"
-  dependencies:
-    "@datadog/flagging-core": "npm:2.0.2"
-  peerDependencies:
-    "@openfeature/server-sdk": ">=1.15.1"
-  checksum: 10/719c551e8544f82935254bfe3122db24203ded76e855b8547308dbed4765f1342ebc68875e10e804c5ff78296de08efed18745a268c5dc5c2d75aa90d561ffcf
-  languageName: node
-  linkType: hard
-
-"@datadog/pprof@npm:5.17.0":
-  version: 5.17.0
-  resolution: "@datadog/pprof@npm:5.17.0"
+"@datadog/pprof@npm:5.18.0":
+  version: 5.18.0
+  resolution: "@datadog/pprof@npm:5.18.0"
   dependencies:
     node-gyp: "npm:latest"
     node-gyp-build: "npm:^4.8.4"
-    pprof-format: "npm:^2.2.1"
+    pprof-format: "npm:^2.3.1"
     source-map: "npm:^0.8.0"
-  checksum: 10/b50d5cb7d77eca165bdc4a6d81d6d9c44c67aeaf4e86bc7702af3f601ace5d73c255849e5e4a00770f1ffa40fb4bb992b720fe29efd0f0d695da47c16680a83d
+  checksum: 10/1b137e71a78590c2018196b5eee71510eec5ddd3f65029b8375f373590f5ba1323236dc6a678970c621786f47d2f4190d9a0f9c703e22da9cf21af7f20b08bae
   languageName: node
   linkType: hard
 
-"@datadog/wasm-js-rewriter@npm:5.0.1":
-  version: 5.0.1
-  resolution: "@datadog/wasm-js-rewriter@npm:5.0.1"
+"@datadog/wasm-js-rewriter@npm:5.0.3":
+  version: 5.0.3
+  resolution: "@datadog/wasm-js-rewriter@npm:5.0.3"
   dependencies:
-    js-yaml: "npm:^4.1.0"
+    js-yaml: "npm:^4.3.1"
     lru-cache: "npm:^7.14.0"
-    module-details-from-path: "npm:^1.0.3"
-    node-gyp-build: "npm:^4.5.0"
-  checksum: 10/7f59c5e5731a3b671f4a91accab1e334ee3aeacb6a33b66a66179ab933b889a06265b37ee18c9dd44e99048f0ac0818d23d666fd1af82aeef63374b5f218f3be
+    module-details-from-path: "npm:^1.0.4"
+    node-gyp-build: "npm:^4.8.4"
+  checksum: 10/b99d91d146e55715fdbd528086da08536bdc4d87669bb489f2a864dc1963350276aa0c4914706df987ed9a6b44134f8642b3133a555a8835f78631f7f6945774
   languageName: node
   linkType: hard
 
@@ -442,17 +422,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@google-cloud/paginator@npm:^5.0.0":
-  version: 5.0.2
-  resolution: "@google-cloud/paginator@npm:5.0.2"
-  dependencies:
-    arrify: "npm:^2.0.0"
-    extend: "npm:^3.0.2"
-  checksum: 10/b64ba2029b77fdcf3c827aea0b6d128122fd1d2f4aa8c1ba70747cba0659d4216a283769fb3bbeb8f726176f5282624637f02c30f118a010e05838411da0cb76
-  languageName: node
-  linkType: hard
-
-"@google-cloud/paginator@npm:^7.0.0":
+"@google-cloud/paginator@npm:^7.0.0, @google-cloud/paginator@npm:^7.0.1":
   version: 7.0.1
   resolution: "@google-cloud/paginator@npm:7.0.1"
   dependencies:
@@ -468,28 +438,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@google-cloud/projectify@npm:^4.0.0":
-  version: 4.0.0
-  resolution: "@google-cloud/projectify@npm:4.0.0"
-  checksum: 10/fdccdda0b50855c35541d71c46a6603f3302ff1a00108d946272cb2167435da00e2a2da5963fe489f4f5a4a9eb6320abeb97d3269974a972ae89f5df8451922d
-  languageName: node
-  linkType: hard
-
-"@google-cloud/projectify@npm:^6.0.0":
+"@google-cloud/projectify@npm:^6.0.0, @google-cloud/projectify@npm:^6.0.1":
   version: 6.0.1
   resolution: "@google-cloud/projectify@npm:6.0.1"
   checksum: 10/9de224e65e441abf684b78daf15b0ed02b9c1707ea883a64030c742ab853c5dd7d5feadb96ce27aecd79a06ce2ab727e7e475fa87d06682ec7c20f6547575c88
   languageName: node
   linkType: hard
 
-"@google-cloud/promisify@npm:<4.1.0":
-  version: 4.0.0
-  resolution: "@google-cloud/promisify@npm:4.0.0"
-  checksum: 10/c5de81321b3a5c567edcbe0b941fb32644611147f3ba22f20575918c225a979988a99bc2ebda05ac914fa8714b0a54c69be72c3f46c7a64c3b19db7d7fba8d04
-  languageName: node
-  linkType: hard
-
-"@google-cloud/promisify@npm:^6.0.0":
+"@google-cloud/promisify@npm:^6.0.0, @google-cloud/promisify@npm:^6.0.1":
   version: 6.0.1
   resolution: "@google-cloud/promisify@npm:6.0.1"
   checksum: 10/26c935f029aef04996fd99182de93fb5477ae1146710e32221fecd844adb168da0dc58e25df6b66f0a25f88028e7af60d5bbbd3c57d345376eddd2cda6b3218b
@@ -531,13 +487,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@google-cloud/storage@npm:^8.0.0":
-  version: 8.0.0
-  resolution: "@google-cloud/storage@npm:8.0.0"
+"@google-cloud/storage@npm:^8.0.1":
+  version: 8.0.1
+  resolution: "@google-cloud/storage@npm:8.0.1"
   dependencies:
-    "@google-cloud/paginator": "npm:^5.0.0"
-    "@google-cloud/projectify": "npm:^4.0.0"
-    "@google-cloud/promisify": "npm:<4.1.0"
+    "@google-cloud/paginator": "npm:^7.0.1"
+    "@google-cloud/projectify": "npm:^6.0.1"
+    "@google-cloud/promisify": "npm:^6.0.1"
     abort-controller: "npm:^3.0.0"
     async-retry: "npm:^1.3.3"
     duplexify: "npm:^4.1.3"
@@ -547,9 +503,9 @@ __metadata:
     html-entities: "npm:^2.5.2"
     mime: "npm:^3.0.0"
     p-limit: "npm:^3.0.1"
-    retry-request: "npm:^7.0.0"
-    teeny-request: "npm:^9.0.0"
-  checksum: 10/6170940e1e50e22e78a675834f8eae3862ae4d8185fb5d7f9dd149ebf6b02b5cd87485e1ac3a81065f3cb61b14384cbe0d0e5e3393b67c90388278b2d3eba640
+    retry-request: "npm:^9.0.1"
+    teeny-request: "npm:^11.0.1"
+  checksum: 10/ca5d20c322e85a1268a26e3854c70c6d720a1167d481bd896bc8eef739ebcf6eca462cf1a8ac4a809bb166461ae9f4540ff4b14df16aa6ca1ba874adf703abc5
   languageName: node
   linkType: hard
 
@@ -1079,7 +1035,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mr/cli@workspace:@mr/cli"
   dependencies:
-    "@google-cloud/storage": "npm:^8.0.0"
+    "@google-cloud/storage": "npm:^8.0.1"
     "@inquirer/prompts": "npm:^8.5.2"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
@@ -1089,7 +1045,7 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     "@types/source-map-support": "npm:^0.5.10"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.10.0"
+    dd-trace: "npm:^6.11.0"
     dotenv: "npm:^17.4.2"
     esbuild: "npm:^0.28.2"
     js-yaml: "npm:^5.3.0"
@@ -1159,7 +1115,7 @@ __metadata:
     "@types/qs": "npm:^6.15.1"
     "@types/ws": "npm:^8.18.1"
     bufferutil: "npm:^4.1.0"
-    dd-trace: "npm:^6.10.0"
+    dd-trace: "npm:^6.11.0"
     formidable: "npm:^3.5.4"
     qs: "npm:^6.15.3"
     services-comun: "workspace:*"
@@ -1938,13 +1894,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tootallnate/once@npm:2":
-  version: 2.0.1
-  resolution: "@tootallnate/once@npm:2.0.1"
-  checksum: 10/487b59b5adb8458dc13394a5aae997bf9705c51fa1e2396c50cd967019d06b273faba3c4d9e7895a996b9e9b055f1c55e53d822e54b3e9c298bcb4f6967cd0d5
-  languageName: node
-  linkType: hard
-
 "@tsconfig/node24@npm:^24.0.5":
   version: 24.0.5
   resolution: "@tsconfig/node24@npm:24.0.5"
@@ -2046,14 +1995,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pg@npm:^8.21.0":
-  version: 8.21.0
-  resolution: "@types/pg@npm:8.21.0"
+"@types/pg@npm:^8.23.1":
+  version: 8.23.1
+  resolution: "@types/pg@npm:8.23.1"
   dependencies:
     "@types/node": "npm:*"
     pg-protocol: "npm:*"
     pg-types: "npm:^2.2.0"
-  checksum: 10/496ed159233d7aad007b3a15db04ffe4b9efac1f200b720387bb59c7d7c8e42e9f475f93aedee0c83a5f7ae559c20ee29ad494aa16be248f555197cbc8657cb3
+  checksum: 10/c68a88f73e05dc17c20f819682b43fd17b5c80baf5651f391303fef462ce7ba58e9fde2ce0964016a9db0a60a8abb15817b765c2db9f4b4c2907255ab43c5a03
   languageName: node
   linkType: hard
 
@@ -2071,7 +2020,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/request@npm:*, @types/request@npm:^2.48.8":
+"@types/request@npm:*":
   version: 2.48.13
   resolution: "@types/request@npm:2.48.13"
   dependencies:
@@ -2239,15 +2188,6 @@ __metadata:
   bin:
     acorn: bin/acorn
   checksum: 10/8be2a40714756d713dfb62544128adce3b7102c6eb94bc312af196c2cc4af76e5b93079bd66b05e9ca31b35a9b0ce12171d16bc55f366cafdb794fdab9d753ec
-  languageName: node
-  linkType: hard
-
-"agent-base@npm:6":
-  version: 6.0.2
-  resolution: "agent-base@npm:6.0.2"
-  dependencies:
-    debug: "npm:4"
-  checksum: 10/21fb903e0917e5cb16591b4d0ef6a028a54b83ac30cd1fca58dece3d4e0990512a8723f9f83130d88a41e2af8b1f7be1386fda3ea2d181bb1a62155e75e95e23
   languageName: node
   linkType: hard
 
@@ -2797,17 +2737,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dd-trace@npm:^6.10.0":
-  version: 6.10.0
-  resolution: "dd-trace@npm:6.10.0"
+"dd-trace@npm:^6.11.0":
+  version: 6.11.0
+  resolution: "dd-trace@npm:6.11.0"
   dependencies:
-    "@datadog/libdatadog": "npm:0.9.4"
+    "@datadog/libdatadog": "npm:0.12.1"
     "@datadog/native-appsec": "npm:11.0.1"
     "@datadog/native-iast-taint-tracking": "npm:4.2.0"
     "@datadog/native-metrics": "npm:3.1.2"
-    "@datadog/openfeature-node-server": "npm:2.0.2"
-    "@datadog/pprof": "npm:5.17.0"
-    "@datadog/wasm-js-rewriter": "npm:5.0.1"
+    "@datadog/pprof": "npm:5.18.0"
+    "@datadog/wasm-js-rewriter": "npm:5.0.3"
     "@opentelemetry/api": "npm:>=1.0.0 <1.10.0"
     "@opentelemetry/api-logs": "npm:<1.0.0"
     dc-polyfill: "npm:^0.1.11"
@@ -2823,8 +2762,6 @@ __metadata:
       optional: true
     "@datadog/native-metrics":
       optional: true
-    "@datadog/openfeature-node-server":
-      optional: true
     "@datadog/pprof":
       optional: true
     "@datadog/wasm-js-rewriter":
@@ -2835,7 +2772,7 @@ __metadata:
       optional: true
     oxc-parser:
       optional: true
-  checksum: 10/d934503c68aae5b52dc15d8e26055d5093010addea7447232d414861b426531476e4b8749727635dce777743cecbd7a040c59876f23eab4ae5eaae4d8df4e31e
+  checksum: 10/220de801d253efd3aa94dae4146890b3d01ee4e3b22607556537318e4ea3b964f58733538aed6b3174220ea1d6f7b9954648dfd31f107c59bad8c7a173fc8355
   languageName: node
   linkType: hard
 
@@ -3659,17 +3596,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"http-proxy-agent@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "http-proxy-agent@npm:5.0.0"
-  dependencies:
-    "@tootallnate/once": "npm:2"
-    agent-base: "npm:6"
-    debug: "npm:4"
-  checksum: 10/5ee19423bc3e0fd5f23ce991b0755699ad2a46a440ce9cec99e8126bb98448ad3479d2c0ea54be5519db5b19a4ffaa69616bac01540db18506dd4dac3dc418f0
-  languageName: node
-  linkType: hard
-
 "http-proxy-agent@npm:^7.0.0":
   version: 7.0.2
   resolution: "http-proxy-agent@npm:7.0.2"
@@ -3688,16 +3614,6 @@ __metadata:
     jsprim: "npm:^1.2.2"
     sshpk: "npm:^1.7.0"
   checksum: 10/2ff7112e6b0d8f08b382dfe705078c655501f2ddd76cf589d108445a9dd388a0a9be928c37108261519a7f53e6bbd1651048d74057b804807cce1ec49e87a95b
-  languageName: node
-  linkType: hard
-
-"https-proxy-agent@npm:^5.0.0":
-  version: 5.0.1
-  resolution: "https-proxy-agent@npm:5.0.1"
-  dependencies:
-    agent-base: "npm:6"
-    debug: "npm:4"
-  checksum: 10/f0dce7bdcac5e8eaa0be3c7368bb8836ed010fb5b6349ffb412b172a203efe8f807d9a6681319105ea1b6901e1972c7b5ea899672a7b9aad58309f766dcbe0df
   languageName: node
   linkType: hard
 
@@ -3945,14 +3861,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-yaml@npm:^4.1.0":
-  version: 4.3.0
-  resolution: "js-yaml@npm:4.3.0"
+"js-yaml@npm:^4.3.1":
+  version: 4.3.1
+  resolution: "js-yaml@npm:4.3.1"
   dependencies:
     argparse: "npm:^2.0.1"
   bin:
     js-yaml: bin/js-yaml.js
-  checksum: 10/2bcec3a8118d7f744badeb04e14366578d234a736f353d41fe35d2305e4ce2409a8e041d277f07cd6bbc8aaa12128d650a68ce43247072519bede20962d2126f
+  checksum: 10/2ce71b5d632abbd77da80447bf860e8a0264e54bffe94840984887d58b023761495b523727547904517a6107a1ef189854b361e0fc44995ee13a84f222d7bd42
   languageName: node
   linkType: hard
 
@@ -4162,7 +4078,7 @@ __metadata:
   resolution: "logs-slave@workspace:services/logs-slave"
   dependencies:
     "@google-cloud/bigquery": "npm:^9.0.2"
-    "@google-cloud/storage": "npm:^8.0.0"
+    "@google-cloud/storage": "npm:^8.0.1"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
     "@mr/core-network": "workspace:*"
@@ -4173,7 +4089,7 @@ __metadata:
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
     crawler-user-agents: "npm:^1.60.0"
-    dd-trace: "npm:^6.10.0"
+    dd-trace: "npm:^6.11.0"
     formidable: "npm:^3.5.4"
     geoip-lite: "npm:^2.0.3"
     hexoid: "npm:^2.0.0"
@@ -4217,7 +4133,7 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.10.0"
+    dd-trace: "npm:^6.11.0"
     formidable: "npm:^3.5.4"
     hexoid: "npm:^2.0.0"
     logs-services: "workspace:*"
@@ -4247,7 +4163,7 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.10.0"
+    dd-trace: "npm:^6.11.0"
     formidable: "npm:^3.5.4"
     hexoid: "npm:^2.0.0"
     logs-services: "workspace:*"
@@ -4397,7 +4313,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"module-details-from-path@npm:^1.0.3, module-details-from-path@npm:^1.0.4":
+"module-details-from-path@npm:^1.0.4":
   version: 1.0.4
   resolution: "module-details-from-path@npm:1.0.4"
   checksum: 10/2ebfada5358492f6ab496b70f70a1042f2ee7a4c79d29467f59ed6704f741fb4461d7cecb5082144ed39a05fec4d19e9ff38b731c76228151be97227240a05b2
@@ -4537,7 +4453,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-gyp-build@npm:^4.3.0, node-gyp-build@npm:^4.5.0, node-gyp-build@npm:^4.8.4":
+"node-gyp-build@npm:^4.3.0, node-gyp-build@npm:^4.8.4":
   version: 4.8.4
   resolution: "node-gyp-build@npm:4.8.4"
   bin:
@@ -4974,10 +4890,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pprof-format@npm:^2.2.1":
-  version: 2.2.2
-  resolution: "pprof-format@npm:2.2.2"
-  checksum: 10/031ee918f7f19314fe1903f7053275b1a3e09adf4b6b1a0fd036183b56e4eb230042d45459d2bfca4954a92409aed900a7f89e8b774b069962db963317cf36cc
+"pprof-format@npm:^2.3.1":
+  version: 2.3.1
+  resolution: "pprof-format@npm:2.3.1"
+  checksum: 10/790a7e8dc62442ed47290ddd12518bcd6ab00598fdb043343f0576bc204635c3e229cb34354f3ab1a3082389e7b213b1039a510901c967b6ae85a2e4406e552c
   languageName: node
   linkType: hard
 
@@ -5370,18 +5286,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"retry-request@npm:^7.0.0":
-  version: 7.0.2
-  resolution: "retry-request@npm:7.0.2"
-  dependencies:
-    "@types/request": "npm:^2.48.8"
-    extend: "npm:^3.0.2"
-    teeny-request: "npm:^9.0.0"
-  checksum: 10/8f4c927d41dd575fc460aad7b762fb0a33542097201c3c1a31529ad17fa8af3ac0d2a45bf4a2024d079913e9c2dd431566070fe33321c667ac87ebb400de5917
-  languageName: node
-  linkType: hard
-
-"retry-request@npm:^9.0.0":
+"retry-request@npm:^9.0.0, retry-request@npm:^9.0.1":
   version: 9.0.1
   resolution: "retry-request@npm:9.0.1"
   dependencies:
@@ -5774,7 +5679,7 @@ __metadata:
     "@google-cloud/common": "npm:^8.0.1"
     "@google-cloud/eventarc-publishing": "npm:^5.0.0"
     "@google-cloud/pubsub": "npm:^6.0.1"
-    "@google-cloud/storage": "npm:^8.0.0"
+    "@google-cloud/storage": "npm:^8.0.1"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
     "@mr/core-network": "workspace:*"
@@ -5784,7 +5689,7 @@ __metadata:
     "@sequelize/core": "npm:7.0.0-alpha.48"
     "@types/formidable": "npm:^3.5.1"
     "@types/node": "npm:^24.13.3"
-    "@types/pg": "npm:^8.21.0"
+    "@types/pg": "npm:^8.23.1"
     "@types/pidusage": "npm:^2.0.5"
     "@types/qs": "npm:^6.15.1"
     "@types/sparkpost": "npm:^2.1.9"
@@ -5793,7 +5698,7 @@ __metadata:
     "@valkey/valkey-glide": "npm:^2.5.1"
     chokidar: "npm:^5.0.0"
     cron-parser: "npm:^5.10.0"
-    dd-trace: "npm:^6.10.0"
+    dd-trace: "npm:^6.11.0"
     formidable: "npm:^3.5.4"
     isbot: "npm:^5.2.1"
     moment-timezone: "npm:^0.6.3"
@@ -5807,7 +5712,7 @@ __metadata:
     sparkpost: "npm:^2.1.4"
     tslib: "npm:^2.8.1"
     typescript: "npm:^6.0.3"
-    uuid: "npm:^14.0.1"
+    uuid: "npm:^14.0.2"
   languageName: unknown
   linkType: soft
 
@@ -5913,13 +5818,6 @@ __metadata:
   version: 0.8.0
   resolution: "source-map@npm:0.8.0"
   checksum: 10/ad71b0c03715d970c2d114f0d403cc02c1e60e9ce997715f0a69bde2604b1d1ac287760f93d9763313a2a2b2c297df901f3378569f750a240e936ac5ddfd6b31
-  languageName: node
-  linkType: hard
-
-"spark-md5@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "spark-md5@npm:3.0.2"
-  checksum: 10/60981e181a296b2d16064ef86607f78d7eb1e08a5f39366239bb9cdd6bc3838fb2f667f2506e81c8d5c71965cdd6f18a17fb1c9a8368eeb407b9dd8188e95473
   languageName: node
   linkType: hard
 
@@ -6115,7 +6013,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"teeny-request@npm:^11.0.0":
+"teeny-request@npm:^11.0.0, teeny-request@npm:^11.0.1":
   version: 11.0.1
   resolution: "teeny-request@npm:11.0.1"
   dependencies:
@@ -6124,19 +6022,6 @@ __metadata:
     node-fetch: "npm:^3.3.2"
     stream-events: "npm:^1.0.5"
   checksum: 10/3f8078edd161b01f912f3f56ac7775b8e5a5a491d7113a130dff29f45a4ffa56a2deff16a519058453253736d7f7d42e21a28302e143e5f7567fd16956ddc7cf
-  languageName: node
-  linkType: hard
-
-"teeny-request@npm:^9.0.0":
-  version: 9.0.0
-  resolution: "teeny-request@npm:9.0.0"
-  dependencies:
-    http-proxy-agent: "npm:^5.0.0"
-    https-proxy-agent: "npm:^5.0.0"
-    node-fetch: "npm:^2.6.9"
-    stream-events: "npm:^1.0.5"
-    uuid: "npm:^9.0.0"
-  checksum: 10/44daabb6c2e239c3daed0218ebdafb50c7141c16d7257a6cfef786dbff56d7853c2c02c97934f7ed57818ce5861ac16c5f52f3a16fa292bd4caf53483d386443
   languageName: node
   linkType: hard
 
@@ -6394,12 +6279,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^14.0.1":
-  version: 14.0.1
-  resolution: "uuid@npm:14.0.1"
+"uuid@npm:^14.0.2":
+  version: 14.0.2
+  resolution: "uuid@npm:14.0.2"
   bin:
     uuid: dist-node/bin/uuid
-  checksum: 10/0f978fd5b0269d7acb615342aeb131f0b8d85eeb8ec34f2915d906baa3befcc14a079a430d0f8116aec6fd20c850cbfab65d1b3d1643fa81ed373c0cf9574f18
+  checksum: 10/e8263a76ad7b2d1f246df5a48a5bdf30d886eedbb1d3d74c75356d02b2966f5fffd7790b85afdb3682e4e732d13fca7974626419814f45de6847f78ce03c745e
   languageName: node
   linkType: hard
 
@@ -6412,7 +6297,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^9.0.0, uuid@npm:^9.0.1":
+"uuid@npm:^9.0.1":
   version: 9.0.1
   resolution: "uuid@npm:9.0.1"
   bin:
@@ -6519,7 +6404,7 @@ __metadata:
   resolution: "workers-slave@workspace:services/workers-slave"
   dependencies:
     "@elastic/elasticsearch": "npm:^9.5.0"
-    "@google-cloud/storage": "npm:^8.0.0"
+    "@google-cloud/storage": "npm:^8.0.1"
     "@mr/core-dev": "workspace:*"
     "@mr/core-i18n": "workspace:*"
     "@mr/core-network": "workspace:*"
@@ -6527,7 +6412,7 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     bufferutil: "npm:^4.1.0"
     chokidar: "npm:^5.0.0"
-    dd-trace: "npm:^6.10.0"
+    dd-trace: "npm:^6.11.0"
     formidable: "npm:^3.5.4"
     hexoid: "npm:^2.0.0"
     mysql2: "npm:^3.23.3"

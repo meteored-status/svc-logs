@@ -2,6 +2,18 @@
 
 ---
 
+## 2026.8.18
+
+### Added — `.github/copilot-instructions.md`
+
+- [Jose] **Convención de SQL:** las palabras reservadas de MySQL/PostgreSQL van siempre en
+  MAYÚSCULAS, tanto en las consultas embebidas en `.ts` como en los ficheros `.sql` de
+  `mapping/`. Aplica a DML, DDL, funciones y tipos de datos; los identificadores (tablas,
+  columnas, alias) y los valores literales se dejan en su capitalización original. Con ejemplos
+  de correcto/incorrecto en ambos formatos, como el resto de convenciones de la lista.
+
+---
+
 ## 2026.8.5
 
 ### Added — `CONTRIBUTING.md`

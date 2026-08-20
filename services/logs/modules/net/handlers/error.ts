@@ -50,7 +50,7 @@ class Error extends RouteGroup<Configuracion> {
                 ts_to = parseInt(query.ts_to);
             }
 
-            const logs = await LogError.search({
+            const {logs, total, reachable, histogram} = await LogError.search({
                 projects,
                 servicio: services,
                 url: urls,
@@ -65,6 +65,9 @@ class Error extends RouteGroup<Configuracion> {
 
             return this.sendRespuesta<IListOUT>(conexion, {
                 data: {
+                    total,
+                    reachable,
+                    histogram,
                     logs: logs.map(log => {
                         return {
                             project: log.proyecto,
