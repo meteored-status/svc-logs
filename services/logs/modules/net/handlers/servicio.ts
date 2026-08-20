@@ -46,7 +46,7 @@ class Servicio extends RouteGroup<Configuracion> {
                 ts_to = parseInt(query.ts_to);
             }
 
-            const logs = await LogServicio.search({
+            const {logs, total, reachable, histogram} = await LogServicio.search({
                 projects,
                 severidad: severity,
                 servicios: services,
@@ -60,6 +60,9 @@ class Servicio extends RouteGroup<Configuracion> {
 
             return this.sendRespuesta<IListOUT>(conexion, {
                 data: {
+                    total,
+                    reachable,
+                    histogram,
                     logs: logs.map(log => {
                         return {
                             timestamp: log.timestamp.getTime(),
