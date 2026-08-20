@@ -5,13 +5,34 @@ const md5 = (data)=>{
     return createHash('md5').update(data).digest("hex")
 }
 
+/**
+ * Hash del contenido de un fichero o, recursivamente, de un directorio.
+ *
+ * Devuelve `undefined` si la ruta no existe, en vez de tumbar la compilación: `buildDirs` puede
+ * incluir ficheros que solo están en algunos entornos —`.env.local` lo trae el despliegue desde las
+ * credenciales y no está en el repositorio—, y con un `statSync` a secas un fichero ausente rompía
+ * `next build` entero.
+ *
+ * Ojo al tocar el cálculo: el resultado es el `buildId` de Next, y de él depende que el despliegue
+ * detecte que un workspace ha cambiado. Cualquier cambio en cómo se combinan los hashes mueve el
+ * `buildId` de todos los proyectos a la vez, y eso fuerza una imagen nueva de cada uno.
+ */
 const hashDir = (dir) => {
+    const stat = fs.statSync(dir, {throwIfNoEntry: false});
+    if (stat===undefined) {
+        return undefined;
+    }
+
     const hashes = [];
 
-    if (fs.statSync(dir).isDirectory()) {
+    if (stat.isDirectory()) {
         for (const file of fs.readdirSync(dir)) {
             const path = `${dir}/${file}`;
-            if (fs.statSync(path).isDirectory()) {
+            const hijo = fs.statSync(path, {throwIfNoEntry: false});
+            if (hijo===undefined) {
+                continue;
+            }
+            if (hijo.isDirectory()) {
                 hashes.push(hashDir(path));
             } else {
                 hashes.push(md5(fs.readFileSync(path)));
@@ -78,7 +99,9 @@ module.exports = function (buildDirs) {
     }
 
     if (buildDirs && buildDirs.length) {
-        salida.generateBuildId = async () => md5(buildDirs.map(d => hashDir(d)).join(''))
+        // Las entradas que no existen no suman nada, pero en cuanto aparecen cambian el `buildId`:
+        // es lo que hace que el despliegue detecte, por ejemplo, que el build ya lleva `.env.local`.
+        salida.generateBuildId = async () => md5(buildDirs.map(d => hashDir(d)).filter(hash => hash!==undefined).join(''))
     }
 
     return salida;

@@ -301,6 +301,29 @@ Estos paquetes **no se editan directamente** en el monorepo como código de nego
   }
   ```
 - **Logging:** usar `info`/`error` de `services-comun/modules/utiles/log`; evitar `console.log`.
+- **SQL:** las palabras reservadas de MySQL/PostgreSQL van siempre en **MAYÚSCULAS**, tanto en las consultas embebidas en `.ts` como en los ficheros `.sql` de `mapping/`. Aplica a DML, DDL, funciones y tipos de datos. Los identificadores —tablas, columnas, alias— y los valores literales se dejan tal cual, en su capitalización original.
+
+  ```sql
+  -- ✅ Correcto
+  SELECT u.id, u.last_access AS lastAccess FROM user u WHERE u.status = ? ORDER BY u.name;
+  CREATE TABLE department (
+    id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+  -- ❌ Incorrecto
+  select u.id, u.last_access as lastAccess from user u where u.status = ? order by u.name;
+  create table department (id smallint unsigned not null auto_increment primary key);
+  ```
+
+  ```ts
+  // ✅ Correcto
+  await db.select(`SELECT ${this.COMMON_FIELDS} FROM role r WHERE r.id = ?`, [id]);
+
+  // ❌ Incorrecto
+  await db.select(`select ${this.COMMON_FIELDS} from role r where r.id = ?`, [id]);
+  ```
+
 - **Errores:** propagar siempre mediante Promise.reject o rechazo de `Deferred`; no silenciar salvo en callbacks de reposición del pool.
 - **Inicialización de propiedades de clase:** las propiedades de instancia se inicializan siempre en el cuerpo del constructor, nunca en la declaración de la propiedad. Esto aplica tanto a propiedades primitivas como a objetos y arrays.
 

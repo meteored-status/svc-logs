@@ -16,7 +16,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^9.5.0",
     "chokidar": "^5.0.0",
-    "dd-trace": "^6.10.0",
+    "dd-trace": "^6.11.0",
     "formidable": "^3.5.4",
     "hexoid": "^2.0.0",
     "mysql2": "^3.23.3",

@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^9.0.2",
-    "@google-cloud/storage": "^8.0.0",
+    "@google-cloud/storage": "^8.0.1",
     "chokidar": "^5.0.0",
     "crawler-user-agents": "^1.60.0",
-    "dd-trace": "^6.10.0",
+    "dd-trace": "^6.11.0",
     "formidable": "^3.5.4",
     "geoip-lite": "^2.0.3",
     "hexoid": "^2.0.0",
