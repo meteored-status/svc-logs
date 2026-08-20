@@ -1,11 +1,13 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Tue, 02 Jun 2026 06:52:00 GMT
- * Hash: cbade27bc646de64e869cf93e21d3964
- * Versión: 2026.6.2+1-juancmartinez
+ * Editor: Bixus
+ * Fecha: Tue, 18 Aug 2026 12:16:10 GMT
+ * Hash: 48f068dade9924e1b5eb1aaedb4db371
+ * Versión: 2026.8.18+1-bixus
+ * Anterior: 2026.6.2+1-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {warning} from "../../../../utiles/log.ts";
+import {warning} from "../../../../utiles/log";
 
 type Lock = string;
 
