@@ -1,10 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 20 Aug 2026 06:26:03 GMT
- * Hash: f71aa236a0684fc9aa7e3c716c8d41d3
- * Versión: 2026.8.20+1-bixus
+ * Fecha: Fri, 21 Aug 2026 06:11:54 GMT
+ * Hash: 55b52a2ddada97e52297d70244860e6e
+ * Versión: 2026.8.21+1-bixus
+ * Anterior: 2026.8.20+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
+
+import type {EAuditAction, TAuditDetail} from "../interface";
 
 /**
  * Filtros y paginación del listado de auditoría, tal y como llegan en la query string.
@@ -13,11 +16,19 @@
  * no cuadre en vez de responder un error, igual que hace el listado de logs. Un filtro ilegible es un
  * filtro que no se aplica, no una petición inválida.
  *
- * @property user    - Texto a buscar en el usuario: casa por **nombre o email**, en cualquier parte del
- *                     valor y sin distinguir mayúsculas. Es el mismo criterio que el filtro de miembros
- *                     de la tabla de departamentos.
- * @property path    - Texto a buscar en la ruta, también en cualquier parte y sin distinguir mayúsculas:
- *                     `manager` encuentra `/manager/users` y `/manager/rol`.
+ * @property user    - Emails de los usuarios a incluir, separados por `;`. Son valores **exactos**: se
+ *                     eligen de la lista que da `available-filters`, no se escriben. Vale cualquiera de
+ *                     ellos.
+ *
+ *                     Se filtra por email y no por nombre porque es lo único único por usuario; la
+ *                     pantalla enseña el nombre al lado, pero manda esto.
+ * @property path    - Rutas a incluir, separadas por `;`, con el mismo criterio. Ojo: al ser exactas,
+ *                     filtrar por `/logs` ya **no** arrastra `/logs-error`, como pasaba cuando se
+ *                     buscaba por subcadena.
+ * @property action  - Acciones a incluir (`EAuditAction`), separadas por `;`, con el mismo criterio.
+ *                     Lo que no sea una acción conocida se ignora en vez de devolver una lista vacía:
+ *                     filtrar por algo que no existe no es una petición inválida, es un filtro que no
+ *                     dice nada.
  * @property tsFrom  - Límite inferior del `@timestamp`, en milisegundos e **incluido**.
  * @property tsTo    - Límite superior del `@timestamp`, en milisegundos e **incluido**.
  * @property page    - Página a devolver, empezando en 1. Ausente o ilegible es la primera.
@@ -27,6 +38,7 @@
 export interface IListIN {
     user?: string;
     path?: string;
+    action?: string;
     ts_from?: string;
     ts_to?: string;
     page?: string;
@@ -57,6 +69,10 @@ export interface IListIN {
  *                      usuario o ruta— para llegar al resto.
  * @property page      - Página devuelta, ya normalizada (la que se pidió, o 1 si no era válida).
  * @property perPage   - Registros por página aplicados, ya normalizados y recortados al máximo.
+ * @property userCount - Usuarios **distintos** entre los accesos que cumplen los filtros. No se puede
+ *                       derivar de `accesses`: ahí solo hay una página.
+ * @property topPath   - La ruta más visitada, o ausente si no hay ningún acceso. Igual que `userCount`,
+ *                       se cuenta sobre todo lo que casa con el filtro, no sobre la página.
  * @property histogram - Cómo se reparten en el tiempo los accesos que cumplen los filtros, para la
  *                       gráfica que va encima de la tabla.
  *
@@ -69,9 +85,22 @@ export interface IListOUT {
     accesses: IAccess[];
     total: number;
     reachable: number;
+    userCount: number;
+    topPath?: ITopPath;
     page: number;
     perPage: number;
     histogram: IHistogram;
+}
+
+/**
+ * Ruta más visitada de las que cumplen los filtros.
+ *
+ * @property path  - La ruta.
+ * @property count - Cuántos accesos suyos hay.
+ */
+export interface ITopPath {
+    path: string;
+    count: number;
 }
 
 /**
@@ -109,12 +138,22 @@ export interface IBucket {
  *
  * @property timestamp - Instante del acceso, en milisegundos.
  * @property user      - Quién accedió, tal y como estaba registrado entonces.
- * @property path      - Ruta visitada, con su query string si la tenía.
+ * @property path      - Pantalla del panel donde se produjo la acción (`/manager/users`), con su query
+ *                       string si la tenía. Es la del panel también en las modificaciones —no el
+ *                       endpoint que las ejecutó—, porque es donde estaba la persona y es lo que se
+ *                       reconoce al leer el registro. Solo cae al endpoint si la petición no dijo desde
+ *                       qué pantalla venía, que es el caso de una llamada a la API a pelo.
+ * @property action    - Qué se hizo. Los accesos registrados antes de que existiera este campo llegan
+ *                       como `navigate`, que es lo que eran: entonces solo se anotaban visitas.
+ * @property detail    - Detalle de la acción, o ausente si no lo tiene. Un `navigate` nunca lo lleva: la
+ *                       ruta ya lo dice todo.
  */
 export interface IAccess {
     timestamp: number;
     user: IAccessUser;
     path: string;
+    action: EAuditAction;
+    detail?: TAuditDetail;
 }
 
 /**

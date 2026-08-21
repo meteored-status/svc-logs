@@ -13,7 +13,6 @@
     "patch:apply": "yarn workspace @mr/core-dev mrpack:patch:apply",
     "services-comun": "yarn workspace services-comun",
     "services-comun-status": "yarn workspace services-comun-status",
-    "logs": "yarn workspace logs",
     "logs-slave": "yarn workspace logs-slave",
     "logs-web": "yarn workspace logs-web",
     "workers-slave": "yarn workspace workers-slave",

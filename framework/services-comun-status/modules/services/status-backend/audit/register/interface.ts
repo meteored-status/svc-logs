@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 20 Aug 2026 06:26:03 GMT
- * Hash: 94e049da0ede920b06928cfc3a74a76e
- * Versión: 2026.8.20+1-bixus
+ * Fecha: Fri, 21 Aug 2026 06:11:54 GMT
+ * Hash: 5e4887d11e4b2319de5ab77270d77def
+ * Versión: 2026.8.21+1-bixus
+ * Anterior: 2026.8.20+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -12,6 +13,11 @@
  * Solo viaja la ruta: **quién** accede no lo dice el cliente, lo resuelve el backend a partir del token
  * de la petición. Si el usuario viniera en el payload, cualquiera con sesión podría escribir accesos a
  * nombre de otro y la auditoría dejaría de valer como tal.
+ *
+ * Tampoco viaja la acción, por lo mismo: este endpoint anota siempre un `EAuditAction.NAVIGATE` y no lee
+ * ninguna del payload. Las demás acciones (`edit`, `delete`) las registra el backend cuando las
+ * ejecuta —después de que hayan pasado de verdad—, así que no hay forma de inventarse un borrado que
+ * nunca ocurrió ni de anotar una visita como si fuera otra cosa.
  *
  * @property path - Ruta visitada dentro del panel, con su query string si la tiene (`/manager/users`,
  *                  `/logs?service=3`). Se registra tal cual llega, normalizada por el backend: sin
