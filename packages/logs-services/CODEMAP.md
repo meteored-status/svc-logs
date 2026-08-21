@@ -7,9 +7,12 @@ Mapa técnico del workspace `packages/logs-services/`.
 Entidades de acceso a datos del dominio de logs aplicativos (no de accesos web, esos son otro
 dominio: ver `logs-worker-*`/`workers-accesos-*` de `workers-base`). Dos clases hermanas, cada una
 con su propio índice de Elasticsearch: `Log` (logs de servicio: eventos con severidad) y `Error`
-(errores de aplicación con traza y contexto). Solo dos workspaces lo consumen —
-`services/logs` (consulta) y `services/logs-web` (ingesta) — y ninguno más: no hay ni cronjobs ni
-otro `packages/*` en este repo que lo importen.
+(errores de aplicación con traza y contexto). Lo consume **un solo workspace**, `services/logs-web` (la ingesta): no hay
+cronjobs ni otro `packages/*` en este repo que lo importen. Tenía un segundo consumidor,
+`services/logs` (la consulta), retirado al pasar los listados del panel a `status-backend` en el repo
+`svc-status` — ver el README de la raíz. Los `getAlias()` de aquí siguen describiendo lo que ese otro
+servicio lee, pero él no importa este paquete: su copia del contrato vive en el framework compartido
+(`services-comun-status/modules/services/logs/logs/elastic.ts`), y las dos tienen que decir lo mismo.
 
 Cada clase resuelve dos destinos distintos según la operación:
 
@@ -72,11 +75,11 @@ Ninguna de las dos clases sabe filtrar, paginar ni borrar — eso vive en los co
 este paquete, porque son la razón de ser de algunos de sus campos:
 
 - `checked` en `ILogErrorES` nace siempre en `false` al hacer `ingest` (`services/logs-web`). Quien
-  lo pone en `true` es `services/logs/modules/data/log/log-error.ts` con un método que se llama
-  **`delete`** pero que en realidad no borra nada: hace un `updateByQuery` con
-  `script: "ctx._source.checked = true"`. Es decir, "borrar un error" en el panel es marcarlo como
-  revisado, no eliminar el documento. Al tocar consultas contra `Error.getAlias()` conviene no
-  perder de vista que la mayoría de listados filtran ya por `checked: false` (solo pendientes).
+  lo pone en `true` es `status-backend`, en el repo `svc-status` (`RegistroError.marcar()`): un
+  `updateByQuery` con `script: "ctx._source.checked = true"`. Es decir, «borrar un error» en el panel
+  es marcarlo como revisado, no eliminar el documento — allí el endpoint, el permiso y el apunte de
+  auditoría se llaman `check` justamente por eso. Al tocar este índice conviene no perder de vista que
+  los listados filtran ya por `checked: false` (solo pendientes).
 - `Log` (logs de servicio) no tiene ningún campo equivalente a `checked`: todo lo escrito queda
   visible siempre, no hay noción de "revisado" en ese índice.
 
@@ -84,7 +87,7 @@ este paquete, porque son la razón de ser de algunos de sus campos:
 
 `getAlias()` devuelve un nombre **fijo, sin proyecto** (`mr-log-servicios` / `mr-log-errores`),
 mientras que `getIndex(proyecto)` siempre lleva el proyecto como sufijo. Para que una búsqueda
-contra `getAlias()` (lo que hacen los dos métodos de consulta de `services/logs`, ver más abajo)
+contra `getAlias()` (lo que hacen las consultas de `status-backend`)
 llegue a los documentos escritos en `mr-log-servicios-<proyecto>`/`mr-log-errores-<proyecto>`,
 tiene que existir en el clúster de Elasticsearch un **alias** con exactamente ese nombre fijo que
 abarque todos los índices por proyecto — o una convención equivalente (patrón de índice, alias de
@@ -99,10 +102,10 @@ podido verificar contra el clúster real):
    índices enteros de una búsqueda con `terms`/`term` sobre ese campo sin llegar a abrirlos —
    exactamente lo que hace falta para que consultar por `proyecto` contra un alias que agrupa
    *muchos* índices (uno por proyecto) sea barato.
-2. Los dos consumidores de lectura (`LogServicio.search`/`filterValues` y
-   `LogError.search`/`filterValues`/`delete`, ambos en `services/logs/modules/data/log/`) **sí**
-   filtran siempre por `terms: {proyecto: projects}` además de usar `getAlias()` como índice — sin
-   ese filtro, leer por el alias mezclaría los proyectos sin poder distinguirlos en la consulta.
+2. Las consultas de lectura (hoy `RegistroServicio` y `RegistroError` en `status-backend`, del repo
+   `svc-status`; antes `LogServicio`/`LogError` de `services/logs`) **sí** filtran siempre por
+   `terms: {proyecto: projects}` además de usar el alias como índice — sin ese filtro, leer por el
+   alias mezclaría los proyectos sin poder distinguirlos en la consulta.
 
 Lo que **no** se ha encontrado en este repositorio es el código o la plantilla que crea o mantiene
 ese alias: no hay ningún `index_patterns`/`aliases` en `mapping/logs/*.json` (solo `settings` y
@@ -135,10 +138,16 @@ ILM realmente distintas en el clúster o un desajuste de nombre sin consecuencia
 
 | Paquete | Ficheros consumidores | Uso |
 |---------|------------------------|-----|
-| `services/logs` | `modules/data/log/servicio.ts` (`LogServicio`), `modules/data/log/log-error.ts` (`LogError`) | Solo **lectura**. Importa `Log`/`Error` para reconstruir instancias a partir de los `hit._source` que devuelve Elasticsearch, y `ILogServicioES`/`ILogErrorES` para tipar la búsqueda. Todas las consultas van contra `Log.getAlias()`/`Error.getAlias()` — nunca contra `getIndex()` — con `terms: {proyecto: projects}` como filtro obligatorio. `LogError` además marca como revisados (`checked: true`) con su método `delete()` (ver más arriba). |
 | `services/logs-web` | `modules/data/servicio.ts` (función `ingest`), `modules/data/error.ts` (función `ingest`) | Solo **escritura**. Cada `ingest()` construye una instancia (`new Log(...)`/`new Error(...)`) y la encola con `BULK.create({index: Log.getIndex(documento.proyecto), doc: documento.toJSON()})` — su **propia** cola `BulkAuto`, no `Log.BULK`. El `ingest` de error, además, si falla el `create`, registra el fallo en el spec de status (`services/logs-web/modules/data/status.ts`, que a su vez depende de `logs-status-base`, ver el CODEMAP de ese paquete) para que se refleje en el panel de status. |
 
 `services/logs-slave` y `services/workers-slave` no declaran ni importan `logs-services`.
+
+**El lector ya no es un consumidor de este paquete.** Las consultas las hace `status-backend` (repo
+`svc-status`), que tipa y nombra los índices con su propia copia del contrato en el framework
+compartido (`services-comun-status/modules/services/logs/logs/elastic.ts`) en lugar de importar
+`logs-services`, que es un paquete local de este repo. Son dos declaraciones del **mismo** documento y
+de los **mismos** alias: si una cambia y la otra no, la ingesta y la consulta dejan de entenderse sin
+que nada falle al compilar.
 
 ## Flujo de uso típico
 
@@ -149,11 +158,11 @@ Escritura (services/logs-web)
     -> BULK.create({index: getIndex(proyecto), doc: documento.toJSON()})
                                                    índice físico mr-log-{servicios,errores}-<proyecto>
 
-Lectura (services/logs)
-  LogServicio.search(filter, pagination) / LogError.search(...)
-    -> elastic.search({index: Log.getAlias()/Error.getAlias(), query: {bool: {must: [{terms: {proyecto: ...}}, ...]}}})
+Lectura (status-backend, repo svc-status — ya no pasa por este paquete)
+  RegistroServicio.search(...) / RegistroError.search(...)
+    -> elastic.search({index: LOG_{SERVICIOS,ERRORES}_ALIAS, query: {bool: {filter: [{terms: {proyecto: ...}}, ...]}}})
                                                    nombre fijo, sin proyecto — ver incógnita arriba
-    -> new Log(...)/new Error(...) por cada hit    (logs-services, para reconstruir la entidad)
+    -> se publica el documento tal cual, sin reconstruir entidad
 ```
 
 ## Mantenimiento
