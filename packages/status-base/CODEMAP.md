@@ -18,7 +18,7 @@ configuración que dice si el reporte de status está activo y a qué servidor a
 
 **Un solo consumidor.** Solo `services/logs-web` lo importa (`SlaveSpec extends LogsSpec` en
 `modules/data/status.ts`, y `StatusConfig`/`IStatusConfig` en `modules/utiles/config.ts`). Ni
-`services/logs`, ni `services/logs-slave`, ni `services/workers-slave` lo usan — a pesar de que la
+`services/logs-slave` ni `services/workers-slave` lo usan — a pesar de que la
 única implementación conocida de `LogsSpec` es `SlaveSpec`, y su `TGroup` se llama
 `LOGS_SLAVE`, un nombre que por sí solo sugiere el servicio `logs-slave` y no `logs-web`. Ver la
 nota sobre `TGroup.LOGS_SLAVE` más abajo. Con un único consumidor, la existencia de este paquete

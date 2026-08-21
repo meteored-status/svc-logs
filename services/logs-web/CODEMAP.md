@@ -6,10 +6,11 @@ Mapa técnico del workspace `services/logs-web/`.
 
 Recibir por HTTP los logs de servicio y de error que emiten el resto de servicios del
 monorepo (`/service/logs/service/`, `/service/logs/error/`) y encolarlos en Elasticsearch
-vía `BulkAuto`. Es el único punto de **escritura** de esos dos flujos; la consulta para
-mostrarlos en el panel de administración (listados, filtros, borrado lógico) vive en
-`services/logs` — ver «Relación con `services/logs`» más abajo, es la sección más
-relevante si se está tocando ese otro servicio.
+vía `BulkAuto`. Es el único punto de **escritura** de esos dos flujos, y desde que se retiró
+`services/logs` es el único servicio de este repositorio que los toca: la consulta para mostrarlos
+en el panel (listados, filtros, marcado de revisados) la hace `status-backend`, en el repo
+`svc-status` — ver «Quién lee lo que se escribe aquí» más abajo, es la sección más relevante si se
+está tocando la forma del documento.
 
 > **El nombre "web" es engañoso**: no es una app de frontend ni sirve páginas. Es un
 > servicio HTTP de ingesta, con la misma forma que `status-external` del repo hermano
@@ -100,27 +101,30 @@ ingestError(data: ILogErrorPOST, config): void
 mismos índices están agrupados bajo los alias `mr-log-servicios` / `mr-log-errores`
 (`Log.getAlias()` / `Error.getAlias()`, también en `logs-services`).
 
-### Relación con `services/logs` — **mismos índices**
+### Quién lee lo que se escribe aquí — **mismos índices, otro repositorio**
 
-`services/logs` (el servicio de consulta/listados) también depende de `logs-services`
-(`workspace:*` en su `package.json`) y sus clases de datos —
-`modules/data/log/servicio.ts` (`LogServicio.search`) y
-`modules/data/log/log-error.ts` (`LogError.search`/`filterValues`/`delete`) — buscan
-exactamente sobre `Log.getAlias()` / `Error.getAlias()`, es decir sobre `mr-log-servicios`
-y `mr-log-errores`. **Son los mismos alias/índices que escribe `logs-web`**: no hay
-transformación intermedia ni un índice "de lectura" separado. Cualquier cambio de forma de
-documento, de nombre de índice o de alias en `logs-services` afecta a los dos servicios a
-la vez, y cualquier cambio en los listados de `services/logs` que dependa de la forma del
-documento (`ILogServicioES`/`ILogErrorES`) debe seguir siendo compatible con lo que
-`logs-web` escribe aquí (y viceversa).
+Lo que se indexa aquí lo consulta **`status-backend`**, del repo hermano `svc-status`
+(`modules/data/log/registro/{servicio,error}.ts`, rutas `/backend/log/{servicio,error}/…`), sobre
+exactamente los mismos alias `mr-log-servicios` y `mr-log-errores`: no hay transformación
+intermedia ni un índice «de lectura» separado. Así que **cualquier cambio de forma de documento, de
+nombre de índice o de alias rompe a los dos a la vez**, y lo hace en silencio: son dos
+repositorios que compilan por separado.
 
-La separación entre ambos servicios es de **exposición**, no de datos: `logs-web` está
-registrado como `EService.logs_web` con endpoint `proxy-svc-logs-web`
-(`framework/services-comun-status/modules/services/config.ts`) — el prefijo `proxy-`
-indica que se expone fuera del clúster interno, coherente con que lo llaman los propios
-servicios monitorizados para reportar sus logs — mientras que `services/logs` es
-`EService.logs` con endpoint `switch-svc-logs` (sin `proxy-`, solo accesible dentro del
-clúster), coherente con que solo lo consume el backend-for-frontend del panel.
+Ese contrato —los alias y las interfaces `ILogServicioES`/`ILogErrorES`— vive por eso en el
+framework compartido, en `services-comun-status/modules/services/logs/logs/elastic.ts`. Aquí se
+sigue escribiendo con las clases `Log`/`Error` de `logs-services`, que declaran lo mismo por su
+cuenta: **son dos declaraciones del mismo documento**, y si una cambia sin la otra, la ingesta y la
+consulta dejan de entenderse. Lo suyo, el día que se toque, es que `logs-services` importe del
+framework en lugar de repetirlo.
+
+Antes esa consulta la servía `services/logs`, un segundo servicio de este mismo repositorio
+(`EService.logs`, endpoint interno `switch-svc-logs`), que se retiró al mover los listados a
+`status-backend`. El motivo no fue de organización: aquellos endpoints eran internos y sin
+autenticación, y se creían el parámetro `projects` que les llegara, así que el filtro de «qué
+proyectos puede ver este usuario» acababa aplicándolo el BFF del panel. Este servicio sigue siendo
+`EService.logs_web` con endpoint `proxy-svc-logs-web` — el prefijo `proxy-` indica que se expone
+fuera del clúster interno, coherente con que lo llaman los propios servicios monitorizados para
+reportar sus logs.
 
 ### Asimetría entre `ingestError` e `ingestLog`
 
@@ -195,8 +199,9 @@ es la config que consulta `SlaveSpec.get()` para decidir si auto-monitorizarse.
   - `@mr/core-i18n`, `@mr/core-network`, `@mr/core-workload` — router HTTP
     (`RouteGroup`), `Engine` HTTP, `Main.ejecutar`.
   - `logs-services` (dir `packages/logs-services`) — clases `Log`/`Error`, forma de
-    documento ES, nombres de índice/alias. **Compartido con `services/logs`** (ver
-    "Relación con `services/logs`").
+    documento ES, nombres de índice/alias. Desde que se retiró `services/logs` es su
+    **único** consumidor, pero el mismo contrato lo declara aparte el framework, que es de
+    donde lo lee `status-backend` (ver "Quién lee lo que se escribe aquí").
   - `logs-status-base` (dir `packages/status-base`) — `LogsSpec`, `TGroup`, `StatusConfig`;
     auto-monitorización contra el panel Status.
   - `services-comun` — logging, `elastic`, `BulkAuto`/`Deferred`, config base de status.

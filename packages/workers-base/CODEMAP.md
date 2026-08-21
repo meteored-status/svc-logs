@@ -125,8 +125,7 @@ fichero que la necesita la vuelve a escribir en vez de importarla una sola vez.
 |---------|------------------------|-----|
 | `services/workers-slave` | `modules/data/bucket.ts` (`Bucket extends BucketBase`, donde `BucketBase` es el `Bucket` de este paquete, renombrado en el import para no chocar de nombre — mismo patrón que `ComponentBase` en `svc-status/packages/status-backend-base`), `modules/utiles/config.ts` (`GOOGLE`) | Único consumidor. `Bucket.run(config, notify, signal)` es el punto de entrada desde el handler de Pub/Sub (`modules/net/handlers/slave.ts`, no documentado aquí — vive en el servicio): filtra por `eventType` (solo procesa `OBJECT_FINALIZE`; `OBJECT_DELETE` está deshabilitado por filtro de PubSub y cualquier otro tipo solo se registra con `info()`), encadena las escrituras de estado de `BucketBase` (`addProcesando` → `findBucket` → `update` → `procesando`) y por último `bucket.ingest(config.google, notify, signal, false)` — siempre con `repesca: false` desde este punto de entrada; la vía de `repesca: true` no se ha encontrado invocada desde ningún sitio de este monorepo, así que ese camino (incluida la deduplicación de `Cloudflare.limpiarDuplicados`) parece no ejecutarse hoy en producción salvo que exista un disparador fuera de este código. |
 
-`services/logs`, `services/logs-slave` y `services/logs-web` no declaran ni importan
-`workers-base`.
+`services/logs-slave` y `services/logs-web` no declaran ni importan `workers-base`.
 
 ## Flujo de uso típico
 
