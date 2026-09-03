@@ -6,12 +6,6 @@ interface IHeaders {
     version?: string;
 }
 
-interface IHeadersES {
-    node?:    string;
-    service?: string;
-    version?: string;
-}
-
 export interface IRegistroRespuesta {
     status: number;
     tiempo?: number;
@@ -19,27 +13,18 @@ export interface IRegistroRespuesta {
     headers?: IHeaders;
 }
 
-export interface IRegistroRespuestaES {
-    status: number;
-    tiempo?: number;
-    contentType: string;
-    headers?: IHeadersES;
-}
-
 export class RegistroRespuesta implements IRegistroRespuesta {
     /* STATIC */
     public static build(edge: IRAWDataEdge, response: IRAWDataResponse, origin?: IRAWDataOrigin): RegistroRespuesta {
         const headers: IHeaders = {};
-        if (response.headers!=undefined) {
-            if (response.headers.node!=undefined) {
-                headers.node = response.headers.node;
-            }
-            if (response.headers.service!=undefined) {
-                headers.service = response.headers.service;
-            }
-            if (response.headers.version!=undefined) {
-                headers.version = response.headers.version;
-            }
+        if (response.headers.node!==undefined) {
+            headers.node = response.headers.node;
+        }
+        if (response.headers.service!==undefined) {
+            headers.service = response.headers.service;
+        }
+        if (response.headers.version!==undefined) {
+            headers.version = response.headers.version;
         }
 
         return new this({
@@ -53,14 +38,14 @@ export class RegistroRespuesta implements IRegistroRespuesta {
 
     /* INSTANCE */
     public get status(): number { return this.data.status; }
-    public get tiempo(): number|undefined { return this.data.tiempo; };
+    public get tiempo(): number|undefined { return this.data.tiempo; }
     public get contentType(): string { return this.data.contentType; }
-    public get headers(): IHeaders|undefined { return this.data.headers; };
+    public get headers(): IHeaders|undefined { return this.data.headers; }
 
     protected constructor(private data: IRegistroRespuesta) {
     }
 
-    public toJSON(): IRegistroRespuestaES {
+    public toJSON(): IRegistroRespuesta {
         return {
             status: this.data.status,
             tiempo: this.data.tiempo,

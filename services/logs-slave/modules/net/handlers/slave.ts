@@ -1,11 +1,16 @@
 import {RouteGroup} from "@mr/core-network/server/http/routes/group";
 import type {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";
-import {error} from "services-comun/modules/utiles/log";
+import {error, warning} from "services-comun/modules/utiles/log";
 
 import {ClienteGCS} from "../../data/cliente/gcs";
+import {parsearResourceName} from "../resource";
+
 import type {Configuracion} from "../../utiles/config";
 
-interface IMessasge {
+/**
+ * Notificación de Cloud Storage entregada por Pub/Sub (push) con forma de Cloud Audit Log.
+ */
+interface IMessage {
     protoPayload: {
         resourceName: string;
     };
@@ -25,28 +30,30 @@ class Slave extends RouteGroup<Configuracion>{
                     },
                 ],
                 handler: async (conexion) => {
-                    const post = conexion.post as Partial<IMessasge>;
+                    const post = conexion.post as Partial<IMessage>;
 
                     conexion.noCache();
 
-                    if (post.protoPayload?.resourceName) {
-                        const [base, path] = post.protoPayload.resourceName.split("/objects/");
-                        const bucket = base.substring(19); // quitamos el trozo de projects/_/buckets/
-                        try {
-                            // await ClienteGCS.addStatusProcesando(bucket, path);
-                            const cliente = await ClienteGCS.searchBucket(bucket, path);
-                            await cliente.ingest(this.configuracion.google, path);
+                    // respondemos 200 pase lo que pase: Pub/Sub reintentaría la entrega y buena
+                    // parte de los rechazos de aquí (bucket no registrado, cliente desconocido) no
+                    // son transitorios
+                    const resourceName = post.protoPayload?.resourceName;
+                    if (resourceName===undefined) {
+                        return this.sendRespuesta(conexion);
+                    }
 
-                            return this.sendRespuesta(conexion);
-                        } catch (err) {
-                            if (err instanceof Error) {
-                                error("Error procesando", bucket, path, err.message);
-                                // return conexion.error(err.message);
-                            } else {
-                                error("Error procesando", bucket, path, err);
-                                // return conexion.error(JSON.stringify(err));
-                            }
-                        }
+                    const recurso = parsearResourceName(resourceName);
+                    if (recurso===undefined) {
+                        warning("Notificación con resourceName inesperado", resourceName);
+
+                        return this.sendRespuesta(conexion);
+                    }
+
+                    try {
+                        const cliente = await ClienteGCS.searchBucket(recurso.bucket, recurso.path);
+                        await cliente.ingest(this.configuracion.google, recurso.path);
+                    } catch (err) {
+                        error("Error procesando", recurso.bucket, recurso.path, err instanceof Error ? err.message : err);
                     }
 
                     return this.sendRespuesta(conexion);
@@ -57,4 +64,3 @@ class Slave extends RouteGroup<Configuracion>{
 }
 
 export default (config: Configuracion)=>new Slave(config);
-

@@ -11,7 +11,8 @@
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "scripts": {
     "packd": "yarn g:esbuild",
-    "devel": "yarn g:devel"
+    "devel": "yarn g:devel",
+    "test": "rm -rf tmp/spec && yarn workspace services-comun exec tsc -p ../../services/logs-slave/tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
   },
   "dependencies": {
     "@google-cloud/bigquery": "^9.0.3",

@@ -1,5 +1,6 @@
 import {type Google} from "@mr/core-workload/config/google";
 import {Storage} from "services-comun/modules/fs/storage";
+import {error, info} from "services-comun/modules/utiles/log";
 
 import {ClienteError} from "./error";
 import {Grupo} from "./grupo";
@@ -14,196 +15,43 @@ interface IClienteGCS {
     tipo: GCSTipo;
 }
 
-interface IClienteGCSMySQL extends IClienteGCS {
+/**
+ * Entrada del catálogo de buckets.
+ *
+ * @property cliente - Id del `Cliente` al que pertenece la carpeta.
+ * @property grupo   - Subproyecto regional, si el cliente lo distingue (p.ej. `es` en `tiempo-es`).
+ * @property tipo    - Formato del log; por defecto `cloudflare`.
+ */
+interface ICatalogoGCS {
     cliente: string;
     grupo?: string;
+    tipo?: GCSTipo;
 }
+
+const TIPO_DEFECTO: GCSTipo = "cloudflare";
+
+/** Subproyectos regionales del cliente `tiempo`, uno por país/idioma. */
+const TIEMPO_GRUPOS: string[] = [
+    "ar", "at", "bo", "br", "ca", "cl", "cr", "de", "do", "ec", "en", "es", "eu",
+    "fr", "hn", "it", "mx", "nl", "pa", "pe", "pt", "py", "ru", "uy", "ve",
+];
 
 export class ClienteGCS implements IClienteGCS {
     /* STATIC */
-    private static BUCKETS: Record<string, Record<string, IClienteGCSMySQL>> = {
+    /**
+     * Catálogo `bucket → primera carpeta del path → cliente`. Vive en código, no en configuración
+     * externa ni en MySQL: añadir un cliente o un subproyecto exige tocar este fichero y redesplegar.
+     */
+    private static readonly BUCKETS: Record<string, Record<string, ICatalogoGCS>> = {
         "cf-accesos": {
-            "ed": {
-                bucket: "cf-accesos",
-                cliente: "ed",
-                tipo: "cloudflare"
-            },
-            "fce": {
-                bucket: "cf-accesos",
-                cliente: "fce",
-                tipo: "cloudflare"
-            },
-            "hoteles": {
-                bucket: "cf-accesos",
-                cliente: "hoteles",
-                tipo: "cloudflare"
-            },
-            "motor": {
-                bucket: "cf-accesos",
-                cliente: "motor",
-                tipo: "cloudflare"
-            },
-            "motenic": {
-                bucket: "cf-accesos",
-                cliente: "motenic",
-                tipo: "cloudflare"
-            },
-            "mr": {
-                bucket: "cf-accesos",
-                cliente: "mr",
-                tipo: "cloudflare"
-            },
-            "tiempo-ar": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "ar",
-                tipo: "cloudflare"
-            },
-            "tiempo-at": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "at",
-                tipo: "cloudflare"
-            },
-            "tiempo-bo": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "bo",
-                tipo: "cloudflare"
-            },
-            "tiempo-br": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "br",
-                tipo: "cloudflare"
-            },
-            "tiempo-ca": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "ca",
-                tipo: "cloudflare"
-            },
-            "tiempo-cl": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "cl",
-                tipo: "cloudflare"
-            },
-            "tiempo-cr": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "cr",
-                tipo: "cloudflare"
-            },
-            "tiempo-de": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "de",
-                tipo: "cloudflare"
-            },
-            "tiempo-do": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "do",
-                tipo: "cloudflare"
-            },
-            "tiempo-ec": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "ec",
-                tipo: "cloudflare"
-            },
-            "tiempo-en": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "en",
-                tipo: "cloudflare"
-            },
-            "tiempo-es": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "es",
-                tipo: "cloudflare"
-            },
-            "tiempo-eu": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "eu",
-                tipo: "cloudflare"
-            },
-            "tiempo-fr": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "fr",
-                tipo: "cloudflare"
-            },
-            "tiempo-hn": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "hn",
-                tipo: "cloudflare"
-            },
-            "tiempo-it": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "it",
-                tipo: "cloudflare"
-            },
-            "tiempo-mx": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "mx",
-                tipo: "cloudflare"
-            },
-            "tiempo-nl": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "nl",
-                tipo: "cloudflare"
-            },
-            "tiempo-pa": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "pa",
-                tipo: "cloudflare"
-            },
-            "tiempo-pe": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "pe",
-                tipo: "cloudflare"
-            },
-            "tiempo-pt": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "pt",
-                tipo: "cloudflare"
-            },
-            "tiempo-py": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "py",
-                tipo: "cloudflare"
-            },
-            "tiempo-ru": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "ru",
-                tipo: "cloudflare"
-            },
-            "tiempo-uy": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "uy",
-                tipo: "cloudflare"
-            },
-            "tiempo-ve": {
-                bucket: "cf-accesos",
-                cliente: "tiempo",
-                grupo: "ve",
-                tipo: "cloudflare"
-            },
-        }
+            "ed": {cliente: "ed"},
+            "fce": {cliente: "fce"},
+            "hoteles": {cliente: "hoteles"},
+            "motor": {cliente: "motor"},
+            "motenic": {cliente: "motenic"},
+            "mr": {cliente: "mr"},
+            ...Object.fromEntries(TIEMPO_GRUPOS.map(grupo=>[`tiempo-${grupo}`, {cliente: "tiempo", grupo}])),
+        },
     };
 
     public static async searchBucket(bucket: string, dir: string): Promise<ClienteGCS> {
@@ -212,7 +60,11 @@ export class ClienteGCS implements IClienteGCS {
         if (!data) {
             return Promise.reject(new ClienteError(`GCS ${bucket}/${path} no encontrado`));
         }
-        return new this(await Grupo.searchID(data.cliente, data.grupo), data);
+
+        return new this(await Grupo.searchID(data.cliente, data.grupo), {
+            bucket,
+            tipo: data.tipo ?? TIPO_DEFECTO,
+        });
     }
 
     /* INSTANCE */
@@ -237,28 +89,32 @@ export class ClienteGCS implements IClienteGCS {
             return await Storage.getOne(config, bucket, file);
         } catch (err) {
             if (err instanceof Error && err.message.includes("No such object")) {
-                console.log(err.message);
+                info(`El objeto ${bucket}/${file} ya no existe`);
             } else {
-                console.log(JSON.stringify(err));
+                error(`Error accediendo a ${bucket}/${file}`, err instanceof Error ? err.message : JSON.stringify(err));
             }
 
-            return;
+            return undefined;
         }
     }
 
+    /**
+     * Descarga el objeto, lo vuelca a BigQuery y solo entonces lo borra del bucket. Si el volcado
+     * falla, el objeto se conserva para poder repescarlo (ver `mapping/repesca-errores.sh`).
+     */
     public async ingest(storage: Google, source: string): Promise<void> {
         const data = await this.getArchivo(storage, this.bucket, source);
-        if (!data) {
+        if (data===undefined) {
             return;
         }
 
-        try {
-            await ingest(this.cliente, data);
-        } catch (err) {
-            if (!(err instanceof Error) || !err.message.includes("No such object")) {
-                return Promise.reject(err);
-            }
+        const resultado = await ingest(this.cliente, data);
+        if (!resultado.guardado) {
+            error(`No se ha podido volcar ${this.bucket}/${source} a BigQuery; se conserva el objeto para repesca`);
+
+            return;
         }
+
         await data.delete();
     }
 }
