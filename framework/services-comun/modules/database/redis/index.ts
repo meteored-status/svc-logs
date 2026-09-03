@@ -1,9 +1,9 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Thu, 13 Aug 2026 09:14:19 GMT
- * Hash: cfb8d8f8027650aafe64b44eeabe112a
- * Versión: 2026.8.13+2-davidmartinezmoya
- * Anterior: 2026.7.30+1-juancmartinez
+ * Editor: Juan C. Martínez
+ * Fecha: Wed, 02 Sep 2026 12:14:50 GMT
+ * Hash: 972aeb9c4ce350f3fde85d1931c694c2
+ * Versión: 2026.9.2+2-juancmartinez
+ * Anterior: 2026.8.13+2-davidmartinezmoya
  * Proyecto: git@github.com:alpred/meteored-svc-data-alertas.git
  */
 
@@ -201,7 +201,7 @@ export class Redis implements AsyncDisposable {
             const response = await client.hGet(key, field).then(d => d ? JSON.parse(d) : null).catch(err => {
                 throw Redis.buildPromiseError("Error obteniendo datos para hGet (single)", err);
             });
-            if (response && (!response.expires || response.expires > 0 && response.expires < Date.now())) { // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
+            if (response && (!response.expires || (response.expires > 0 && Date.now() <= response.expires))) { // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
                 return {[field]: response.data} as unknown as { [field: string]: string };
             }
         } catch (e) {
@@ -234,7 +234,7 @@ export class Redis implements AsyncDisposable {
             const fields = Object.keys(response)
                 .filter(field => {
                     const value = JSON.parse(response[field]);
-                    return !value.expires || value.expires > 0 && value.expires < Date.now(); // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
+                    return !value.expires || (value.expires > 0 && Date.now() <= value.expires); // TODO: Cambiar uso de la expiración cuando se actualice a la 7.4 de Redis (hExpire)
                 });
 
             return {

@@ -1,15 +1,17 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: f9db6bc27a132aaf7337491f49e80d7c
- * Versión: 2026.7.14+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Wed, 02 Sep 2026 14:14:26 GMT
+ * Hash: 3bc7a0a98318e29885155ac9d6717b3d
+ * Versión: 2026.9.2+1-bixus
+ * Anterior: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {isFile, readJSON} from "../../../utiles/fs";
 import {IModulo, type IModuloConfig as IModuloConfigBase, Modulo} from ".";
 import {JSONItem} from "../data";
 import {pascalCase} from "../util/case";
+import {problemasDePlural} from "./translation/plural";
 
 export interface IModuloJSON extends IModulo {
     traducciones: JSONItem[];
@@ -55,6 +57,22 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
 
     public traducciones() {
         return this.original.traducciones;
+    }
+
+    /**
+     * Qué hay mal escrito en el módulo, en frases listas para enseñar y ya localizadas en su entrada.
+     *
+     * Se comprueba **antes de generar nada**, y por eso existe: lo que valida hoy —que un plural diga cuál de
+     * sus parámetros es el contador— es un dato que falta en el `.json`, no un fallo del código generado. Sin
+     * esto el hueco se rellenaba solo en tiempo de ejecución, eligiendo la forma del cero, y se veía en
+     * pantalla o no se veía nunca.
+     *
+     * @returns Los problemas encontrados, vacío si el módulo está bien.
+     */
+    public validar(): string[] {
+        return this.traducciones().flatMap(item =>
+            problemasDePlural(item).map(problema => `${this.path()}/${this.name()} › ${item.id}: ${problema}`)
+        );
     }
 
     public moduleLangs(): string[] {

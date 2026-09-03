@@ -8,9 +8,9 @@
     "@mr/core-workload": "workspace:*",
     "@types/node": "^24.13.3",
     "@types/qs": "^6.15.1",
-    "qs": "^6.15.3",
+    "qs": "^6.16.0",
     "services-comun": "workspace:*",
     "tslib": "^2.8.1"
   },
-  "version": "2026.8.21+2-bixus"
+  "version": "2026.9.2+2-bixus"
 }

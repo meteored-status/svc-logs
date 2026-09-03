@@ -1,24 +1,32 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 1ce5ab334abd7345976dc8fbe6b938a2
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 02 Sep 2026 14:55:52 GMT
+ * Hash: b1dd13613d4d824bafc4f780c32f0f2a
+ * Versión: 2026.9.2+3-bixus
+ * Anterior: 2026.9.2+2-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {JSONItem, JSONValorSet, JSONValuePlural, JSONValueSingular} from "../../data";
+import {JSONItem, JSONValorSet} from "../../data";
 import {Definition} from "../definition";
-import {definitionModulePath, LANG_REGEXPS} from "./common";
+import {LANG_REGEXPS} from "./common";
+import {emitirValor} from "./valor";
 import {ModuloJSON} from "../json";
 import {pascalCase} from "../../util/case.ts";
 
+/**
+ * Un fichero con **varios** valores ordenados, envueltos en un `TranslationSet`.
+ *
+ * Mismo cuerpo que `map.ts` salvo en qué los envuelve y en que aquí no hay claves: lo que declara cada valor
+ * es `emitirValor()`, compartido con los otros dos.
+ */
 export default (lang: string, value: JSONValorSet, item: JSONItem, module: ModuloJSON, definition: Definition) => {
 
     const langMatch = LANG_REGEXPS.find(({regex}) => regex.test(lang));
     const langKey = langMatch ? langMatch.lang : lang;
 
     const imports: Set<string> = new Set();
-    const valuesLines: Record<string, string[]> = {};
+    const valuesLines: string[][] = [];
 
     const paramDefinition = pascalCase(`${item.id}Params`);
 
@@ -27,54 +35,12 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
     imports.add(`import {TranslationSet} from "services-comun/modules/traduccion/v2/translation-set";`);
 
     let valueCount: number = 1;
-    Object.entries(value.valores).forEach(([key, value]) => {
+    value.valores.forEach((valor) => {
+        const emitido = emitirValor(valor, item, module, definition, langKey, `${valueCount}`);
+        emitido.imports.forEach(linea => imports.add(linea));
+        valuesLines.push(emitido.lineas);
+        values.push(emitido.variable);
 
-        switch (value.type) {
-            case "singular":
-                const singularValue = value as JSONValueSingular;
-                imports.add(`import {SingularValue} from "services-comun/modules/traduccion/v2/value/singular-value";`);
-                if (item.params && item.params.length > 0) {
-                    imports.add(`import type {${paramDefinition}} from "${definitionModulePath(module)}";`);
-                }
-
-                const block = valuesLines[key]??=[];
-
-                block.push(`const value${valueCount} = \`${singularValue.value}\`;`);
-
-                if (item.params && item.params.length > 0) {
-                    block.push(`const singularValue${valueCount} = new SingularValue<${paramDefinition}>(value${valueCount});`);
-                    definition.addParamDefinition(paramDefinition, item.params);
-                } else {
-                    block.push(`const singularValue${valueCount} = new SingularValue(value${valueCount});`);
-                }
-                values.push(`singularValue${valueCount}`);
-                break;
-            case "plural":
-                const pluralValue = value as JSONValuePlural;
-                imports.add(`import pluralBuilder from "services-comun/modules/traduccion/v2/util/plural-function-builder";`)
-                imports.add(`import {PluralValue} from "services-comun/modules/traduccion/v2/value/plural-value";`);
-                imports.add(`import {TPluralKey} from "services-comun/modules/traduccion/v2/value";`);
-                if (item.params && item.params.length > 0) {
-                    imports.add(`import type {${paramDefinition}} from "${definitionModulePath(module)}";`);
-                }
-
-                const block2 = valuesLines[key]??=[];
-
-                block2.push(`const values${valueCount}: Partial<Record<TPluralKey, string>> = {`);
-                Object.entries(pluralValue.value).forEach(([key, value]) => {
-                    block2.push(`    ${key}: "${value}",`);
-                });
-                block2.push('};');
-
-                if (item.params && item.params.length > 0) {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue<${paramDefinition}>(values${valueCount}, pluralBuilder('${langKey}'), ["${item.params.join("\", \"")}"]);`);
-                    definition.addParamDefinition(paramDefinition, item.params);
-                } else {
-                    block2.push(`const pluralValue${valueCount} = new PluralValue(values${valueCount}, pluralBuilder('${langKey}'));`);
-                }
-                values.push(`pluralValue${valueCount}`);
-                break;
-        }
         valueCount++;
     });
 
@@ -85,7 +51,7 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
     fileLines.push(...imports.values());
     fileLines.push('');
 
-    Object.values(valuesLines).forEach(valueLines => {
+    valuesLines.forEach(valueLines => {
         fileLines.push(...valueLines);
         fileLines.push('');
     });
@@ -93,7 +59,7 @@ export default (lang: string, value: JSONValorSet, item: JSONItem, module: Modul
 
     let declarationLine = `const translationSet = new TranslationSet`;
 
-    if (item.params && item.params.length > 0) {
+    if ((item.params ?? []).length > 0) {
         declarationLine += `<${paramDefinition}>`;
     }
     declarationLine += '(';

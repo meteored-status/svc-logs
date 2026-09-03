@@ -22,21 +22,21 @@
   "exports": {},
   "dependencies": {
     "@google-cloud/storage": "^8.0.1",
-    "@inquirer/prompts": "^8.6.0",
+    "@inquirer/prompts": "^8.7.0",
     "chokidar": "^5.0.0",
-    "dd-trace": "^6.11.0",
+    "dd-trace": "^6.13.0",
     "dotenv": "^17.4.2",
-    "js-yaml": "^5.3.0",
+    "js-yaml": "^5.4.1",
     "jszip": "^3.10.1",
-    "mysql2": "^3.23.4",
+    "mysql2": "^3.24.3",
     "source-map-support": "^0.5.21",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
     "@mr/core-i18n": "workspace:*",
-    "@rspack/cli": "^2.1.10",
-    "@rspack/core": "^2.1.10",
+    "@rspack/cli": "^2.2.2",
+    "@rspack/core": "^2.2.2",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.13.3",
     "@types/source-map-support": "^0.5.10",
@@ -47,5 +47,5 @@
     "tslib": "^2.8.1",
     "typescript": "^6.0.3"
   },
-  "version": "2026.8.21+1-bixus"
+  "version": "2026.9.3+1-bixus"
 }

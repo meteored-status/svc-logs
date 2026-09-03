@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 03 Jul 2026 07:46:10 GMT
- * Hash: a7fea9bc007b35dcd008a4226761c500
- * Versión: 2026.7.3+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Wed, 26 Aug 2026 06:23:31 GMT
+ * Hash: 599f65e7857b5ae5acb62780550f1a1a
+ * Versión: 2026.8.26+1-bixus
+ * Anterior: 2026.7.3+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Configuracion as ConfiguracionBase, type IConfiguracion as IConfiguracionBase} from "@mr/core-workload/config";
@@ -18,6 +19,6 @@ export class Configuracion extends ConfiguracionBase<IConfiguracion> implements 
 
     /* STATIC */
     public static async load(): Promise<Configuracion> {
-        return this.cargar<IConfiguracion, Configuracion>({});
+        return await this.cargar<IConfiguracion>({}) as Configuracion;
     }
 }

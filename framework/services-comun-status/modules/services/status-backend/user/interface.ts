@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 12 Aug 2026 12:26:29 GMT
- * Hash: 4f91124a7e06783dd2e24e56b41e5e05
- * Versión: 2026.8.12+2-bixus
+ * Fecha: Mon, 24 Aug 2026 11:07:07 GMT
+ * Hash: 0ff88fa2acb6dd5586273f7f9329ebae
+ * Versión: 2026.8.24+1-bixus
+ * Anterior: 2026.8.12+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -12,8 +13,9 @@
  *
  * - `PENDING` — recién registrado por el login, a la espera de que un administrador lo active.
  * - `ACTIVE`  — activo; es el único estado con acceso al panel.
- * - `BANNED`  — vetado a mano. Conserva roles y departamentos —para poder devolverlo a `ACTIVE`
- *               sin rehacerlos—, pero no puede entrar.
+ * - `BANNED`  — vetado a mano. Conserva roles, departamentos y la guardia —para poder devolverlo a
+ *               `ACTIVE` sin rehacerlos—, pero no puede entrar, así que ninguno de los tres tiene
+ *               efecto mientras lo esté: en particular no cubre turnos de guardia.
  *
  * Los valores 0 y 1 son los que ya tenía la antigua columna `enabled`, así que la migración
  * (`mapping/mysql/ddl-alter-0006.sql`) es un simple cambio de nombre y tipo.

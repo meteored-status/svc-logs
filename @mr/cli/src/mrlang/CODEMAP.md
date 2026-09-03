@@ -91,9 +91,16 @@ mrlang/
 │   │   ├── definition.ts        Definition — genera `index.ts`/`bundle.ts` de definiciones compartidas por idioma
 │   │   └── translation/
 │   │       ├── common.ts        LANG_REGEXPS, definitionModulePath(), langModulePath()
-│   │       ├── literal.ts       generateLiteral() — plantilla Literal (singular/plural)
-│   │       ├── map.ts           generateMap()     — plantilla TranslationMap
-│   │       └── set.ts           generateSet()     — plantilla TranslationSet
+│   │       ├── plural.ts        tienePlural(), problemasDePlural(), argumentoCounter() — el contador de un plural
+│   │       ├── valor.ts         emitirValor() — escribe UN SingularValue/PluralValue; lo comparten los tres
+│   │       ├── literal.ts       generateLiteral() — envuelve un valor en Literal
+│   │       ├── map.ts           generateMap()     — envuelve varios en TranslationMap, por clave
+│   │       └── set.ts           generateSet()     — envuelve varios en TranslationSet, ordenados
+│   │
+│   │   Los tres se diferencian **solo en qué envuelven**. Lo que declara el valor está en `valor.ts`
+│   │   y no copiado tres veces, que es lo que los hizo divergir: `set.ts` no pasaba `params` al
+│   │   `SingularValue` y `literal.ts` copió una variable de su propia rama del singular. Las dos
+│   │   veces compilaba y fallaba en pantalla.
 │   │
 │   └── util/
 │       └── case.ts               pascalCase()
@@ -390,7 +397,7 @@ export type TOrigen = "auto"|"interno";
 export type TVariable = "literal"|"map"|"set";
 export type TValue = "singular"|"plural";
 
-export interface JSONItem { id, origen: TOrigen, tipo: TVariable, params?, values: {valor: Record<string,JSONValor>, defecto?} }
+export interface JSONItem { id, origen: TOrigen, tipo: TVariable, params?, counter?, values: {valor: Record<string,JSONValor>, defecto?} }
 export interface JSONValue { type: TValue }
 export interface JSONValueSingular extends JSONValue { type:"singular"; value:string }
 export interface JSONValuePlural extends JSONValue { type:"plural"; value: Partial<Record<TPluralKey,string>> }
@@ -401,9 +408,53 @@ export interface JSONItemMap extends JSONItem { tipo:"map"; ... }
 export interface JSONItemSet extends JSONItem { tipo:"set"; ... }
 ```
 A diferencia de v1, **no hay tipo `plural` independiente**: el plural es un `JSONValuePlural`
-dentro de un `JSONItemLiteral` (`values.valor[lang].type === "plural"`).
+dentro de un `JSONItemLiteral` (`values.valor[lang].type === "plural"`) — o dentro de un `map` o un `set`, que
+también admiten valores plurales.
+
+`counter` dice **cuál de los `params` es el número que decide la forma del plural**. Es opcional porque con un
+único parámetro se deduce que es ese, y así los módulos escritos antes de que el campo existiera siguen
+generándose sin tocarlos; con dos o más es obligatorio, porque nada dice que el contador sea el primero. Lo
+comprueba `ModuloJSON.validar()` — ver `translation/plural.ts`.
+
+### `clases-v2/modulo/translation/plural.ts` — el contador de un plural
+
+```ts
+export const tienePlural = (item: JSONItem): boolean
+export const problemasDePlural = (item: JSONItem): string[]
+export const argumentoCounter = (item: JSONItem): string
+```
+
+Vive aparte de los tres emisores porque los tres lo necesitan igual —una entrada `literal`, `map` o `set` puede
+llevar plurales dentro— y porque la validación tiene que poder preguntarlo **sin generar nada**.
+
+`tienePlural()` mira **todos** los valores de la entrada, los de cada idioma y el del defecto, y en un `map` o un
+`set` también los de dentro: basta que un idioma tenga forma plural para que la entrada necesite contador.
+
+`problemasDePlural()` es la tabla de validación:
+
+| `params` | `counter` | resultado |
+|---|---|---|
+| 0 | — | error: no hay ningún número con el que elegir la forma |
+| 1 | ausente | se deduce que el contador es ese |
+| 1 o más | presente pero no está en `params` | error: es el fallo de dedo que antes volvía a fallar en silencio |
+| 2 o más | ausente | error: hay que declarar cuál es el contador |
+
+`argumentoCounter()` emite el cuarto argumento de `PluralValue` **solo cuando la entrada lo declara**: con un
+único parámetro el runtime lo deduce igual, y no emitirlo deja byte a byte iguales los ficheros de los módulos
+que ya existían.
 
 ### `clases-v2/generate.ts` — `Generate`
+
+**La jerarquía de idiomas la resuelve `resolverValor()`, y la usan los tres tipos.** Para un idioma dado sube
+por la cadena del catálogo (`es-ES` → `es` → `en` → `en-US`) antes de rendirse al `defecto` de la entrada. Vivía
+suelta dentro del `case "literal"`, así que un `map` o un `set` hacían `valor[lang] ?? defecto` y se saltaban la
+herencia entera — con los idiomas de hoy daba igual, porque el defecto es inglés y la cadena de `es` acaba en
+inglés, pero un idioma con padre distinto del defecto habría partido la pantalla en dos.
+
+**Valida antes de tocar el `.src`.** `run()` carga los módulos, junta lo que devuelva `validar()` de cada uno y,
+si hay algo, lo escribe con `error()` y rechaza **sin borrar ni generar nada** — antes el borrado del `.src` era
+lo primero, así que un `.json` mal escrito dejaba el workspace sin nada generado.
+
 ```ts
 export class Generate {
     public static async run(basedir: string, watch: boolean): Promise<void>

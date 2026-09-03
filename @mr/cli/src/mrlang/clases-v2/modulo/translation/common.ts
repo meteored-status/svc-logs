@@ -1,7 +1,9 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: 0ceea312eca7da8dc2f9016644c66cca
+ * Editor: Bixus
+ * Fecha: Wed, 02 Sep 2026 14:49:28 GMT
+ * Hash: 4229cb648d4d85d986eb92c32d8b0fd8
+ * Versión: 2026.9.2+2-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {ModuloJSON} from "../json";
@@ -16,7 +18,10 @@ export const LANG_REGEXPS = [
         lang: 'en'
     },
     {
-        regex: /^pt-PT|pt$/i,
+        // Anclada **entera**: `/^pt-PT|pt$/` se lee como `(^pt-PT)|(pt$)`, porque la alternancia es lo que
+        // menos ata, así que casaba cualquier código *terminado* en «pt» —`egypt`, `apt`— y dejaba fuera lo
+        // que se pretendía. Con los idiomas de hoy no se notaba; se notaría al añadir uno.
+        regex: /^(pt-PT|pt)$/i,
         lang: 'pt_PT'
     },
     {

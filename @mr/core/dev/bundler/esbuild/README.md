@@ -37,6 +37,59 @@ bundler/esbuild/esbuild.config.mjs
 
 ---
 
+## Externals: `dependencies` decide qué se empaqueta y qué no
+
+```js
+external: Object.keys(dependencies ?? {}),
+```
+
+**La lista de `dependencies` del `package.json` del workspace ES su lista de externals.** No hay
+lista aparte ni configuración por servicio: lo que está declarado se deja como `require()` en el
+bundle y tiene que existir en `node_modules` al arrancar; lo que no está declarado, esbuild lo
+**empaqueta dentro** de `output/app.js`.
+
+Esto convierte `dependencies` en una decisión de build y no en metadatos, y tiene tres
+consecuencias que conviene tener presentes:
+
+| Situación | Qué pasa |
+|-----------|----------|
+| Declarada y usada | Queda `require()`. Es el caso normal. |
+| Declarada y **no** usada | No pasa nada en el bundle. La imagen desplegada instala un paquete que nadie pide. |
+| **No** declarada y usada | Se empaqueta dentro del `app.js`. Funciona, pero engorda el bundle — medido en `svc-status`: `sparkpost` sin declarar añadía **1,6 MB**. |
+
+Corolario práctico: cuando un servicio empieza a usar una librería **a través de un framework**
+(`services-comun`, `@mr/core-*`), hay que declararla también en el servicio. Los frameworks tienen
+todas sus dependencias en `devDependencies` —se empaquetan, no se instalan—, así que nada avisa: el
+servicio compila igual y solo se nota en el tamaño del `output/app.js`.
+
+### Dos trampas al auditar dependencias sin usar
+
+**1. El lanzador no está en el bundle.** `app.js` en la raíz del workspace hace
+`require("source-map-support").install()` y, bajo `process.env.DATADOG`, `require("dd-trace").init()`,
+las dos cosas **antes** de cargar `./output/app`. Ninguna aparece como `require()` dentro del bundle,
+así que auditar grepeando solo `output/app.js` las marca como no usadas — y quitar
+`source-map-support` no engorda el bundle: rompe el arranque. Hay que mirar también `app.js` y
+`devel.js`.
+
+**2. `tslib` no se puede quitar aunque no aparezca.** Los tsconfig base (`tsconfig/node.json` y
+`tsconfig/browser.json`) llevan `importHelpers: true`, así que `tsc` exige poder resolver `tslib` en
+cuanto un fichero emite un helper — y `packd` ejecuta `tsc --noEmit` junto a esbuild, de modo que el
+build falla entero. En el bundle no aparece porque esbuild inserta sus propios helpers y no respeta
+`importHelpers`, lo que hace que parezca prescindible en los workspaces que hoy no emiten ninguno.
+Lo es solo hasta que alguien escriba un decorador.
+
+### Cómo comprobar si una dependencia sobra
+
+1. `require()` en `output/app.js` tras `packd`.
+2. `require()` en el lanzador `app.js` y en `devel.js`.
+3. Requires no literales en el bundle (carga dinámica que esbuild no puede resolver).
+4. Tras quitarla: `yarn install`, recompilar y comprobar que `output/app.js` **no crece**. Si crece,
+   se usaba y ahora está empaquetada dentro.
+
+El paso 4 es el que cierra el asunto, porque no depende de haber acertado con los tres anteriores.
+
+---
+
 ## Reglas de runtime
 
 | Runtime | Entradas | Salida |
