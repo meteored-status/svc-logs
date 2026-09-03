@@ -103,7 +103,7 @@ Ambos ficheros también se usan como **inputs de fingerprint** de versión de de
 | `random.ts` | `random(chars)`, `valoresValidos(listado)` |
 | `use-case.ts` | `UseCase<I,R>` (abstract) — patrón caso de uso con `IUseCase<R>` |
 | `object.ts` | `mergeDeep`, `dynamicProperty`, `copyObject`, `immute`, `sortObjectKeys` |
-| `array.ts` | `arrayEquals`, `unique`, `arrayChop` (particiona en bloques de tamaño fijo, usado por *bulk writers*) |
+| `array.ts` | `arrayEquals`, `unique`, `arrayChop` (particiona en bloques de tamaño fijo, usado por *bulk writers*; un array vacío no produce ningún bloque) |
 | `stream.ts` | `pipeline` (re-export de `pipelinePromise`), `buffer2stream`, `stream2buffer` |
 | `idioma.ts` | `parseIdioma`, `isRTL` |
 | `cloudflare.ts` | `cfCountry`, `cfIP` — cabeceras de Cloudflare sobre `Conexion` |
