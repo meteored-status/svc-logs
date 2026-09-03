@@ -2,6 +2,14 @@
 
 ---
 
+## 2026.9.3 — [Jose]
+
+### Removed
+- Borrado `.mr-ignore`: solo declaraba `tsconfig.tsbuildinfo`, que `mrpack` ya ignora de forma incorporada
+  (ver el `CHANGELOG` de `@mr/cli`).
+
+---
+
 ## 2026.8.7 — [Jose]
 
 ### Added

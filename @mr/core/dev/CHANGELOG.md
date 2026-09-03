@@ -2,6 +2,63 @@
 
 ---
 
+## 2026.9.3
+
+### Added — convenciones
+
+- [Jose] `.github/copilot-instructions.md` → «Preferencias de flujo de trabajo»: **se pueden y conviene
+  escribir pruebas cuando la tarea lo permita y se considere oportuno**, sin esperar a que las pidan, con el
+  criterio de si un fallo ahí pasaría desapercibido. Recoge además las reglas del arnés: `node:test` y el
+  `typescript` del workspace, **no añadir Jest ni Vitest** (es decisión de cadena de suministro del usuario,
+  no del agente), `*.spec.ts` en `spec/` y nunca dentro de `modules/`, no dar por buena una prueba sin
+  haberla visto fallar, y anotar como `todo` los fallos que no toque arreglar en esa tarea.
+- `AGENTS.md` — corregido «No hay script raiz `test` descubierto», que dejó de ser cierto: ahora se lanzan
+  por workspace con `yarn run <workspace> test`, y de momento solo los tiene `services-comun`.
+
+### Fixed — `tsconfig/node.json`
+
+- [Jose] **Quitado el `exclude`, que no excluía nada.** Los cuatro patrones (`node_modules`,
+  `**/*.spec.ts`, `output/*`, `output/**/*`) estaban en el tsconfig base, pero TypeScript resuelve las
+  rutas relativas heredadas **contra el fichero que las declara**, así que en cualquier workspace que
+  extienda este config resolvían a `@mr/core/dev/tsconfig/…` —un directorio con dos ficheros `.json`— y no
+  filtraban nada. Comprobado con `tsc --showConfig` desde `status-frontend`.
+- Salía **peor que no poner nada**: con la clave presente, TypeScript no aplica sus exclusiones por defecto
+  (`node_modules`, `bower_components`, `jspm_packages` y el `outDir`), así que cada workspace se quedaba con
+  cuatro rutas muertas en lugar de con las buenas. Al quitarla vuelven las de TypeScript.
+- Se detectó al escribir las primeras pruebas del monorepo: puestas junto al fichero que probaban, los cinco
+  `.spec.ts` de `services-comun` entraban en la compilación de `status-frontend`, que se trae esos módulos
+  por ruta explícita (`../../framework/services-comun/modules/**/*.ts`). El `**/*.spec.ts` del base estaba
+  ahí justo para evitarlo.
+- Sin efecto medible sobre lo que ya había: `status-frontend` y `services-comun` ven exactamente los mismos
+  ficheros que antes (5003 y 1299) y siguen compilando sin errores. Lo que cambia es que un `exclude` que
+  aparentaba proteger y no protegía ya no está, y que quien lo necesite lo declare en su propio tsconfig,
+  que es donde las rutas relativas funcionan. Documentado en el `README.md`.
+- [Jose] Borrado `.mr-ignore`: solo declaraba `tsconfig.tsbuildinfo`, que `mrpack` ya ignora de forma
+  incorporada (ver el `CHANGELOG` de `@mr/cli`).
+
+---
+
+## 2026.8.26
+
+### Added — `bundler/esbuild`
+
+- Documentado que **`external: Object.keys(dependencies)`**, o sea que la lista de `dependencies`
+  del `package.json` de un workspace **es** su lista de externals de esbuild. No estaba escrito en
+  ningún sitio, y es la clase de regla que no se descubre leyendo el `package.json`: convierte
+  declarar una dependencia en una decisión de build. Lo que no se declara se empaqueta dentro del
+  `app.js` — medido en `svc-status`, `sparkpost` sin declarar añadía 1,6 MB al bundle de dos
+  servicios.
+- Documentadas las **dos trampas** al auditar dependencias sin usar, las dos por falso positivo al
+  grepear solo el bundle: el **lanzador** `app.js` requiere `source-map-support` (y `dd-trace` bajo
+  `DATADOG`) fuera del bundle, así que quitarlas no engorda nada — rompe el arranque; y **`tslib`**
+  no aparece nunca en el bundle porque esbuild mete sus propios helpers, pero los tsconfig base
+  llevan `importHelpers: true` y `tsc --noEmit` falla en cuanto un fichero emite un helper.
+- Añadido el procedimiento de comprobación en cuatro pasos, con el cuarto —recompilar y verificar
+  que el bundle no crece— como el que cierra el asunto, porque no depende de haber acertado con los
+  tres anteriores.
+
+---
+
 ## 2026.8.18
 
 ### Added — `.github/copilot-instructions.md`

@@ -441,3 +441,29 @@ Estos paquetes **no se editan directamente** en el monorepo como código de nego
 ## Preferencias de flujo de trabajo
 
 - **Git:** no hagas commits hasta que el usuario te lo indique explícitamente.
+- **Tests:** se pueden —y conviene— escribir pruebas cuando la tarea lo permita y se considere oportuno, sin
+  esperar a que el usuario las pida. No son obligatorias en cada cambio: el criterio es si un fallo ahí
+  **pasaría desapercibido**. Lo que más lo merece es la lógica pura cuyo error no rompe la compilación y solo
+  se ve en pantalla o en producción —reglas de plural e i18n, formateo, parsers, cálculo de rangos y fechas,
+  validaciones—; lo que menos, el código que solo pega piezas o que ya falla al compilar si te equivocas.
+
+  Cómo se hace en este monorepo:
+
+  - **Arnés:** ejecutor de `node:test` y el `typescript` del propio workspace. Hay un ejemplo completo en
+    `framework/services-comun/` (`spec/`, `tsconfig.spec.json` y el script `test`), que se lanza con
+    `yarn run services-comun test`.
+  - **No añadas Jest, Vitest ni ningún otro runner.** Con `enableHardenedMode` y `npmMinimalAgeGate` en el
+    `.yarnrc.yml`, meter una dependencia así es una decisión de cadena de suministro y la toma el usuario,
+    no el agente. Si crees que hace falta, propónlo en vez de instalarlo.
+  - **Los ficheros son `*.spec.ts` y van en `spec/`, nunca dentro de `modules/`.** Los servicios se traen los
+    módulos de los frameworks por ruta explícita en su `tsconfig` (p. ej.
+    `../../framework/services-comun/modules/**/*.ts`), así que un `.spec.ts` dentro de `modules/` acabaría en
+    la compilación de cada servicio que consuma el workspace. El `exclude` del tsconfig base **no** protege
+    de esto y por eso se quitó: TypeScript resuelve las rutas relativas heredadas contra el fichero que las
+    declara. Ver `@mr/core/dev/README.md` → «Sin `exclude`, a propósito».
+  - **Una prueba no vale hasta que se la ha visto fallar.** Antes de darla por buena, rompe a propósito el
+    código que cubre y comprueba que falla —y que no falla el resto—; después deshaz el cambio. Una prueba
+    escrita contra código ya arreglado puede estar pasando por el motivo equivocado.
+  - Si al escribirlas aparece un fallo que no toca arreglar en esa tarea, déjalo anotado como `todo` de
+    `node:test` —sale en la salida y no rompe la suite— en vez de fijar el comportamiento erróneo con una
+    prueba en verde.

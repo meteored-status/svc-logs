@@ -29,7 +29,7 @@ bundler/esbuild/
 - `getOutputConfig(basedir)` — salida fija `output/`.
 - `getSourcemap()` — source maps siempre activos en Node.
 - `getDefine({...})` — define variables globales (`DESARROLLO`, `TEST`, etc.).
-- `getOptions(config)` — traduce config de bundle a opciones de `esbuild`.
+- `getOptions(config)` — traduce config de bundle a opciones de `esbuild`. Aquí sale `external: Object.keys(dependencies ?? {})`: **la lista de `dependencies` del workspace es su lista de externals**, así que declarar o no declarar un paquete decide si queda como `require()` o si se empaqueta dentro del `app.js`. Ver el README para las consecuencias y las dos trampas al auditar (el lanzador y `tslib`).
 - `getDatabase(build, entorno)` — selecciona BD de `build.database`.
 - `getConfigList({...})` — genera una única config Node; para `runtime!=node` o `framework=nextjs` devuelve `[]` con warning.
 
@@ -47,6 +47,7 @@ bundler/esbuild/
 ## Contrato funcional (equivalente a rspack)
 
 - Soporta solo compilación Node.
+- Los externals **no** se configuran: son las `dependencies` del workspace.
 - Solo compila cuando `deploy.runtime === "node"` y `build.framework !== "nextjs"`.
 - Inyecta el mismo set de globales usado por rspack.
 - El modo watch es opt-in vía `--watch`; ya no se activa automáticamente por `entorno=desarrollo`.

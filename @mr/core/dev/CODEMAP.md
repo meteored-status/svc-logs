@@ -72,8 +72,12 @@ jsx: "react"                    strictNullChecks: true
 noImplicitOverride: true        noImplicitReturns: true
 noPropertyAccessFromIndexSignature: true         incremental: true
 removeComments: true            sourceMap: true
-exclude: ["node_modules", "**/*.spec.ts", "output/*", "output/**/*"]
 ```
+
+**Sin `exclude`, y no debe volver a tenerlo.** Un tsconfig base no puede expresar exclusiones útiles para
+quien lo extiende: TypeScript resuelve las rutas relativas heredadas contra el fichero que las declara, así
+que apuntarían aquí y no al workspace. Tener la clave presente además desactiva las exclusiones por defecto
+de TypeScript, con lo que salía peor que no ponerla. Ver `README.md` → «Sin `exclude`, a propósito».
 
 **Depende de:** `@tsconfig/node24` (paquete público).
 **Usado por:** todo workspace `runtime: node` (ver `manifest/deployment` → `Runtime.node`) vía:

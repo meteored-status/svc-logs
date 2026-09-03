@@ -33,7 +33,12 @@
 - Actualizacion de stack del monorepo: `yarn run update`
 - Tras update, aplicar migraciones automatizadas SIEMPRE: `yarn run patch:apply`.
 - Ejecutar scripts de un workspace desde raiz: `yarn run www-frontend <script>` (atajo de `yarn workspace www-frontend <script>`).
-- No hay script raiz `test` descubierto; para validar cambios, usa compilacion/watch del workspace afectado y comandos `mrpack`.
+- No hay script raiz `test`: las pruebas se lanzan por workspace, `yarn run <workspace> test`. De momento
+  solo las tiene `services-comun` (`yarn run services-comun test`); para el resto, valida con
+  compilacion/watch del workspace afectado y comandos `mrpack`.
+- Se pueden y conviene escribir pruebas cuando la tarea lo permita — ver la seccion «Preferencias de flujo
+  de trabajo» de `.github/copilot-instructions.md` para el criterio y las reglas del arnes (`node:test`, sin
+  runners nuevos, `*.spec.ts` en `spec/` y nunca dentro de `modules/`).
 
 ## Convenciones no obvias (importantes para agentes)
 - Fuente canonica de convenciones AI: `.github/copilot-instructions.md` (ojo: `.github/` es symlink a `@mr/core/dev/.github/` y `AGENTS.md` en raíz es symlink a `@mr/core/dev/AGENTS.md`).

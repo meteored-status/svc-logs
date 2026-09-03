@@ -1,88 +1,52 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 25 Jun 2026 06:52:42 GMT
- * Hash: 91f4b642fab7d8406d098a6dce08eb86
- * Versión: 2026.6.25+5-josantoniojimnez
- * Anterior: 2026.6.25+4-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 02 Sep 2026 14:55:52 GMT
+ * Hash: 4d64376985f4c15e5e8b28740e21becf
+ * Versión: 2026.9.2+3-bixus
+ * Anterior: 2026.9.2+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {JSONItem, JSONValue, JSONValuePlural, JSONValueSingular} from "../../data";
+import {JSONItem, JSONValue} from "../../data";
 import {Definition} from "../definition";
-import {definitionModulePath, LANG_REGEXPS} from "./common";
+import {LANG_REGEXPS} from "./common";
+import {emitirValor} from "./valor";
 import {ModuloJSON} from "../json";
 import {pascalCase} from "../../util/case.ts";
 
+/**
+ * Un fichero con **un** valor, envuelto en un `Literal`.
+ *
+ * Sin sufijo en los nombres de las variables, que aquí no hay más que uno; lo que declara el valor es
+ * `emitirValor()`, compartido con `map.ts` y `set.ts`.
+ */
 export default (lang: string, value: JSONValue, item: JSONItem, module: ModuloJSON, definition: Definition) => {
 
     const langMatch = LANG_REGEXPS.find(({regex}) => regex.test(lang));
     const langKey = langMatch ? langMatch.lang : lang;
+
+    const paramDefinition = pascalCase(`${item.id}Params`);
+    const conParams = (item.params ?? []).length > 0;
+
+    const emitido = emitirValor(value, item, module, definition, langKey, "");
 
     const fileLines: string[] = [];
 
     fileLines.push('// NO EDITAR A MANO');
     fileLines.push('');
     fileLines.push(`import {Literal} from "services-comun/modules/traduccion/v2/literal";`);
+    fileLines.push(...emitido.imports);
+    fileLines.push('');
+    fileLines.push(...emitido.lineas);
+    fileLines.push('');
 
-    const paramDefinition = pascalCase(`${item.id}Params`);
-
-    switch (value.type) {
-        case "singular":
-            const singularValue = value as JSONValueSingular;
-            fileLines.push(`import {SingularValue} from "services-comun/modules/traduccion/v2/value/singular-value";`);
-            if (item.params && item.params.length > 0) {
-                fileLines.push(`import type {${paramDefinition}} from "${definitionModulePath(module)}";`);
-            }
-            fileLines.push('');
-            fileLines.push(`const value = \`${singularValue.value}\`;`);
-            fileLines.push('');
-
-            if (item.params && item.params.length > 0) {
-                fileLines.push(`const singularValue = new SingularValue<${paramDefinition}>(value, ["${item.params.join("\", \"")}"]);`);
-                fileLines.push('');
-                fileLines.push(`const literal = new Literal<${paramDefinition}>(singularValue);`);
-                fileLines.push(`export default (params: Partial<${paramDefinition}>) => literal.render(params);`);
-
-                definition.addParamDefinition(paramDefinition, item.params);
-            } else {
-                fileLines.push(`const singularValue = new SingularValue(value);`);
-                fileLines.push('');
-                fileLines.push(`const literal = new Literal(singularValue);`);
-                fileLines.push(`export default literal.render();`);
-            }
-            break;
-        case "plural":
-            fileLines.push(`import pluralBuilder from "services-comun/modules/traduccion/v2/util/plural-function-builder";`)
-            const pluralValue = value as JSONValuePlural;
-            fileLines.push(`import {PluralValue} from "services-comun/modules/traduccion/v2/value/plural-value";`);
-            fileLines.push(`import {TPluralKey} from "services-comun/modules/traduccion/v2/value";`);
-            if (item.params && item.params.length > 0) {
-                fileLines.push(`import type {${paramDefinition}} from "${definitionModulePath(module)}";`);
-            }
-
-            fileLines.push('');
-            fileLines.push(`const values: Partial<Record<TPluralKey, string>> = {`);
-            Object.entries(pluralValue.value).forEach(([key, value]) => {
-                fileLines.push(`    ${key}: "${value}",`);
-            });
-            fileLines.push('};');
-            fileLines.push('');
-
-            if (item.params && item.params.length > 0) {
-                fileLines.push(`const pluralValue = new PluralValue<${paramDefinition}>(values, pluralBuilder('${langKey}'), ["${item.params.join("\", \"")}"]);`);
-                fileLines.push('');
-                fileLines.push(`const literal = new Literal<${paramDefinition}>(pluralValue);`);
-                fileLines.push(`export default (params: Partial<${paramDefinition}>) => literal.render(params);`);
-                definition.addParamDefinition(paramDefinition, item.params);
-            } else {
-                fileLines.push(`const pluralValue = new PluralValue(values, pluralBuilder('${langKey}'));`);
-                fileLines.push('');
-                fileLines.push(`const literal = new Literal(singularValue);`);
-                fileLines.push(`export default literal.render;`);
-            }
-            break;
+    if (conParams) {
+        fileLines.push(`const literal = new Literal<${paramDefinition}>(${emitido.variable});`);
+        fileLines.push(`export default (params: Partial<${paramDefinition}>) => literal.render(params);`);
+    } else {
+        fileLines.push(`const literal = new Literal(${emitido.variable});`);
+        fileLines.push(`export default literal.render();`);
     }
 
-
     return fileLines.join('\n');
-
 }

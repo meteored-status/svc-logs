@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 15e477f772dbff536f1463d5db513e36
- * Versión: 2026.7.14+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Mon, 31 Aug 2026 06:46:28 GMT
+ * Hash: 7a19fcf8679f73ffbddea6414c4ba153
+ * Versión: 2026.8.31+1-bixus
+ * Anterior: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {Manifest} from "@mr/core-dev/manifest";
@@ -17,6 +18,11 @@ import type {IPackageJson as IPackageJsonBase} from "../packagejson";
  * añadiendo/eliminando entradas según el runtime, framework y versiones por defecto
  * del monorepo (p.ej. `tslib`, `@mr/core-*`, `dd-trace`, dependencias de OpenTelemetry
  * obsoletas, dependencias específicas de modo `devel` como `chokidar`/`ws`).
+ *
+ * Las que se **eliminan** son las que entraron por un motivo que ya no existe: las de OpenTelemetry,
+ * sustituidas por `dd-trace`; `@google-cloud/trace-agent`, por lo mismo; y `hexoid`, que exigía
+ * `formidable` hasta su 3.5. Retirarlas aquí, y no una a una en cada workspace, es lo que evita que
+ * vuelvan solas en el siguiente `init`.
  *
  * @param config              - Manifest del workspace.
  * @param dependencies        - `dependencies` del `package.json` (mutado in-place).
@@ -58,7 +64,6 @@ export function checkDependencies(config: Manifest, dependencies: Record<string,
         }
         if (!config.deploy.cronjob) {
             dependencies["chokidar"] ??= defecto["chokidar"]??"*";
-            dependencies["hexoid"] ??= defecto["hexoid"]??"*";
             dependencies["formidable"] ??= defecto["formidable"]??"*";
             dependencies["ws"] ??= defecto["ws"]??"*";
             optionalDependencies["bufferutil"] ??= defecto["bufferutil"]??"*";
@@ -79,6 +84,18 @@ export function checkDependencies(config: Manifest, dependencies: Record<string,
         if (devDependencies["source-map-support"] != undefined) {
             delete devDependencies["source-map-support"];
         }
+    }
+    // `hexoid` entró porque la exigía `formidable`, y desde su 3.5 ya no: usa `@paralleldrive/cuid2`. Nunca
+    // fue un paquete que importase el código de ningún servicio, así que sin ese motivo no queda ninguno.
+    // Se retira de donde esté en lugar de dejar de inyectarla solamente, porque si no seguiría declarada
+    // para siempre en los workspaces que ya la tienen. Y esto importa más de lo que parece: `dependencies`
+    // es la lista de externals de esbuild, así que cada entrada de más es un paquete que la imagen
+    // desplegada instala sin que nadie lo pida.
+    //
+    // Va fuera del bloque de servicios a propósito: un cronjob no la recibe hoy, pero puede arrastrarla de
+    // cuando ese bloque sí se le aplicaba.
+    if (dependencies["hexoid"]!=undefined) {
+        delete dependencies["hexoid"];
     }
     if (dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"]!=undefined) {
         delete dependencies["@google-cloud/opentelemetry-cloud-trace-exporter"];

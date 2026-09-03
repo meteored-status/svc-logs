@@ -1,17 +1,17 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: 8569a5441d1c64e2be615a5bc84b2f6c
- * Versión: 2026.7.14+1-josantoniojimnez
- * Anterior: 2026.6.25+5-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Wed, 02 Sep 2026 14:49:28 GMT
+ * Hash: 12c5da90ff0af98380eb50b781ad868a
+ * Versión: 2026.9.2+2-bixus
+ * Anterior: 2026.9.2+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import chokidar from "chokidar";
 
 import {isDir, mkdir, readDir, rmdir, safeWrite, unlink} from "../../utiles/fs";
 import {error, info} from "../../utiles/log";
-import {JSONItemLiteral, JSONItemMap, JSONItemSet, JSONValue} from "./data";
+import {JSONItemLiteral, JSONItemMap, JSONItemSet, JSONValor} from "./data";
 import {Lang} from "./lang/lang.ts";
 import {ModuloJSON} from "./modulo/json";
 import {Definition} from "./modulo/definition";
@@ -40,20 +40,30 @@ export class Generate {
             return Promise.reject();
         }
 
+        const sourceDir = `${classdir}/.src`;
+        const langsDir = `${sourceDir}/langs`;
+        const definitionsDir = `${sourceDir}/definitions`;
+
+        // Se leen los JSON **antes** de tocar el `.src`: si alguno está mal escrito, lo que había sigue en su
+        // sitio en vez de quedarse el workspace sin generar por un error de una sola entrada.
+        const modulos = await this.loadModule(jsondir, langsDir, definitionsDir, watch);
+
+        const problemas = modulos.flatMap(modulo => modulo.validar());
+        if (problemas.length > 0) {
+            for (const problema of problemas) {
+                error(problema);
+            }
+            return Promise.reject(`${problemas.length} ${problemas.length == 1 ? "entrada mal escrita" : "entradas mal escritas"}; no se ha generado nada`);
+        }
+
         //aquí limpiamos los archivos generados anteriormente
         if (await isDir(`${classdir}/.src`)) {
             await rmdir(`${classdir}/.src`);
         }
 
-        const sourceDir = `${classdir}/.src`;
-        const langsDir = `${sourceDir}/langs`;
-        const definitionsDir = `${sourceDir}/definitions`;
-
         await mkdir(sourceDir);
         await mkdir(langsDir);
         await mkdir(definitionsDir);
-
-        const modulos = await this.loadModule(jsondir, langsDir, definitionsDir, watch);
 
         for (const modulo of modulos) {
             await this.generateModule(modulo, langsDir, definitionsDir);
@@ -102,6 +112,35 @@ export class Generate {
     }
 
     /**
+     * El valor de una entrada para un idioma, **subiendo por la jerarquía** del catálogo antes de rendirse al
+     * defecto: `es-ES` mira `es`, luego `en`, luego `en-US`.
+     *
+     * Está aquí y no repetido en cada `case` porque **solo lo hacían los literales**. Un `map` o un `set`
+     * resolvían con `valor[lang] ?? defecto`, así que se saltaban la herencia entera. Hoy no se distinguía
+     * —el defecto de estos módulos es inglés y la cadena de `es` acaba en inglés—, pero al añadir un idioma
+     * cuyo padre no sea el defecto, un `es-MX` caería a `es` en los literales y al inglés en el mapa de la
+     * misma pantalla.
+     *
+     * @param valores Valores por código de idioma, tal como vienen del `.json`.
+     * @param defecto El valor de respaldo de la entrada, si lo declara.
+     * @param lang    Idioma que se está generando.
+     * @returns El valor a usar, o `undefined` si la entrada no tiene nada que ofrecer para ese idioma.
+     */
+    private static async resolverValor<T extends JSONValor>(valores: Record<string, T>, defecto: T|undefined, lang: string): Promise<T|undefined> {
+        let actual: Lang|null = await Lang.getByCode(lang);
+
+        while (actual != null) {
+            const valor = valores[actual.code];
+            if (valor != undefined) {
+                return valor;
+            }
+            actual = await actual.parent;
+        }
+
+        return defecto;
+    }
+
+    /**
      * Genera los ficheros de un módulo para todos sus idiomas disponibles.
      *
      * @param modulo - Módulo de traducciones cargado desde JSON.
@@ -128,18 +167,7 @@ export class Generate {
                 switch (jsonItem.tipo) {
                     case "literal":
                         const literal = jsonItem as JSONItemLiteral;
-                        let valor: JSONValue | undefined = undefined;
-                        let currentLang: Lang | null = await Lang.getByCode(lang);
-                        // Busca primero en el idioma solicitado y sube por su jerarquía.
-                        while (currentLang && !valor) {
-                            valor = literal.values.valor[currentLang.code];
-                            if (!valor) {
-                                currentLang = await currentLang.parent;
-                            }
-                        }
-                        if (!valor) {
-                            valor = literal.values.defecto;
-                        }
+                        const valor = await this.resolverValor(literal.values.valor, literal.values.defecto, lang);
 
                         if (valor) {
                             const content = generateLiteral(lang, valor, literal, modulo, definition);
@@ -149,7 +177,7 @@ export class Generate {
 
                     case "map":
                         const map = jsonItem as JSONItemMap;
-                        const valorMap = (map.values.valor[lang]??map.values.defecto);
+                        const valorMap = await this.resolverValor(map.values.valor, map.values.defecto, lang);
                         if (valorMap) {
                             const content = generateMap(lang, valorMap, map, modulo, definition);
                             await safeWrite(fileName, content, true);
@@ -157,7 +185,7 @@ export class Generate {
                         break;
                     case "set":
                         const set = jsonItem as JSONItemSet;
-                        const valorSet = (set.values.valor[lang]??set.values.defecto);
+                        const valorSet = await this.resolverValor(set.values.valor, set.values.defecto, lang);
                         if (valorSet) {
                             const content = generateSet(lang, valorSet, set, modulo, definition);
                             await safeWrite(fileName, content, true);

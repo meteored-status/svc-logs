@@ -1,16 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 21 Aug 2026 06:11:54 GMT
- * Hash: 7cbf75ee3598c0d3f746f3b69aa46358
- * Versión: 2026.8.21+1-bixus
- * Anterior: 2026.8.20+1-bixus
+ * Fecha: Tue, 01 Sep 2026 09:55:30 GMT
+ * Hash: 2aaf1f0ee780af770a183b95cb696208
+ * Versión: 2026.9.1+1-bixus
+ * Anterior: 2026.8.31+3-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 export type EPermission =
     "status.admin"                      |
     "status.panel.access"               |
-    "status.panel.guardian.view"        |
     "status.resources.list"             |
     "status.resources.save"             |
     "status.service.list"               |
@@ -25,6 +24,13 @@ export type EPermission =
     "status.log.list"                   |
     "status.log.check"                  |
     "status.audit.read"                 |
+    "status.infra.view"                 |
+    "status.infra.edit"                 |
+    "status.impersonate.view"           |
+    "status.impersonate.full"           |
+    "status.oncall.view"                |
+    "status.oncall.list"                |
+    "status.oncall.edit"                |
     "status.user.list"                  |
     "status.user.edit"                  |
     "status.user.delete"                |

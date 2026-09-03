@@ -106,6 +106,20 @@ Configuración base para todos los servicios Node.js del monorepo. Extiende
 }
 ```
 
+### Sin `exclude`, a propósito
+
+`tsconfig/node.json` **no declara `exclude`**, y no debe volver a declararlo: un tsconfig base no puede
+expresar exclusiones que sirvan a quien lo extiende. TypeScript resuelve las rutas relativas heredadas
+contra el fichero que las declara, así que un `"**/*.spec.ts"` escrito aquí apunta a
+`@mr/core/dev/tsconfig/` y no al workspace que hereda —comprobado con `tsc --showConfig` desde
+`status-frontend`: los cuatro patrones que había (`node_modules`, `**/*.spec.ts`, `output/*`,
+`output/**/*`) resolvían a `../../@mr/core/dev/tsconfig/…` y no excluían nada—.
+
+Y salía **peor que no poner nada**: al estar la clave presente, TypeScript no aplica sus exclusiones por
+defecto (`node_modules`, `bower_components`, `jspm_packages` y el `outDir`), de modo que cada workspace se
+quedaba con cuatro rutas muertas en vez de con las buenas. Sin la clave, cada workspace recibe las de
+TypeScript y puede añadir las suyas —relativas a su propio tsconfig, que es donde funcionan—.
+
 ---
 
 ## tsconfig · Browser

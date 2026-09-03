@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-network",
-  "version": "2026.8.20+1-bixus",
+  "version": "2026.9.3+1-bixus",
   "description": "Utilidades de red de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {
@@ -8,9 +8,9 @@
     "tipo": "core"
   },
   "dependencies": {
-    "dd-trace": "^6.11.0",
+    "dd-trace": "^6.13.0",
     "formidable": "^3.5.4",
-    "qs": "^6.15.3",
+    "qs": "^6.16.0",
     "tslib": "^2.8.1",
     "ws": "^8.21.3"
   },

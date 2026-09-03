@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 21 Aug 2026 06:11:54 GMT
- * Hash: b81d89491b548db6ab331559ceaf397f
- * Versión: 2026.8.21+1-bixus
+ * Fecha: Wed, 26 Aug 2026 09:06:22 GMT
+ * Hash: 0be5d78f69decbb5aa5470c4d95525de
+ * Versión: 2026.8.26+2-bixus
+ * Anterior: 2026.8.21+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -40,6 +41,10 @@ export enum EAuditAction {
     EDIT     = "edit",
     DELETE   = "delete",
     CHECK    = "check",
+    // Empezar a ver el panel como otra persona. Va como acción propia y no como `navigate` o `check` porque es
+    // lo único del registro que **no lo hace quien parece**: a partir de ese apunte, lo que esa sesión vea sale
+    // con los permisos de otra cuenta. Buscarlo tiene que ser un filtro, no leerse los detalles de otra acción.
+    IMPERSONATE = "impersonate",
 }
 
 const ACCIONES: Set<string> = new Set<string>(Object.values(EAuditAction));
