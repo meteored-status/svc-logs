@@ -12,5 +12,5 @@
     "services-comun": "workspace:*",
     "tslib": "^2.8.1"
   },
-  "version": "2026.9.2+2-bixus"
+  "version": "2026.9.3+1-bixus"
 }

@@ -1,9 +1,8 @@
 import type {Backends} from "./backends";
-import {Cliente, type ICliente} from ".";
+import {Cliente} from ".";
 
 export interface IGrupo {
     id: string;
-    cliente: ICliente;
     backends?: Backends;
 }
 
@@ -18,7 +17,7 @@ export class Grupo implements IGrupo {
             return cliente;
         }
 
-        cliente.aplicarGrupo(new this(cliente, {cliente, id: grp}));
+        cliente.aplicarGrupo(new this({id: grp}));
 
         return cliente;
     }
@@ -27,7 +26,7 @@ export class Grupo implements IGrupo {
     public readonly id: string;
     public readonly backends: Backends;
 
-    private constructor(public readonly cliente: Cliente, data: IGrupo) {
+    private constructor(data: IGrupo) {
         this.id = data.id;
         this.backends = data.backends ?? {};
     }
