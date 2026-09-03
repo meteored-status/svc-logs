@@ -1,9 +1,10 @@
-import {RegistroCache, type IRegistroCache, IRegistroCacheApp} from "./cache";
-import {RegistroCliente, type IRegistroCliente, IRegistroClienteCrawler, IRegistroClienteApp} from "./cliente";
+import {RegistroCache, type IRegistroCache, type IRegistroCacheApp} from "./cache";
+import {RegistroCliente, type IRegistroCliente, type IRegistroClienteCrawler, type IRegistroClienteApp} from "./cliente";
 import {RegistroOrigen, type IRegistroOrigen} from "./origen";
-import {RegistroPeticion, type IRegistroPeticion, IRegistroPeticionApp} from "./peticion";
-import {RegistroRespuesta, type IRegistroRespuesta, type IRegistroRespuestaES} from "./respuesta";
-import {Cliente} from "../cliente";
+import {RegistroPeticion, type IRegistroPeticion, type IRegistroPeticionApp} from "./peticion";
+import {RegistroRespuesta, type IRegistroRespuesta} from "./respuesta";
+
+import type {Cliente} from "../cliente";
 
 export interface IRAWDataClient {
     bot: boolean;
@@ -95,11 +96,11 @@ interface IRegistro {
     url: URL;
     proyecto: string;
     subproyecto?: string;
-    peticion: IRegistroPeticion;
-    cache: IRegistroCache;
-    respuesta: IRegistroRespuesta;
-    cliente: IRegistroCliente;
-    origen?: IRegistroOrigen;
+    peticion: RegistroPeticion;
+    cache: RegistroCache;
+    respuesta: RegistroRespuesta;
+    cliente: RegistroCliente;
+    origen?: RegistroOrigen;
 }
 
 export interface IRegistroES {
@@ -109,7 +110,7 @@ export interface IRegistroES {
     subproyecto?: string;
     peticion: IRegistroPeticion;
     cache: IRegistroCache;
-    respuesta: IRegistroRespuestaES;
+    respuesta: IRegistroRespuesta;
     cliente: IRegistroCliente;
     origen?: IRegistroOrigen;
 }
@@ -121,7 +122,7 @@ export interface IRegistroCrawler {
     subproyecto?: string;
     peticion: IRegistroPeticion;
     cache: IRegistroCache;
-    respuesta: IRegistroRespuestaES;
+    respuesta: IRegistroRespuesta;
     cliente: IRegistroClienteCrawler;
     origen?: IRegistroOrigen;
 }
@@ -144,45 +145,37 @@ export interface IRegistroApp {
     };
     peticion: IRegistroPeticionApp;
     cache: IRegistroCacheApp;
-    respuesta: IRegistroRespuestaES;
+    respuesta: IRegistroRespuesta;
     cliente: IRegistroClienteApp;
     origen?: IRegistroOrigen;
 }
 
-interface IObj {
-    peticion: RegistroPeticion;
-    cache: RegistroCache;
-    respuesta: RegistroRespuesta;
-    cliente: RegistroCliente;
-    origen?: RegistroOrigen;
-}
+/**
+ * Valor usado para los campos de app cuando la petición no trae el header `meteored` y se
+ * reconoce como app por una de las heurísticas legacy de path.
+ */
+const APP_DESCONOCIDA = "unknown";
+
+/**
+ * Header `meteored`: `<so> <versión so>; <versión>/<paquete>[(sufijo)][;bg|fg]`.
+ */
+const APP_HEADER = /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^();]+)(?:\((\w+)\))?(?:;(bg|fg)?)?$/;
 
 export class Registro implements IRegistro {
     /* STATIC */
     public static build(data: IRAWData, cliente: Cliente): Registro {
-        const url = new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`);
-        const peticion = RegistroPeticion.build(data.client, data.request, data.zone.name);
-        const cache = RegistroCache.build(data.cache);
         const respuesta = RegistroRespuesta.build(data.edge, data.response, data.origin);
-        const clienteData = RegistroCliente.build(data.client);
-        const origen = RegistroOrigen.build(data.origin, cliente.backends);
 
         return new this({
             timestamp: data.edge.timestamp.start,
-            url,
+            url: new URL(`${data.client.request.scheme}://${data.client.request.host}${data.client.request.uri}`),
             proyecto: cliente.id,
             subproyecto: cliente.proyecto(respuesta.headers?.service),
-            peticion,
-            cache,
+            peticion: RegistroPeticion.build(data.client, data.request, data.zone.name),
+            cache: RegistroCache.build(data.cache),
             respuesta,
-            cliente: clienteData,
-            origen,
-        }, {
-            peticion,
-            cache,
-            respuesta,
-            cliente: clienteData,
-            origen,
+            cliente: RegistroCliente.build(data.client),
+            origen: RegistroOrigen.build(data.origin, cliente.backends),
         });
     }
 
@@ -191,13 +184,13 @@ export class Registro implements IRegistro {
     public get url(): URL { return this.data.url; }
     public get proyecto(): string { return this.data.proyecto; }
     public get subproyecto(): string|undefined { return this.data.subproyecto; }
-    public get peticion(): RegistroPeticion { return this.obj.peticion; }
-    public get cache(): RegistroCache { return this.obj.cache; }
-    public get respuesta(): RegistroRespuesta { return this.obj.respuesta; }
-    public get cliente(): RegistroCliente { return this.obj.cliente; }
-    public get origen(): RegistroOrigen|undefined { return this.obj.origen; }
+    public get peticion(): RegistroPeticion { return this.data.peticion; }
+    public get cache(): RegistroCache { return this.data.cache; }
+    public get respuesta(): RegistroRespuesta { return this.data.respuesta; }
+    public get cliente(): RegistroCliente { return this.data.cliente; }
+    public get origen(): RegistroOrigen|undefined { return this.data.origen; }
 
-    public constructor(private readonly data: IRegistro, private readonly obj: IObj) {
+    private constructor(private readonly data: IRegistro) {
     }
 
     public toJSON(): IRegistroES {
@@ -206,11 +199,11 @@ export class Registro implements IRegistro {
             url: this.data.url.toString(),
             proyecto: this.data.proyecto,
             subproyecto: this.data.subproyecto,
-            peticion: this.obj.peticion.toJSON(),
-            cache: this.obj.cache.toJSON(),
-            respuesta: this.obj.respuesta.toJSON(),
-            cliente: this.obj.cliente.toJSON(),
-            origen: this.obj.origen?.toJSON(),
+            peticion: this.data.peticion.toJSON(),
+            cache: this.data.cache.toJSON(),
+            respuesta: this.data.respuesta.toJSON(),
+            cliente: this.data.cliente.toJSON(),
+            origen: this.data.origen?.toJSON(),
         };
     }
 
@@ -220,28 +213,36 @@ export class Registro implements IRegistro {
             url: this.data.url.toString(),
             proyecto: this.data.proyecto,
             subproyecto: this.data.subproyecto,
-            peticion: this.obj.peticion.toJSON(),
-            cache: this.obj.cache.toJSON(),
-            respuesta: this.obj.respuesta.toJSON(),
-            cliente: this.obj.cliente.toCrawler(),
-            origen: this.obj.origen?.toJSON(),
+            peticion: this.data.peticion.toJSON(),
+            cache: this.data.cache.toJSON(),
+            respuesta: this.data.respuesta.toJSON(),
+            cliente: this.data.cliente.toCrawler(),
+            origen: this.data.origen?.toJSON(),
         };
     }
 
     public toApp(header?: string): IRegistroApp {
-        const partes = header ?
-            /^(\w+) ([\w.]+); ?([\w./]+)\/([^/^();]+)(?:\((\w+)\))?(?:;(bg|fg)?)?$/.exec(header):
-            ["", "unknown", "unknown", "unknown", "unknown"];
-        if (!partes) {
+        const partes = header ? APP_HEADER.exec(header) : null;
+        if (header && partes===null) {
             throw new Error(`Header de App inválido: ${header}`);
         }
-        const [, os, osver, version, app, sufijo, ambient] = partes;
-        const sf = sufijo?.trim()??"";
-        const amb = ambient?.trim()??"";
 
-        const servicio = os==="unknown" && this.data.peticion.path.includes("peticionMovil.php") ?
+        const [
+            ,
+            os = APP_DESCONOCIDA,
+            osver = APP_DESCONOCIDA,
+            version = APP_DESCONOCIDA,
+            app = APP_DESCONOCIDA,
+            sufijo,
+            ambient,
+        ] = partes ?? [];
+
+        const sf = sufijo?.trim() ?? "";
+        const amb = ambient?.trim() ?? "";
+
+        const servicio = os===APP_DESCONOCIDA && this.data.peticion.path.includes("peticionMovil.php") ?
             "legacy" :
-            (this.data.subproyecto ?? "unknown");
+            (this.data.subproyecto ?? APP_DESCONOCIDA);
 
         return {
             timestamp: this.data.timestamp.toISOString(),
@@ -252,18 +253,18 @@ export class Registro implements IRegistro {
             app: {
                 package: app.trim(),
                 version: version.trim(),
-                sufijo: sf.length>0?sf:undefined,
-                ambient: amb.length>0?amb:undefined,
+                sufijo: sf.length>0 ? sf : undefined,
+                ambient: amb.length>0 ? amb : undefined,
             },
             os: {
                 nombre: os.trim(),
                 version: osver.trim(),
             },
-            peticion: this.obj.peticion.toAPP(),
-            cache: this.obj.cache.toAPP(),
-            respuesta: this.obj.respuesta.toJSON(),
-            cliente: this.obj.cliente.toAPP(),
-            origen: this.obj.origen?.toJSON(),
+            peticion: this.data.peticion.toAPP(),
+            cache: this.data.cache.toAPP(),
+            respuesta: this.data.respuesta.toJSON(),
+            cliente: this.data.cliente.toAPP(),
+            origen: this.data.origen?.toJSON(),
         };
     }
 }

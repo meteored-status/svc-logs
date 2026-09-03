@@ -4,6 +4,14 @@
 
 ## 2026.9.3
 
+### Fixed
+- [Jose] `arrayChop()` (`modules/utiles/array.ts`) devolvía **un bloque vacío** (`[[]]`) cuando se le
+  pasaba un array vacío, en vez de ningún bloque (`[]`). Quien lo consumía en un bucle acababa
+  procesando un lote de cero elementos: un `INSERT ... VALUES` sin filas en `database/mysql`, una
+  petición `bulk` vacía en `elasticsearch/bulk`. `RedisBulk.doInserts()` y `Bulk.ejecutar()` ya
+  llevaban un `if (length===0) return` justo antes de llamar, puesto precisamente para esquivarlo.
+  Ninguno de los cuatro puntos de uso del monorepo dependía del comportamiento anterior.
+
 ### Added
 - [Jose] `spec/` — **primeras pruebas automatizadas del monorepo**, sobre `modules/traduccion/v2/`:
   30 casos sobre `PluralValue`, `Value`, `TranslationMap`, `TranslationSet` y `getLang`, más un guardián
@@ -13,6 +21,8 @@
 - Las tres pruebas que cubren el fallo del contador se comprobaron contra la versión anterior de
   `plural-value.ts`: fallan con ella y pasan con la actual. Las otras cuatro del mismo fichero siguen en
   verde con ambas, que era lo que se quería —que apunten al fallo y no a cualquier cambio—.
+- [Jose] `spec/utiles/array.spec.ts` — cobertura de `arrayChop`, `unique` y `arrayEquals`. El caso del
+  array vacío se comprobó contra la versión anterior: falla con ella y pasa con la actual.
 - `tsconfig.spec.json` y el script `test` del `package.json`. **Sin dependencias nuevas**: el ejecutor es el
   de Node 24 y el compilador el `typescript` que ya estaba. Con `enableHardenedMode` y `npmMinimalAgeGate`
   en el `.yarnrc.yml`, meter Jest o Vitest es una decisión de cadena de suministro y no un detalle de

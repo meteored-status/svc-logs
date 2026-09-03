@@ -1,6 +1,6 @@
 import type {Backends} from "./backends";
 import {ClienteError} from "./error";
-import {ClienteGCS} from "./gcs";
+import type {ClienteGCS} from "./gcs";
 import type {Grupo} from "./grupo";
 
 export interface ICliente {
@@ -10,7 +10,7 @@ export interface ICliente {
 
 export class Cliente {
     /* STATIC */
-    private static BACKENDS: Record<string, Backends> = {
+    private static readonly BACKENDS: Record<string, Backends> = {
         "ed": {},
         "fce": {},
         "hoteles": {},
