@@ -312,6 +312,7 @@ compatibilidad con consumidores no migrados — no usar en código nuevo.
 | `traduccion/v2/translation-map.ts` | `TranslationMap<K,T>`, `ITranslationMapValues<K>` |
 | `traduccion/v2/translation-set.ts` | `TranslationSet<T>` |
 | `traduccion/v2/value/{index,value,plural-value,singular-value}.ts` | `TPluralKey`, `Value<T>` (abstract), `PluralValue<T>`, `SingularValue<T>`, `TPluralFunction` |
+| | `PluralValue` necesita saber **cuál de sus `params` es el contador**: es el número con el que `_rules()` elige la forma. Con uno solo se deduce; con varios lo dice el cuarto argumento del constructor, `counter`, que `mrlang` emite desde el campo homónimo del `.json`. Sin contador **lanza**, en vez de resolver por la categoría del cero como hacía antes —que daba siempre plural en es/en y siempre singular en fr, sin avisar—. |
 | `traduccion/v2/util/{lang,plural-function-builder}.ts` | `getLang`, `buildFunction` (default) |
 | `traduccion/v2/example.ts` | Ejemplo de uso de `v2/` (no es código de producción) |
 
@@ -423,6 +424,53 @@ Subdirectorios pequeños y autocontenidos (1–15 ficheros); se documentan aquí
 | `openapi/` | 1 | `IOpenAPI`, `IInfo`, `IPaths`, `IComponents`, ... | Tipos TypeScript del esquema OpenAPI (sin lógica, solo tipado) |
 | `services/` | 1 | `ConfigService`/`IConfigService` | Configuración de registro de un servicio individual (nombre/id), consumida por `Service` de `@mr/core-network` |
 | `browser/` | 15 | `Validator`/`InputValidator`/`SelectValidator`/`TextAreaValidator`/`CheckValidator`/`FileValidator`/`MailValidator`, `PromiseDelayed`, `AnimationFrame`, `Scheduler`/`Prioridad`, `isBot`, `info`/`warn`/`error`, `cookies` (`default`), `yieldToMainBackground`/`yieldToMainUiBlocking` | **Único módulo orientado a cliente/navegador** del workspace: validación de formularios, utilidades DOM, scheduler cooperativo (`isInputPending`/prioridad), logging y promesas adaptadas al *event loop* del navegador, cookies. No usar desde código de servidor. |
+
+---
+
+## 13. Pruebas (`spec/`)
+
+Primeras pruebas automatizadas del monorepo. Cubren `modules/traduccion/v2/`, que es donde un fallo no da
+error de compilación y sí un texto equivocado en pantalla.
+
+```bash
+yarn run services-comun test
+```
+
+| Fichero | Qué fija |
+|---------|----------|
+| `spec/traduccion/v2/plural-value.spec.ts` | de cuál de los `params` sale el número que elige la forma, y que sin contador **lanza** en vez de resolver por la categoría del cero |
+| `spec/traduccion/v2/value.spec.ts` | la sustitución de `{{param}}`: todas las apariciones, el nombre en mayúsculas cuando falta, y que el `0` y la cadena vacía son valores y no ausencias |
+| `spec/traduccion/v2/translation-map.spec.ts` | el catálogo con clave, incluido que una clave que no está devuelve la clave y no un hueco |
+| `spec/traduccion/v2/translation-set.spec.ts` | la lista ordenada y `has` |
+| `spec/traduccion/v2/lang.spec.ts` | `getLang`: la normalización del separador y el `'enUS'` fijo del final |
+| `spec/estructura.spec.ts` | que no haya ningún `.spec.ts` dentro de `modules/` |
+
+### Por qué el arnés es así
+
+**`node:test` y el `tsc` que ya está, sin dependencias nuevas.** El monorepo tiene `enableHardenedMode` y
+`npmMinimalAgeGate` en `.yarnrc.yml`: meter Jest o Vitest es una decisión de cadena de suministro, no un
+detalle de implementación. Node 24 trae ejecutor de pruebas y `typescript` ya es dependencia del workspace,
+así que no hace falta nada más.
+
+**Se compila antes de ejecutar, en vez de usar el TypeScript nativo de Node.** Node sabe ejecutar `.ts`
+directamente, pero transforma fichero a fichero y aquí eso no vale: `plural-value.ts` escribe
+`import {TParams, Value} from "./value"` sin marcar `TParams` como `type`, y `tsc` lo elide porque conoce el
+programa entero mientras que Node no puede saberlo y emite un import real de algo que en ejecución no existe.
+Se compila a `tmp/spec/` (ignorado por git) y se ejecuta el JavaScript.
+
+**Las pruebas viven en `spec/` y no junto al fichero que prueban.** La intención de dejarlas al lado estaba
+en el tsconfig base —`@mr/core-dev/tsconfig/node.json` excluía `**/*.spec.ts`—, pero esa exclusión **no
+protegía a quien consume el workspace**: TypeScript resuelve las rutas relativas heredadas contra el fichero
+que las declara, así que el patrón apuntaba a `@mr/core/dev/tsconfig/` y no al workspace. Se quitó por eso.
+Y los servicios se traen estos módulos por ruta explícita
+(`../../framework/services-comun/modules/**/*.ts` en el tsconfig de `status-frontend`), de modo que un
+`.spec.ts` dentro de `modules/` acaba en la compilación de cada servicio que lo consuma. Fuera de `modules/`
+no lo ve nadie.
+
+**El sitio donde viven las pruebas es ahora una regla comprobada, no una convención.** El `exclude` del
+tsconfig base se quitó —no excluía nada, ver el `CHANGELOG` de `@mr/core-dev`—, así que lo único que impide
+que un `.spec.ts` acabe en la compilación de los servicios es dónde se coloca. `spec/estructura.spec.ts`
+recorre `modules/` y falla si encuentra alguno.
 
 ---
 

@@ -428,6 +428,23 @@ ajustan el comportamiento del empaquetado y la detección de cambios:
 | `.mr-bin` | Las entradas listadas se tratan como binarias: al recibir un update se sobreescriben directamente sin intentar un merge 3-way. |
 | `.mr-nohash` | Las entradas listadas se incluyen en el ZIP al publicar, pero su hash **no contribuye** al hash del directorio padre. Los cambios en esos hijos no disparan la detección de cambios del paquete. |
 
+Además, en **cualquier nivel** del árbol se ignoran siempre, sin necesidad de declararlos:
+
+| Entrada | Motivo |
+|---------|--------|
+| `.DS_Store` | basura de Finder |
+| `node_modules` | dependencias instaladas |
+| `tmp` | directorio de trabajo; ahí compilan, p. ej., las pruebas de `services-comun` (`tmp/spec`) |
+| `*.tsbuildinfo` | caché incremental de `tsc`, en cualquiera de sus variantes de nombre |
+
+Todos son transitorios y están ignorados por git en todo el monorepo, así que ningún paquete puede depender
+de enviarlos: lo que hubiera dentro no sobreviviría a un clon limpio. También se descartan los ficheros cuyo
+nombre contiene `~` o acaba en `.bak`.
+
+> `*.tsbuildinfo` se declaraba antes paquete a paquete en los `.mr-ignore`, y eso fallaba en silencio en los
+> que nadie se acordó de crear: `services-comun-status` y `@mr/core-workload` estaban enviando el suyo (87 y
+> 74 KB). Al pasar a ser incorporado, los `.mr-ignore` que solo servían para eso se han borrado.
+
 **Ejemplo de `.mr-nohash`:** para que los cambios en `bin/min/` no generen una nueva
 versión del paquete, crear el fichero `bin/.mr-nohash` con el contenido:
 

@@ -2,6 +2,88 @@
 
 ---
 
+## 2026.9.3
+
+### Added
+- [Jose] `spec/` — **primeras pruebas automatizadas del monorepo**, sobre `modules/traduccion/v2/`:
+  30 casos sobre `PluralValue`, `Value`, `TranslationMap`, `TranslationSet` y `getLang`, más un guardián
+  estructural (`spec/estructura.spec.ts`). Se ejecutan con
+  `yarn run services-comun test`. Se eligió esa zona porque es donde un fallo no da error de compilación y
+  sí un texto equivocado en pantalla —es justo lo que pasó con el contador de los plurales—.
+- Las tres pruebas que cubren el fallo del contador se comprobaron contra la versión anterior de
+  `plural-value.ts`: fallan con ella y pasan con la actual. Las otras cuatro del mismo fichero siguen en
+  verde con ambas, que era lo que se quería —que apunten al fallo y no a cualquier cambio—.
+- `tsconfig.spec.json` y el script `test` del `package.json`. **Sin dependencias nuevas**: el ejecutor es el
+  de Node 24 y el compilador el `typescript` que ya estaba. Con `enableHardenedMode` y `npmMinimalAgeGate`
+  en el `.yarnrc.yml`, meter Jest o Vitest es una decisión de cadena de suministro y no un detalle de
+  implementación. La salida va a `tmp/spec/`, que ya estaba ignorada por git.
+
+### Fixed
+- [Jose] `modules/traduccion/v2/translation-set.ts` — **`has` con `ignoreMayus` convertía un acierto en
+  fallo.** Solo pasaba a minúsculas el valor guardado y nunca el argumento, así que la bandera que debería
+  hacer la búsqueda más permisiva la volvía más estricta: `has("Lunes")` era cierto y
+  `has("Lunes", undefined, true)`, falso. Solo acertaba si quien llamaba traía ya el texto en minúsculas.
+  Ahora normaliza los dos lados. No tiene usos en este repo —se encontró escribiendo las pruebas—, pero
+  `services-comun` es código compartido y puede tenerlos en otros; el arreglo solo convierte falsos en
+  ciertos, así que ningún uso correcto cambia de comportamiento.
+- [Jose] Borrado `.mr-ignore`: solo declaraba `tsconfig.tsbuildinfo`, que `mrpack` ya ignora de forma
+  incorporada (ver el `CHANGELOG` de `@mr/cli`).
+
+### Notas
+- Las pruebas van en `spec/` y no junto al fichero que prueban. El tsconfig base
+  (`@mr/core-dev/tsconfig/node.json`) excluía `**/*.spec.ts` con esa intención, pero **esa exclusión no
+  protegía a los consumidores** —TypeScript resuelve las rutas relativas heredadas contra el fichero que las
+  declara, así que apuntaba a `@mr/core/dev/tsconfig/` y no al workspace—; se ha quitado, ver el `CHANGELOG`
+  de `@mr/core-dev`. Como los servicios incluyen estos módulos por ruta explícita, un `.spec.ts` dentro de
+  `modules/` entraría en la compilación de cada servicio que lo consuma, así que lo que sostiene la regla es
+  la colocación: `spec/estructura.spec.ts` recorre `modules/` y falla si aparece alguno. Comprobado que
+  salta plantando un fichero y que `status-frontend` no ve ninguno.
+
+---
+
+## 2026.9.2
+
+### Fixed
+- [Jose] `modules/traduccion/v2/value/plural-value.ts` — **un plural con más de un parámetro elegía la forma
+  con la categoría del cero**, en silencio. `value()` solo usaba el contador cuando había exactamente un
+  parámetro; en cualquier otro caso llamaba a `_rules(0)`, así que en español y en inglés salía **siempre** el
+  plural y en francés **siempre** el singular, sin ningún aviso ni en compilación ni en ejecución.
+- Ahora `PluralValue` acepta un cuarto argumento, `counter`, que dice cuál de los `params` es el número que
+  decide la forma; lo emite `mrlang` desde el campo homónimo del `.json`. **Con un solo parámetro se sigue
+  deduciendo**, así que los módulos generados antes de esto no cambian ni hay que reescribir ningún `.json`.
+- Sin contador que resolver, `value()` **lanza** en vez de elegir mal. No debería llegar ahí: `mrlang` rechaza
+  al generar un plural que no diga cuál es su contador. Es la red de debajo.
+
+## 2026.9.2
+
+### Fixed
+- [Juan Carlos] `modules/database/bulk/redis.ts` — `RedisBulk.CHUNK_DEFECTO` sube de 1000 a 5000.
+  1000 se eligió como valor seguro al introducir el troceado, pero se observan lotes reales de hasta
+  ~19000 items: con 5000 pasan de 19 viajes a 4, y cada `MULTI` sigue lejos del caso patológico que
+  disparaba el `TimeoutError` del `PING`. No se sube más porque `RedisBulk` encola dos comandos por
+  item (`SET` + `EXPIRE`) —un lote son ya ~10000 comandos— y `EXEC` es atómico, así que el lote
+  bloquea al resto de clientes mientras se ejecuta. Los `chunk` por DAO siguen teniendo precedencia.
+- [Juan Carlos] `modules/database/redis/index.ts` — `hGet`/`hGetAll` volvían a usar la condición de
+  caducidad invertida (`expires < Date.now()`), reintroducida al hacer `mrpack framework` (revirtió el
+  fix local de `fix condición expiración`, nunca enviado al bucket). Con ella se descartaban justo los
+  campos vigentes y se devolvían solo los caducados, así que `loadHJSON` respondía `{}` para hashes
+  recién escritos — los `world` de alertas (`backoffice:data-alertas:world:<day>`) y los contadores por
+  país se guardaban bien pero se leían como inexistentes. Restaurada a `Date.now() <= expires`.
+- [Juan Carlos] `modules/database/bulk/redis.ts` — `RedisBulk`/`RedisHBulk` respetan `BulkConfig.chunk`
+  (por defecto `RedisBulk.CHUNK_DEFECTO = 1000`) y trocean con `arrayChop`, enviando un `MULTI` por lote
+  en vez de uno único con todos los elementos. Un lote de decenas de miles de items monopolizaba la cola
+  de escritura del cliente durante segundos: los comandos de dentro del `MULTI` están exentos de
+  `commandOptions.timeout` (node-redis solo propaga `chainId`/`typeMapping`), pero el `PING` de
+  `pingInterval` sí lo lleva, se encolaba detrás del lote, abortaba con `TimeoutError` y node-redis lo
+  reemitía como evento `error` del cliente — lo que disparaba el reset de conexiones de
+  `RedisCluster` en mitad de la escritura y hacía fallar el `bulkSet`/`bulkHSet` en vuelo.
+  Los demás drivers (`my-s-q-l.ts`, `postgre-s-q-l.ts`, `elastic.ts`) ya delegaban `chunk` a su capa
+  inferior; Redis no tiene esa capa y no lo aplicaba en absoluto.
+  Nota: el troceado elimina la atomicidad del lote completo, que en la práctica no existía —
+  `bulkSet` ya escribía cada nodo primario por separado con `Promise.all`.
+
+---
+
 ## 2026.8.4
 
 ### Added

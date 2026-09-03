@@ -1,10 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Tue, 14 Jul 2026 07:18:57 GMT
- * Hash: f8fc7c8d80b23a862470441e2ff1aba7
- * Versión: 2026.7.14+1-josantoniojimnez
- * Anterior: 2026.6.26+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Thu, 03 Sep 2026 06:58:23 GMT
+ * Hash: 7c29abdc9fae6d8dab78a942bb964027
+ * Versión: 2026.9.3+1-bixus
+ * Anterior: 2026.7.14+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import JSZip from "jszip";
@@ -234,6 +234,7 @@ export class PaqueteDirectory extends PaqueteFile {
     /**
      * Recorre recursivamente el árbol de hijos actualizando los hashes de cada nodo.
      * Respeta `.mr-ignore` (excluir) y `.mr-nohash` (incluir pero no contribuir al hash padre).
+     * Siempre se ignoran `.DS_Store`, `node_modules` y `tmp`, en cualquier nivel del árbol.
      *
      * @param basedir - Raíz absoluta del monorepo.
      * @param autor   - Autor que se registra en los nodos que cambian.
@@ -244,7 +245,16 @@ export class PaqueteDirectory extends PaqueteFile {
         const dir = `${basedir}/${this.filename}`;
 
         const files = await readDir(dir);
-        ignore.push(".DS_Store", "node_modules");
+        // `tmp` va aquí por lo mismo que `node_modules`: es transitorio, está ignorado por git en todo el
+        // monorepo y por tanto ningún paquete puede depender de enviarlo —lo que hubiera dentro no
+        // sobreviviría a un clon limpio—. Sin esto, un workspace de framework que compile ahí (p. ej. las
+        // pruebas de `services-comun`, que emiten en `tmp/spec`) mete su salida de compilación en el ZIP y
+        // la reparte por los demás repos.
+        ignore.push(".DS_Store", "node_modules", "tmp");
+        // Los `*.tsbuildinfo` son la caché incremental de `tsc`. Se resuelven contra lo que hay en disco en
+        // vez de por nombre fijo para cubrir cualquier variante (`tsconfig.tsbuildinfo`, pero también
+        // `tsconfig.<loquesea>.tsbuildinfo` si el workspace compila con más de un proyecto).
+        ignore.push(...files.filter(file => file.endsWith(".tsbuildinfo")));
         if (files.includes(".mr-ignore")) {
             ignore.push(...await readFileString(`${dir}/.mr-ignore`).then(data=>data.trim().split("\n")));
         }

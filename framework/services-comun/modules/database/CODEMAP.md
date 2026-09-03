@@ -150,13 +150,24 @@ Valkey). Comparte forma de API con `Redis` para facilitar la migración entre am
 | `bulk/index.ts` | `Bulk<T>` (abstract), `BulkConfig` |
 | `bulk/my-s-q-l.ts` | `MySQL<T> extends Bulk<T>`, `MySQLBulkConfig<T>` |
 | `bulk/postgre-s-q-l.ts` | `PostgreSQLBulk<T> extends Bulk<T>`, `PostgreSQLBulkConfig<T>` |
-| `bulk/redis.ts` | `RedisBulk<T> extends Bulk<T>`, `RedisBulkConfig<T>` |
+| `bulk/redis.ts` | `RedisBulk<T> extends Bulk<T>`, `RedisBulkConfig<T>`, `RedisHBulk<T> extends Bulk<T>`, `RedisHBulkConfig<T>` |
 | `bulk/elastic.ts` | `ElasticSearchBulk extends BulkBase`, `ElasticSearchBulkConfig` |
 
 `Bulk<T>` (abstract) acumula elementos hasta un tamaño de lote (`arrayChop` de `utiles/array.ts`) o un
 `delay`, y los envía en una sola operación al backend correspondiente. `ElasticSearchBulk` reutiliza
 `BulkBase` de `modules/elasticsearch/bulk/base.ts` en vez del `Bulk<T>` local — es un adaptador delgado
 sobre el sistema de *bulk* de Elasticsearch descrito en el bloque 8 del CODEMAP padre.
+
+`BulkConfig.chunk` acota el tamaño de cada operación enviada al backend. `my-s-q-l.ts`,
+`postgre-s-q-l.ts` y `elastic.ts` lo delegan a su capa inferior (`size`/`blockSize`); `bulk/redis.ts`
+no tiene esa capa y trocea él mismo con `arrayChop` (`utiles/array.ts`), emitiendo un `MULTI` por lote
+—`RedisBulk.CHUNK_DEFECTO = 5000` si no se indica `chunk`—. Esto es obligatorio y no una optimización:
+un `MULTI` con decenas de miles de comandos monopoliza la cola de escritura del cliente, y el `PING`
+de `pingInterval` (que sí está sujeto a `commandOptions.timeout`, a diferencia de los comandos dentro
+del `MULTI`) aborta encolado detrás, provocando el reset de conexiones de `RedisCluster`.
+El tope no puede subirse sin más: `RedisBulk` encola dos comandos por item (`SET` + `EXPIRE`), y
+`EXEC` es atómico, así que mientras el lote se ejecuta el servidor no atiende a ningún otro cliente.
+`RedisHBulk` es la variante para campos de hash (`bulkHSet`), con caducidad lógica por campo.
 
 **Usado por:** `send-task-system` (persistencia de envíos/eventos en Elasticsearch en lote).
 

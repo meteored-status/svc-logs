@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 21 Aug 2026 06:11:54 GMT
- * Hash: 55b52a2ddada97e52297d70244860e6e
- * Versión: 2026.8.21+1-bixus
- * Anterior: 2026.8.20+1-bixus
+ * Fecha: Wed, 26 Aug 2026 09:06:22 GMT
+ * Hash: b832c2a59adf5714986c1c7d53c061ab
+ * Versión: 2026.8.26+2-bixus
+ * Anterior: 2026.8.21+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -147,6 +147,14 @@ export interface IBucket {
  *                       como `navigate`, que es lo que eran: entonces solo se anotaban visitas.
  * @property detail    - Detalle de la acción, o ausente si no lo tiene. Un `navigate` nunca lo lleva: la
  *                       ruta ya lo dice todo.
+ * @property impersonated - A quién estaba **suplantando** quien hizo la acción, o ausente si no suplantaba a
+ *                       nadie (el caso normal).
+ *
+ *                       Importa quién va en cada sitio: `user` es **siempre la persona de carne y hueso que lo
+ *                       hizo**, y este campo la identidad con la que lo hizo. Al revés —guardar al suplantado
+ *                       como autor— el registro diría que Sara borró un rol cuando lo borró Jose entrando como
+ *                       ella, y una auditoría que nombra al autor equivocado es peor que no tenerla: la tabla
+ *                       enseña `user` y los filtros buscan por `user`.
  */
 export interface IAccess {
     timestamp: number;
@@ -154,6 +162,7 @@ export interface IAccess {
     path: string;
     action: EAuditAction;
     detail?: TAuditDetail;
+    impersonated?: IAccessUser;
 }
 
 /**

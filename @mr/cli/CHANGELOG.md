@@ -2,6 +2,126 @@
 
 ---
 
+## 2026.9.3
+
+### Fixed
+
+- [Jose] `src/mrpack/clases/paquete/directory.ts` — **el `tmp/` de un workspace de framework se empaquetaba
+  y se enviaba.** Los únicos ignores incorporados eran `.DS_Store` y `node_modules`, y `addNuevos` mete
+  cualquier otro fichero o directorio que no esté en `.mr-ignore`, sin filtro por extensión. Añadido `tmp`
+  a la lista, por lo mismo que `node_modules`: es transitorio, está ignorado por git en todo el monorepo y
+  ningún paquete puede depender de enviarlo —lo que hubiera dentro no sobreviviría a un clon limpio—.
+- No había salido antes porque **ningún workspace de framework tenía `tmp/`**: los logs de `mrpack framework`
+  van al `tmp/log` de la **raíz** del monorepo, no al del workspace. Apareció al compilar ahí las pruebas de
+  `services-comun` (`tmp/spec`), que metían 33 ficheros de salida de compilación en el ZIP —de 266 en total—
+  y los habrían repartido por los demás repos.
+- Medido reproduciendo el recorrido de `update`/`addNuevos` sobre `framework/services-comun` con un fichero
+  canario dentro de `tmp/`: antes entraban 266 ficheros, 33 de ellos bajo `tmp/`; después 233 y ninguno —232
+  al quitar además el `.mr-ignore` redundante del punto siguiente—. El
+  directorio `spec/` sí sigue viajando (6 ficheros), que es lo que se quiere: las pruebas acompañan al
+  código compartido.
+- [Jose] **Los `*.tsbuildinfo` pasan a ignorarse también de forma incorporada**, en vez de declararse paquete
+  a paquete. Se resuelven contra lo que hay en disco y no por nombre fijo, así que cubren cualquier variante
+  (`tsconfig.tsbuildinfo`, `tsconfig.<loquesea>.tsbuildinfo`).
+- Declararlo a mano fallaba en silencio justo donde nadie se acordaba de crear el `.mr-ignore`:
+  **`services-comun-status` y `@mr/core-workload` estaban enviando el suyo** —87 y 74 KB—, y en un paquete
+  de 17 ficheros como `core-workload` eso era la mayor parte del ZIP. El primero se envió así hoy mismo.
+- Borrados los cuatro `.mr-ignore` que solo existían para esto (`framework/services-comun`,
+  `@mr/core/network`, `@mr/core/dev` y `@mr/cli/src`). Se conservan `@mr/cli/bin/.mr-ignore` y
+  `@mr/core/dev/.claude/.mr-ignore`, que tienen contenido propio.
+- Comprobado sobre los nueve paquetes de framework del repo: ninguno lleva ya `.tsbuildinfo` ni nada bajo
+  `tmp/`. `services-comun-status` baja de 90 a 89 ficheros y `@mr/core-workload` de 17 a 16.
+
+---
+
+## 2026.9.2 (2)
+
+### Fixed — `src/mrlang/clases-v2/`
+
+- [Jose] **Un `set` con `params` no sustituía ninguno.** `modulo/translation/set.ts` emitía
+  `new SingularValue<XParams>(value)` sin el array de parámetros —el que `map.ts` sí pasa—, así que
+  `applyParams()` no tenía nada que sustituir y el `{{n}}` se pintaba literal. Es la misma forma de fallo que
+  el de los plurales: el genérico decía que aceptaba los parámetros, compilaba, y no se veía hasta tenerlo en
+  pantalla. Latente hasta ahora porque no hay ningún `set` en uso.
+- **`LANG_REGEXPS` casaba cualquier código terminado en «pt».** `/^pt-PT|pt$/i` se lee como `(^pt-PT)|(pt$)`,
+  porque la alternancia ata menos que el anclaje: `egypt` y `apt` daban positivo y `pt-BR` —que tiene su propia
+  regla— dependía de llegar después. Anclada entera, `/^(pt-PT|pt)$/i`. Sin efecto con los idiomas de hoy
+  (`es`, `en`, `fr`), que no casaban ni antes ni ahora.
+
+- **La jerarquía de idiomas la aplicaban solo los literales.** `clases-v2/generate.ts` subía por la cadena de
+  padres (`Lang.getByCode` → `.parent`) para un `literal`, pero para un `map` o un `set` hacía
+  `valor[lang] ?? defecto` y se saltaba la herencia entera. Hoy coincidía —el defecto de estos módulos es
+  inglés y la cadena de `es` acaba en inglés—, así que se habría visto el día que alguien añadiera un idioma
+  con padre distinto del defecto: un `es-MX` caería a `es` en los literales y al inglés en el mapa de la misma
+  pantalla, en la misma tarjeta. Los tres tipos comparten ahora `Generate.resolverValor()`.
+
+### Changed — `src/mrlang/clases-v2/`
+
+- [Jose] **Los tres emisores dejan de tener tres copias de lo mismo.** `modulo/translation/valor.ts` escribe
+  **un valor** —`SingularValue` o `PluralValue`— con sus imports, sus líneas y el nombre de la variable que
+  deja declarada, y `literal.ts`, `map.ts` y `set.ts` solo deciden en qué lo envuelven: un `Literal`, un
+  `TranslationMap` o un `TranslationSet`.
+- **Es la causa de los tres fallos de hoy, no un tercero más.** `set.ts` se dejó el array de `params` del
+  `SingularValue`, `literal.ts` copió de su propia rama del singular una variable que en la del plural no
+  existía, y la jerarquía de idiomas vivía dentro de un `case`. Los tres compilaban y los tres se veían solo
+  en pantalla. Mientras el valor se escriba en un sitio, no pueden volver a discrepar en eso.
+- El genérico de la firma y el array de nombres se emiten **juntos**, en la misma expresión: separarlos es
+  exactamente lo que hacía el `set` —el tipo decía que aceptaba parámetros y el runtime no sustituía nada—.
+- Salida verificada contra la anterior sobre los 2989 ficheros generados de los 26 módulos: **ninguna
+  diferencia semántica**. Solo el orden de dos imports, una línea en blanco de menos y las claves de las
+  formas de plural sin comillas en los `map` y los `set` (`one:` en vez de `"one":`), que es como ya las
+  escribía `literal.ts`.
+
+## 2026.9.2
+
+### Added — `src/mrlang/clases-v2/`
+
+- [Jose] **`counter`: un plural puede decir cuál de sus parámetros es el contador.** Es el número con el que se
+  elige la forma, y con dos o más parámetros no se puede adivinar —en «{{n}} de {{total}}» manda `n`, y en
+  «{{total}} en {{n}} días» manda el segundo—. Nuevo campo opcional de `JSONItem`, emitido como cuarto argumento
+  de `PluralValue` **solo cuando la entrada lo declara**: con un único parámetro el runtime lo deduce igual, así
+  que los ficheros generados de los módulos que ya existían salen byte a byte iguales y no hay que reescribir
+  ningún `.json`.
+- **`mrlang generate` valida los plurales y se niega a generar si algo no cuadra**, diciendo módulo, entrada y
+  qué le pasa: un plural sin `params`, uno con varios y sin `counter`, o un `counter` que no está entre los
+  `params` —el error de dedo que antes habría vuelto a fallar en silencio—. La comprobación vive en
+  `modulo/translation/plural.ts` y la expone `ModuloJSON.validar()`.
+
+### Fixed — `src/mrlang/clases-v2/`
+
+- **La validación corre antes de borrar el `.src`.** `Generate.run()` empezaba por vaciarlo, así que un `.json`
+  mal escrito dejaba el workspace sin nada generado. Ahora carga, valida y solo entonces borra y genera.
+- **Un plural sin `params` generaba un fichero que no compilaba.** La rama sin parámetros de
+  `modulo/translation/literal.ts` emitía `new Literal(singularValue)` —una variable de la rama del singular,
+  copiada— y un `export default literal.render` sin invocar. El error salía en el sitio equivocado y no decía
+  nada del contador que faltaba; ahora lo rechaza la validación, y la rama emite código correcto.
+
+## 2026.8.26
+
+### Removed — `src/mrpack/clases/init/dependencias.ts`
+
+- [Jose] **`hexoid` deja de inyectarse y se retira de donde esté.** Entró en la lista porque la exigía
+  `formidable`, y desde su 3.5 ya no: usa `@paralleldrive/cuid2`. Nunca fue un paquete que importase el
+  código de ningún servicio, así que sin ese motivo no queda ninguno.
+- No basta con dejar de inyectarla: los workspaces que ya la declaran la conservarían para siempre. Por eso
+  se borra activamente, con el mismo patrón que se usó para `@google-cloud/trace-agent` y las de
+  OpenTelemetry cuando las sustituyó `dd-trace`. El borrado va **fuera** del bloque de `deploy.type:
+  "service"` a propósito: un cronjob no la recibe hoy, pero puede arrastrarla de cuando ese bloque sí se le
+  aplicaba.
+- Por qué importa y no es cosmético: el bundler hace `external: Object.keys(dependencies)`
+  (`@mr/core/dev/bundler/esbuild/esbuild.config.mjs`), así que la lista de `dependencies` de un workspace
+  **es** su lista de externals. Cada entrada de más es un paquete que la imagen desplegada instala sin que
+  nadie lo pida, y un `dependencies` que menciona librerías que el servicio no toca despista a quien viene a
+  entender de qué depende de verdad.
+- **Lo que sigue inyectándose no cambia**: `chokidar`, `formidable`, `ws` y el opcional `bufferutil` en los
+  workspaces de tipo `service`, más `tslib`, `source-map-support` y `dd-trace` en todos los no-Next. Las
+  cuatro primeras se usan de verdad —aparecen como `require()` en los bundles, porque se las traen
+  `@mr/core-network` y `@mr/core-workload`—, y las tres últimas son imprescindibles por motivos que no se
+  ven en el bundle: `tslib` la exige `tsc` con `importHelpers: true`, y `source-map-support` y `dd-trace`
+  las requiere el lanzador `app.js` antes de cargar `./output/app`.
+
+---
+
 ## 2026.8.5
 
 ### Added — `src/mrpack/clases/init/symlinks.ts`, `src/mrpack/clases/init.ts`
