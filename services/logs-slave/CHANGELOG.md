@@ -2,6 +2,14 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entradas nuevas arriba.
 
+## 2026.9.4 — [Jose]
+
+### Fixed
+- El cliente de BigQuery toma el `projectId` del propio fichero de credenciales. `new BigQuery({keyFilename})`
+  no falla cuando el fichero no existe: se queda con el literal `{{projectId}}` y cada bloque insertado
+  devolvía `400 Invalid project ID '{{projectId}}'`. Ahora una credencial ausente o sin `project_id` se
+  registra una sola vez, con el nombre del fichero, y `guardar()` devuelve `false` sin tocar la red.
+
 ## 2026.9.3 — [Jose]
 
 ### Fixed

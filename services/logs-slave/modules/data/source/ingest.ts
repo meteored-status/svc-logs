@@ -4,12 +4,14 @@ import readline from "node:readline/promises";
 import {PromiseChainWTB} from "services-comun/modules/utiles/promise";
 import {arrayChop} from "services-comun/modules/utiles/array";
 import {error} from "services-comun/modules/utiles/log";
+import {readJSON} from "services-comun/modules/utiles/fs";
 
 import {type ISalida, nuevaSalida, procesarLinea} from "./parser";
 
 import type {Cliente} from "../cliente";
 import type {Storage} from "services-comun/modules/fs/storage";
 
+const CREDENCIALES = "files/credenciales/bigquery.json";
 const DATASET = "logs";
 const BLOQUE_BIGQUERY = 1000;
 
@@ -29,11 +31,27 @@ const MAX_ERRORES_LOG = 10;
  * Cliente de BigQuery, creado bajo demanda. Se construye al margen de la abstracción `Google` que
  * usa el resto del servicio para Cloud Storage, así que la ruta de credenciales está aquí a mano:
  * `mrpack.json` las inyecta bajo `credenciales[].target: "bigquery.json"`.
+ *
+ * El `projectId` se toma del propio fichero en lugar de dejar que lo autodetecte la librería: si no
+ * lo consigue no falla al construirse, se queda con el literal `{{projectId}}` y cada inserción se
+ * estrella contra la API con un 400 imposible de leer. Leyéndolo aquí, una credencial ausente o
+ * incompleta se ve una sola vez y antes de tocar la red.
  */
 let bq: BigQuery|undefined;
-const getBQ = (): BigQuery => bq ??= new BigQuery({
-    keyFilename: "files/credenciales/bigquery.json",
-});
+
+const crearBQ = async (): Promise<BigQuery> => {
+    const {project_id: projectId} = await readJSON<{project_id?: string}>(CREDENCIALES);
+    if (projectId==undefined) {
+        return Promise.reject(new Error(`${CREDENCIALES} no declara project_id`));
+    }
+
+    return new BigQuery({
+        projectId,
+        keyFilename: CREDENCIALES,
+    });
+};
+
+const getBQ = async (): Promise<BigQuery> => bq ??= await crearBQ();
 
 /**
  * Resumen de la ingesta de un fichero.
@@ -81,7 +99,15 @@ const guardar = async (salida: ISalida): Promise<boolean> => {
         return true;
     }
 
-    const dataset = getBQ().dataset(DATASET);
+    let dataset: Dataset;
+    try {
+        dataset = (await getBQ()).dataset(DATASET);
+    } catch (err) {
+        error("No se pudo inicializar BigQuery", err instanceof Error ? err.message : JSON.stringify(err));
+
+        return false;
+    }
+
     const resultados = await PromiseChainWTB(bloques.map(bloque=>async ()=>insertar(dataset, bloque)), 0, CONCURRENCIA_BIGQUERY);
 
     return resultados.every(ok=>ok);
