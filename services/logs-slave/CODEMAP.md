@@ -243,6 +243,19 @@ para Cloud Storage: la ruta de credenciales está repetida a mano aquí en vez d
 inyectadas por `mrpack.json` bajo `credenciales[].target: "bigquery.json"`), hay que recordar que
 este fichero no pasa por `Configuracion`.
 
+El `projectId` se lee del propio fichero de credenciales y se pasa explícito al constructor. No es
+redundante: `new BigQuery({keyFilename})` **no falla si el fichero no existe**, se queda con el
+literal `{{projectId}}` como identificador de proyecto y el problema no aparece hasta que cada
+inserción se estrella contra la API con un `400 Invalid project ID '{{projectId}}'`. Leyéndolo aquí,
+una credencial ausente o sin `project_id` se registra una sola vez —con el nombre del fichero— y
+`guardar()` devuelve `false` sin llegar a tocar la red.
+
+Esto importa en local: `files/` está en `.gitignore` y `bigquery.json` solo lo inyecta el paso de
+compilación del despliegue (`prepararCredenciales()` en `@mr/cli`, que además **copia en silencio
+solo si el secreto existe**). Un checkout limpio no tiene esa credencial, así que el volcado a
+BigQuery falla siempre y —desde que el borrado depende de que el volcado sea completo— los objetos
+del bucket no se borran y Pub/Sub los reintenta.
+
 ## Flujo de una petición típica
 
 ```text
