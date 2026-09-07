@@ -28,10 +28,9 @@
     "@mr/core-dev": "workspace:*",
     "@mr/core-i18n": "workspace:*",
     "@mr/core-network": "workspace:*",
+    "@mr/core-utils": "workspace:*",
     "@mr/core-workload": "workspace:*",
     "@types/node": "^24.13.3",
-    "logs-services": "workspace:*",
-    "logs-status-base": "workspace:*",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*"
   },

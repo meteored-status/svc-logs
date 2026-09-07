@@ -28,13 +28,13 @@ services/logs-web/
 ├─ modules/
 │  ├─ engine.ts                      — Engine: arranque HTTP, registra el único RouteGroup (Slave)
 │  ├─ utiles/
-│  │  └─ config.ts                   — Configuracion (extiende services-comun-status + StatusConfig)
+│  │  └─ config.ts                   — Configuracion (extiende services-comun-status) + StatusConfig
 │  ├─ net/
 │  │  └─ handlers/
 │  │     └─ slave.ts                 — RouteGroup: POST /service/logs/{service,error}/
 │  └─ data/
-│     ├─ servicio.ts                 — ingest(): encola Log en logs-services vía BulkAuto
-│     ├─ error.ts                    — ingest(): encola Error en logs-services vía BulkAuto + auto-monitoring de fallos
+│     ├─ servicio.ts                 — ILogServicioPOST + documento indexado + ingest() vía BulkAuto
+│     ├─ error.ts                    — ILogErrorPOST + documento indexado + ingest() vía BulkAuto + aviso de fallos
 │     └─ status.ts                   — SlaveSpec: estado propio del pod (grupo LOGS_SLAVE) para el panel Status
 ├─ assets/
 │  └─ favicon.ico                    — favicon servido por el handler favicon de @mr/core-workload
@@ -79,27 +79,30 @@ del servicio.
 
 ### `servicio.ts` / `error.ts` — ingesta (escritura)
 
-Ambos módulos son delgados: construyen el documento con las clases del paquete
-**compartido** `logs-services` (`packages/logs-services/modules/data/{servicio,error}.ts`,
-nombre de paquete `logs-services`) y lo encolan con una instancia propia de
-`BulkAuto` (`services-comun/modules/elasticsearch/bulk/auto`) apuntando a `elastic`
+Cada módulo tiene lo suyo entero: qué se acepta por HTTP (`ILogServicioPOST` / `ILogErrorPOST`),
+cómo se construye el documento, en qué índice va, y el `BulkAuto`
+(`services-comun/modules/elasticsearch/bulk/auto`) que lo encola contra `elastic`
 (`services-comun/modules/utiles/elastic`):
 
 ```
-ingestLog(data: ILogServicioPOST): void
-  → new Log(...)                    — logs-services/modules/data/servicio
-  → BULK.create({index: Log.getIndex(proyecto), doc: documento.toJSON()})
+ingest(data: ILogServicioPOST): void
+  → BULK.create({index: indiceDe(proyecto), doc: documento(data)})
 
-ingestError(data: ILogErrorPOST, config): void
-  → new Error(...)                  — logs-services/modules/data/error
-  → BULK.create({index: Error.getIndex(proyecto), doc: documento.toJSON()})
+ingest(data: ILogErrorPOST, config): void
+  → BULK.create({index: indiceDe(proyecto), doc: documento(data)})
        .promise.catch(async (err) => { ... })   — ver "Asimetría" más abajo
 ```
 
-`Log.getIndex(proyecto)` / `Error.getIndex(proyecto)` (en `logs-services`) devuelven
-`mr-log-servicios-<proyecto>` / `mr-log-errores-<proyecto>` (proyecto en minúsculas); esos
-mismos índices están agrupados bajo los alias `mr-log-servicios` / `mr-log-errores`
-(`Log.getAlias()` / `Error.getAlias()`, también en `logs-services`).
+`indiceDe(proyecto)` devuelve `mr-log-servicios-<proyecto>` / `mr-log-errores-<proyecto>` (el
+proyecto en minúsculas, que es lo único que admite Elasticsearch en el nombre de un índice),
+construido **sobre las constantes del framework** `LOG_SERVICIOS_ALIAS` / `LOG_ERRORES_ALIAS`, que
+son los alias que agrupan esos índices y lo que consulta el panel.
+
+**Esto estaba en el paquete `logs-services`**, con este servicio como único consumidor: dos
+ficheros con una clase de getters cada uno cuya única salida era un `toJSON()`. Al deshacer el
+paquete la clase se ha quedado por el camino —el documento ya lo declara el framework, así que la
+clase solo envolvía una interfaz— y con ella un segundo `BulkAuto` que arrancaba dentro de `Log` y
+al que nadie escribía: un temporizador vaciando una cola siempre vacía.
 
 ### Quién lee lo que se escribe aquí — **mismos índices, otro repositorio**
 
@@ -111,11 +114,10 @@ nombre de índice o de alias rompe a los dos a la vez**, y lo hace en silencio: 
 repositorios que compilan por separado.
 
 Ese contrato —los alias y las interfaces `ILogServicioES`/`ILogErrorES`— vive por eso en el
-framework compartido, en `services-comun-status/modules/services/logs/logs/elastic.ts`. Aquí se
-sigue escribiendo con las clases `Log`/`Error` de `logs-services`, que declaran lo mismo por su
-cuenta: **son dos declaraciones del mismo documento**, y si una cambia sin la otra, la ingesta y la
-consulta dejan de entenderse. Lo suyo, el día que se toque, es que `logs-services` importe del
-framework en lugar de repetirlo.
+framework compartido, en `services-comun-status/modules/services/logs/logs/elastic.ts`, y **es de
+donde se escribe desde aquí**. Lo era solo a medias hasta que se deshizo `logs-services`: ese
+paquete declaraba las mismas propiedades y el mismo `"mr-log-errores"` por su cuenta, o sea dos
+declaraciones del mismo documento en dos repos que compilan por separado. Ahora hay una.
 
 Antes esa consulta la servía `services/logs`, un segundo servicio de este mismo repositorio
 (`EService.logs`, endpoint interno `switch-svc-logs`), que se retiró al mover los listados a
@@ -153,15 +155,39 @@ tal cual está en el código, sin asumir su gravedad real.
 
 ### `status.ts` — `SlaveSpec` (auto-monitorización)
 
-Extiende `LogsSpec<ISpec>` de `logs-status-base` (paquete `packages/status-base`, nombre
-npm `logs-status-base`), bajo el grupo `TGroup.LOGS_SLAVE`. Singleton por proceso
-(`SlaveSpec.get(config)`, con `_INSTANCE` cacheada). Solo se activa si
-`config.status.enabled` es `true` (`StatusConfig`, ver `modules/utiles/config.ts`); si no,
-`buildMonitors()` es un no-op (comprobado en la clase base `LogsSpec`, no en este
-workspace). El único monitor que construye (`buildWorkspaceMonitors`) es "Elasticsearch",
-en OK/error según si `cluster.elastic.current_publish.errors` tiene elementos — y ese
-array **solo lo rellena `ingestError`** (ver asimetría arriba); un fallo publicando logs de
+Extiende `Spec<ISpec>` del framework directamente, bajo el grupo `TGroup.LOGS_SLAVE`. Singleton por
+proceso (`SlaveSpec.get(config)`, con `_INSTANCE` cacheada). Solo se activa si
+`config.status.enabled` es `true` (`StatusConfig`, ahora en `modules/utiles/config.ts`); si no,
+`buildMonitors()` no hace nada. El único monitor que construye (`buildWorkspaceMonitors`) es
+"Elasticsearch", en OK/error según si `cluster.elastic.current_publish.errors` tiene elementos — y
+ese array **solo lo rellena `ingestError`** (ver asimetría arriba); un fallo publicando logs de
 servicio no lo toca.
+
+**Absorbe la clase `LogsSpec` de `logs-status-base`**, que era abstracta con esta como única
+implementación. Con la herencia deshecha quedaron fuera `determineDiffTime()` y `TTimeUnit`, que no
+los llamaba nadie y eran además una copia —con menos unidades— de lo que ya hay en
+`services-comun/modules/utiles/fecha.ts`.
+
+### ⚠️ El monitor de Elasticsearch no puede ponerse en rojo
+
+Y no por una condición mal escrita, sino por el `data` que se heredaba: **devuelve un
+`DEFAULT_SPEC()` nuevo en cada llamada** en vez de lo que cargó `load()`. De ahí que `cluster`
+también sea un árbol recién creado cada vez, y entonces, en el `catch` de `ingestError`:
+
+```
+logsSpec.cluster.….errors.push(…)   → objeto 1, que se tira
+logsSpec.cluster.….count++          → objeto 2, que se tira
+logsSpec.cluster.….date = Date.now()→ objeto 3, que se tira
+logsSpec.buildMonitors()            → lee el objeto 4: errors: [] y date: 0
+```
+
+Resultado: el monitor informa **siempre** de que no ha habido errores al publicar, con fecha de
+actualización 1970, y `save()` persiste `_data` —lo que dejó `load()`—, así que tampoco queda
+registro. El aviso de fallos de escritura, tal cual está, es decorativo.
+
+Se ha conservado **igual** al deshacer los paquetes, y con el aviso escrito en el propio código:
+arreglarlo es hacer que `data` mantenga un árbol entre llamadas, y eso enciende un monitor que
+lleva verde desde que existe. Es una decisión de operación, no de un refactor de paquetes.
 
 ## `Engine` (`modules/engine.ts`)
 
