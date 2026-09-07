@@ -1,12 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 02 Sep 2026 14:49:28 GMT
- * Hash: 8520e77e6aa02b50e4b37bde8bdae474
- * Versión: 2026.9.2+2-bixus
- * Anterior: 2026.9.2+1-bixus
+ * Fecha: Thu, 03 Sep 2026 14:04:25 GMT
+ * Hash: 6153034e32abe95e38144903342494e8
+ * Versión: 2026.9.3+2-bixus
+ * Anterior: 2026.9.2+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import {etiquetaDeDia, etiquetaDeMes, formatear, porcentaje} from "../formato";
 import {EHallazgo, type IHallazgoOUT} from "./interface";
 import {ESeveridad} from "./interface";
 
@@ -175,57 +176,16 @@ export interface IHallazgoEscrito {
     nota?: string;
 }
 
-/** Cómo se lee cada unidad. `count` no lleva sufijo: «31 zonas» ya se entiende por el nombre de la línea. */
-const UNIDADES: Record<string, string> = {
-    "TB": "TB",
-    "MB": "MB",
-    "MM": "MM",
-    "MM_ms": "MM ms",
-    "MM_GB_s": "MM GB-s",
-    "count": "",
-};
-
 /**
- * Un número con su unidad, en el idioma que se está leyendo.
+ * Un número con su unidad, o una raya si no hay dato.
  *
- * Los decimales van por magnitud y no fijos: tres decimales en un «377 TB» son ruido y ninguno en un «0,25 TB»
- * pierde el dato. `sufijo: false` para el primero de dos valores de la misma unidad en la misma frase: «3.699 de
- * 2.500 MM ms» y no «3.699 MM ms de 2.500 MM ms».
+ * Lo único que añade sobre el `formatear()` del formateador compartido es el `undefined`, que aquí llega —hay
+ * hallazgos sin valor de referencia— y allí no tendría sentido. Todo lo demás —los decimales por magnitud, la
+ * tabla de unidades, el sufijo— **era una copia literal** de esa función con el locale metido a mano, escrita
+ * cuando `formatear()` todavía formateaba con `"es-ES"` fijo y por tanto no se podía reutilizar. Ahora sí.
  */
-const medida = (valor: number|undefined, unidad: string, locale: string, {sufijo = true}: {sufijo?: boolean} = {}): string => {
-    if (valor === undefined) {
-        return "—";
-    }
-
-    const unidadTexto = UNIDADES[unidad] ?? unidad;
-    const decimales = unidad === "count" ? 0 : valor >= 100 ? 0 : valor >= 1 ? 1 : 2;
-    const numero = valor.toLocaleString(locale, {minimumFractionDigits: decimales, maximumFractionDigits: decimales});
-
-    return sufijo && unidadTexto.length > 0 ? `${numero} ${unidadTexto}` : numero;
-}
-
-/**
- * Un porcentaje, sin decimales de más y **sin signo**.
- *
- * El signo lo dice el propio código de la frase —`escalon-subio` contra `escalon-bajo`— y no un menos delante: «un
- * −72,7%» obliga a interpretar dos convenciones a la vez. El umbral de decimales va sobre el **valor absoluto**,
- * que es donde estaba el fallo de la primera versión: `valor >= 10` es falso para un −72,7, así que las bajadas
- * salían con un decimal y las subidas sin él en la misma lista.
- */
-const porciento = (valor: number, locale: string): string => {
-    const absoluto = Math.abs(valor);
-
-    return `${absoluto.toLocaleString(locale, {maximumFractionDigits: absoluto >= 10 ? 0 : 1})}%`;
-}
-
-const nombreDeMes = (valor: string, locale: string): string => {
-    const [anio, numero] = valor.split("-").map(actual => Number.parseInt(actual, 10));
-    const escrito = new Date(Date.UTC(anio, numero-1, 1)).toLocaleDateString(locale, {month: "long", year: "numeric", timeZone: "UTC"});
-
-    return `${escrito.charAt(0).toUpperCase()}${escrito.slice(1)}`;
-}
-
-const nombreDeDia = (valor: string, locale: string): string => new Date(`${valor}T00:00:00Z`).toLocaleDateString(locale, {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC"});
+const medida = (valor: number|undefined, unidad: string, locale: string, {sufijo = true}: {sufijo?: boolean} = {}): string =>
+    valor === undefined ? "—" : formatear(valor, unidad, locale, {sufijo});
 
 /**
  * Escribe un hallazgo con los textos y el idioma que se le pasen.
@@ -242,13 +202,13 @@ export const escribir = (hallazgo: IHallazgoOUT, escritura: IEscritura): IHallaz
     const {frases, notas, lineas, locale} = escritura;
     const codigos = texto(hallazgo);
 
-    const fecha = nombreDeDia(date, locale);
+    const fecha = etiquetaDeDia(date, locale);
     const params: Record<string, string|number> = {
-        mes: month !== undefined ? nombreDeMes(month, locale) : "",
+        mes: month !== undefined ? etiquetaDeMes(month, locale) : "",
         fecha,
         valor: medida(value, unit, locale),
         tope: medida(reference, unit, locale),
-        pct: porciento(percent ?? 0, locale),
+        pct: porcentaje(percent ?? 0, locale),
         // Sin unidad: la lleva ya el valor con el que se compara, en la misma frase.
         vecindad: medida(reference, unit, locale, {sufijo: false}),
         antes: medida(reference, unit, locale, {sufijo: false}),

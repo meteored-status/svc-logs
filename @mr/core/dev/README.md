@@ -283,7 +283,7 @@ Los shorthands del `package.json` raíz mapean a:
 
 **Fichero:** `CONTRIBUTING.md`
 **Expuesto en la raíz de cada monorepo consumidor** mediante symlink (`initContributing()`,
-mismo patrón que `AGENTS.md`/`CLAUDE.md` — ver `@mr/cli/src/mrpack/clases/init/symlinks.ts`).
+mismo patrón que `AGENTS.md`/`CLAUDE.md` — ver `@mr/cli/src/clases/init/symlinks.ts`).
 
 Documenta las convenciones de ramas (git-flow del monorepo: `master`/`main`, `develop`,
 `hotfix/<nombre>`, `feature/<fecha>_<nombre>_<ticket>_<desc>`, `version/<desarrollador>`),
@@ -308,7 +308,7 @@ si algún workspace con cambios significativos (fichero nuevo, o ≥ 15 líneas 
 tocó su `CODEMAP.md` — o su `CHANGELOG.md`, si ya existía.
 
 - Todo `.claude/` se symlinkea entero en la raíz de cada monorepo consumidor mediante
-  `initClaudeDir()` (`@mr/cli/src/mrpack/clases/init/symlinks.ts`), igual que `.github/`
+  `initClaudeDir()` (`@mr/cli/src/clases/init/symlinks.ts`), igual que `.github/`
   (junction en Windows, symlink relativo en Unix) — a diferencia de `AGENTS.md`/`CLAUDE.md`,
   que son symlinks de fichero simple. `.claude/settings.local.json` (local) se excluye tanto
   del envío del framework (`.claude/.mr-ignore`) como del `.gitignore` raíz de cada monorepo

@@ -7,7 +7,7 @@
 > eliminado un bloque de texto inyectado que sustituía la nota de orden real).
 > Última revisión: 2026-07-17 (el cursor de patch en `config.workspaces.json` se mueve de
 > `patch` a nivel raíz a `framework.patch` —primera propiedad del objeto `framework`, antes de
-> `framework.updates`, ver `@mr/cli/src/mrpack/clases/init/config-workspaces.ts`—; nueva
+> `framework.updates`, ver `@mr/cli/src/clases/init/config-workspaces.ts`—; nueva
 > `getPatchFromConfig(json)` en `index.mjs` que centraliza la lectura aceptando ambas
 > ubicaciones, usada por `readPatchCursor()`/`writePatchCursor()`; `writePatchCursor()`
 > reconstruye `framework` para que `patch` quede primero y limpia el `patch` legacy de la raíz
@@ -56,6 +56,8 @@ patches/
     ├── breaking-user-tiempo-domain-default-import.mjs     R032
     ├── breaking-dominio-tiempo-list-rename.mjs            R033
     ├── deprecated-frontend-legacy-import.mjs              R034
+    ├── deprecated-traduccion-v2-import.mjs                R035
+    ├── ensure-i18n-core-devdep.mjs                        WS002
     └── sync-mr-devdeps.mjs                                WS001
 ```
 
@@ -105,12 +107,13 @@ processFile(filePath, rules)                 // → { changed, hits[] } — apli
 R003 → R002 → R006 → R007 → R004 → R005 → R001 → R008 → R009 → R010
 → R011 → R012 → R013 → R014 → R015 → R016 → R034 → R017 → R019 → R020
 → R018 → R021 → R022 → R023 → R024 → R025 → R026 → R027 → R028 → R029
-→ R030 → R031 → R032 → R033
+→ R030 → R031 → R032 → R033 → R035
 ```
 
 ### `WORKSPACE_RULES`
 ```
 WS001  — syncMrDevDepsRule
+WS002  — ensureI18nCoreDevDepRule
 ```
 
 ---
@@ -186,6 +189,7 @@ Regla de nivel workspace. `run(rootDir)` recibe la raíz del monorepo y devuelve
 | R032 | `breaking-user-tiempo-domain-default-import.mjs` | custom | `import Foo from "@mr/user-tiempo-domain"` *(default export eliminado)* → `import {Dominio as Foo} from "@mr/user-tiempo-domain"` *(también `import type` y mixto `Foo, {Bar}`)* |
 | R033 | `breaking-dominio-tiempo-list-rename.mjs` | specifierRename | `{DominioTiempoList}` de `@mr/user-tiempo-domain/loader` *(breaking)* → `{DominioList as DominioTiempoList}` |
 | R034 | `deprecated-frontend-legacy-import.mjs` | simple | `services-comun/modules/frontend` → `@mr/core-templates/legacy` |
+| R035 | `deprecated-traduccion-v2-import.mjs` | simple | `services-comun/modules/traduccion/v2/` → `@mr/core-i18n/` (con barra final: el `index.ts` del runtime no se exporta) |
 
 > **Nota de orden:** subpaths deben ir **antes** que sus paths padre en `RULES` para evitar
 > matches parciales (p.ej. R017/R019 antes que R018; R034 antes que R016/R017 por la misma

@@ -258,7 +258,7 @@ e incremental: solo aplica reglas con número mayor que el cursor `framework.pat
 `.ts`/`.tsx`/`.js`/`.mjs`/`.cjs` de todo el monorepo consumidor.
 **Usado por:** `yarn run patch:apply` (alias de `yarn workspace @mr/core-dev mrpack:patch:apply`);
 invocado automáticamente por `@mr/cli` (`aplicarPatches()` en
-`@mr/cli/src/mrpack/clases/patches.ts`) tras `mrpack framework`/`mrpack update`, siempre antes
+`@mr/cli/src/clases/patches.ts`) tras `mrpack framework`/`mrpack update`, siempre antes
 de recompilar `@mr/cli`.
 
 ---
@@ -284,7 +284,7 @@ stdin, agrupa por workspace los ficheros de código sin comitear, y bloquea una 
 **Depende de:** nada de `@mr/core-dev` en tiempo de ejecución — es un script de proceso invocado
 por el propio Claude Code.
 **Usado por:** todo monorepo consumidor, vía `initClaudeDir()`
-(`@mr/cli/src/mrpack/clases/init/symlinks.ts`), que symlinkea `.claude/` entero en la raíz del
+(`@mr/cli/src/clases/init/symlinks.ts`), que symlinkea `.claude/` entero en la raíz del
 proyecto (mismo mecanismo que `initGithub()` con `.github/`).
 
 ---

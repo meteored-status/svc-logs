@@ -1,117 +1,83 @@
-import {build, context} from "esbuild";
-import {rmSync} from "node:fs";
-import {readFileSync} from "node:fs";
-import {createRequire} from "node:module";
-import {dirname, resolve} from "node:path";
+// La compilación vive en `@mr/core-cli/esbuild`, compartida con `mrlang`. Aquí solo lo propio: el
+// punto de entrada y, en watch, arrancar de paso el de `mrlang`.
+import {existsSync} from "node:fs";
+import {resolve} from "node:path";
 import {spawn} from "node:child_process";
 import {fileURLToPath} from "node:url";
 
-const _require  = createRequire(import.meta.url);
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf-8"));
+import {compilar} from "@mr/core-cli/esbuild";
 
-// Las dependencies de runtime son externas (no se bundlean).
-// Los workspace devDeps (services-comun, @mr/core-*, etc.) SÍ se bundlean
-// porque son TypeScript puro sin compilar.
-//
-// Excepción explícita (igual que en rspack.config.mjs):
-//   - typescript:              devDep de build, 9MB de fuente, tiene dynamic requires internos.
-//   - ts-checker-rspack-plugin: solo se usa durante la compilación de @mr/cli, no en runtime.
-const EXTRA_EXTERNAL = ["typescript", "ts-checker-rspack-plugin"];
-const external = [...Object.keys(pkg.dependencies ?? {}), ...EXTRA_EXTERNAL];
-
-// Equivalente al DefinePlugin de rspack: inyecta las variables globales del entorno.
-const define = {
-    "DESARROLLO":         "false",
-    "TEST":               "false",
-    "PRODUCCION":         "true",
-    "ENTORNO":            '"produccion"',
-    "NEXTJS":             "false",
-    "DATABASE":           '"undefined"',
-    "global.DESARROLLO":  "false",
-    "global.TEST":        "false",
-    "global.PRODUCCION":  "true",
-    "global.ENTORNO":     '"produccion"',
-    "global.NEXTJS":      "false",
-    "global.DATABASE":    '"undefined"',
-};
-
-const outdir      = resolve(__dirname, "../bin/min");
-// TypeScript 7 ya no expone "./bin/tsc" en el campo "exports" de su package.json,
-// así que resolvemos el paquete y componemos la ruta al binario manualmente.
-const tscBin      = resolve(dirname(_require.resolve("typescript/package.json")), "bin/tsc");
-// const tscBin      = require.resolve("typescript/bin/tsc");
-const tsconfigPath = resolve(__dirname, "tsconfig.json");
-
-const watch = process.argv.includes("--watch");
+// La raíz del monorepo: este fichero está en `@mr/cli/src`, así que son tres niveles arriba.
+const raiz = resolve(fileURLToPath(import.meta.url), "../../../..");
 
 /**
- * Lanza `tsc --noEmit` (con o sin --watch).
- * Devuelve una Promise que se resuelve con el exit code cuando el proceso termina.
- * En modo watch el proceso nunca termina (la Promise nunca resuelve).
+ * El workspace de `mrlang`, si está instalado en este monorepo.
+ *
+ * `mrlang` vivía aquí hasta el 2026-09-04 y un solo `compile:watch` construía los dos CLI. Al
+ * separarlos, quien toca las herramientas se quedó con dos watches que arrancar a mano. Esto lo
+ * devuelve sin volver a acoplar los paquetes: no se importa su configuración, se lanza **su
+ * propio** script de compilación.
+ *
+ * Se comprueba si existe porque los dos paquetes se envían por separado: un monorepo puede tener
+ * `@mr/cli` sin `@mr/core-i18n`, y en ese caso esto no hace nada.
+ *
+ * @returns La ruta del workspace, o `null` si no está.
  */
-function runTsc(watchMode) {
-    const args = [tscBin, "--noEmit", "--project", tsconfigPath];
-    if (watchMode) {
-        args.push("--watch", "--preserveWatchOutput");
+function buscarMrlang() {
+    const dir = resolve(raiz, "@mr/core/i18n");
+    if (!existsSync(resolve(dir, "package.json")) || !existsSync(resolve(dir, "src/esbuild.config.mjs"))) {
+        return null;
     }
-    return new Promise(res => {
-        spawn("node", args, {stdio: "inherit"}).on("close", code => res(code ?? 0));
+
+    return dir;
+}
+
+/**
+ * Lanza el `compile:watch` de `mrlang` como proceso hijo, heredando la salida.
+ */
+function watchMrlang(dir) {
+    console.log(`esbuild: @mr/core-i18n detectado, compilando mrlang también (${dir})`);
+    const hijo = spawn("yarn", ["workspace", "@mr/core-i18n", "run", "compile:watch"], {
+        cwd: raiz,
+        stdio: "inherit",
+        shell: process.platform === "win32",
+    });
+
+    // Al cerrar este proceso, cerrar el hijo: sin esto queda un esbuild huérfano en watch.
+    let cerrando = false;
+    const cerrar = () => {
+        cerrando = true;
+        hijo.kill();
+    };
+    process.on("exit", cerrar);
+    process.on("SIGINT", () => {
+        cerrar();
+        process.exit(0);
+    });
+    process.on("SIGTERM", cerrar);
+
+    // Si el hijo se cae solo se avisa, pero no se tumba este watch: mrpack es lo principal.
+    //
+    // El flag es necesario: al cerrar con Ctrl+C, `yarn` traduce la señal a un código de salida
+    // (129 = 128+SIGHUP), así que sin él un cierre normal se reportaría como error.
+    hijo.on("exit", (code) => {
+        if (!cerrando && code !== 0 && code !== null) {
+            console.error(`esbuild: el watch de mrlang ha terminado con código ${code}`);
+        }
     });
 }
 
-const sharedConfig = {
-    bundle:      true,
-    platform:    "node",
-    target:      "node24",
-    format:      "cjs",
-    external,
-    define,
-    sourcemap:   true,
-    minify:      !watch,
-    outdir,
-    // Genera mrpack-run.js / mrlang-run.js (mismo nombre que espera lib.js)
-    entryNames:  "[name]-run",
-    tsconfig:    resolve(__dirname, "tsconfig.json"),
-    logLevel:    "info",
-};
-
-if (watch) {
-    // Modo watch: esbuild reconstruye automáticamente al detectar cambios en disco.
-    // tsc --watch corre en paralelo para mostrar errores de tipos en tiempo real.
-    // No limpiamos outdir para que el primer arranque sea inmediato.
-    runTsc(true); // no se await — el proceso vive indefinidamente
-
-    const [ctxMrpack, ctxMrlang] = await Promise.all([
-        context({...sharedConfig, entryPoints: {"mrpack": resolve(__dirname, "mrpack/main.ts")}}),
-        context({...sharedConfig, entryPoints: {"mrlang": resolve(__dirname, "mrlang/main.ts")}}),
-    ]);
-    await Promise.all([ctxMrpack.watch(), ctxMrlang.watch()]);
-    console.log("esbuild: watching for changes (Ctrl+C to stop)...");
-} else {
-    // Limpiar salida anterior (equivalente a output.clean: true de rspack)
-    rmSync(outdir, {recursive: true, force: true});
-
-    // esbuild y tsc corren en paralelo (igual que TsCheckerRspackPlugin).
-    // El script falla si tsc reporta errores de tipos.
-    const t0 = Date.now();
-    const [, tscCode] = await Promise.all([
-        Promise.all([
-            build({
-                ...sharedConfig,
-                entryPoints: {"mrpack": resolve(__dirname, "mrpack/main.ts")},
-            }),
-            build({
-                ...sharedConfig,
-                entryPoints: {"mrlang": resolve(__dirname, "mrlang/main.ts")},
-            }),
-        ]),
-        runTsc(false),
-    ]);
-
-    console.log(`\nesbuild: compilado en ${((Date.now() - t0) / 1000).toFixed(2)}s`);
-
-    if (tscCode !== 0) {
-        process.exitCode = 1;
-    }
-}
+await compilar({
+    url: import.meta.url,
+    entry: {"mrpack": "main.ts"},
+    watch: process.argv.includes("--watch"),
+    // Solo en watch, y a propósito. `compile` está en el camino caliente del arranque, que lo
+    // lanza cuando falta `bin/min/mrpack-run.js`: compilar allí un CLI que no se ha pedido sería
+    // trabajo de más.
+    alWatch: () => {
+        const mrlang = buscarMrlang();
+        if (mrlang !== null) {
+            watchMrlang(mrlang);
+        }
+    },
+});

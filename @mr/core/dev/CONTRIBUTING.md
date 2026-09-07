@@ -92,10 +92,10 @@ mano: la regenera la herramienta en cada envío.
 ### `CHANGELOG.md`
 
 Formato [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entradas nuevas
-arriba, con fecha de calendario y autor:
+arriba, con fecha de calendario, **hora** y autor:
 
 ```markdown
-## 2026.8.5 — [Jose]
+## 2026.8.5 14:37 — [Jose]
 
 ### Added
 - ...
@@ -106,6 +106,20 @@ arriba, con fecha de calendario y autor:
 
 Usar las secciones estándar (`Added`, `Changed`, `Fixed`, `Removed`, …) solo cuando
 apliquen; no es obligatorio incluir todas en cada entrada.
+
+**La hora es el desambiguador, y por eso no es opcional.** En un día hay varias entradas
+—varias personas, y varias sesiones de trabajo en paralelo—, así que la fecha sola no
+distingue una de otra. Basta la hora local en `HH:MM`; no hay que acertar al minuto ni
+mirar el reloj dos veces.
+
+Lo que **no** se debe usar es un contador (`(1)`, `(2)`, …). Se llegó a usar sin estar
+escrito aquí, y falla exactamente donde más duele: para saber qué número toca hay que leer
+lo que han escrito los demás, y dos sesiones que escriben a la vez eligen el mismo. Pasó
+cinco veces en un solo día, y cada colisión se arregla a mano renumerando la propia —nunca
+la del otro, que ya está comiteada—. Una hora se sabe sin preguntarle a nadie.
+
+Las entradas antiguas que llevan contador **se dejan como están**: son historial ya
+publicado, y renumerarlas no arregla nada.
 
 ---
 

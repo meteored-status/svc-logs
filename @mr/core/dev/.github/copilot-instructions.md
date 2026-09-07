@@ -19,15 +19,31 @@ Usa **Yarn workspaces** y **TypeScript** con paths absolutos entre paquetes.
 **Ruta:** `@mr/cli/`
 **Nombre npm:** `@mr/cli`
 
-CLI del monorepo. Proporciona los ejecutables `mrpack` (ciclo de vida del proyecto: compilación,
-despliegue, frameworks, init, update, upload, autodoc) y `mrlang` (internacionalización).
+CLI de ciclo de vida del monorepo. Proporciona el ejecutable `mrpack` (compilación, despliegue,
+frameworks, init, update, upload, autodoc).
 Consulta la documentación completa en [`@mr/cli/README.md`](../@mr/cli/README.md).
+
+> `mrlang` **ya no está aquí**: vive en `@mr/core-i18n` desde el 2026-09-04, y lo que las dos CLI
+> compartían está en `@mr/core-cli`.
 
 ### Sub-módulos documentados
 
 | Módulo | Documentación |
 |--------|---------------|
 | Manifest raíz (`mrpack.json` del monorepo) | [`manifest/README.md`](../@mr/cli/manifest/README.md) |
+
+---
+
+## Paquete `@mr/core-cli`
+
+**Ruta:** `@mr/core/cli/`
+**Nombre npm:** `@mr/core-cli`
+
+Infraestructura compartida por las dos herramientas de línea de comandos, `mrpack` (`@mr/cli`) y
+`mrlang` (`@mr/core-i18n`): E/S de ficheros, logger, colores de consola y la clase base `Modulo` de
+la que cuelga cada comando. No define ningún comando. Existe para que las dos CLI no dependan una
+de la otra.
+Consulta la documentación completa en [`@mr/core/cli/README.md`](../@mr/core/cli/README.md).
 
 ---
 
@@ -66,7 +82,7 @@ resetear frameworks mediante `yarn mrpack framework` o `yarn mrpack update`. Sol
 necesario invocarlo a mano si se quiere relanzar de forma explícita.
 
 La función que lo invoca es `aplicarPatches(basedir)`, definida en
-`@mr/cli/src/mrpack/clases/patches.ts`. Usa `Deferred<void>` de
+`@mr/cli/src/clases/patches.ts`. Usa `Deferred<void>` de
 `services-comun/modules/utiles/promise` y `stdio: "inherit"` para mostrar la salida
 en tiempo real. Se llama siempre **antes** de recompilar `@mr/cli`, de modo que
 cualquier cambio que los patches introduzcan en el código queda incorporado en la
@@ -97,8 +113,15 @@ Consulta la documentación completa en [`@mr/core/utils/README.md`](../@mr/core/
 **Ruta:** `@mr/core/i18n/`
 **Nombre npm:** `@mr/core-i18n`
 
-Tipos y utilidades de internacionalización compartidos por todos los paquetes del monorepo.
-Proporciona los tipos `Idioma`, `IdiomaCorto` e `IdiomaLargo`, la lista `soportados` y los helpers `soportado()` y `corto()`.
+Internacionalización del monorepo, de punta a punta. Tres piezas: los **idiomas**
+(`modules/langs.ts`, importable como `@mr/core-i18n/langs`) con los tipos `Idioma`, `IdiomaCorto` e
+`IdiomaLargo`, la lista `soportados` y los helpers `soportado()` y `corto()`; el **runtime de
+traducciones v2** (el resto de `modules/`: `Literal`, `TranslationMap`, `TranslationSet`, los `Value`
+y los plurales), que vivía en `services-comun/modules/traduccion/v2/` hasta el 2026-09-04; y el
+**generador** `mrlang` (`src/` + `bin/`), que vivía en `@mr/cli` hasta esa misma fecha.
+
+> El `exports` publica solo lo que se importa de fuera. Al añadir un módulo a `modules/` no se ve
+> hasta declarar su clave, y si lo va a emitir `mrlang`, hay que tocar también `src/clases-v2/modulo/`.
 Consulta la documentación completa en [`@mr/core/i18n/README.md`](../@mr/core/i18n/README.md).
 
 ---

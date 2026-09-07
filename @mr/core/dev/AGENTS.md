@@ -47,10 +47,10 @@
 - Esta regla se hace cumplir tambien mediante un hook `Stop` de Claude Code
   (`.claude/hooks/check-codemap.mjs`, declarado en `.claude/settings.json`). Todo `.claude/` es
   symlink a `@mr/core/dev/.claude/` (igual que `.github/`), expuesto por `initClaudeDir()` en
-  `@mr/cli/src/mrpack/clases/init/symlinks.ts`; `.claude/settings.local.json` (local) queda
+  `@mr/cli/src/clases/init/symlinks.ts`; `.claude/settings.local.json` (local) queda
   excluido tanto del envio del framework (`@mr/core/dev/.claude/.mr-ignore`) como del `.gitignore`
   raiz de cada monorepo consumidor (`**/.claude/settings.local.json` en la plantilla `IGNORE` de
-  `@mr/cli/src/mrpack/clases/init/ignore.ts`), asi que nunca se versiona ni se propaga. Al
+  `@mr/cli/src/clases/init/ignore.ts`), asi que nunca se versiona ni se propaga. Al
   terminar un turno con cambios sin comitear,
   agrupa los ficheros de codigo modificados por workspace (directorio con `package.json` mas
   cercano, excluyendo la raiz del monorepo) y bloquea una vez si algun workspace con cambios

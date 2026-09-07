@@ -3,4 +3,4 @@
 // Calcularlo aquí es más robusto que process.cwd(), que puede variar según cómo Yarn
 // invoque el bin (PnP puede arrancar desde el directorio del workspace, no desde la raíz).
 process.env.MRPACK_ROOT = require("path").resolve(__dirname, "../../..");
-require("./lib")("mrpack");
+require("@mr/core-cli/arranque")({modulo: "mrpack", workspace: "@mr/cli", bin: __dirname});

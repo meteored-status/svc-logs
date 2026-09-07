@@ -1,9 +1,18 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Thu, 03 Sep 2026 13:36:43 GMT
+ * Hash: 5871bee4dac7d0603dbf632b779267e9
+ * Versión: 2026.9.3+3-juancmartinez
+ * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
+ */
+
 import {ReceiverDAO} from "../receiver-d-a-o";
 import {ElasticSearch} from "../../../../utiles/config";
 import {Elasticsearch, SearchHit, SearchRequest, SortResults} from "../../../../../elasticsearch";
 import {Receiver} from "../../../model/receiver";
 import {ElasticSearchBulk, ElasticSearchBulkConfig} from "../../../../../database/bulk/elastic";
 import {ElasticSearchScroll} from "../../../../../database/scroll";
+import type {TBounceCategory} from "../../../../../email/webhook/sparkpost/bounce-class";
 
 interface IDocument {
     id: string;
@@ -14,6 +23,29 @@ interface IDocument {
     statistics?: IStatistics;
 }
 
+/**
+ * Estadísticas acumuladas de un receptor, a partir de los eventos del proveedor.
+ *
+ * @property received     - El mensaje llegó al buzón. Un rebote asíncrono lo retira: ver
+ *                          `undelivered`.
+ * @property received_time- Cuándo lo aceptó el MTA remoto. Se conserva aunque `received` se retire,
+ *                          porque la aceptación ocurrió de verdad.
+ * @property bounce       - Llegó algún evento de rebote, de cualquier naturaleza. **No sirve por sí
+ *                          solo como tasa de rebote**: la mayoría son direcciones ya suprimidas.
+ *                          Los rebotes reales son `bounce && !suppressed`.
+ * Los cuatro campos de rebote van opcionales a propósito: no hay recálculo hacia atrás, así que los
+ * receptores indexados antes de este cambio no los tienen. Ausente significa «no se sabe», no
+ * «no» — pero como `undefined` es falsy, un consumidor que pregunte `!suppressed` los trata como no
+ * suprimidos, que es lo prudente.
+ *
+ * @property suppressed   - El proveedor no llegó a enviar porque la dirección está en su lista de
+ *                          supresión (`bounce_class` 25). Es secuela de un rebote antiguo, no uno
+ *                          nuevo.
+ * @property undelivered  - Un rebote `out_of_band` retiró la recepción: el MTA aceptó el mensaje y
+ *                          lo devolvió después. Las autorespuestas de ausencia no cuentan.
+ * @property bounce_class - Clase de rebote de Sparkpost del último rebote registrado.
+ * @property bounce_category - Categoría derivada de `bounce_class`.
+ */
 export interface IStatistics {
     received_time?: number;
     first_open_time?: number;
@@ -29,6 +61,10 @@ export interface IStatistics {
     bounce_count: number;
     unsubscribe_count: number;
     spam_count: number;
+    suppressed?: boolean;
+    undelivered?: boolean;
+    bounce_class?: number;
+    bounce_category?: TBounceCategory;
 }
 
 export class ElasticReceiverDAO extends ReceiverDAO {

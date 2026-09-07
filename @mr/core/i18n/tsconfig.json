@@ -1,3 +1,22 @@
 {
-  "extends": "@mr/core-dev/tsconfig.json"
+  "//": "Extiende @tsconfig/node24 directamente en vez del tsconfig de @mr/core-dev, para no depender de ese paquete. Aquí solo queda lo que el monorepo cambia sobre esa base; lo demás -target, strict, esModuleInterop, skipLibCheck- viene de upstream. No se declaran los tipos globales del bundler (PRODUCCION, ENTORNO, …): este paquete no usa ninguno. OJO: este fichero se exporta como @mr/core-i18n/tsconfig.json y lo extiende el workspace i18n/ de cada proyecto, así que un cambio aquí les llega a todos.",
+  "extends": "@tsconfig/node24/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2023", "esnext.disposable", "dom"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "allowUnusedLabels": false,
+    "importHelpers": true,
+    "incremental": true,
+    "isolatedModules": false,
+    "jsx": "react",
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strictNullChecks": true
+  }
 }
