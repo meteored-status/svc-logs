@@ -2,6 +2,18 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entradas nuevas arriba.
 
+## 2026.9.7 17:58 — [Jose]
+
+### Changed
+- **La ingesta se migra a `status-external`** (repo `svc-status`) y este servicio deja de recibir tráfico. La
+  URL pública no cambia: era el prefijo `/service/logs/` del mismo host, y se ha movido de un
+  `VirtualService` al otro. El código de aquí se queda en pie mientras se verifica —los dos escriben el mismo
+  documento en el mismo índice, así que la vuelta atrás es una línea de kustomize— y la retirada del
+  workspace es el paso siguiente.
+- Fuera su enrutado del kustomize (`router.yaml` y los dos parches de overlay). **El `VirtualService` viejo
+  sigue en el cluster hasta que se borre a mano**: `gke-deploy` no poda, y mientras exista Istio resuelve el
+  prefijo por orden de creación y gana el suyo.
+
 ## 2026.9.7 17:21 — [Jose]
 
 ### Changed

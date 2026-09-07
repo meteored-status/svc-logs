@@ -2,6 +2,22 @@
 
 Mapa técnico del workspace `services/logs-web/`.
 
+## ⚠️ Este servicio ya no recibe tráfico: la ingesta se migró
+
+`POST /service/logs/service/` y `POST /service/logs/error/` las atiende **`status-external`**, del repo
+hermano `svc-status`, desde el despliegue del 7 de septiembre de 2026. La URL pública es la misma: los dos
+servicios ya publicaban en `status.meteored.com` repartiéndose por prefijo, así que la migración fue mover el
+prefijo `/service/logs/` de un `VirtualService` al otro en el kustomize.
+
+El código de aquí **sigue en pie y funcionando**, y es a propósito: mientras el `VirtualService` viejo exista
+en el cluster, la ruta la puede servir cualquiera de los dos y los dos escriben el mismo documento en el mismo
+índice, así que la vuelta atrás es una línea de kustomize. **La retirada de este workspace es el paso
+siguiente**, cuando se haya verificado que los logs siguen entrando por el otro lado.
+
+Lo que hay debajo describe el servicio tal y como está, que es lo que hay que leer para retirarlo o para
+volver atrás.
+
+
 ## Objetivo
 
 Recibir por HTTP los logs de servicio y de error que emiten el resto de servicios del
