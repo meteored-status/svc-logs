@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 03 Sep 2026 14:04:25 GMT
- * Hash: 9f2aa41200a0c017c04745d46201d186
- * Versión: 2026.9.3+2-bixus
- * Anterior: 2026.9.1+3-bixus
+ * Fecha: Mon, 07 Sep 2026 14:55:58 GMT
+ * Hash: d2bd5651c214afb9a84a50f78874b596
+ * Versión: 2026.9.7+3-bixus
+ * Anterior: 2026.9.7+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -43,11 +43,17 @@ export const ETIQUETAS: Record<string, string> = {
     "acm.domains":                "Dominios de Advanced Certificate Manager",
     "zones.enterprise":           "Zonas Enterprise",
     "zones.total":                "Zonas totales",
-    "rate_limiting.requests":     "Peticiones de rate limiting",
     "access.seats":               "Asientos de Access",
     "gateway.seats":              "Asientos de Gateway",
     "zero_trust.seats":           "Asientos de Zero Trust",
     "devices.warp":               "Dispositivos WARP",
+    "dns.records":                "Registros DNS",
+    // Las cinco líneas espejo: el mismo tráfico facturado en otro producto. Ver `IMetrica.serie`.
+    "waf.requests":               "Peticiones de WAF",
+    "waf.data_transfer":          "Transferencia de WAF",
+    "ddos.data_transfer":         "Transferencia de Advanced DDoS",
+    "argo.data_transfer":         "Transferencia de Smart Shield Argo",
+    "load_balancing.data_transfer": "Transferencia de balanceo (L7)",
 };
 
 /**
@@ -58,10 +64,15 @@ export const ETIQUETAS: Record<string, string> = {
  */
 const UNIDADES: Record<string, string> = {
     "TB": "TB",
+    "GB": "GB",
     "MB": "MB",
     "MM": "MM",
     "MM_ms": "MM ms",
     "MM_GB_s": "MM GB-s",
+    // Decenas de miles, que es como el contrato factura los registros DNS («per 10K DNS Records»). El valor sale
+    // por debajo de 1 —hay ~1.240 registros contra un tope de 100 decenas de miles— y se deja así a propósito: el
+    // número que se ve es el mismo que el del acuerdo, que es la razón de no normalizar ninguna unidad.
+    "10K": "×10K",
     "count": "",
 };
 
