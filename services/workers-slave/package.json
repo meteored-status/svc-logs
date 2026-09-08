@@ -17,7 +17,7 @@
     "@elastic/elasticsearch": "^9.5.1",
     "@google-cloud/storage": "^8.0.1",
     "chokidar": "^5.0.0",
-    "dd-trace": "^6.13.0",
+    "dd-trace": "^6.14.0",
     "formidable": "^3.5.4",
     "mysql2": "^3.24.3",
     "qs": "^6.16.0",
@@ -33,7 +33,7 @@
     "@types/node": "^24.13.3",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
-    "workers-base": "workspace:*"
+    "zod": "^4.5.4"
   },
   "main": "app.js",
   "optionalDependencies": {

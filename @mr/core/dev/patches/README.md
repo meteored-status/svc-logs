@@ -151,6 +151,7 @@ Se ejecutan sobre cada fichero individualmente. El cursor `config.workspaces.jso
 | `R032` | `import Foo from "@mr/user-tiempo-domain"` *(breaking: default export eliminado)* | `import {Dominio as Foo} from "@mr/user-tiempo-domain"` *(también maneja `import type` y mixto `Foo, {Bar}`)* |
 | `R033` | `import {DominioTiempoList} from "@mr/user-tiempo-domain/loader"` *(breaking)* | `import {DominioList as DominioTiempoList} from "@mr/user-tiempo-domain/loader"` |
 | `R034` | `services-comun/modules/frontend/*` | `@mr/core-templates/legacy/*` |
+| `R035` | `services-comun/modules/traduccion/v2/*` | `@mr/core-i18n/*` |
 
 > **Orden de evaluación:** subpaths deben ir **antes** que sus paths padre en `RULES` para
 > evitar matches parciales (p.ej. R017/R019 antes que R018).
@@ -163,6 +164,7 @@ No usan el cursor: son idempotentes por diseño y no modifican ficheros `.ts`.
 | ID | Descripción |
 |----|-------------|
 | `WS001` | Escanea todos los `.ts` de cada workspace, detecta imports `@mr/*` ausentes en `package.json` y los añade en `devDependencies` con `"workspace:*"`. |
+| `WS002` | Pone al día el workspace `i18n/`: declara `@mr/core-i18n` y, **solo si el proyecto genera con v2**, quita `services-comun` y apunta el `extends` del `tsconfig.json` a `@mr/core-i18n/tsconfig.json`. No deduce nada de los imports: WS001 no puede cubrirlo porque el árbol `i18n/.src/` es generado y las reglas de fichero lo saltan, así que hasta la primera regeneración no hay import que detectar. La versión sale del script `generate` del propio proyecto. |
 
 ---
 

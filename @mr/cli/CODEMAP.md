@@ -6,17 +6,22 @@
 > exportados", sección "Símbolos" con firmas resumidas, notas "Depende de"/"Usado por" y
 > diagrama de dependencias entre bloques al final.
 >
-> Este fichero complementa a [`README.md`](./README.md) (uso, flags, flujos de trabajo de
-> `mrpack`/`mrlang` en detalle) sin duplicarlo: aquí solo se documentan ficheros, símbolos
+> Este fichero complementa a [`README.md`](./README.md) (uso, flags y flujos de trabajo de
+> `mrpack` en detalle) sin duplicarlo: aquí solo se documentan ficheros, símbolos
 > exportados y relaciones de dependencia entre bloques. Consulta el README para el
 > comportamiento funcional de cada comando.
 
-`@mr/cli` es el CLI del monorepo `web-www`. Expone dos binarios (`package.json::bin`):
+`@mr/cli` es el CLI de ciclo de vida del monorepo `web-www`. Expone **un** binario
+(`package.json::bin`):
 
 | Binario | Entry point | Submódulo (documentación detallada) |
 |---------|-------------|--------------------------------------|
-| `mrpack` | `bin/mrpack.js` → `src/mrpack/main.ts` | [`src/mrpack/CODEMAP.md`](./src/mrpack/CODEMAP.md) |
-| `mrlang` | `bin/mrlang.js` → `src/mrlang/main.ts` | [`src/mrlang/CODEMAP.md`](./src/mrlang/CODEMAP.md) |
+| `mrpack` | `bin/mrpack.js` → `src/main.ts` | [`src/CODEMAP.md`](./src/CODEMAP.md) |
+
+> **Expuso dos hasta el 2026-09-04.** `mrlang` se mudó a `@mr/core-i18n`, que es donde vive el
+> resto de la internacionalización, y lo que las dos CLI compartían salió a
+> [`@mr/core-cli`](../core/cli/README.md). Los dos paquetes dependen de él y **ninguno del otro**:
+> si aparece aquí un import de `@mr/core-i18n`, o allí uno de `@mr/cli`, es que algo se coló.
 
 ---
 
@@ -26,34 +31,43 @@
 
 | Fichero | Rol |
 |---------|-----|
-| `bin/mrpack.js` | Entry point ejecutable de `mrpack`. Fija `MRPACK_ROOT` (raíz del monorepo, calculada desde `__dirname`, no `process.cwd()`) y delega en `lib.js` |
-| `bin/mrlang.js` | Idéntico a `mrpack.js` pero para `mrlang` |
-| `bin/lib.js` | Lógica compartida de arranque (sin TypeScript, plano en JS) |
-| `bin/min/*.js` | **Artefactos compilados** (`mrpack-run.js`, `mrlang-run.js` + `.js.map`); no editar a mano, ver [§7](#7-compilación-del-paquete) |
+| `bin/mrpack.js` | Entry point ejecutable de `mrpack`. Fija `MRPACK_ROOT` (raíz del monorepo, calculada desde `__dirname`, no `process.cwd()`) y delega en `@mr/core-cli/arranque` |
+| `bin/min/*.js` | **Artefactos compilados** (`mrpack-run.js` + `.js.map`); no editar a mano, ver [§7](#7-compilación-del-paquete) |
 
 ### Símbolos
 
-#### `lib.js` (`module.exports`)
+#### El arranque, en `@mr/core-cli/arranque`
+
 ```js
-module.exports = (modulo: "mrpack"|"mrlang") => void
+require("@mr/core-cli/arranque")({modulo: "mrpack", workspace: "@mr/cli", bin: __dirname});
 ```
-Flujo: normaliza `MRPACK_ROOT` (fallback a `process.cwd()` si el bin no lo fijó), hace
-`chdir` a la raíz de `@mr/cli`, y ejecuta `Modulo.ejecutar()`:
-- Intenta `require("./min/<modulo>-run")` directamente.
+
+Normaliza `MRPACK_ROOT` (fallback a `process.cwd()` si el bin no lo fijó), hace `chdir` a la raíz
+del paquete que llama y ejecuta:
+- Intenta `require("<bin>/min/<modulo>-run")` directamente.
 - Si falla (artefacto ausente o corrupto), compila (`yarn run compile`, vía `spawn`) y
   reintenta una vez.
 - Suprime los warnings de proceso `DEP0040` (paquete `punycode` deprecado, arrastrado por
   `dd-trace`/`@google-cloud/storage` vía `node-fetch@2.x`) y `DEP0190` (uso de `shell:true` en
   Windows, necesario porque `yarn` allí es un wrapper `.cmd`).
 
-**Depende de:** ninguno de `src/` (JS plano, sin transpilar). **Usado por:** `bin/mrpack.js`,
-`bin/mrlang.js`.
+`bin` es el `__dirname` de quien llama y hay que pasarlo: dentro del módulo compartido,
+`__dirname` es el de `@mr/core-cli`.
+
+**Depende de:** ninguno de `src/`. **Usado por:** `bin/mrpack.js` y el `bin/mrlang.js` de
+`@mr/core-i18n`.
+
+> Este documento dijo un tiempo que compartir el arranque «obligaría a publicar JS desde un paquete
+> de TypeScript», y era falso. `@mr/core-cli` publica `arranque.js` sin problema: su `tsconfig` no
+> lleva `allowJs`, así que el fichero no entra en la compilación, y el `exports` apunta a él
+> directamente. Lo que sí es cierto es que **tiene que ser JS plano**: lo carga el `bin` antes de
+> que exista nada compilado.
 
 ---
 
-## 2. `src/mrpack/` — CLI de ciclo de vida del proyecto
+## 2. `src/` — CLI de ciclo de vida del proyecto
 
-**CODEMAP:** [`src/mrpack/CODEMAP.md`](./src/mrpack/CODEMAP.md) (mapa completo: árbol de
+**CODEMAP:** [`src/CODEMAP.md`](./src/CODEMAP.md) (mapa completo: árbol de
 directorios, clases, funciones exportadas y grafo de dependencias interno).
 
 Implementa los 7 módulos de `yarn mrpack <modulo>` documentados en el README
@@ -62,70 +76,56 @@ de workspaces, gestión de `config.workspaces.json`, instalación/actualización
 frameworks compartidos (GCS), inicialización/normalización del monorepo y generación de
 documentación OpenAPI.
 
-**Punto de entrada:** `src/mrpack/main.ts` → `src/mrpack/mrpack.ts::MRPack`.
+**Punto de entrada:** `src/main.ts` → `src.ts::MRPack`.
 
 ---
 
-## 3. `src/mrlang/` — CLI de internacionalización
+## 3. `mrlang` — ya no vive aquí
 
-**CODEMAP:** [`src/mrlang/CODEMAP.md`](./src/mrlang/CODEMAP.md) (mapa completo: dos
-generaciones de generador en paralelo — `clases/` v1 JSON+MySQL y `clases-v2/` v2 solo-JSON —,
-clases, funciones exportadas y grafo de dependencias interno).
+Se mudó a **`@mr/core-i18n`** el 2026-09-04: código en `@mr/core/i18n/src/`, bin propio en
+`@mr/core/i18n/bin/`, mapa en
+[`@mr/core-i18n/src/CODEMAP.md`](../core/i18n/src/CODEMAP.md).
 
-Implementa los 5 módulos de `yarn mrlang <modulo>`: `init` (alta del proyecto de traducciones),
-`pull`/`push` (sincronización con MySQL), `generate` (JSON → clases TypeScript, con selector
-`-v/--version` entre generador v1 y v2) y `fremote` (corrección de metadatos remotos).
+Lo que queda de esa relación en este paquete es **una sola cosa, y no es un import**:
+`src/clases/workspace/i18n.ts::I18N` lanza la generación de traducciones como proceso hijo
+durante `mrpack devel`, con `spawn("yarn", ["run", "i18n", "run", "generate", …])`. Va por el
+script del workspace `i18n` del proyecto, no por el bin, así que `mrpack` no necesita saber en qué
+paquete vive `mrlang`.
 
-**Punto de entrada:** `src/mrlang/main.ts` → `src/mrlang/mrlang.ts::MRLang`.
+`src/clases/init.ts` sí escribe la ruta del bin (`@mr/core/i18n/bin/mrlang.js`) en el
+`package.json` de los proyectos que inicializa. Es un dato, no una dependencia — pero si `mrlang`
+se vuelve a mudar, hay que tocarlo.
 
-**Relación con `mrpack`:** `mrlang` reutiliza directamente clases de `mrpack` sin reexportarlas
-(`Colors` de `mrpack/clases/colors`, `Modulo`/`IModuloConfig` de `mrpack/modulo`), y
-`clases/workspace/i18n.ts::I18N` (dentro de `mrpack`) lanza `mrlang generate --watch` como
-proceso hijo durante `mrpack devel`. No hay dependencia inversa: `mrpack` no importa nada de
-`mrlang` salvo a través de ese `spawn`.
+Y **`mrpack` mantiene al día su bundle**: `checkMrlang()`
+([`clases/framework/cliente.ts`](./src/clases/framework/cliente.ts)) compara
+`@mr/core/i18n/bin/hash.md5` con el md5 de su `bin/min/` y lanza su `compile` si no cuadra. Se
+llama desde `clases/init.ts::checkCliente` —o sea en `devel`, `update` e `init`— y al terminar una
+tanda del gestor de frameworks. Tampoco es una dependencia de código: se invoca `yarn workspace
+@mr/core-i18n run compile` como proceso hijo, y si el paquete no está, no hace nada.
 
 ---
 
-## 4. `src/utiles/` — utilidades compartidas entre `mrpack` y `mrlang`
+## 4. `@mr/core-cli` — utilidades compartidas entre las dos CLI
 
-**Ficheros:**
+**Ya no están en este paquete.** `src/utiles/fs.ts`, `src/utiles/log.ts`, `src/modulo.ts`,
+`src/clases/colors.ts` y `src/utiles/colors.ts` salieron a
+[`@mr/core-cli`](../core/cli/README.md) al separar `mrlang`, y se importan por nombre de paquete:
 
-| Fichero | Símbolos exportados |
-|---------|---------------------|
-| `fs.ts` | `readDir`, `readFile`, `readFileBuffer`, `readFileString`, `readJSON`, `readJSONSync`, `isDir`, `isFile`, `mkdir`, `rmdir`, `safeWrite`, `unlink`, `md5Dir` |
-| `log.ts` | `info`, `warning`, `error` |
+| Antes | Ahora |
+|-------|-------|
+| `src/utiles/fs` | `@mr/core-cli/fs` |
+| `src/utiles/log` | `@mr/core-cli/log` |
+| `src/clases/colors` | `@mr/core-cli/colors` |
+| `src/utiles/colors` | `@mr/core-cli/colors/base` |
+| `src/modulo` | `@mr/core-cli/modulo` |
 
-### Símbolos
+Los símbolos y el porqué de los forks de `fs`/`log` están en
+[`@mr/core-cli/CODEMAP.md`](../core/cli/CODEMAP.md). Aquí basta con dos notas que siguen valiendo:
 
-#### `fs.ts`
-Fork local de `services-comun/modules/utiles/fs.ts`, reducido a solo las funciones que usa
-`@mr/cli`. El original importa `error`/`warning` de un `log.ts` que depende de `dd-trace`; este
-fork usa en su lugar `./log.ts` (este mismo bloque), evitando arrastrar `dd-trace` al bundle de
-la CLI a través de esa ruta de imports.
-
-```ts
-readJSON<T>(file: PathLike|FileHandle): Promise<T>
-readJSONSync<T>(file: PathOrFileDescriptor): T|null
-safeWrite(local: PathLike, data: string|Buffer, sobreescribir?: boolean, excepcion?: boolean): Promise<boolean>
-  // Escribe en <local>.<random> con flag "wx", y solo entonces renombra sobre local (rename atómico);
-  // si sobreescribir=false y ya existe destino, no sobreescribe (devuelve false) — patrón write-then-rename
-md5Dir(dir: string): Promise<string>   // hash MD5 recursivo del árbol (nombre+contenido de cada fichero)
-```
-
-#### `log.ts`
-Fork mínimo de `services-comun/modules/utiles/log.ts`, sin dependencia de `dd-trace` ni de los
-modos `KUBERNETES`/`DATADOG` (irrelevantes: `mrpack`/`mrlang` corren siempre en local/CI).
-
-```ts
-info(...txt: any[]): void      // console.info
-warning(...txt: any[]): void   // console.warn
-error(...txt: any[]): void     // console.error
-```
-
-**Depende de:** `services-comun/modules/utiles/{hash,random}` (solo `fs.ts`, para `md5Dir`).
-**Usado por:** ambos submódulos (`mrpack/clases/*`, `mrlang/clases*/*`) para toda su E/S de
-disco y logging de bajo nivel; `mrpack/clases/log.ts::Log` es una capa superior propia (con
-prefijo `[hora][tipo][etiqueta]` y anidamiento) que **no** reutiliza `src/utiles/log.ts`.
+- `mrpack` los usa en **45 ficheros**, y esbuild los **bundlea** (son un workspace devDep, no una
+  `dependency`), así que `bin/min/mrpack-run.js` no lleva ningún `require("@mr/core-cli")`.
+- `src/clases/log.ts::Log` es una capa superior propia —con prefijo
+  `[hora][tipo][etiqueta]` y anidamiento— que **no** reutiliza `@mr/core-cli/log`.
 
 ---
 
@@ -144,14 +144,14 @@ defecto y variables de entorno de cada campo).
 | `deploy/run.ts` | `IManifestDeploymentRun`, `ManifestDeploymentRun` |
 
 Define el esquema TypeScript del `mrpack.json` de raíz (bloque `deploy.{build,run}`), leído por
-`yarn mrpack deploy`. Es distinto del manifest **por workspace** (`src/mrpack/clases/manifest/`,
-documentado en [`src/mrpack/CODEMAP.md`](./src/mrpack/CODEMAP.md)): este bloque solo modela el
+`yarn mrpack deploy`. Es distinto del manifest **por workspace** (`src/clases/manifest/`,
+documentado en [`src/CODEMAP.md`](./src/CODEMAP.md)): este bloque solo modela el
 manifest de la raíz del monorepo, no el de cada `service`/`job`/`cronjob` individual.
 
 **Depende de:** nada externo (tipos/clases planas). **Usado por:**
-`src/mrpack/clases/manifest/root/` (`ManifestRootLoader`, que carga/normaliza/persiste este
-esquema) — la relación entre este directorio y su consumidor real en `src/mrpack/` está
-documentada con más detalle en `src/mrpack/CODEMAP.md`.
+`src/clases/manifest/root/` (`ManifestRootLoader`, que carga/normaliza/persiste este
+esquema) — la relación entre este directorio y su consumidor real en `src/` está
+documentada con más detalle en `src/CODEMAP.md`.
 
 ---
 
@@ -176,54 +176,57 @@ TypeScript de `src/`.
 
 ## 7. Compilación del paquete
 
-Los ejecutables de `@mr/cli` (`bin/min/{mrpack,mrlang}-run.js`) se generan con
-**[esbuild](https://esbuild.github.io/)** a partir de `src/mrpack/main.ts` y `src/mrlang/main.ts`
-respectivamente. Ver el detalle completo (targets, externals, tamaños, source maps y la
+El ejecutable de `@mr/cli` (`bin/min/mrpack-run.js`) se genera con
+**[esbuild](https://esbuild.github.io/)** a partir de `src/main.ts`. Ver el detalle completo (targets, externals, tamaños, source maps y la
 resolución de `tscBin`/fijación de `typescript@^6.x`) en
 [`README.md#compilación-del-paquete`](./README.md#compilación-del-paquete); no se duplica aquí.
 
-Scripts relevantes (`package.json`): `compile` (build de producción), `compile:watch` (watch),
-`compile:rspack` (fallback al bundler anterior).
+Scripts relevantes (`package.json`): `compile` (build de producción) y `compile:watch` (watch).
+Hubo un `compile:rspack`, fallback al bundler anterior, y se retiró: no lo invocaba nadie.
+
+**`compile:watch` arranca también el watch de `mrlang`** si `@mr/core/i18n/` existe en la raíz del
+monorepo, lanzando su propio script como proceso hijo. Devuelve el comportamiento de antes de
+separar los dos CLI sin volver a acoplarlos: no se importa su configuración y, si el paquete no
+está, no hace nada. `compile` **no** lo hace, porque lo llama el arranque cuando falta el bundle.
 
 ---
 
 ## Diagrama de dependencias entre bloques
 
 ```
-bin/{mrpack,mrlang}.js ──→ bin/lib.js ──→ bin/min/{mrpack,mrlang}-run.js (compilado desde src/*/main.ts)
-                                                    │
-                                                    ▼
-                                          src/mrpack/main.ts          src/mrlang/main.ts
-                                                    │                          │
-                                                    ▼                          ▼
-                                          src/mrpack/mrpack.ts::MRPack   src/mrlang/mrlang.ts::MRLang
-                                                    │                          │
-                                    (7 módulos: devel/deploy/config/    (5 módulos: fremote/generate/
-                                     framework/init/update/autodoc)      init/pull/push)
-                                                    │                          │
-                                                    │        reutiliza Colors, Modulo/IModuloConfig
-                                                    │◄─────────────────────────┘
-                                                    │        (mrlang no reexporta, importa directo)
-                                                    │
-                                    src/mrpack/clases/workspace/i18n.ts::I18N
-                                          └─→ spawn("mrlang generate --watch")   (única dependencia mrpack→mrlang, vía proceso hijo)
-                                                    │
-                                                    ▼
-                                             src/utiles/{fs,log}.ts   ◄── usado también por src/mrlang/clases*/*
-                                                    │
-                                                    ▼
-                                  manifest/ (esquema mrpack.json raíz)
-                                       ▲
-                                       │ consumido por
-                          src/mrpack/clases/manifest/root/::ManifestRootLoader
-                                       │
-                                       ▼
-                          deployment/std/build.yaml (Cloud Build; lee manifest/ vía bin/configg,
-                                                      ejecuta "yarn mrpack deploy"/"yarn mrpack autodoc")
+bin/mrpack.js ──→ @mr/core-cli/arranque ──→ bin/min/mrpack-run.js (compilado desde src/main.ts)
+                                          │
+                                          ▼
+                                src/main.ts
+                                          │
+                                          ▼
+                                src.ts::MRPack
+                                          │
+                          (7 módulos: devel/deploy/config/framework/init/update/autodoc)
+                                          │
+                                          ├──→ @mr/core-cli/{fs,log,colors,colors/base,modulo}
+                                          │      (bundleado: es workspace devDep, no dependency)
+                                          │
+                                          └──→ src/clases/workspace/i18n.ts::I18N
+                                                 └─→ spawn("yarn run i18n run generate")
+                                                       └─→ el mrlang de @mr/core-i18n, en otro proceso
+                                          │
+                                          ▼
+                          manifest/ (esquema mrpack.json raíz)
+                               ▲
+                               │ consumido por
+                  src/clases/manifest/root/::ManifestRootLoader
+                               │
+                               ▼
+                  deployment/std/build.yaml (Cloud Build; lee manifest/ vía bin/configg,
+                                              ejecuta "yarn mrpack deploy"/"yarn mrpack autodoc")
 ```
 
-**Regla de dependencia:** `mrlang` puede importar de `mrpack` (comparte su clase `Modulo` base y
-sus utilidades de colores/log), pero `mrpack` nunca importa código TypeScript de `mrlang` — la
-única integración es el `spawn` de proceso hijo desde `I18N` durante `mrpack devel`. `manifest/`
-y `deployment/` no dependen de ningún código de `src/`; son consumidos por él (el primero
-tipando el `mrpack.json` raíz, el segundo ejecutando los binarios compilados en CI/CD).
+**Regla de dependencia:** `@mr/cli` y `@mr/core-i18n` **no se importan entre sí**. Lo que fue una
+relación de código —`mrlang` importaba `Modulo` y `Colors` de `mrpack`— es ahora una dependencia
+de los dos a `@mr/core-cli`. La única integración que queda entre las dos CLI es el `spawn` de
+proceso hijo desde `I18N` durante `mrpack devel`, y va por el script del workspace `i18n`, no por
+el bin.
+
+`manifest/` y `deployment/` no dependen de ningún código de `src/`; son consumidos por él (el
+primero tipando el `mrpack.json` raíz, el segundo ejecutando los binarios compilados en CI/CD).

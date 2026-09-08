@@ -2,7 +2,200 @@
 
 ---
 
+## 2026.9.4 17:30 — [Jose]
+
+### Removed
+
+- **`src/mrpack/` se aplana en `src/`.** El nivel sobraba desde que `mrlang` se mudó: este `src/`
+  tenía un solo CLI dentro. Deja los dos paquetes simétricos —`@mr/core-i18n` ya quedó así— y el
+  `entry` del build en `main.ts`.
+
+  Los imports internos siguen valiendo porque todo se movió junto. Los cinco que salían a
+  `@mr/cli/manifest/` se recalcularon contra la ubicación nueva, no quitándoles un `..` a ojo.
+  `src/mrpack/CODEMAP.md` pasa a `src/CODEMAP.md`, y con él las 53 referencias a la ruta vieja
+  repartidas por catorce documentos. Bundle byte a byte idéntico.
+
+- **Fuera el fallback de rspack.** `src/rspack.config.mjs`, el script `compile:rspack` y sus tres
+  devDependencies —`@rspack/cli`, `@rspack/core` y `ts-checker-rspack-plugin`—, que existían solo
+  para servirlo: nada más en el paquete las usaba.
+
+  No lo invocaba nadie: ni CI, ni las configuraciones de `.run/`, ni ningún script. Y la prueba
+  buena es otra: **llevaba roto desde que se separaron las dos CLI** —su entry apuntaba a
+  `src/mrlang/main.ts`, que se había mudado— y no se enteró nadie hasta que salió al repasar las
+  dependencias. Se arregló entonces, y ahora se retira; funcionaba, pero solo porque acababa de
+  arreglarse.
+
+- Con él se va `ts-checker-rspack-plugin` de la lista de externals de `@mr/core-cli/esbuild`, donde
+  ya no pinta nada: ninguna de las dos CLI lo declara.
+
+> **El rspack que sí se usa es otro y no se toca**: el de `@mr/core-dev` (`bundler/rspack/`, script
+> raíz `g:rspack`), que es con el que se construyen los bundles de los servicios. Tiene sus propias
+> `@rspack/*`.
+
+### Changed
+
+- **`src/esbuild.config.mjs` se queda en el enganche.** La compilación pasa a
+  `@mr/core-cli/esbuild`, compartida con `mrlang`; aquí solo quedan el entry y el arranque del
+  watch del otro CLI. Bundle byte a byte idéntico.
+
+- **`bin/lib.js` desaparece**: el arranque pasa a `@mr/core-cli/arranque`, compartido con `mrlang`.
+  Estaba duplicado desde que se separaron las dos CLI —lo dupliqué yo—, y este CODEMAP llegó a
+  justificarlo diciendo que compartirlo «obligaría a publicar JS desde un paquete de TypeScript».
+  Era falso: `@mr/core-cli` publica el fichero sin que entre en su compilación, porque su
+  `tsconfig` no lleva `allowJs`. Corregido también ahí.
+
+  `bin/mrpack.js` se queda en cinco líneas: fija `MRPACK_ROOT` y delega, pasando su propio
+  `__dirname`.
+
+### Added
+
+- **`mrpack` mantiene al día el bundle de `mrlang`.** `checkMrlang()`
+  (`clases/framework/cliente.ts`) compara `@mr/core/i18n/bin/hash.md5` con el md5 de su `bin/min/`
+  y, si no cuadra, lanza su `compile` y vuelve a anotar el hash. Se comprueba en el arranque
+  (`clases/init.ts::checkCliente`, que corren `devel`, `update` e `init`) y al terminar una tanda
+  del gestor de frameworks.
+
+  Es el mismo mecanismo de `recompilarCliente()`, con dos diferencias: **no reinicia** —`mrpack` no
+  está ejecutando ese código— y **recompila también si falta el fichero de hash**, para sembrarlo
+  la primera vez que el paquete llega a un monorepo. Si `@mr/core/i18n/` no está, no hace nada.
+
+  Arregla una regresión de la separación de las dos CLI: `mrlang` seguía ejecutando el bundle
+  anterior tras actualizar su paquete, porque su `bin/lib.js` solo compila cuando el bundle
+  **falta**, no cuando está viejo.
+
+- **`compile:watch` vuelve a construir los dos CLI.** Detecta si `@mr/core/i18n/` está en la raíz
+  del monorepo y, si está, lanza `yarn workspace @mr/core-i18n run compile:watch` como proceso
+  hijo con la salida heredada. Recupera lo que se perdió al separar `mrlang`: un solo comando para
+  quien toca las herramientas.
+
+  No reacopla los paquetes. No se importa la configuración del otro —cada CLI tiene sus externals,
+  su entry y su tsconfig—, se lanza su script; y si `@mr/core-i18n` no está instalado, no pasa
+  nada, que es el caso posible porque los dos se envían por separado.
+
+  **Solo en `compile:watch`.** `compile` está en el camino caliente de `bin/lib.js`, que lo lanza
+  cuando falta `bin/min/mrpack-run.js`: compilar allí un CLI que nadie ha pedido sería trabajo de
+  más en el arranque.
+
+Comprobado en los cuatro casos: con el paquete presente arranca los dos y `mrlang` reconstruye al
+editar su fuente; `compile` a secas no lo toca; Ctrl+C cierra los dos sin dejar huérfanos; y con
+`@mr/core-i18n` ausente el watch de `mrpack` arranca solo, sin mencionarlo.
+
+> Dos avisos para quien vaya a probar esto a mano, que me costaron dos falsos negativos:
+> un cambio que no altera el bundle —un comentario, o un `export` que esbuild elimina por
+> tree-shaking— **no reescribe el fichero**, así que comparar el hash no sirve para saber si el
+> watch reaccionó; hay que mirar el `[watch] build started` del log o tocar algo que llegue al
+> bundle. Y matar el `yarn` que envuelve al watch **no mata el node** de debajo: deja el watcher
+> huérfano.
+
+---
+
+## 2026.9.4 11:40 — [Jose]
+
+### Removed
+
+- **`mrlang` sale de este paquete.** Se muda a `@mr/core-i18n`, que es donde vive el resto de la
+  internacionalización, y se lleva su `bin`, su `esbuild` y sus cinco comandos. `@mr/cli` pasa a
+  exponer **un solo binario**, `mrpack`, y pierde la devDependencia a `@mr/core-i18n`, que existía
+  únicamente porque `mrlang init` leía de allí la lista de idiomas.
+
+- **Las utilidades compartidas salen a [`@mr/core-cli`](../core/cli/README.md)**, un workspace
+  nuevo del que dependen las dos CLI:
+
+  | Antes | Ahora |
+  |-------|-------|
+  | `src/utiles/fs.ts` | `@mr/core-cli/fs` |
+  | `src/utiles/log.ts` | `@mr/core-cli/log` |
+  | `src/mrpack/clases/colors.ts` | `@mr/core-cli/colors` |
+  | `src/mrpack/utiles/colors.ts` | `@mr/core-cli/colors/base` |
+  | `src/mrpack/modulo.ts` | `@mr/core-cli/modulo` |
+
+  El directorio `src/utiles/` desaparece. Los 45 ficheros de `mrpack` que los usaban pasan a
+  importarlos por nombre de paquete; esbuild los sigue **bundleando** —son workspace devDep, no
+  `dependency`—, así que `bin/min/mrpack-run.js` no lleva ningún `require("@mr/core-cli")`.
+  Comprobado sobre el bundle.
+
+### Changed
+
+- `src/mrpack/clases/init.ts` escribe ahora `@mr/core/i18n/bin/mrlang.js` como ruta del bin de
+  `mrlang` en el `package.json` de los proyectos que inicializa, y `yarn workspace @mr/core-i18n`
+  en el comentario de los scripts.
+- **La única integración que queda entre las dos CLI es la que ya había**, y no es un import:
+  `clases/workspace/i18n.ts::I18N` lanza la generación como proceso hijo durante `mrpack devel`,
+  con `spawn("yarn", ["run", "i18n", "run", "generate", …])`. Va por el script del workspace
+  `i18n` del proyecto, así que no ha hecho falta tocarla: `mrpack` nunca supo en qué paquete vive
+  `mrlang`.
+- `src/rspack.config.mjs` pierde su entry `mrlang`. El script `compile:rspack` —el fallback al
+  bundler anterior— apuntaba a `src/mrlang/main.ts` y **quedó roto al separar las dos CLI**; se vio
+  al repasar las dependencias, porque nadie lo ejecuta. Arreglado y comprobado: compila.
+- **Las dependencias se repasaron enteras y no sobra ninguna.** Las diez `dependencies` se alcanzan
+  desde `src/mrpack/main.ts`, y de las `devDependencies` se usan todas —las tres de rspack por el
+  fallback, y `@types/js-yaml` y `@types/source-map-support` porque ninguno de esos dos paquetes
+  trae tipos propios—. `@ungap/structured-clone` y `node-diff3` se alcanzan pero no se declaran, y
+  está bien: esbuild los **inlinea** en el bundle, no quedan como `require`.
+- `bin/lib.js` se queda con un solo módulo posible. Sigue recibiéndolo por parámetro, que es
+  herencia de cuando había dos; `@mr/core-i18n` tiene su propia copia de este arranque, porque
+  compartir 70 líneas de JS plano obligaría a publicar JS desde un paquete de TypeScript.
+
+---
+
+## 2026.9.4
+
+### Added
+
+- [Jose] `src/mrlang/clases-v2/modulo/translation/idiomas.ts` — **`avisosDeIdioma()`: avisa de las entradas a
+  las que les falta un idioma que el resto del módulo sí tiene.** Es el fallo que no delata nadie:
+  `mrlang generate` no se queja de un idioma ausente, el runtime cae al defecto, y la pantalla sale medio
+  traducida. Compila, se despliega, y solo lo ve quien la use en ese idioma. Pasó de verdad — treinta cadenas
+  nuevas escritas en tres idiomas cuando el proyecto tiene cuatro.
+
+  **Se compara contra los idiomas que el propio módulo tiene, no contra una lista fija**, y eso es lo que lo
+  hace usable: un `.json` no declara en qué idiomas está, así que el módulo se declara a sí mismo con la unión
+  de lo que traen sus entradas. Un módulo escrito entero en dos idiomas no avisa de nada, porque eso es una
+  decisión; lo que se detecta es la incoherencia dentro del módulo.
+
+  Mismo canal que el aviso del contador y **sin cortar la generación**: traducir entrada a entrada es un
+  estado legítimo mientras se está haciendo. Comprobado de tres maneras: silencio con el proyecto como está
+  (1.078 entradas), aviso por entrada al quitar el catalán de dos de `page.user`, y silencio al quitárselo a
+  **todas** las de `page.login` — que es la prueba que evita que el aviso sea un incordio.
+
 ## 2026.9.3
+
+### Fixed
+
+- [Jose] `src/mrlang/clases-v2/generate.ts` — **`mrlang generate` dejaba `i18n/.src` incompleto mientras
+  generaba.** Lo borraba en bloque antes de empezar, así que durante todo lo que tardase, cualquiera que
+  compilase en ese hueco —un `tsc`, el `next dev` de otra terminal, otra sesión de trabajo— se llevaba decenas
+  de «Cannot find module» sobre ficheros que existían hace un segundo y volvían a existir al terminar. Pasó de
+  verdad, y cuesta un rato entenderlo porque el error no señala a quien lo provocó.
+
+  Ahora **genera encima y poda al final** (`limpiarHuerfanos()`): lo peor que puede ver quien lea a la vez es
+  un fichero con el contenido anterior, que compila. El orden de escritura ya lo permitía sin saberlo —las
+  claves de un idioma se escriben antes que su `index.ts`, así que un índice nunca apunta a un fichero que
+  todavía no está—. `generateModule()` devuelve las rutas que escribe, y con eso `run()` sabe qué sobra.
+
+  Verificado de las dos maneras que hacían falta: lo generado es **byte a byte lo mismo** que antes sobre los
+  4.406 ficheros del proyecto, y **la poda poda** —lo que el borrado hacía gratis—: quitando una clave de un
+  `.json` desaparece su fichero en los tres idiomas, y retirando un módulo entero desaparecen sus cuatro
+  directorios.
+
+### Added
+
+- [Jose] `src/mrlang/clases-v2/modulo/translation/plural.ts` — **`avisosDePlural()`: avisa cuando el `counter`
+  de un plural parece ser el parámetro equivocado.** Es el fallo que la validación existente no puede ver: un
+  contador que existe, está entre los `params` y aun así no es el número con el que concuerda la frase. No
+  falla nada —el runtime elige la forma por el número equivocado y sale «1 de 30 días» o «5 de 1 día» sin un
+  solo error—, así que es justo el que llega a producción.
+
+  La concordancia se lee en **lo que cambia** entre las dos formas: se recortan el prefijo y el sufijo comunes
+  y se busca el hueco `{{param}}` más cercano a lo que queda en medio, con empate a la izquierda. **No avisa**
+  con formas idénticas, con una diferencia que abarque varios huecos, o sin ningún hueco del que tirar: es una
+  heurística sobre lenguaje natural, y un falso positivo cuesta más que un despiste sin detectar porque enseña
+  a ignorar los avisos.
+
+  **Va por un canal aparte y no corta la generación** (`ModuloJSON.avisos()` → `warning()` en `Generate.run()`,
+  después de los errores). `validar()` comprueba datos que faltan y es un error; esto adivina intención y es un
+  aviso. Medido sobre los módulos del proyecto: 1.048 entradas, 0 avisos; y dando la vuelta al `counter` de las
+  ocho entradas con varios parámetros, las 15 combinaciones erróneas salen todas.
 
 ### Fixed
 

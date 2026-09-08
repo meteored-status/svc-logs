@@ -1,3 +1,11 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Thu, 03 Sep 2026 13:36:43 GMT
+ * Hash: bafafb1524521e6788cf0be05fe64e75
+ * Versión: 2026.9.3+3-juancmartinez
+ * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
+ */
+
 import {Configuracion} from "../utiles/config";
 import {mkdir, readJSON, safeWrite} from "../../utiles/fs";
 import {error, info} from "../../utiles/log";
@@ -163,7 +171,9 @@ export class StatisticsController {
                 first_open_count: 0,
                 bounce_count: 0,
                 unsubscribe_count: 0,
-                spam_count: 0
+                spam_count: 0,
+                suppressed: false,
+                undelivered: false
             };
         }
 

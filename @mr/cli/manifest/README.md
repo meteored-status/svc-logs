@@ -108,5 +108,5 @@ Controla si se ejecuta el despliegue y qué versión se usa.
 
 ## Loader
 
-El cargador `ManifestRootLoader` (`src/mrpack/clases/manifest/root/`) lee el fichero, aplica los valores por defecto para los campos ausentes, y — si se invoca con `load(true)` — sobreescribe los valores con las variables de entorno listadas arriba. Si el fichero no existe o su contenido difiere de los valores normalizados, se reescribe automáticamente en disco.
+El cargador `ManifestRootLoader` (`src/clases/manifest/root/`) lee el fichero, aplica los valores por defecto para los campos ausentes, y — si se invoca con `load(true)` — sobreescribe los valores con las variables de entorno listadas arriba. Si el fichero no existe o su contenido difiere de los valores normalizados, se reescribe automáticamente en disco.
 

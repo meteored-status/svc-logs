@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 01 Sep 2026 13:11:20 GMT
- * Hash: d3827e60a467b9a0e03157c95044e2f5
- * Versión: 2026.9.1+3-bixus
- * Anterior: 2026.9.1+1-bixus
+ * Fecha: Mon, 07 Sep 2026 14:26:51 GMT
+ * Hash: 0ba18e5983beef913846be778d96795e
+ * Versión: 2026.9.7+2-bixus
+ * Anterior: 2026.9.1+3-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -15,11 +15,21 @@
  *                           años, una lista de fechas sin motivo no dice por qué cambió nada.
  * @property limits        - Los límites por métrica. Un juego **completo**, no un delta: al crear una fecha se
  *                           copian los vigentes, así que cada una se puede leer sola.
+ * @property prices        - El precio de cada unidad de exceso, en **USD** y por métrica, tal como lo dice la tabla
+ *                           de Excess Usage Pricing del acuerdo. Es lo que permite avisar de un exceso en dinero y
+ *                           no en porcentaje: «133% de la transferencia contratada» no se decide igual que «unos
+ *                           1.200 $ al mes».
+ *
+ *                           Solo están las líneas tarifadas. Una que falte **no vale cero**: significa que el
+ *                           contrato no le pone precio al exceso —`Included`, o simplemente ausente de esa tabla— y
+ *                           que pasarse hay que negociarlo. En dólares porque el acuerdo está en dólares, y
+ *                           convertirlo a euros aquí sería inventarse un tipo de cambio.
  */
 export interface ILimitDateOUT {
     effectiveDate: string;
     description: string;
     limits: Record<string, number>;
+    prices: Record<string, number>;
 }
 
 /**
@@ -35,10 +45,15 @@ export interface ILimitDateOUT {
  *                     guardado y el API no coinciden, o sea que hay red. En las demás —las volumétricas, que son
  *                     las que de verdad se negocian— lo que se teclee ahí es **el único registro que existe** fuera
  *                     del acuerdo firmado, y no hay nada que lo contraste.
+ *
+ *                     `mirrors` dice que esa línea no tiene serie propia y se mide con la de otra métrica, y
+ *                     `bound` que la serie prestada es solo una cota superior. Importa al teclear: el tope es
+ *                     suyo y hay que apuntarlo igual, pero el porcentaje que se verá después sale de una serie
+ *                     que es de otro.
  */
 export interface ILimitsOUT {
     dates: ILimitDateOUT[];
-    metrics: {metric: string; unit: string; agg: string; apiConfirmed: boolean}[];
+    metrics: {metric: string; unit: string; agg: string; apiConfirmed: boolean; mirrors?: string; bound?: boolean}[];
 }
 
 /**
@@ -60,10 +75,14 @@ export interface ILimitDateIN {
  * @property description      - Su descripción, si se cambia.
  * @property limits           - El juego completo de límites. Una métrica que no venga **se borra** de esa fecha: es
  *                              lo que permite quitar de en medio una línea que ya no se contrata.
+ * @property prices           - El juego completo de precios de exceso, en USD. Mismo criterio que `limits`: lo que
+ *                              no venga se queda **sin tarifar**, así que quien guarda manda las dos cosas enteras
+ *                              o pierde lo que no mande. Ausente equivale a no tarifar ninguna.
  */
 export interface ILimitsSaveIN {
     effectiveDate: string;
     newEffectiveDate?: string;
     description?: string;
     limits: Record<string, number>;
+    prices?: Record<string, number>;
 }

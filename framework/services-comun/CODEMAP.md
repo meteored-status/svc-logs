@@ -298,6 +298,12 @@ compatibilidad con consumidores no migrados — no usar en código nuevo.
 
 ## 9. Traducción (`modules/traduccion/`)
 
+> **Aquí solo queda v1.** El runtime v2 —`Literal`, `TranslationMap`, `TranslationSet`, los
+> `Value`, `getLang` y el builder de plurales— se mudó a **`@mr/core-i18n`** el 2026-09-04, que es
+> donde vive `mrlang`, el generador que escribe los imports que lo consumen. La migración de
+> imports la hace el patch `R035`. Detalle en
+> [`@mr/core-i18n/CODEMAP.md`](../../@mr/core/i18n/CODEMAP.md).
+
 **Ficheros:**
 
 | Fichero | Símbolos exportados |
@@ -307,14 +313,6 @@ compatibilidad con consumidores no migrados — no usar en código nuevo.
 | `traduccion/plural.ts` | `TraduccionPlural<T>` |
 | `traduccion/map.ts` | `TraduccionMap<K,T>`, `ITraduccionMapKeys`, `ITraduccionMapValores<K>` |
 | `traduccion/set.ts` | `TraduccionSet<T>`, `TValor` |
-| `traduccion/v2/index.ts` | `Translation<T>` (abstract, v2) |
-| `traduccion/v2/literal.ts` | `Literal<T>` |
-| `traduccion/v2/translation-map.ts` | `TranslationMap<K,T>`, `ITranslationMapValues<K>` |
-| `traduccion/v2/translation-set.ts` | `TranslationSet<T>` |
-| `traduccion/v2/value/{index,value,plural-value,singular-value}.ts` | `TPluralKey`, `Value<T>` (abstract), `PluralValue<T>`, `SingularValue<T>`, `TPluralFunction` |
-| | `PluralValue` necesita saber **cuál de sus `params` es el contador**: es el número con el que `_rules()` elige la forma. Con uno solo se deduce; con varios lo dice el cuarto argumento del constructor, `counter`, que `mrlang` emite desde el campo homónimo del `.json`. Sin contador **lanza**, en vez de resolver por la categoría del cero como hacía antes —que daba siempre plural en es/en y siempre singular en fr, sin avisar—. |
-| `traduccion/v2/util/{lang,plural-function-builder}.ts` | `getLang`, `buildFunction` (default) |
-| `traduccion/v2/example.ts` | Ejemplo de uso de `v2/` (no es código de producción) |
 
 ### Símbolos
 
@@ -331,10 +329,13 @@ Translation<T>
 ```
 
 `TraduccionLiteral` (cadena fija), `TraduccionPlural` (singular/plural), `TraduccionMap` (diccionario
-clave→cadena) son las tres variantes v1. `traduccion/v2/` reimplementa el mismo árbol con soporte de
-`PluralValue`/`SingularValue` vía `TPluralFunction` (reglas de pluralización por idioma,
-`plural-function-builder.ts`) — **v2 es la versión activa** para nuevo desarrollo; v1 se mantiene por
+clave→cadena) son las tres variantes v1, y son lo único que queda en este paquete. **v2 es la
+versión activa** para nuevo desarrollo y vive en `@mr/core-i18n`; v1 se mantiene aquí por
 compatibilidad con literales ya definidos.
+
+Ojo con el `TParams` de `traduccion/index.ts`: el v2 lo importaba de aquí teniendo uno idéntico
+propio, y esa atadura se cortó al mudarlo. Los dos siguen siendo `Record<string, string|number>`,
+pero ya no son el mismo símbolo.
 
 **Usado por:** capas de presentación de servicios que renderizan textos meteorológicos/de negocio
 localizados (fuera de este workspace).
@@ -392,7 +393,8 @@ tipo) y `@mr/core-workload/config/pod` (`IPodInfo`, solo tipo).
 |---------|---------------------|
 | `email/manager.ts` | `IMailManager`, `IActor`, `IAttachment`, `IMail`, `TContentTypes`, `TemplateContent<T>`/`ITemplateContent<T>`, `HTMLInlineContent`/`TextInlineContent` |
 | `email/managers/spark_post.ts` | `SparkPostManager implements IMailManager` |
-| `email/webhook/sparkpost/sparkpost.ts` | Tipos de payload de webhook: `TEvent`, `TMessageEvent`, `TTrackEvent`, `TGenEvent`, `TUnsubscribeEvent`, `IEvent`, `IMessageIDEvent`, `ITrackEvent`, `IUnsubscribeEvent`, `IMSYS`, `IBatch` |
+| `email/webhook/sparkpost/sparkpost.ts` | Tipos de payload de webhook: `TEvent`, `TMessageEvent`, `TTrackEvent`, `TGenEvent`, `TUnsubscribeEvent`, `IEvent`, `IMessageIDEvent`, `IMessageBounceEvent`, `ITrackEvent`, `IUnsubscribeEvent`, `IMSYS`, `IBatch`; guarda de tipo `esRebote()` |
+| `email/webhook/sparkpost/bounce-class.ts` | Taxonomía de rebotes: `TBounceCategory`, `BOUNCE_CLASS_SUPPRESSED`, `BOUNCE_CLASS_AUTO_REPLY`, `claseRebote()`, `categoriaRebote()` |
 | `email/webhook/sparkpost/auth.ts` | `Auth`, `default auth` |
 
 ### Símbolos
@@ -429,8 +431,10 @@ Subdirectorios pequeños y autocontenidos (1–15 ficheros); se documentan aquí
 
 ## 13. Pruebas (`spec/`)
 
-Primeras pruebas automatizadas del monorepo. Cubren `modules/traduccion/v2/`, que es donde un fallo no da
-error de compilación y sí un texto equivocado en pantalla.
+Primeras pruebas automatizadas del monorepo. Nacieron cubriendo `modules/traduccion/v2/`, que es donde
+un fallo no da error de compilación y sí un texto equivocado en pantalla; **esas se fueron con el
+runtime v2 a `@mr/core-i18n`** el 2026-09-04, con el mismo arnés. Aquí queda lo que sigue siendo de
+este paquete.
 
 ```bash
 yarn run services-comun test
@@ -438,11 +442,7 @@ yarn run services-comun test
 
 | Fichero | Qué fija |
 |---------|----------|
-| `spec/traduccion/v2/plural-value.spec.ts` | de cuál de los `params` sale el número que elige la forma, y que sin contador **lanza** en vez de resolver por la categoría del cero |
-| `spec/traduccion/v2/value.spec.ts` | la sustitución de `{{param}}`: todas las apariciones, el nombre en mayúsculas cuando falta, y que el `0` y la cadena vacía son valores y no ausencias |
-| `spec/traduccion/v2/translation-map.spec.ts` | el catálogo con clave, incluido que una clave que no está devuelve la clave y no un hueco |
-| `spec/traduccion/v2/translation-set.spec.ts` | la lista ordenada y `has` |
-| `spec/traduccion/v2/lang.spec.ts` | `getLang`: la normalización del separador y el `'enUS'` fijo del final |
+| `spec/utiles/array.spec.ts` | `arrayChop`, `unique` y `arrayEquals` |
 | `spec/estructura.spec.ts` | que no haya ningún `.spec.ts` dentro de `modules/` |
 
 ### Por qué el arnés es así

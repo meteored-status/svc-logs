@@ -28,10 +28,10 @@
     "@types/sparkpost": "^2.1.9",
     "@types/ungap__structured-clone": "^1.2.0",
     "@ungap/structured-clone": "^1.4.0",
-    "@valkey/valkey-glide": "^2.5.1",
+    "@valkey/valkey-glide": "^2.5.2",
     "chokidar": "^5.0.0",
     "cron-parser": "^5.10.0",
-    "dd-trace": "^6.13.0",
+    "dd-trace": "^6.14.0",
     "formidable": "^3.5.4",
     "isbot": "^5.2.2",
     "moment-timezone": "^0.6.3",
@@ -47,5 +47,5 @@
     "typescript": "^6.0.3",
     "uuid": "^14.0.2"
   },
-  "version": "2026.9.3+2-bixus"
+  "version": "2026.9.7+1-bixus"
 }
