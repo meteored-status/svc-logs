@@ -6329,20 +6329,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"workers-base@workspace:*, workers-base@workspace:packages/workers-base":
-  version: 0.0.0-use.local
-  resolution: "workers-base@workspace:packages/workers-base"
-  dependencies:
-    "@elastic/elasticsearch": "npm:^9.5.1"
-    "@mr/core-workload": "workspace:*"
-    "@types/node": "npm:^24.13.3"
-    services-comun: "workspace:*"
-    services-comun-status: "workspace:*"
-    tslib: "npm:^2.8.1"
-    zod: "npm:^4.5.4"
-  languageName: unknown
-  linkType: soft
-
 "workers-slave@workspace:services/workers-slave":
   version: 0.0.0-use.local
   resolution: "workers-slave@workspace:services/workers-slave"
@@ -6364,8 +6350,8 @@ __metadata:
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tslib: "npm:^2.8.1"
-    workers-base: "workspace:*"
     ws: "npm:^8.21.3"
+    zod: "npm:^4.5.4"
   dependenciesMeta:
     bufferutil:
       optional: true

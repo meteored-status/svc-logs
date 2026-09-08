@@ -2,8 +2,19 @@ import {
     Configuracion as ConfiguracionBase,
     type IConfiguracion as IConfiguracionBase
 } from "services-comun-status/modules/config/service";
-import {GOOGLE} from "workers-base/modules/utiles/config";
 import {Google, type IGoogle} from "@mr/core-workload/config/google";
+
+/**
+ * Configuración GCP por defecto. `storage.buckets` va vacío a propósito: los buckets no se declaran
+ * de forma estática, se resuelven en ejecución contra la tabla MySQL `buckets` (`Bucket.findBucket`).
+ */
+const GOOGLE: IGoogle = {
+    id: "api-project-858154548956",
+    storage: {
+        credenciales: "files/credenciales/storage.json",
+        buckets: {},
+    },
+};
 
 interface IConfiguracion extends IConfiguracionBase {
     google: IGoogle;

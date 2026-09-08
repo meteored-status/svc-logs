@@ -7,12 +7,7 @@ import {error, info} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/utiles/elastic/bulk";
 import elasticsearch from "services-comun/modules/utiles/elastic";
 
-import {Bucket, type ICliente} from "../bucket";
-
-interface INotify {
-    bucketId: string;
-    objectId: string;
-}
+import {Bucket, type ICliente, type INotify} from "../bucket";
 
 export interface SourceCloudflare {
     "@timestamp": Date;
@@ -226,7 +221,7 @@ export class Cloudflare {
             doc: raw,
         })
             .catch(async (err)=>{
-                console.log(err);
+                error("Error indexando en Elasticsearch", JSON.stringify(err));
                 if (i<10 && (err.message?.includes("Request timed out") || err.name?.includes("TimeoutError") || err.name?.includes("ConnectionError"))) {
                     const multiplicador = err.name?.includes("ConnectionError") ? 10 : 1;
                     i++;

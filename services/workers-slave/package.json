@@ -33,7 +33,7 @@
     "@types/node": "^24.13.3",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
-    "workers-base": "workspace:*"
+    "zod": "^4.5.4"
   },
   "main": "app.js",
   "optionalDependencies": {

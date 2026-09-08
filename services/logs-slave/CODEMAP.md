@@ -16,7 +16,7 @@ Es el hermano de `services/workers-slave` (ver su CODEMAP para el detalle): los 
 que la disparó, pero divergen en casi todo lo demás — qué tipo de log de Cloudflare consumen
 (HTTP de borde aquí, *tail events* de Workers allí), a dónde escriben el resultado (BigQuery aquí,
 Elasticsearch allí) y cómo se despliegan (Cloud Run/"lambda" aquí, servicio k8s allí). No comparten
-código: `logs-slave` no depende de `packages/workers-base`, y viceversa.
+ningún fichero.
 
 ## Árbol de módulos
 
@@ -96,7 +96,7 @@ Elasticsearch no interviene en absoluto en este pipeline.
 Extiende la `Configuracion` de `services-comun-status/modules/config/service` añadiendo `google`
 (`Google` de `@mr/core-workload/config/google`), con el proyecto GCP fijado en
 `"meteored-status"`. **Ojo:** este es un proyecto GCP distinto del que usa `workers-slave`
-(`"api-project-858154548956"`, ver `packages/workers-base/modules/utiles/config.ts`) — dos
+(`"api-project-858154548956"`, ver `services/workers-slave/modules/utiles/config.ts`) — dos
 servicios hermanos del mismo monorepo, cada uno apuntando a su propio proyecto de Google Cloud
 para sus buckets de Storage. No se ha investigado más allá de lo que dice el código si son en
 realidad el mismo proyecto referenciado de dos formas (nombre vs. número) o dos proyectos
@@ -156,7 +156,7 @@ más allá de ese único campo opcional. Si viene pero no tiene la forma esperad
 | `grupo.ts` → `Grupo` | Variante de `Cliente` para subproyectos regionales del cliente `tiempo` (`tiempo-ar`, `tiempo-es`, …, un `Grupo` por país). `Grupo.searchID()` resuelve el `Cliente` base y, si hay `grupo`, le aplica `cliente.aplicarGrupo(...)`, que **fusiona** los backends propios del grupo sobre los del cliente base (`{...clienteBackends, ...grupoBackends}`) — el grupo puede añadir o sobreescribir entradas, nunca las elimina. |
 | `gcs.ts` → `ClienteGCS` | Resuelve `(bucket, primera-carpeta-del-path)` contra un catálogo `BUCKETS` **también cableado en código** (hoy solo el bucket `"cf-accesos"`, 31 entradas: 6 clientes simples más los 25 subproyectos de `tiempo`, derivados de la lista `TIEMPO_GRUPOS`). `ingest(storage, source)` descarga el objeto, llama a `source/ingest.ts` y **solo borra el objeto si el volcado a BigQuery fue completo**; si falló alguna inserción, lo conserva para repesca. Si la descarga falla (`getArchivo` atrapa cualquier error, sin reintentar) devuelve `undefined` y lo registra con `info`/`error` del logger del monorepo. |
 
-**Diferencia notable con `workers-slave`:** el `Bucket` de `workers-base` (usado por `workers-slave`)
+**Diferencia notable con `workers-slave`:** el `Bucket` de `workers-slave`
 reintenta hasta 10 veces con backoff cuando el objeto todavía no es visible tras la notificación
 (`err?.code == 404` → `null` y reintento), porque la notificación y la disponibilidad real del
 objeto en GCS pueden no ser instantáneas. `ClienteGCS.getArchivo` aquí **no reintenta nada**: un
@@ -319,9 +319,8 @@ quisiera cubrir el catálogo `BUCKETS`/`BACKENDS`, haría falta antes resolver e
     `CustomError`).
   - `services-comun-status` — `Configuracion`/`IConfiguracion` base de servicio, `SERVICES`
     (registro de endpoints k8s/red, aunque este servicio se despliega en Cloud Run).
-- **No depende de `packages/workers-base`** ni de `packages/status-base`: pese al nombre
-  parecido y al propósito hermano de `workers-slave`, este workspace no comparte código de
-  ingesta con él — cada uno tiene su propio `Bucket`/`Cliente` y su propio catálogo cableado.
+- **No comparte código con `services/workers-slave`**: pese al propósito hermano, cada uno tiene
+  su propio `Bucket`/`Cliente` y su propio catálogo cableado.
 - **`mrpack.json` provisiona una conexión Cloud SQL** (`cloudsql: ["meteored-status:europe-southwest1:status-master-1"]`)
   **pero no se ha encontrado ningún uso de MySQL en el código de este workspace** (sin `mysql2`
   en `package.json`, sin ningún import de `services-comun/modules/utiles/mysql`). Se documenta la

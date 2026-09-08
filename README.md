@@ -18,7 +18,6 @@ rutas, capa de datos y deuda conocida— y su `CHANGELOG.md`:
 | `services/logs-web` | Ingesta HTTP de logs de servicio y de error: el único punto de escritura de esos dos flujos | [CODEMAP](./services/logs-web/CODEMAP.md) |
 | `services/logs-slave` | Receptor por PubSub de notificaciones de GCS: accesos de Cloudflare hacia BigQuery | [CODEMAP](./services/logs-slave/CODEMAP.md) |
 | `services/workers-slave` | Receptor equivalente para los logs de Cloudflare Workers | [CODEMAP](./services/workers-slave/CODEMAP.md) |
-| `packages/workers-base` | Base de ingesta de buckets de Workers | [CODEMAP](./packages/workers-base/CODEMAP.md) |
 
 Los dos ejes del repositorio, para orientarse rápido:
 
