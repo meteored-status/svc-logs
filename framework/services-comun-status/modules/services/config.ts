@@ -1,13 +1,20 @@
+/**
+ * Editor: Bixus
+ * Fecha: Tue, 08 Sep 2026 06:45:12 GMT
+ * Hash: 9ee2ea87e2999171fc18031549236e31
+ * Versión: 2026.9.8+1-bixus
+ * Anterior: 2026.9.4+2-bixus
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
+ */
+
 import {INetServiceBase} from "@mr/core-network/server/http/config/net";
 import {Service} from "@mr/core-network/server/http/service";
 
 export enum EService {
     logs_slave,
-    logs_web,
     status_backend,
     status_external,
     status_frontend,
-    status_webhook,
     workers_slave,
 }
 
@@ -18,11 +25,6 @@ mapeo.set(EService.logs_slave, {
     namespace: "services",
     tags: ["logs", "slave"],
     slow: 0,
-});
-mapeo.set(EService.logs_web, {
-    endpoint: "proxy-svc-logs-web",
-    namespace: "services",
-    tags: ["logs", "web"],
 });
 mapeo.set(EService.status_backend, {
     endpoint: "switch-svc-status-backend",
@@ -38,11 +40,6 @@ mapeo.set(EService.status_frontend, {
     endpoint: "proxy-svc-status-frontend",
     namespace: "services",
     tags: ["status", "status-frontend"],
-});
-mapeo.set(EService.status_webhook, {
-    endpoint: "proxy-svc-status-webhook",
-    namespace: "services",
-    tags: ["status", "webhook"],
 });
 mapeo.set(EService.workers_slave, {
     endpoint: "proxy-svc-workers-slave",

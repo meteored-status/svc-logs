@@ -120,7 +120,7 @@ SendTaskController
 | `controller/statistics-controller.ts` | `StatisticsController` | Agrega estadísticas de envíos/eventos; usa `statisticsControlFile` (ver configuración) como marca de la última ejecución |
 | `statistics/calculator.ts` | `Calculator` (abstract) | `calculate(receiver: Receiver): void` (abstract) — actualiza el agregado de estadísticas de un `Receiver` a partir de `this.event: SendEvent` |
 | `statistics/calculator-builder.ts` | `CalculatorBuilder` | *Factory* análoga a `SenderBuilder`/`ReceiverIdentifierBuilder` |
-| `statistics/impl/sparkpost-calculator.ts` | `SparkpostCalculator extends Calculator` | Implementación para eventos SparkPost |
+| `statistics/impl/sparkpost-calculator.ts` | `SparkpostCalculator extends Calculator` | Implementación para eventos SparkPost. Separa los rebotes reales de las supresiones (`suppressed`, `bounce_class` 25) y aplica los asíncronos: un `out_of_band` marca `undelivered` y **retira la recepción**, salvo la clase 60 (autorespuesta). Ver [`email/webhook/sparkpost/bounce-class.ts`](../email/webhook/sparkpost/bounce-class.ts) |
 
 ---
 

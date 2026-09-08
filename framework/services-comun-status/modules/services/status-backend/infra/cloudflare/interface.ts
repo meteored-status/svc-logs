@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 01 Sep 2026 09:55:30 GMT
- * Hash: ff9ef4193a9aed799ef040c213dc9d18
- * Versión: 2026.9.1+1-bixus
+ * Fecha: Mon, 07 Sep 2026 14:26:51 GMT
+ * Hash: daa7eaf514c15053605e5679b83bf719
+ * Versión: 2026.9.7+2-bixus
+ * Anterior: 2026.9.1+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -45,6 +46,15 @@ export const RETRASO_DIAS = 2;
  *                         porque un cero se lee como «ese día no hubo consumo» y lo que pasa es que ese día no
  *                         se pudo medir. Las series arrancan en fechas distintas a propósito: el balanceo solo
  *                         conserva 30 días y las DNS queries 62.
+ * @property mirrors     - Con qué otra métrica se mide esta línea, cuando no tiene serie propia. El contrato
+ *                         factura el mismo tráfico en varios productos —las peticiones del CDN son las que pasan
+ *                         por el WAF, y las dos líneas llevan su tope de 30.000 MM—, así que la línea existe con
+ *                         su tope y sus puntos son prestados. La pantalla **tiene que decirlo**: dos tarjetas con
+ *                         la misma gráfica y ninguna explicación se leen como un error del panel.
+ * @property bound       - Que los puntos prestados son una **cota superior** y no la misma cantidad. En WAF y en
+ *                         Advanced DDoS el tráfico es el mismo, porque van delante de todo; en Argo y en el
+ *                         balanceo solo cuenta lo que pasa por ellos, que es un subconjunto. Ahí «por debajo del
+ *                         tope» sigue siendo verdad, pero el porcentaje es el peor caso y no una medida.
  */
 export interface ICloudflareMetricOUT {
     metric: string;
@@ -53,13 +63,19 @@ export interface ICloudflareMetricOUT {
     entitlement?: number;
     since?: string;
     points: {date: string; value: number}[];
+    mirrors?: string;
+    bound?: boolean;
 }
 
 /**
  * Una línea del contrato que **no se está midiendo**.
  *
  * No es un hueco a rellenar sino información: dice que se contrató algo cuyo consumo no se puede saber por API,
- * y eso vale para la renovación. Hoy son `acm.domains` y `rate_limiting.requests`.
+ * y eso vale para la renovación. Hoy es `acm.domains` — `rate_limiting.requests` estaba aquí hasta que la
+ * renovación de 2026 dejó de contratarla.
+ *
+ * **Las líneas espejo no salen aquí**, y esa es la mitad del motivo por el que existen: `waf.data_transfer` sí se
+ * mide, con la serie de `cdn.data_transfer`. Antes de declararlas, apuntarles el tope las metía en esta lista.
  *
  * Dos estuvieron aquí y ya no, y las dos por lo mismo: las di por no medibles sin comprobarlo.
  * `load_balancing.dns_queries` se cuenta filtrando la analítica de DNS por los nombres de los balanceadores, y

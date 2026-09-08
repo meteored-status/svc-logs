@@ -1,0 +1,26 @@
+{
+  "name": "@mr/core-cli",
+  "version": "2026.9.7+1-bixus",
+  "description": "Infraestructura compartida por las herramientas de línea de comandos de MR{FW}",
+  "author": "José Antonio Jiménez",
+  "config": {
+    "subible": true,
+    "tipo": "core"
+  },
+  "exports": {
+    "./arranque": "./arranque.js",
+    "./esbuild": "./esbuild.mjs",
+    "./colors": "./modules/colors/index.ts",
+    "./colors/base": "./modules/colors/base.ts",
+    "./fs": "./modules/fs.ts",
+    "./log": "./modules/log.ts",
+    "./modulo": "./modules/modulo.ts"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "esbuild": "^0.28.2"
+  }
+}

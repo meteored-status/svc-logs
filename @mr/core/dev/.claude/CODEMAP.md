@@ -1,7 +1,7 @@
 # CODEMAP — `@mr/core/dev/.claude/`
 
 > Todo el directorio se symlinkea en la raíz de cada monorepo consumidor por
-> `initClaudeDir()` (`@mr/cli/src/mrpack/clases/init/symlinks.ts`), igual que `initGithub()`
+> `initClaudeDir()` (`@mr/cli/src/clases/init/symlinks.ts`), igual que `initGithub()`
 > hace con `.github/`.
 
 ---
@@ -39,7 +39,7 @@ garantizan:
   `@mr/core/dev/.mr-ignore` para excluir `tsconfig.tsbuildinfo`, pero aquí a nivel de
   subdirectorio (`.mr-ignore` se lee de forma independiente en cada directorio durante el
   recorrido, ver `paquete/directory.ts`).
-- La plantilla `IGNORE` de `@mr/cli/src/mrpack/clases/init/ignore.ts` incluye
+- La plantilla `IGNORE` de `@mr/cli/src/clases/init/ignore.ts` incluye
   `**/.claude/settings.local.json`, que `mrpack init` escribe en el `.gitignore` raíz de
   cada monorepo consumidor — así git nunca lo trackea, sea cual sea el path físico real
   (`@mr/core/dev/.claude/settings.local.json` a través del symlink).
@@ -108,7 +108,7 @@ Node ESM plano, sin dependencias externas.
    fichero).
 7. Si es significativo: `tocadoEnArbol()` comprueba si algún `CODEMAP.md` **en cualquier
    punto del árbol del workspace** (no solo en su raíz exacta — en este monorepo los CODEMAP.md
-   viven anidados por submódulo, ej. `@mr/cli/src/mrpack/CODEMAP.md`) está entre los ficheros
+   viven anidados por submódulo, ej. `@mr/cli/src/CODEMAP.md`) está entre los ficheros
    cambiados → si no, `missingCodemap`. `existeEnArbol()` busca recursivamente (profundidad
    máxima 6, saltando `node_modules/.yarn/output/files/bin/tmp/.git`) si existe algún
    `CHANGELOG.md` en el workspace; si existe y ninguno fue tocado → `missingChangelog`

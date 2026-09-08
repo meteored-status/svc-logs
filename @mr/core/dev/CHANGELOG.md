@@ -4,6 +4,19 @@
 
 ## 2026.9.3
 
+### Changed — convenciones
+
+- [Jose] `CONTRIBUTING.md` → «`CHANGELOG.md`»: **la entrada lleva hora, y el contador `(N)` queda
+  prohibido.** El formato documentado era `## 2026.8.5 — [Jose]`, sin desambiguador; como en un día hay
+  varias entradas, las sesiones se inventaron un contador que no estaba escrito en ninguna parte. Y falla
+  donde más duele: para saber qué número toca hay que leer lo que han escrito los demás, así que dos
+  sesiones que escriben a la vez eligen el mismo. **Cinco colisiones en un solo día**, cada una arreglada a
+  mano renumerando la propia —nunca la del otro, que ya está comiteada—.
+
+  La hora local en `HH:MM` se sabe sin preguntarle a nadie, ordena igual de bien y no hay que acertar al
+  minuto. Las entradas antiguas con contador se dejan como están: son historial publicado y renumerarlas no
+  arregla nada.
+
 ### Added — convenciones
 
 - [Jose] `.github/copilot-instructions.md` → «Preferencias de flujo de trabajo»: **se pueden y conviene

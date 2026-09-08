@@ -39,6 +39,8 @@ import {deprecatedPortalTiempoImportRule} from "./rules/deprecated-portal-tiempo
 import {breakingDominioTiempoRenameRule} from "./rules/breaking-dominio-tiempo-rename.mjs";
 import {breakingDominioTiempoListRenameRule} from "./rules/breaking-dominio-tiempo-list-rename.mjs";
 import {breakingUserTiempoDomainDefaultImportRule} from "./rules/breaking-user-tiempo-domain-default-import.mjs";
+import {deprecatedTraduccionV2ImportRule} from "./rules/deprecated-traduccion-v2-import.mjs";
+import {ensureI18nCoreDevDepRule} from "./rules/ensure-i18n-core-devdep.mjs";
 import {syncMrDevDepsRule} from "./rules/sync-mr-devdeps.mjs";
 
 // La raiz del monorepo se infiere a partir de la ubicacion de este script:
@@ -81,13 +83,15 @@ const RULES = [
     breakingDominioTiempoRenameRule,               // R031 (breaking: DominioTiempo -> Dominio as DominioTiempo en @mr/user-tiempo-domain)
     breakingUserTiempoDomainDefaultImportRule,     // R032 (breaking: import Foo from @mr/user-tiempo-domain -> import {Dominio as Foo} from @mr/user-tiempo-domain)
     breakingDominioTiempoListRenameRule,           // R033 (breaking: DominioTiempoList -> DominioList as DominioTiempoList en @mr/user-tiempo-domain/loader)
+    deprecatedTraduccionV2ImportRule,              // R035 (services-comun/modules/traduccion/v2/* -> @mr/core-i18n/*)
 ];
 /**
  * Reglas de nivel workspace. Se ejecutan siempre que haya al menos un patch
  * de fichero pendiente. No usan el cursor: son idempotentes por diseno.
  */
 const WORKSPACE_RULES = [
-    syncMrDevDepsRule,  // WS001 - sincroniza @mr/* en devDependencies
+    syncMrDevDepsRule,        // WS001 - sincroniza @mr/* en devDependencies
+    ensureI18nCoreDevDepRule, // WS002 - el workspace i18n/ declara @mr/core-i18n y suelta services-comun si es v2
 ];
 const TARGET_EXT = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs"]);
 const CONFIG_WORKSPACES_FILE = path.join(ROOT, "config.workspaces.json");

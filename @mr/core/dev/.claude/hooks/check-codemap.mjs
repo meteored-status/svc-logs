@@ -93,7 +93,7 @@ function aPosix(rutaAbs, basedir) {
 /**
  * Busca si algún fichero de nombre `nombreArchivo` fue tocado dentro del árbol de
  * `workspaceRel` (a cualquier profundidad) — los CODEMAP.md/CHANGELOG.md de este monorepo
- * viven anidados por submódulo (ej. `@mr/cli/src/mrpack/CODEMAP.md`), no en la raíz exacta
+ * viven anidados por submódulo (ej. `@mr/cli/src/CODEMAP.md`), no en la raíz exacta
  * del workspace.
  */
 function tocadoEnArbol(rutasCambiadas, workspaceRel, nombreArchivo) {

@@ -1,14 +1,44 @@
 {
   "name": "@mr/core-i18n",
-  "version": "2026.7.14+1-josantoniojimnez",
+  "version": "2026.9.7+1-bixus",
   "description": "Utilidades relacionadas con las traducciones de MR{FW}",
   "author": "José Antonio Jiménez",
+  "scripts": {
+    "mrlang": "yarn workspace @mr/core-i18n node --no-warnings bin/mrlang",
+    "compile": "node src/esbuild.config.mjs",
+    "compile:watch": "node src/esbuild.config.mjs --watch",
+    "test": "yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
+  },
+  "bin": {
+    "mrlang": "bin/mrlang.js"
+  },
   "config": {
     "subible": true,
     "tipo": "core"
   },
+  "exports": {
+    "./tsconfig.json": "./tsconfig.json",
+    "./langs": "./modules/langs.ts",
+    "./literal": "./modules/literal.ts",
+    "./translation-map": "./modules/translation-map.ts",
+    "./translation-set": "./modules/translation-set.ts",
+    "./util/lang": "./modules/util/lang.ts",
+    "./util/plural-function-builder": "./modules/util/plural-function-builder.ts",
+    "./value": "./modules/value/index.ts",
+    "./value/plural-value": "./modules/value/plural-value.ts",
+    "./value/singular-value": "./modules/value/singular-value.ts"
+  },
+  "dependencies": {
+    "chokidar": "^5.0.0",
+    "source-map-support": "^0.5.21",
+    "tslib": "^2.8.1"
+  },
   "devDependencies": {
-    "@mr/core-dev": "workspace:*",
-    "@types/node": "^24.13.3"
+    "@mr/core-cli": "workspace:*",
+    "@tsconfig/node24": "^24.0.5",
+    "@types/node": "^24.13.3",
+    "@types/source-map-support": "^0.5.10",
+    "esbuild": "^0.28.2",
+    "typescript": "^6.0.3"
   }
 }

@@ -1,0 +1,5 @@
+bin/*
+!bin/.mr-ignore
+!bin/.mr-nohash
+!bin/hash.md5
+!bin/mrlang.js

@@ -2,6 +2,113 @@
 
 ---
 
+## 2026.9.4 15:20 — [Jose]
+
+### Removed
+
+- **El runtime de traducciones v2 sale del paquete.** `modules/traduccion/v2/` se muda entero a
+  `@mr/core-i18n/modules/`: `Literal`, `TranslationMap`, `TranslationSet`, los `Value`, `getLang()`
+  y el builder de reglas CLDR. Con él se van sus cinco ficheros de `spec/`, que estrenan allí el
+  mismo arnés.
+
+  El motivo es de vecindad: quien escribe los imports a ese runtime es `mrlang`, que vive en
+  `@mr/core-i18n`. Separados, un cambio en el formato generado se repartía entre dos paquetes de
+  framework con envíos independientes.
+
+  Aquí se queda **v1** completo (`traduccion/{index,literal,plural,map,set}.ts`), que sigue siendo
+  la base de las traducciones de dominio.
+
+- Un detalle que se ve al separarlos: el v2 importaba `TParams` de `traduccion/index.ts` —el
+  generador **anterior**— teniendo uno idéntico en su propio `value/value.ts`. Esa atadura se
+  cortó al mudarlo; los dos tipos siguen siendo `Record<string, string|number>`, pero ya no son el
+  mismo símbolo.
+
+### Migración
+
+La hace el patch **`R035`** de `@mr/core-dev`: `services-comun/modules/traduccion/v2/*` →
+`@mr/core-i18n/*`. Va acompañado de **`WS002`**, que declara `@mr/core-i18n` en el
+`i18n/package.json` del proyecto — sin él, el código generado importa un paquete que el workspace
+no declara y la compilación falla.
+
+
+## 2026.9.3 — [Jose]
+
+### Fixed
+- `traduccion/v2/value/plural-value.ts` — un contador de **un millón justo** lanzaba
+  `Missing plural value for key "many"` en castellano, francés y catalán, en vez de pintar texto.
+  CLDR le da a esos tres idiomas una categoría que un catálogo de dos formas no menciona —`many`,
+  que en `Intl.PluralRules` sale para los múltiplos exactos de 1.000.000 y no para cualquier cifra
+  grande—, y `value()` buscaba la forma de la categoría elegida sin nada debajo. Ahora las
+  **categorías de refinamiento** (`zero`, `two`, `few`, `many`) **caen a `other`**, que es la comodín
+  de CLDR y justo lo que significa escribir solo dos formas.
+- **`one` y `other` siguen lanzando si faltan**, que es la mitad que importa del arreglo: eso no es un
+  hueco entre CLDR y el catálogo sino un despiste de quien escribió la entrada, y caer a la otra
+  pintaría «1 días» en el caso más frecuente de todos sin que nadie se enterase. Comprobado quitando
+  el guardián: la prueba que ya existía para el singular ausente se pone roja.
+
+### Added
+- `spec/traduccion/v2/plural-value.spec.ts` — cinco casos más: las premisas (que es/fr/ca tienen tres
+  categorías y `en` dos, y que `many` es el millón justo y no «un número grande»), la caída a `other`
+  en los tres idiomas, que un `many` escrito manda sobre la comodín, y que las dos formas obligatorias
+  siguen lanzando. La suite pasa de 38 a 43 casos.
+
+### Notes
+- Es **preexistente y no lo introdujo el catalán**: afecta igual a los tres idiomas latinos desde que
+  existe el runtime v2. Hoy hace falta un contador que llegue al millón exacto, y los que pueden son
+  los que cuentan registros de log por tramo (`grafica_cuantos` de `page.logs` y `page.logs-error`) y
+  los accesos de auditoría (`accesos_n`); los otros 48 plurales del catálogo cuentan usuarios, roles,
+  días o servicios y no se acercan.
+- Lo que se evitaba no era un texto raro: `PluralValue.value()` se resuelve dentro del `callback` de
+  tooltip de una gráfica, en un componente de cliente, así que la excepción se lleva la página entera.
+- Las cuatro entradas alcanzables **ya declaran su `many`** en `i18n/.json/` («1.000.000 **de**
+  registros», «1 000 000 **d'**enregistrements»), así que la caída a `other` es la red de debajo y no
+  la solución. Ver `i18n/readme.md`.
+
+---
+
+## 2026.9.3 — [Juan Carlos]
+
+### Fixed
+- `send-task-system/statistics/impl/sparkpost-calculator.ts` — arreglada la medición de rebotes
+  ([BAK-1646](https://meteored.atlassian.net/browse/BAK-1646)), que medía dos cosas equivocadas a
+  la vez:
+  - **`out_of_band` se descartaba en silencio.** Son los rebotes asíncronos: el MTA remoto acepta
+    el mensaje —momento en el que Sparkpost ya emitió el `delivery` correspondiente— y lo devuelve
+    después. Al no tener rama en el `switch`, esos receptores se quedaban marcados como entregados.
+    Comprobado contra producción: de 500 receptores con un `out_of_band` real, **500 constaban con
+    `received = true` y `bounce = false`**. Ahora el evento marca `undelivered` y **retira la
+    recepción** (`received = false`); `received_time` se conserva, porque la aceptación sí ocurrió.
+    Se exceptúa la clase 60 (autorespuesta de ausencia), que llega por el mismo canal pero no es un
+    fallo de entrega.
+  - **`bounce` mezclaba rebotes reales con supresiones.** El 93,3 % de los eventos `bounce` son
+    `bounce_class` 25 (*Admin Failure*), o sea Sparkpost negándose a enviar a una dirección de su
+    lista de supresión: la consecuencia de un rebote antiguo, no uno nuevo. Ahora quedan separados
+    por `suppressed`, y **los rebotes reales son `bounce && !suppressed`**.
+
+### Added
+- `email/webhook/sparkpost/bounce-class.ts` — taxonomía de clases de rebote de Sparkpost:
+  `TBounceCategory`, `claseRebote()` (normaliza: **el proveedor manda `bounce_class` como cadena**,
+  `"25"`, así que compararla sin convertir no casa nunca) y `categoriaRebote()`.
+- `email/webhook/sparkpost/sparkpost.ts` — `IMessageBounceEvent` (cubre `bounce` y `out_of_band`,
+  que comparten forma) con `bounce_class`, `error_code`, `raw_reason` y `reason`, y la guarda de
+  tipo `esRebote()`. Los campos ya llegaban en tiempo de ejecución —el DAO restaura el payload
+  íntegro con `JSON.parse(json_event)`—, solo faltaba declararlos.
+- `send-task-system` — `IStatistics` gana `suppressed`, `undelivered`, `bounce_class` y
+  `bounce_category`. Van **opcionales a propósito**: no hay recálculo hacia atrás, así que los
+  receptores ya indexados no los tienen, y ausente significa «no se sabe», no «no».
+
+### Notes
+- **Sin recálculo hacia atrás**, por decisión de alcance. El cronjob es aditivo y nunca resetea el
+  bloque (`StatisticsController.calculateStatistics`), así que relanzarlo sobre una ventana ya
+  procesada duplicaría contadores en vez de recalcularlos. Los campos nuevos solo se pueblan hacia
+  adelante.
+- El consumidor de estos campos en el monorepo `meteored-svc-newsletter` es el panel
+  (`services/newsletter-panel`), que **sigue midiendo lo no entregado como `receptores - recibidos`**
+  y no con `bounce`. Esa card no cambia de fórmula, pero su denominador sí mejora: al retirar las
+  recepciones de los `out_of_band`, la tasa de recepción deja de inflarse ~1,7 %.
+
+---
+
 ## 2026.9.3
 
 ### Fixed

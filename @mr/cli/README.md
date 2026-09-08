@@ -1,13 +1,17 @@
 # `@mr/cli` — Herramientas de línea de comandos
 
-CLI del monorepo `web-www`. Proporciona dos ejecutables:
+CLI del monorepo `web-www`. Proporciona un ejecutable:
 
 | Comando | Descripción |
 |---------|-------------|
 | `mrpack` | Gestión del ciclo de vida del proyecto (compilación, despliegue, frameworks…) |
-| `mrlang` | Utilidades de internacionalización |
 
-> **Código fuente:** ver [`CODEMAP.md`](CODEMAP.md) para el mapa completo del paquete (bin/, manifest/, deployment/, src/utiles/), con enlaces a [`src/mrpack/CODEMAP.md`](src/mrpack/CODEMAP.md) y [`src/mrlang/CODEMAP.md`](src/mrlang/CODEMAP.md) para el detalle de clases, funciones exportadas y grafo de dependencias de cada módulo.
+> **`mrlang` estuvo aquí hasta el 2026-09-04.** Ahora vive en
+> [`@mr/core-i18n`](../core/i18n/README.md), con su propio bin, y lo que las dos CLI compartían
+> está en [`@mr/core-cli`](../core/cli/README.md). Los dos paquetes dependen de él y ninguno del
+> otro.
+
+> **Código fuente:** ver [`CODEMAP.md`](CODEMAP.md) para el mapa completo del paquete (bin/, manifest/, deployment/), con enlace a [`src/CODEMAP.md`](src/CODEMAP.md) para el detalle de clases, funciones exportadas y grafo de dependencias del módulo.
 
 ---
 
@@ -76,7 +80,7 @@ yarn mrpack devel [opciones] [adicional]
 > **Patches automáticos:** al arrancar con `-c`, `mrpack devel` ejecuta siempre
 > `yarn run patch:apply` antes de iniciar los compiladores, independientemente de si
 > se han actualizado frameworks o no. Si no hay patches pendientes el comando finaliza
-> de inmediato. Consulta [`@mr/core/dev/patches/README.md`](../@mr/core/dev/patches/README.md)
+> de inmediato. Consulta [`@mr/core/dev/patches/README.md`](../core/dev/patches/README.md)
 > para la documentación completa del sistema de parches.
 
 #### `config.workspaces.json`
@@ -94,7 +98,7 @@ controla la generación de internacionalización:
 
 El resto de la propiedad `workspaces` agrupa los demás workspaces del proyecto según su
 `deploy.type` (`browser`, `cronjobs`, `jobs`, `services`; ver
-[`@mr/core/dev/manifest/README.md`](../@mr/core/dev/manifest/README.md) para
+[`@mr/core/dev/manifest/README.md`](../core/dev/manifest/README.md) para
 `ManifestDeploymentKind`), **no** según el directorio físico que los contiene. Cada
 workspace tiene dos flags booleanos opcionales:
 
@@ -111,7 +115,7 @@ La propiedad `framework` agrupa la configuración relativa a los paquetes framew
 
 | Flag | Significado |
 |------|-------------|
-| `patch` | Último patch aplicado (`RXXX`) por `yarn run patch:apply` (ver [`@mr/core/dev/patches/README.md`](../@mr/core/dev/patches/README.md)). Ausente **o cadena vacía `""`** = ningún patch registrado; `patch:apply` reprocesa todas las reglas desde cero. |
+| `patch` | Último patch aplicado (`RXXX`) por `yarn run patch:apply` (ver [`@mr/core/dev/patches/README.md`](../core/dev/patches/README.md)). Ausente **o cadena vacía `""`** = ningún patch registrado; `patch:apply` reprocesa todas las reglas desde cero. |
 | `updates` | Frecuencia de **preselección** de paquetes de framework con update disponible al arrancar `devel -c` (tabla siguiente). |
 
 | Valor de `updates` | Comportamiento |
@@ -718,7 +722,7 @@ yarn mrpack update
 > después de actualizar los frameworks. No es necesario ejecutarlo a mano salvo que se
 > quiera relanzar de forma explícita.
 >
-> Consulta [`@mr/core/dev/patches/README.md`](../@mr/core/dev/patches/README.md) para
+> Consulta [`@mr/core/dev/patches/README.md`](../core/dev/patches/README.md) para
 > la documentación completa del sistema de parches.
 
 ---
@@ -780,7 +784,7 @@ Consulta [`CHANGELOG.md`](./CHANGELOG.md) para el historial de cambios del paque
 
 ## Estructura interna — `clases/framework/`
 
-El módulo de gestión de frameworks está dividido en tres ficheros bajo `src/mrpack/clases/framework/`:
+El módulo de gestión de frameworks está dividido en tres ficheros bajo `src/clases/framework/`:
 
 | Fichero | Responsabilidad |
 |---------|-----------------|
@@ -788,7 +792,7 @@ El módulo de gestión de frameworks está dividido en tres ficheros bajo `src/m
 | `gestor.ts` | Todo el ciclo de vida de paquetes: `gestionar`, `actualizarTodo`, `enviarTodo`, `resetearTodo`; `GestorTabla`, `construirInfoPaquetes`, `ejecutarAcciones`; `const enum Accion`, `type GestorModo`, `IPaqueteGestion` |
 | `index.ts` | Barrel que re-exporta todo lo anterior |
 
-Además, `src/mrpack/clases/patches.ts` expone la función compartida `aplicarPatches(basedir)`
+Además, `src/clases/patches.ts` expone la función compartida `aplicarPatches(basedir)`
 usada tanto por el gestor de frameworks como por el comando `update`.
 
 ### `GestorTabla`
@@ -851,34 +855,54 @@ Regenera el `.yarnrc.yml` del monorepo usando `js-yaml`:
 
 ## Compilación del paquete
 
-Los ejecutables de `@mr/cli` se generan con **[esbuild](https://esbuild.github.io/)**
-a partir del código TypeScript en `src/`. El resultado son dos ficheros en `bin/min/`:
+El ejecutable de `@mr/cli` se genera con **[esbuild](https://esbuild.github.io/)**
+a partir del código TypeScript en `src/`. La configuración vive en
+[`@mr/core-cli/esbuild`](../core/cli/README.md), compartida con `mrlang`; en
+`src/esbuild.config.mjs` solo queda el entry y el enganche del watch. El resultado es un fichero en `bin/min/`:
 
 | Fichero | Origen |
 |---------|--------|
-| `bin/min/mrpack-run.js` | `src/mrpack/main.ts` |
-| `bin/min/mrlang-run.js` | `src/mrlang/main.ts` |
+| `bin/min/mrpack-run.js` | `src/main.ts` |
 
 ### Scripts disponibles
 
 | Script | Descripción |
 |--------|-------------|
 | `yarn workspace @mr/cli run compile` | Build de producción: esbuild (minificado) + `tsc --noEmit` en paralelo. Falla si hay errores de tipos. |
-| `yarn workspace @mr/cli run compile:watch` | Watch: esbuild reconstruye en ~50 ms al guardar; `tsc --watch` muestra errores de tipos en tiempo real. |
-| `yarn workspace @mr/cli run compile:rspack` | Fallback al bundler anterior (rspack). |
+| `yarn workspace @mr/cli run compile:watch` | Watch: esbuild reconstruye en ~50 ms al guardar; `tsc --watch` muestra errores de tipos en tiempo real. **Arranca también el watch de `mrlang`** si `@mr/core-i18n` está instalado. |
 
 > **Nota de rendimiento:** esbuild tarda ~70 ms en bundlear; el tiempo total del script
 > `compile` (~0.85 s) lo determina `tsc --noEmit`, que corre en paralelo.
+
+### El watch arrastra a `mrlang`
+
+Antes de separar los dos CLI, un solo `compile:watch` construía `mrpack` y `mrlang`. Al mudarse
+`mrlang` a `@mr/core-i18n`, quien toca las herramientas se quedó con dos watches que arrancar a
+mano; esto lo devuelve.
+
+`src/esbuild.config.mjs` mira si existe `@mr/core/i18n/` en la raíz del monorepo y, si está, lanza
+**su propio** script (`yarn workspace @mr/core-i18n run compile:watch`) como proceso hijo, con la
+salida heredada. No se importa su configuración: cada CLI tiene sus externals, su entry y su
+tsconfig, y esto no vuelve a acoplar los paquetes — si `@mr/core-i18n` no está instalado, no pasa
+nada.
+
+**Solo en `compile:watch`, no en `compile`.** El segundo está en el camino caliente de
+el arranque, que lo lanza automáticamente cuando falta `bin/min/mrpack-run.js`: compilar allí un
+CLI que nadie ha pedido sería trabajo de más en el arranque.
+
+Ctrl+C cierra los dos. El aviso de que el hijo ha terminado se calla cuando el cierre es nuestro,
+porque `yarn` traduce la señal a un código de salida (129) y si no se distinguiera, cada Ctrl+C
+parecería un error.
 
 ### Características del bundle
 
 - **Target:** `node24` — aprovecha las APIs nativas de Node 24 sin transpilación innecesaria.
 - **Externals:** solo las `dependencies` de `package.json` se marcan como externas (no se
-  bundlean). Los workspace devDeps (`services-comun`, `@mr/core-*`…) se bundlean inline
+  bundlean). Los workspace devDeps (`services-comun`, `@mr/core-cli`…) se bundlean inline
   porque son TypeScript puro sin compilar. `typescript` se excluye explícitamente para
   evitar incluir sus 9 MB de fuente.
-- **Sin code splitting:** cada ejecutable es un único fichero CJS autocontenido, sin chunks
-  intermedios. Tamaño resultante: `mrpack-run.js` ~169 kB, `mrlang-run.js` ~85 kB.
+- **Sin code splitting:** el ejecutable es un único fichero CJS autocontenido, sin chunks
+  intermedios. Tamaño resultante: `mrpack-run.js` ~205 kB.
 - **Source maps:** ficheros `.js.map` adyacentes; `source-map-support` los carga
   automáticamente al arrancar.
 
@@ -900,7 +924,7 @@ a partir del código TypeScript en `src/`. El resultado son dos ficheros en `bin
 
 ## Integración con IDEs (JetBrains / VS Code)
 
-Para facilitar la ejecución y depuración de las herramientas del monorepo (`mrpack` y `mrlang`), este paquete incluye configuraciones de ejecución compartidas que se sincronizan entre todos los proyectos:
+Para facilitar la ejecución y depuración de las herramientas del monorepo, este paquete incluye configuraciones de ejecución compartidas que se sincronizan entre todos los proyectos:
 
 ### JetBrains (PhpStorm, WebStorm, etc.)
 * **Ubicación**: `.run/`

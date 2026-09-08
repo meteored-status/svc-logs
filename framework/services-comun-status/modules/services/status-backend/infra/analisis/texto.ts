@@ -1,12 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 02 Sep 2026 14:49:28 GMT
- * Hash: 8520e77e6aa02b50e4b37bde8bdae474
- * Versión: 2026.9.2+2-bixus
- * Anterior: 2026.9.2+1-bixus
+ * Fecha: Mon, 07 Sep 2026 14:26:51 GMT
+ * Hash: ba96b7aa265cd2815a47c1a724079912
+ * Versión: 2026.9.7+2-bixus
+ * Anterior: 2026.9.3+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import {etiquetaDeDia, etiquetaDeMes, formatear, porcentaje} from "../formato";
 import {EHallazgo, type IHallazgoOUT} from "./interface";
 import {ESeveridad} from "./interface";
 
@@ -168,64 +169,51 @@ export interface IEscritura {
  * @property titulo - La línea del contrato, como se llama en la propuesta de renovación.
  * @property frase  - Qué le pasa, con sus números.
  * @property nota   - Lo que hay que matizar, cuando hay algo que matizar.
+ * @property coste  - Lo que cuesta el exceso, **ya formateado en dólares**. Ausente cuando no hay exceso que cobrar
+ *                    o cuando el contrato no tarifa esa línea, que no es lo mismo que salir gratis.
+ *
+ *                    Va como campo aparte y no metido en la frase por dos razones. Una: solo lo llevan dos de los
+ *                    catorce códigos de frase, así que meterle un `{{coste}}` a las plantillas obligaría a que
+ *                    todas lo tuvieran o a duplicar las dos que sí. Y dos: el porcentaje y el dinero se leen
+ *                    distinto —uno dice cuánto te has pasado y el otro cuánto cuesta—, así que quien pinta querrá
+ *                    darles sitios distintos, y en un correo puede querer que el dinero vaya en negrita.
  */
 export interface IHallazgoEscrito {
     titulo: string;
     frase: string;
     nota?: string;
-}
-
-/** Cómo se lee cada unidad. `count` no lleva sufijo: «31 zonas» ya se entiende por el nombre de la línea. */
-const UNIDADES: Record<string, string> = {
-    "TB": "TB",
-    "MB": "MB",
-    "MM": "MM",
-    "MM_ms": "MM ms",
-    "MM_GB_s": "MM GB-s",
-    "count": "",
-};
-
-/**
- * Un número con su unidad, en el idioma que se está leyendo.
- *
- * Los decimales van por magnitud y no fijos: tres decimales en un «377 TB» son ruido y ninguno en un «0,25 TB»
- * pierde el dato. `sufijo: false` para el primero de dos valores de la misma unidad en la misma frase: «3.699 de
- * 2.500 MM ms» y no «3.699 MM ms de 2.500 MM ms».
- */
-const medida = (valor: number|undefined, unidad: string, locale: string, {sufijo = true}: {sufijo?: boolean} = {}): string => {
-    if (valor === undefined) {
-        return "—";
-    }
-
-    const unidadTexto = UNIDADES[unidad] ?? unidad;
-    const decimales = unidad === "count" ? 0 : valor >= 100 ? 0 : valor >= 1 ? 1 : 2;
-    const numero = valor.toLocaleString(locale, {minimumFractionDigits: decimales, maximumFractionDigits: decimales});
-
-    return sufijo && unidadTexto.length > 0 ? `${numero} ${unidadTexto}` : numero;
+    coste?: string;
 }
 
 /**
- * Un porcentaje, sin decimales de más y **sin signo**.
+ * El importe de un exceso, en dólares y con el separador de miles del idioma que se está leyendo.
  *
- * El signo lo dice el propio código de la frase —`escalon-subio` contra `escalon-bajo`— y no un menos delante: «un
- * −72,7%» obliga a interpretar dos convenciones a la vez. El umbral de decimales va sobre el **valor absoluto**,
- * que es donde estaba el fallo de la primera versión: `valor >= 10` es falso para un −72,7, así que las bajadas
- * salían con un decimal y las subidas sin él en la misma lista.
+ * **En dólares y no en euros**, porque el acuerdo está en dólares: pasarlo aquí obligaría a inventarse un tipo de
+ * cambio y a que la cifra no cuadrase con la factura de Cloudflare.
+ *
+ * Sin decimales a partir de 100 y con dos por debajo. Es una estimación —el consumo de un mes por el precio de una
+ * unidad—, así que dar «1.234,56 $» aparenta una precisión que no tiene; pero en un exceso de tres dólares los
+ * céntimos son la mitad del número.
+ *
+ * @param importe El importe en dólares.
+ * @param locale  El idioma con el que se separan los miles.
  */
-const porciento = (valor: number, locale: string): string => {
-    const absoluto = Math.abs(valor);
+const dinero = (importe: number, locale: string): string => new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: importe >= 100 ? 0 : 2,
+}).format(importe);
 
-    return `${absoluto.toLocaleString(locale, {maximumFractionDigits: absoluto >= 10 ? 0 : 1})}%`;
-}
-
-const nombreDeMes = (valor: string, locale: string): string => {
-    const [anio, numero] = valor.split("-").map(actual => Number.parseInt(actual, 10));
-    const escrito = new Date(Date.UTC(anio, numero-1, 1)).toLocaleDateString(locale, {month: "long", year: "numeric", timeZone: "UTC"});
-
-    return `${escrito.charAt(0).toUpperCase()}${escrito.slice(1)}`;
-}
-
-const nombreDeDia = (valor: string, locale: string): string => new Date(`${valor}T00:00:00Z`).toLocaleDateString(locale, {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC"});
+/**
+ * Un número con su unidad, o una raya si no hay dato.
+ *
+ * Lo único que añade sobre el `formatear()` del formateador compartido es el `undefined`, que aquí llega —hay
+ * hallazgos sin valor de referencia— y allí no tendría sentido. Todo lo demás —los decimales por magnitud, la
+ * tabla de unidades, el sufijo— **era una copia literal** de esa función con el locale metido a mano, escrita
+ * cuando `formatear()` todavía formateaba con `"es-ES"` fijo y por tanto no se podía reutilizar. Ahora sí.
+ */
+const medida = (valor: number|undefined, unidad: string, locale: string, {sufijo = true}: {sufijo?: boolean} = {}): string =>
+    valor === undefined ? "—" : formatear(valor, unidad, locale, {sufijo});
 
 /**
  * Escribe un hallazgo con los textos y el idioma que se le pasen.
@@ -238,17 +226,17 @@ const nombreDeDia = (valor: string, locale: string): string => new Date(`${valor
  * «subió» y «bajó», la regla estaría en dos sitios y acabarían discrepando.
  */
 export const escribir = (hallazgo: IHallazgoOUT, escritura: IEscritura): IHallazgoEscrito => {
-    const {metric, unit, value, reference, percent, month, days, date} = hallazgo;
+    const {metric, unit, value, reference, percent, month, days, date, cost} = hallazgo;
     const {frases, notas, lineas, locale} = escritura;
     const codigos = texto(hallazgo);
 
-    const fecha = nombreDeDia(date, locale);
+    const fecha = etiquetaDeDia(date, locale);
     const params: Record<string, string|number> = {
-        mes: month !== undefined ? nombreDeMes(month, locale) : "",
+        mes: month !== undefined ? etiquetaDeMes(month, locale) : "",
         fecha,
         valor: medida(value, unit, locale),
         tope: medida(reference, unit, locale),
-        pct: porciento(percent ?? 0, locale),
+        pct: porcentaje(percent ?? 0, locale),
         // Sin unidad: la lleva ya el valor con el que se compara, en la misma frase.
         vecindad: medida(reference, unit, locale, {sufijo: false}),
         antes: medida(reference, unit, locale, {sufijo: false}),
@@ -265,5 +253,6 @@ export const escribir = (hallazgo: IHallazgoOUT, escritura: IEscritura): IHallaz
         titulo: lineas.uGet(metric),
         frase: frases.uGet(codigos.frase, params),
         ...codigos.nota !== undefined ? {nota: notas.uGet(codigos.nota, {fecha})} : {},
+        ...cost !== undefined ? {coste: dinero(cost, locale)} : {},
     };
 }

@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-dev",
-  "version": "2026.9.3+2-bixus",
+  "version": "2026.9.7+1-bixus",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "typings": "./types.d.ts",
@@ -56,7 +56,7 @@
     "pug": "^3.0.4",
     "pug3-loader": "^2.4.3",
     "rspack-manifest-plugin": "^5.2.2",
-    "sass-embedded": "^1.103.1",
+    "sass-embedded": "^1.104.0",
     "sass-loader": "^17.0.1",
     "source-map-loader": "^5.0.0",
     "style-loader": "^4.0.0",

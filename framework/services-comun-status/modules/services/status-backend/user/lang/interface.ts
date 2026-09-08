@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 02 Sep 2026 14:14:26 GMT
- * Hash: 8430ca3951b3885bfb083a4264a20f3f
- * Versión: 2026.9.2+1-bixus
+ * Fecha: Thu, 03 Sep 2026 14:04:25 GMT
+ * Hash: f101a57e000e7ac3f11dda3dbf4998c7
+ * Versión: 2026.9.3+2-bixus
+ * Anterior: 2026.9.2+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -16,13 +17,21 @@
  * Si alguna vez divergen —un `.json` sin `es`— no se rompe nada: `getLang()` cae al defecto para ese módulo y el
  * resto de la pantalla sigue en su idioma. Se degrada por texto, no por pantalla.
  *
- * El orden es el de presentación en el selector, no alfabético: primero el idioma del equipo.
+ * **El orden de esta lista no se ve en ninguna parte.** Lo fue: era el orden del desplegable, con el idioma
+ * del equipo primero. Hoy el selector se ordena solo, alfabéticamente y por el nombre que se lee —no por
+ * el código—, así que aquí un idioma nuevo se puede añadir donde caiga.
  *
  * **Añadir un idioma es esta línea y sus textos, y nada más.** De aquí salen el enrutado (`i18nConfig`), los botones
  * del selector y la validación del endpoint, así que no hay ningún otro sitio que actualizar — lo único que queda es
  * rellenar el idioma en los `.json` de `i18n/` y regenerar.
+ *
+ * **`ca` es también el valenciano, y no por descuido.** El valenciano no tiene código propio: ni ISO 639-1 ni
+ * 639-3 lo separan del catalán, y la única forma normalizada de nombrarlo es la variante BCP 47 `ca-ES-valencia`.
+ * Aquí no cabe por dos motivos concretos, no por criterio: la columna `user.lang` es `VARCHAR(10)` y esa etiqueta
+ * mide catorce, y el catálogo de `mrlang` no la conoce —ni sabría a qué idioma caer—. Los textos están escritos
+ * eligiendo, cuando las dos normas discrepan, las formas que valen en ambas.
  */
-export const IDIOMAS = ["es", "en", "fr"] as const;
+export const IDIOMAS = ["es", "en", "fr", "ca"] as const;
 
 /** Uno de los idiomas del panel. */
 export type TIdioma = typeof IDIOMAS[number];

@@ -1,0 +1,24 @@
+{
+  "//": "Autosuficiente a propósito: este paquete no extiende el tsconfig de @mr/core-dev, para no depender de él. Las opciones son las que resolvía aquella cadena (@mr/core-dev → tsconfig/node.json → @tsconfig/node24), menos los tipos globales del bundler (PRODUCCION, ENTORNO, …), que este código no usa. Si el tsconfig base del monorepo cambia, esto no se entera: es el precio de no depender, y por eso se compila también dentro de las dos CLI, que sí lo extienden.",
+  "compilerOptions": {
+    "lib": ["es2023", "esnext.disposable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "target": "es2024",
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "allowUnusedLabels": false,
+    "esModuleInterop": true,
+    "importHelpers": true,
+    "isolatedModules": false,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "strictNullChecks": true
+  }
+}

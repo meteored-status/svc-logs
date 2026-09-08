@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 01 Sep 2026 11:32:26 GMT
- * Hash: 48a594a73d302e4de5a131152adc5d4b
- * Versión: 2026.9.1+2-bixus
+ * Fecha: Mon, 07 Sep 2026 14:26:51 GMT
+ * Hash: 6d541eab72935fe11f53de66e8c38a07
+ * Versión: 2026.9.7+2-bixus
+ * Anterior: 2026.9.1+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -82,6 +83,17 @@ export const enum ESeveridad {
  *                         escalón**, porque no hay días posteriores con los que compararlo. Se dice en vez de
  *                         esperar una semana, que es justo lo que haría llegar tarde a lo único que da tiempo a
  *                         arreglar.
+ * @property cost        - Lo que cuesta el exceso, en **dólares**: las unidades que se han pasado del tope por el
+ *                         precio que el contrato le pone a cada una. Solo en `exceso` y en `proyeccion`, que son
+ *                         los dos hallazgos que hablan de haberse pasado o de ir a pasarse.
+ *
+ *                         **Ausente cuando el contrato no tarifa esa línea**, y eso no significa que salga gratis:
+ *                         significa que su exceso no tiene precio puesto —`Included`, o simplemente fuera de la
+ *                         tabla de Excess Usage Pricing— y que el acuerdo dice que las partes lo negocian. Un 0
+ *                         ahí se leería como «pasarse no cuesta nada», que es lo contrario.
+ *
+ *                         En dólares porque el acuerdo está en dólares. Pasarlo a euros aquí obligaría a
+ *                         inventarse un tipo de cambio y a que el número no cuadrase con la factura.
  */
 export interface IHallazgoOUT {
     kind: EHallazgo;
@@ -95,6 +107,7 @@ export interface IHallazgoOUT {
     percent?: number;
     days?: number;
     provisional?: boolean;
+    cost?: number;
 }
 
 /**

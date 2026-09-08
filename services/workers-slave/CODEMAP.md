@@ -14,11 +14,14 @@ Es el hermano de `services/logs-slave` (ver su CODEMAP para el detalle): compart
 único endpoint que recibe una notificación de GCS y procesa el objeto que la disparó—, pero
 divergen en casi todo lo demás: el tipo de log de Cloudflare que consumen (tail events de Workers
 aquí, HTTP de borde allí), el destino de los datos (Elasticsearch aquí, BigQuery allí), y cómo se
-despliegan (servicio k8s "alone" aquí, Cloud Run/"lambda" allí). Este servicio delega casi toda su
-lógica de negocio en el workspace compartido `packages/workers-base`; pese al nombre "base", el
-único consumidor real de ese paquete en el monorepo es este workspace (`grep` de `"workers-base"`
-en los `package.json` del repo solo lo encuentra en la raíz —como listado de workspaces— y en
-`workers-slave`). `logs-slave` no comparte código con ninguno de los dos.
+despliegan (servicio k8s "alone" aquí, Cloud Run/"lambda" allí). `logs-slave` no comparte código
+con este servicio.
+
+**Todo el código vive aquí.** Hasta 2026-09-08 la capa de dominio —`Bucket` (MySQL) y `Cloudflare`
+(Zod + Elasticsearch)— estaba en un workspace aparte, `packages/workers-base`, del que este
+servicio era el único consumidor. Se fusionó dentro: el paquete no compartía nada con nadie, así
+que la separación solo obligaba a leer dos workspaces, mantener dos `package.json` y encadenar
+`Bucket extends BucketBase` para lo que hoy es una sola clase.
 
 ## Árbol de módulos
 
@@ -32,7 +35,9 @@ services/workers-slave/
 │  │  └─ handlers/
 │  │     └─ slave.ts                    — RouteGroup: POST /private/workers/ingest/ y /pubsub/workers/ingest/
 │  └─ data/
-│     └─ bucket.ts                      — Bucket: extiende el Bucket de packages/workers-base con el flujo de un evento de notificación
+│     ├─ bucket.ts                      — Bucket: relación bucket↔cliente en MySQL, cola procesando/repesca, descarga de GCS y flujo de un evento
+│     └─ source/
+│        └─ cloudflare.ts               — Cloudflare: esquema Zod del NDJSON de tail events + indexado en Elasticsearch
 ├─ assets/
 │  └─ favicon.ico                       — favicon servido por el handler estándar de @mr/core-workload
 ├─ files/                                — no explorado en detalle (credenciales/config de despliegue); ver mrpack.json
@@ -68,9 +73,10 @@ Elasticsearch (es su destino de datos), así que el healthcheck lo reflexiona.
 ## `modules/utiles/config.ts` — `Configuracion`
 
 Extiende la `Configuracion` de `services-comun-status/modules/config/service` añadiendo `google`
-(`Google` de `@mr/core-workload/config/google`), con los valores por defecto de
-`packages/workers-base/modules/utiles/config.ts` (`GOOGLE`): proyecto GCP
-`"api-project-858154548956"`, credenciales en `files/credenciales/storage.json`. **Ojo:** este es
+(`Google` de `@mr/core-workload/config/google`), con los valores por defecto de la constante
+`GOOGLE` declarada en este mismo fichero: proyecto GCP `"api-project-858154548956"`, credenciales
+en `files/credenciales/storage.json` y `storage.buckets` vacío a propósito (los buckets se
+resuelven en ejecución contra MySQL, no se declaran de forma estática). **Ojo:** este es
 un proyecto GCP distinto del que usa `logs-slave` (`"meteored-status"`) — ver la nota
 correspondiente en el CODEMAP de ese servicio; no se ha determinado si son en realidad el mismo
 proyecto referenciado de dos formas o dos proyectos distintos.
@@ -114,32 +120,53 @@ un fallo real.
 
 ## Capa de datos
 
-### `modules/data/bucket.ts` — `Bucket` (extiende `packages/workers-base`)
+### `modules/data/bucket.ts` — `Bucket`
 
 | Símbolo | Tipo | Descripción |
 |---------|------|-------------|
-| `INotifyPubSub` | `interface` (extiende `INotify` de `workers-base`) | Forma completa de una notificación de objeto: `bucketId`, `objectId`, `eventTime`, `eventType`, `notificationConfig`, `objectGeneration`, `payloadFormat` — el subconjunto de los campos que trae una notificación GCS real que este servicio necesita para decidir qué hacer. |
-| `Bucket.run(config, notify, signal)` | `static async` | Punto de entrada único del pipeline. Si `eventType !== "OBJECT_FINALIZE"`, no procesa nada: `"OBJECT_DELETE"` se ignora explícitamente con un comentario ("deshabilitado por filtro de PubSub" — es decir, la suscripción de Pub/Sub ya debería estar filtrando estos eventos antes de que lleguen aquí, y este `switch` es una defensa adicional) y cualquier otro tipo se registra con `info()` como "todavía no soportado". Para `OBJECT_FINALIZE`: marca el fichero como recibido (`addProcesando`), resuelve el `Bucket` (fila de MySQL) por `bucketId` con caché en memoria por proceso (`findBucket`, `Bucket.CACHE`, nunca se invalida), resuelve el `ICliente` asociado, marca `procesando` y llama a `bucket.ingest(...)` (heredado de `workers-base`), que descarga el objeto y lo pasa a `Cloudflare.ingest()` (también de `workers-base`). Si `ingest()` falla, llama a `Bucket.addRepesca()` en vez de propagar. |
+| `INotify` | `interface` | `{bucketId, objectId}` — el payload mínimo de una notificación de GCS. **Exportado**: antes se redeclaraba idéntico en tres ficheros distintos (los dos del paquete y este); ahora se declara una vez y `cloudflare.ts` lo importa. |
+| `INotifyPubSub` | `interface` (extiende `INotify`) | Forma completa de una notificación de objeto: `bucketId`, `objectId`, `eventTime`, `eventType`, `notificationConfig`, `objectGeneration`, `payloadFormat`. |
+| `IBucketMySQL` | `interface` | `{id, cliente}` — la fila de la tabla `buckets` (`mapping/workers.sql`). |
+| `ICliente` | `interface` | `{id}` — el cliente resuelto, forma mínima que consume `Cloudflare.ingest()`. |
+| `Bucket` | `class` | Un bucket de GCS registrado, con el cliente al que pertenece. Constructor `private`: solo se instancia desde `findBucketEjecutar()`. |
+| `Bucket.buildSource(notify)` | `static` | `gs://<bucketId>/<objectId>` — el identificador de origen que se guarda en el documento indexado (`SourceCloudflare.source`) y con el que se buscan duplicados. |
+| `Bucket.findBucket(bucket)` | `private static` | Resuelve un `Bucket` por id, **cacheado indefinidamente en memoria** (`CACHE`, sin invalidación ni TTL). Si la fila `cliente` cambia en MySQL, el cambio no se recoge hasta reiniciar el proceso. Rechaza (`Bucket no registrado: <id>`) si no existe. |
+| `Bucket.addProcesando`/`update`/`procesando`/`repescando`/`endProcesando` | `static` | Escrituras sobre la tabla `procesando`, que registra el estado de cada fichero notificado (`recibido` → `procesando` → fin, o `error`/`repescando` si algo falla). |
+| `Bucket.addRepesca(notify, repesca, cliente?, err?)` | `static` | Registra el fallo en la tabla `repesca` (upsert: `contador=contador+1`) y marca `procesando.estado = "error"`. `origen` es `"ingest"` la primera vez y `"repesca"` en reintentos. |
+| `Bucket.run(config, notify, signal)` | `static async` | Punto de entrada único del pipeline. Si `eventType !== "OBJECT_FINALIZE"`, no procesa nada: `"OBJECT_DELETE"` se ignora explícitamente ("deshabilitado por filtro de PubSub" — la suscripción ya debería filtrarlo antes de llegar aquí, y este `switch` es una defensa adicional) y cualquier otro tipo se registra con `info()` como "todavía no soportado". Para `OBJECT_FINALIZE`: `addProcesando` → `findBucket` → `getCliente()` → `update` → `procesando` → `ingest(...)`. Si `ingest()` falla, llama a `addRepesca()` en vez de propagar. |
+| `Bucket.getCliente()` | instance | `{id: this.cliente}`. |
+| `Bucket.ingest(storage, notify, signal, repesca)` | instance, `async` | Descarga el fichero (reintento con backoff lineal hasta 10 veces; un `404` se trata como "no está", no como error, porque el objeto puede no ser visible aún tras la notificación), delega el parseo/indexado en `Cloudflare.ingest()`, borra el registro de `repesca` si existía y borra el fichero ya procesado de GCS. |
 
-El resto de la lógica —resolución del bucket contra MySQL (tabla `buckets`), seguimiento en las
-tablas `procesando`/`repesca`, descarga con reintento (10 intentos con backoff lineal si el objeto
-todavía no es visible tras la notificación, `err?.code == 404`) y el parseo/escritura en
-Elasticsearch (`Cloudflare.ingest()`, índice `logs-worker-<cliente.id>`)— vive en
-`packages/workers-base` en vez de en este workspace, aunque hoy `workers-slave` sea su único
-consumidor (ver "Dependencias"); separarlo así deja el terreno preparado si en el futuro otro
-servicio necesita el mismo acceso a `buckets`/`procesando`/`repesca`. No se repite aquí en detalle;
-`packages/workers-base/CODEMAP.md` ya lo documenta con su propia sección "Consumidores directos"
-dedicada exactamente a esta llamada desde `workers-slave`, e incluye dos hallazgos que afectan
-directamente a este servicio y que no se repiten aquí:
+**Ojo:** `addProcesando`, `update` y `procesando` ejecutan `INSERT ... ON DUPLICATE KEY UPDATE` o
+`UPDATE` puros a través de `db.insert(...)`, no de `db.update()`. Funciona porque
+`services-comun/modules/utiles/mysql` enruta igual todas las escrituras sin transacción (van a
+*master*), pero el nombre del método no dice lo que la consulta hace de verdad.
 
-- **`bucket.ingest(..., false)` se llama siempre con `repesca: false`** desde este `Bucket.run()` —
-  no se ha encontrado en el monorepo ningún sitio que invoque la vía `repesca: true`. La limpieza
-  de duplicados de `Cloudflare.limpiarDuplicados()` (que solo se activa con `repesca: true`) parece
-  no ejecutarse nunca desde este servicio en su forma actual.
-- El índice donde `limpiarDuplicados()` buscaría (`workers-accesos-<cliente>`) **no es** el índice
-  donde `guardar()` escribe (`logs-worker-<cliente>`) — dos nombres distintos, sin alias
-  confirmado que los una. Irrelevante mientras el punto anterior siga siendo cierto, pero relevante
-  el día que alguien active la repesca desde aquí.
+### `modules/data/source/cloudflare.ts` — `Cloudflare`
+
+| Símbolo | Tipo | Descripción |
+|---------|------|-------------|
+| `SourceCloudflare` | `interface` | Forma del documento que se indexa: `{"@timestamp", entrypoint?, status: "ok"\|"canceled"\|"exception", script, event: {rayID, request: {url, method}, response: {status}, type: "fetch"\|"tail"}, exceptions?, logs?, tags?, version: {id, message?, tag?}, namespace?, source}`. `source` no viene del log de Cloudflare: lo añade `parse()` con `Bucket.buildSource(notify)`. |
+| `Cloudflare` | `class` | Parseo (Zod) e indexado de líneas NDJSON de [Workers Trace Events](https://developers.cloudflare.com/workers/observability/logs/tail-workers/). Todo estático. |
+| `Cloudflare.ingest(cliente, notify, storage, signal, repesca)` | `static async` | Lee el fichero línea a línea (`readline`, `crlfDelay: Infinity`), descarta vacías, parsea cada una y encola su indexado sin esperarla individualmente — solo al final, `Promise.all`. Si `signal` se aborta a mitad, corta la lectura y rechaza con `Error("Abortado")`. Con `repesca: true`, antes de leer nada borra del índice los documentos con el mismo `source` (`limpiarDuplicados`). Devuelve el nº de líneas válidas. |
+| `Cloudflare.parse(json, source)` | `private static` | `JSON.parse` + `SCHEMA.parse` (Zod `.strict()`: rechaza campos no declarados); en error registra con `error()` y devuelve `null` — una línea corrupta se descarta y sigue con las demás. |
+
+`guardar()` reintenta hasta 10 veces (con backoff, ×10 si el error es de conexión) solo ante
+*timeout* o error de conexión; cualquier otro error de indexado va directo a `Bucket.addRepesca()`
+sin reintentar aquí (la repesca es el reintento a otro nivel, por todo el fichero).
+
+**Ojo — el índice de "limpiar duplicados" no es el índice donde se escribe.**
+`limpiarDuplicados()` busca y borra en `workers-accesos-<cliente.id>`, pero `guardar()` indexa en
+`logs-worker-<cliente.id>` — dos nombres **distintos**, y no se ha encontrado en este repositorio
+ninguna plantilla (`mapping/`) ni alias que los relacione. Tal como está el código, un reintento
+(`repesca: true`) busca coincidencias en un índice que no es el que recibe las escrituras nuevas,
+así que la limpieza de duplicados probablemente no encuentra nada que borrar. No se ha podido
+confirmar contra el clúster si `workers-accesos-*` es un alias real que incluya `logs-worker-*`, un
+nombre antiguo que quedó sin actualizar, o si de verdad no se deduplica nunca.
+
+Es discutible mientras nadie active la repesca: **`bucket.ingest(..., false)` se llama siempre con
+`repesca: false`** desde `Bucket.run()`, y no se ha encontrado en el monorepo ningún sitio que
+invoque la vía `repesca: true`. `Cloudflare.limpiarDuplicados()` parece no ejecutarse nunca hoy.
 
 **Diferencia notable con `logs-slave`:** aquí sí hay tablas `procesando`/`repesca` en MySQL que
 registran el estado de cada fichero y permiten reintentar los que fallaron; `logs-slave` no tiene
@@ -159,7 +186,7 @@ Cloud Storage (bucket de Workers) o Pub/Sub (push)
        - findBucket(notify.bucketId)                 MySQL: SELECT tabla `buckets` (con caché)
        - update(notify, cliente)                     MySQL: UPDATE `procesando` (cliente resuelto)
        - procesando(notify)                           MySQL: UPDATE `procesando` estado="procesando"
-       - bucket.ingest(config.google, notify, signal, false)   [workers-base]
+       - bucket.ingest(config.google, notify, signal, false)
             - descarga el objeto de GCS (reintenta si 404, hasta 10 veces)
             - Cloudflare.ingest(): parsea cada línea (esquema Zod propio de tail events)
                  y hace bulk.create() en Elasticsearch (logs-worker-<cliente>)
@@ -179,9 +206,8 @@ Cloud Storage (bucket de Workers) o Pub/Sub (push)
   - `@mr/core-workload` — `Main`, `Engine` HTTP base, `Google`/`IGoogle`, `ConfiguracionNet`.
   - `services-comun` — `elasticsearch` (cliente), `error`/`info` (log).
   - `services-comun-status` — `Configuracion`/`IConfiguracion` base de servicio, `SERVICES`.
-  - `workers-base` (`packages/workers-base`) — toda la lógica de dominio compartida: `Bucket`
-    base (MySQL: tablas `buckets`, `procesando`, `repesca`), `Cloudflare` (esquema Zod de tail
-    events + escritura en Elasticsearch) y la configuración GCP por defecto (`GOOGLE`).
+  - `zod` — esquema y validación estricta del NDJSON de tail events (`Cloudflare.SCHEMA*`). Llegó
+    aquí al fusionar `packages/workers-base`, donde ya estaba declarada con este mismo rango.
 - **No depende de `services/logs-slave`** ni comparte ningún fichero con él, pese al propósito
   hermano — ver "Objetivo" más arriba.
 
@@ -189,10 +215,14 @@ Cloud Storage (bucket de Workers) o Pub/Sub (push)
 
 Si se añade un tipo de evento de notificación nuevo a soportar (además de `OBJECT_FINALIZE`):
 
-1. Añadir el caso al `switch` de `Bucket.run()` en este fichero (`modules/data/bucket.ts`), no en
-   `workers-base` — es aquí donde se decide qué tipos de evento le interesan a este servicio en
-   concreto.
-2. Si el nuevo tipo necesita un flujo de procesamiento distinto (no solo "ignorar" o "loguear
-   como no soportado"), decidir si vive en este fichero o si conviene subirlo a `workers-base` por
-   si otros consumidores lo necesitan también.
-3. Actualizar la tabla de "Capa de datos" de este CODEMAP.
+1. Añadir el caso al `switch` de `Bucket.run()` (`modules/data/bucket.ts`).
+2. Actualizar la tabla de "Capa de datos" de este CODEMAP.
+
+Antes de tocar `Cloudflare.limpiarDuplicados()` o cualquier código de la ruta `repesca: true`,
+confirmar contra el clúster real si `workers-accesos-<cliente>` y `logs-worker-<cliente>` son de
+verdad índices distintos o si hay un alias que los une — este mapa no lo ha podido verificar (ver
+el "ojo" de la sección de `cloudflare.ts`) y es la pieza que decide si la deduplicación funciona.
+
+`Bucket.findBucket()` cachea para siempre: si se añade una vía para reasignar el `cliente` de un
+bucket ya en uso, hay que decidir explícitamente si ese cambio necesita invalidar la caché en
+caliente o si basta con esperar al siguiente reinicio.
