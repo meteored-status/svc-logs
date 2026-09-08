@@ -15,45 +15,33 @@ rutas, capa de datos y deuda conocida— y su `CHANGELOG.md`:
 
 | Workspace | Qué es | Mapa |
 |-----------|--------|------|
-| `services/logs-web` | Ingesta HTTP de logs de servicio y de error: el único punto de escritura de esos dos flujos | [CODEMAP](./services/logs-web/CODEMAP.md) |
 | `services/logs-slave` | Receptor por PubSub de notificaciones de GCS: accesos de Cloudflare hacia BigQuery | [CODEMAP](./services/logs-slave/CODEMAP.md) |
 | `services/workers-slave` | Receptor equivalente para los logs de Cloudflare Workers | [CODEMAP](./services/workers-slave/CODEMAP.md) |
 
-Los dos ejes del repositorio, para orientarse rápido:
+Hoy queda **un solo eje**: los accesos de Cloudflare. `logs-slave` (tráfico HTTP de borde,
+Logpush → BigQuery) y `workers-slave` (*tail events* de Workers → Elasticsearch) reciben
+notificaciones de GCS y procesan el objeto que las dispara. Comparten la forma, no el código
+ni los datos, y las descripciones de sus `package.json` se parecen porque están copiadas.
 
-- **Logs de servicio y de error** — `logs-web` los ingiere en Elasticsearch
-  (`mr-log-servicios-*` y `mr-log-errores-*`, con un índice por proyecto y un alias
-  fijo para leerlos juntos). Aquí ya **no se consultan**: las pantallas de logs del
-  panel las sirve `status-backend`, en el repo `svc-status`, leyendo esos mismos
-  alias — ver «El lado de lectura ya no está aquí» más abajo.
-- **Accesos de Cloudflare** — `logs-slave` y `workers-slave` procesan
-  notificaciones de GCS hacia BigQuery, con MySQL para el control de reintentos. No
-  comparten datos con los dos anteriores, aunque las descripciones de sus
-  `package.json` se parezcan (están copiadas).
+### Los logs de servicio y de error ya no están aquí
 
-### El lado de lectura ya no está aquí
+Este repositorio nació con ese segundo eje —los logs de servicio y de error del panel— y ya
+no conserva ninguna de las dos mitades:
 
-Este repositorio tenía un segundo servicio, `services/logs`, que servía los listados de
-logs del panel bajo `/private/logs/*`. Se retiró: esas consultas las hace ahora
-`status-backend` (repo `svc-status`, rutas `/backend/log/{servicio,error}/…`) contra los
-mismos alias, sin pasar por aquí.
+- **La lectura** se fue primero. `services/logs` servía los listados bajo `/private/logs/*`;
+  esas consultas las hace ahora `status-backend` (repo `svc-status`, rutas
+  `/backend/log/{servicio,error}/…`). El motivo no fue la organización del código, sino que
+  aquellos endpoints eran internos y **sin autenticación**: se creían el parámetro `projects`
+  que les llegaba, así que el filtro de «qué proyectos puede ver este usuario» acababa
+  aplicándolo el BFF del panel. En `status-backend` lo resuelve el propio backend con los
+  departamentos del usuario, detrás de su permiso.
+- **La escritura** se fue después (2026-09-07). `services/logs-web` ingería por HTTP en
+  `mr-log-servicios-*` y `mr-log-errores-*`; esa ingesta la hace ahora `status-external`, en
+  ese mismo repo. La URL pública no cambió —el prefijo `/service/logs/` se movió de un
+  `VirtualService` al otro—, y el workspace se retiró de aquí una vez verificado.
 
-El motivo no fue la organización del código, sino que aquellos endpoints eran internos y
-**sin autenticación**: se creían el parámetro `projects` que les llegaba, así que el
-filtro de «qué proyectos puede ver este usuario» acababa aplicándolo el BFF del panel. En
-`status-backend` lo resuelve el propio backend con los departamentos del usuario, detrás
-de su permiso.
-
-Qué implica para este repositorio:
-
-- La **forma del documento y los nombres de los alias** siguen siendo el contrato entre
-  quien escribe (aquí) y quien lee (allí), y viven en el framework compartido
-  (`services-comun-status/modules/services/logs/logs/elastic.ts`). Un cambio de campo o de
-  nombre de índice rompe a los dos a la vez.
-- Los **mappings y la política ILM** de esos índices siguen aquí (`mapping/logs/`): nada
-  de eso se ha movido.
-- El campo `checked` de los errores lo sigue poniendo a `false` la ingesta, pero quien lo
-  pone a `true` —el «borrar» de la pantalla— es ahora `status-backend`.
+Con las dos mitades fuera, los mappings de esos índices (`mapping/logs/log-servicios-*` y
+`log-errores-*`) se retiran también; lo que sigue en `mapping/logs/` pertenece a otros índices.
 
 ## Scripts
 
