@@ -2,6 +2,28 @@
 
 ---
 
+## 2026.10.1 13:08 — [Jose]
+
+### Fixed
+
+- **Las plantillas de Cloud Run (`cloud-run-service.yml` y `cloud-run-job.yml`) apuntan a la imagen
+  que sube `contenedor.sh`**: `deploy.imagen.<entorno>.registro`, `.paquete` y `.nombre`, mediante
+  los nuevos placeholders `${REGISTRO}`, `${PAQUETE}` y `${NOMBRE}`, con los mismos valores por defecto
+  (`europe-west1-docker.pkg.dev`, `services` y el nombre del workspace). Antes la imagen era
+  `europe-west1-docker.pkg.dev/<proyecto>/<kustomize.dir>/<kustomize.name>`, así que cualquier
+  diferencia con `imagen` dejaba a Cloud Run buscando una imagen que no existía. El nombre del
+  servicio o job sigue siendo `<kustomize.dir>-<kustomize.name>`.
+- **`kustomizar.sh` lee `deploy.imagen` en una sola función, `imagenSubida`**, que comparten Cloud Run
+  y GKE.
+- **El despliegue `k8s` (`updateImagen` en `kustomizar.sh`, overlays `entornos/` y `clientes/`)
+  apunta a la imagen que sube `contenedor.sh`**: `deploy.imagen.<entorno>.registro`, `.paquete` y
+  `.nombre`, con los mismos valores por defecto. Antes montaba
+  `europe-west1-docker.pkg.dev/<proyecto>/<kustomize.dir>/<workspace>` sin leer `deploy.imagen`, así que
+  cualquier valor distinto en `imagen` dejaba al cluster buscando una imagen que no existía. El nombre
+  con el que los manifiestos del repo de kustomize referencian la imagen no cambia: se reescribe con
+  `kustomize edit set image <nombre>=<imagen>:<versión>`. El overlay `_all/` sigue en manos de
+  `kustomizar/build.sh`, en el repo de kustomize.
+
 ## 2026.9.30 15:02 — [Jose]
 
 ### Added

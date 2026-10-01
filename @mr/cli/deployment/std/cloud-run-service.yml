@@ -19,7 +19,7 @@ spec:
     #        run.googleapis.com/vpc-access-connector: projects/${PROJECT_ID}/locations/europe-west1/connectors/cloud-run
     spec:
       containers:
-        - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
+        - image: ${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}
           env:
             - name: DATADOG
               value: "false"
