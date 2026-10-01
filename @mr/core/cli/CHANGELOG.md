@@ -2,6 +2,51 @@
 
 ---
 
+## 2026.9.23 09:25 — [Jose]
+
+### Changed
+
+- **Código adaptado a `yarn lint`** (`@mr/core-lint`), sin cambios de comportamiento: `import type` en los
+  imports que solo traen tipos, llaves en todos los `if`/`else`/`for`/`while`, bloques de imports en su orden
+  y separados por una línea en blanco, fuera las dobles líneas en blanco, `Tipo[]` en vez de `Array<Tipo>` y
+  sin `/* STATIC */` en las clases que no tienen estáticos. Casi todo con el autofix; el orden de imports,
+  con un codemod que solo movía líneas enteras.
+
+## 2026.9.17 09:55 — [Jose]
+
+### Fixed
+
+- **`mrpack framework` dejaba de soltar `MaxListenersExceededWarning` a puñados.** Salía uno por
+  cada descarga de GCS: una sola `file.download()` deja once listeners sobre el mismo PassThrough
+  porque cuatro capas encadenan su propio `pipeline()` encima —node-fetch, teeny-request (dos
+  veces), `@google-cloud/storage` y los `eos` que añade Node por cada tramo—, y el límite por
+  defecto son diez. **No era una fuga**: son once por fichero y no crecen con el tiempo.
+- Se sube `defaultMaxListeners` a 20 en vez de silenciar el aviso, para que el detector de fugas
+  siga sirviendo con otro umbral. Filtrarlo no sale bien: no trae `code`, viene en varios sabores
+  (`error`, `close`) y su traza se corta a diez marcos que son **todos** de `node:internal`, así que
+  por el origen no hay forma de separar el ruido ajeno de una fuga propia.
+
+## 2026.9.12 16:55 — [Jose]
+
+### Changed
+
+- **La raíz del monorepo se resuelve aquí, y deja de contarse en `..`.** La fijaba cada bin desde su
+  propio `__dirname` —`resolve(__dirname, "../../../..")` en el de `mrlang`—, y cada uno contaba
+  los suyos porque los dos paquetes cuelgan a distinta profundidad.
+
+  Esa cuenta solo vale para la disposición en la que se escribe. Al llevar `mrlang` a un monorepo
+  donde su paquete cuelga un nivel más arriba, `MRPACK_ROOT` pasó a apuntar **fuera del
+  repositorio** —y sin ningún aviso: es una variable de entorno, no un fichero que falte—, con lo
+  que el generador habría buscado los proyectos de traducción en el directorio padre.
+
+  Ahora `arranque()` usa `PROJECT_CWD`, que exporta Yarn en todo lo que lanza y es el directorio del
+  lockfile. El plan B —para cuando el bin se invoca sin pasar por Yarn— sube desde el `bin` que
+  llama hasta el primer directorio con `yarn.lock`, y si no lo encuentra devuelve el punto de
+  partida en vez de lanzar: un `MRPACK_ROOT` raro todavía es recuperable, y una excepción ahí deja
+  la CLI sin arrancar. Se sigue respetando un `MRPACK_ROOT` ya puesto, por si hay que forzarlo.
+
+  Como está en el arranque compartido, vale para las dos CLI a la vez y **ninguna de las dos
+  vuelve a contar niveles**.
 ## 2026.9.4 20:10 — [Jose]
 
 ### Added

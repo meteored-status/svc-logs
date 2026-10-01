@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-cli",
-  "version": "2026.9.7+1-bixus",
+  "version": "2026.9.28+1-juancmartinez",
   "description": "Infraestructura compartida por las herramientas de línea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {
@@ -20,7 +20,7 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.19.0",
     "esbuild": "^0.28.2"
   }
 }

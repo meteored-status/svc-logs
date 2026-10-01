@@ -39,6 +39,30 @@ if [[ -f "DESPLEGAR.txt" ]]; then
   }
   export -f parseWorkspaceEjecutar
 
+  # Deja en `FICHERO` solo los recursos cuyo namespace existe en el cluster de `CLUSTER` (su zona), según
+  # `namespaces_all_<zona>.json` de `labels.sh`, y avisa de los namespaces descartados. Los recursos sin
+  # namespace se quedan. Falla solo si no hay listado para esa zona.
+  filtrarNamespaces() {
+    FICHERO="${1}"
+    CLUSTER="${2}"
+    DISPONIBLES="namespaces_all_${CLUSTER}.json"
+
+    if [[ ! -f "${DISPONIBLES}" ]]; then
+      echo "No hay listado de namespaces para \"${CLUSTER}\" (${DISPONIBLES})"
+      return 1
+    fi
+
+    DISPONIBLES_JSON="$(cat "${DISPONIBLES}")"
+    export DISPONIBLES_JSON
+
+    FALTAN=$(yq eval -N 'select(.metadata.namespace != null and ([.metadata.namespace] - env(DISPONIBLES_JSON) | length > 0)) | .metadata.namespace' "${FICHERO}" | sort -u | paste -sd ',' - | sed 's/,/, /g')
+    if [[ -n "${FALTAN}" ]]; then
+      echo "Se descartan los recursos de namespaces que no existen en \"${CLUSTER}\": ${FALTAN}"
+      yq eval -i 'select(.metadata.namespace == null or ([.metadata.namespace] - env(DISPONIBLES_JSON) | length == 0))' "${FICHERO}"
+    fi
+  }
+  export -f filtrarNamespaces
+
   parseWorkspaceCluster() {
     DIRECTORIO="${1}"
     WORKSPACE="${2}"
@@ -71,7 +95,11 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         ARCH="linux/amd64"
       fi
 
-      bash "kustomizar/build.sh" "${PROJECT_ID}" "${KUSTOMIZER}" "${SERVICIO}" "${ENTORNO}" "${CLUSTER}" "${VERSION}" "${CLIENTE}" "${ARCH}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
+      GENERADO="generado_${WORKSPACE}_${CLUSTER}.yaml"
+      bash "kustomizar/build.sh" "${PROJECT_ID}" "${KUSTOMIZER}" "${SERVICIO}" "${ENTORNO}" "${CLUSTER}" "${VERSION}" "${CLIENTE}" "${ARCH}" > "${GENERADO}" || exit 1
+      filtrarNamespaces "${GENERADO}" "${CLUSTER}" || exit 1
+      cat "${GENERADO}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
+      rm "${GENERADO}"
       echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
 
     elif [[ -d "${ENTORNOS}" ]]; then
@@ -202,8 +230,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
       while IFS= read -r item; do
         [[ -z "$item" ]] && continue
-        SOURCE=$(echo "$item" | jq -r '.source' | sed "s/\${ZONA}/${ZONA}/g")
-        TARGET=$(echo "$item" | jq -r '.target' | sed "s/\${ZONA}/${ZONA}/g")
+        SOURCE=$(echo "$item" | jq -r '.source' | sed "s/\${ZONA}/${ZONA}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g")
+        TARGET=$(echo "$item" | jq -r '.target' | sed "s/\${ZONA}/${ZONA}/g" | sed "s/\${ENTORNO}/${_ENTORNO}/g")
 
         # Comprobamos que el secreto existe
         if ! echo "$SECRETS" | grep -q "^${SOURCE}$"; then
@@ -304,8 +332,8 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 # .resourceLabels.client-ids
 
       if [[ "$(configw "${RUTA}" '.deploy.target')" == "k8s" ]]; then
-        LENGTH=$(configc "length")
-        if [[ "$LENGTH" -eq 0 ]]; then
+        NUM_CLIENTES=$(configc "length")
+        if [[ "$NUM_CLIENTES" -eq 0 ]]; then
           ZONAS=$(confige '.[] | .resourceLabels.zona')
           for ZONA in ${ZONAS}; do
             parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
@@ -349,11 +377,18 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         fi
 
         if [[ "$(configw "${RUTA}" '.deploy.alone')" == "true" ]]; then
-          if [[ "${_ENTORNO}" == "test" ]]; then
-            parseWorkspaceLambdaZona "${RUTA}" europe-west1 test
-          else
-            parseWorkspaceLambdaZona "${RUTA}" europe-west1 belgica
+          # Un unico despliegue: la region de Belgica (europe-west1) si el entorno tiene cluster alli, y
+          # si no, el primero del array. Es el mismo criterio que ya sigue el despliegue GKE, donde los
+          # workspaces `alone` van solo al cluster de indice 0 (ver `desplegar.sh`). Antes iban forzadas
+          # region y zona, asi que un entorno sin cluster en europe-west1 generaba un `lambda-belgica.sh`
+          # apuntando a una zona inexistente.
+          CLUSTER_ALONE=$(confige '([.[] | select(.zone == "europe-west1")][0] // .[0] // {}) | [.zone // "", .resourceLabels.zona // ""] | @tsv')
+          IFS=$'\t' read -r REGION ZONA <<< "${CLUSTER_ALONE}"
+          if [[ -z "${REGION}" || -z "${ZONA}" ]]; then
+            echo "No hay ningún cluster con zona en \"${_ENTORNO}\" para desplegar ${WORKSPACE} (${SERVICIO}) en solitario"
+            exit 1
           fi
+          parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}"
         else
           REGIONES=$(confige '.[] | .zone')
           for REGION in ${REGIONES}; do

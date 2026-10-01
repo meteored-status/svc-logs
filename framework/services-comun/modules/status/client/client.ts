@@ -1,5 +1,14 @@
-import {IRespuesta} from "@mr/core-network/client/http/interface";
-import {IComponent} from "../common/interface";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 941e5a6fa77eae9f84158fc645e0d62c
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {IRespuesta} from "@mr/core-network/client/http/interface";
+
+import type {IComponent} from "../common/interface";
 
 export interface ISpec<T> {
     service: number;
@@ -12,8 +21,6 @@ export interface IClientConfig {
 }
 
 export class Client {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly config: IClientConfig) {
     }
@@ -29,7 +36,7 @@ export class Client {
             method: 'GET',
         });
         const response: IRespuesta<ISpec<any>> = await result.json();
-        if (!response || !response.data) return Promise.reject('No data found');
+        if (!response || !response.data) {return Promise.reject('No data found');}
         return {
             service: response.data.service,
             name: response.data.name,
@@ -56,7 +63,7 @@ export class Client {
             body: JSON.stringify(obj)
         });
         const response: IRespuesta<ISpec<K>> = await result.json();
-        if (!response || !response.data) return Promise.reject('No data found');
+        if (!response || !response.data) {return Promise.reject('No data found');}
         return response.data;
     }
 
@@ -75,8 +82,6 @@ export class Client {
         });
     }
 }
-
-
 
 let instancia: Client|null = null;
 export default (config: IClientConfig)=>{

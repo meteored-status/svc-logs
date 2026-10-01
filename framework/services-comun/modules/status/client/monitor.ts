@@ -1,4 +1,13 @@
-import {IMonitor, IResolutionGuide, TStatus} from "../common/interface";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 940eba58f1f3dbe19bff0776ea557d71
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {IMonitor, IResolutionGuide} from "../common/interface";
+import {TStatus} from "../common/interface";
 
 export class Monitor {
     /* STATIC */

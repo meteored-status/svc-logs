@@ -1,4 +1,12 @@
-import {Individual} from "./individual";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: a2db77229d29c19fd5af1fb74dbf992b
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {Individual} from "./individual";
 
 /**
  * Clase que implementa el algoritmo genético.
@@ -9,8 +17,6 @@ import {Individual} from "./individual";
  * Se valora cada individuo y se seleccionan los mejores utilizando la función fitness.
  */
 export class Genetic<T extends Individual> {
-    /* STATIC */
-
     /* INSTANCE */
     /**
      * Constructor.
@@ -58,7 +64,7 @@ export class Genetic<T extends Individual> {
             current.push(clone);
         }
 
-        if (this.fitness(current) > this.fitness(data)) return current;
+        if (this.fitness(current) > this.fitness(data)) {return current;}
         return data;
     }
 

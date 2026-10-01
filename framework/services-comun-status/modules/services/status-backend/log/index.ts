@@ -1,12 +1,14 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 21 Aug 2026 06:11:54 GMT
- * Hash: 3f1e5119712c6a743fb24a527caf23f6
- * Versión: 2026.8.21+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: ced9a8786b600d8079d3e920a472ca0d
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.14+4-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
+import type {RequestResponse} from "services-comun/modules/net/request-backend";
+import {BackendRequest} from "services-comun/modules/net/request-backend";
 import {logRejection} from "services-comun/modules/decorators/metodo";
 
 import {auditRequest} from "../audit/request";
@@ -16,8 +18,8 @@ import type {IAvaliableFiltersOUT as IServicioFiltersOUT} from "./servicio/avail
 import type {ICheckIN, ICheckOUT} from "./error/check/interface";
 import type {IListOUT as IErrorListOUT} from "./error/list/interface";
 import type {IListOUT as IServicioListOUT} from "./servicio/list/interface";
-import {IUserLogErrorsOUT} from "./user-log-errors/interface";
-import {IUserLogServicesOUT} from "./user-log-services/interface";
+import type {IUserLogErrorsOUT} from "./user-log-errors/interface";
+import type {IUserLogServicesOUT} from "./user-log-services/interface";
 
 /**
  * Paginación de los dos listados de logs.
@@ -41,9 +43,13 @@ interface IPagination {
  * @property tsTo     - Límite superior del instante, en milisegundos.
  */
 interface IServicioFilter {
+    projects?: string[];
     severity?: number;
+    entornos?: number[];
     services?: string[];
     types?: string[];
+    regions?: string[];
+    hosts?: string[];
     tsFrom?: number;
     tsTo?: number;
 }
@@ -109,9 +115,13 @@ export default class Index extends BackendRequest {
     @logRejection(true)
     public static async servicioList(token: string, filters: IServicioFilter, {page, perPage}: IPagination): Promise<RequestResponse<IServicioListOUT>> {
         const url = `${this.SERVICIO}/backend/log/servicio/list${query([
+            ["projects", lista(filters.projects)],
             ["severity", filters.severity],
+            ["entorno", lista(filters.entornos)],
             ["services", lista(filters.services)],
             ["types", lista(filters.types)],
+            ["regions", lista(filters.regions)],
+            ["hosts", lista(filters.hosts)],
             ["ts_from", filters.tsFrom],
             ["ts_to", filters.tsTo],
             ["page", page],

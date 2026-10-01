@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: f5bacef0b48bba7ede9a5526f89e1ea8
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.3+4-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Mon, 28 Sep 2026 06:38:15 GMT
+ * Hash: 15f04e4925e1ca1ff1d42f71dc0c0e09
+ * Versión: 2026.9.28+1-juancmartinez
+ * Anterior: 2026.9.23+1-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-panel-frontend.git
  */
 
 import chokidar from "chokidar";
@@ -12,10 +12,13 @@ import path from "node:path";
 
 import {isDir, mkdir, readDir, rmdir, safeWrite, unlink} from "@mr/core-cli/fs";
 import {error, info, warning} from "@mr/core-cli/log";
-import {JSONItemLiteral, JSONItemMap, JSONItemSet, JSONValor} from "./data";
+
+import {flattenLang} from "../../modules/util/lang";
+import type {JSONItemLiteral, JSONItemMap, JSONItemSet, JSONValor} from "./data";
 import {Lang} from "./lang/lang.ts";
 import {ModuloJSON} from "./modulo/json";
 import {Definition} from "./modulo/definition";
+import type {IEntradaEmitida} from "./modulo/translation/common";
 import generateLiteral from "./modulo/translation/literal";
 import generateMap from "./modulo/translation/map";
 import generateSet from "./modulo/translation/set";
@@ -49,7 +52,12 @@ export class Generate {
         // sitio en vez de quedarse el workspace sin generar por un error de una sola entrada.
         const modulos = await this.loadModule(jsondir, langsDir, definitionsDir, watch);
 
-        const problemas = modulos.flatMap(modulo => modulo.validar());
+        // `validar()` y `problemasDeValor()` se juntan **antes** de escribir nada. Separados, un módulo con
+        // una entrada sin valor pasaba `validar()`, `generateModule()` escribía el `index.ts` de los idiomas
+        // anteriores a esa entrada y rechazaba a mitad — dejando en `.src` un `index.ts` de un idioma que
+        // importa un `XParams` que `definitions/` de ese módulo todavía no exporta (se reescribe una sola vez,
+        // al final de todos los idiomas). Aquí ningún módulo con problemas llega a `generateModule()`.
+        const problemas = modulos.flatMap(modulo => [...modulo.validar(), ...this.problemasDeValor(modulo)]);
         if (problemas.length > 0) {
             for (const problema of problemas) {
                 error(problema);
@@ -76,9 +84,14 @@ export class Generate {
         // entenderlo, porque el error no señala a quien lo provocó.
         //
         // Generando encima, lo peor que puede ver quien lea a la vez es un fichero con el contenido
-        // **anterior**, que compila. Y el orden de escritura ya lo hacía posible sin saberlo:
-        // `generateModule()` escribe las claves de un idioma antes que su `index.ts`, así que un
-        // índice nunca apunta a un fichero que todavía no está.
+        // **anterior**, que compila — con una salvedad, y es de este módulo: dentro de un mismo
+        // módulo, el `index.ts` de cada idioma se escribe **antes** que su `definitions/`, que se
+        // reescribe una sola vez al final con los tipos de todos los idiomas ya vistos (ver
+        // `generateModule()`). Entre esos dos `await` hay una ventana en la que un `index.ts` recién
+        // escrito puede importar un `XParams` que `definitions/` todavía no exporta. La pasada previa
+        // de `validar()` + `problemasDeValor()`, arriba, evita el caso que antes se colaba a mitad de
+        // `generateModule()` —una entrada sin valor dejaba escritos varios `index.ts` antes de
+        // rechazar—, pero no esta ventana, más estrecha y del mismo módulo consigo mismo.
         const escritos = new Set<string>();
         for (const modulo of modulos) {
             for (const fichero of await this.generateModule(modulo, langsDir, definitionsDir)) {
@@ -114,13 +127,52 @@ export class Generate {
                 if (watch) {
                     const watcher = chokidar.watch(`${basedir}/${file}`, {persistent: true});
                     watcher.on("change", async () => {
-                        info(`Module ${modulo.name()} has been changed`);
-                        for (const langs of await readDir(`${langsDir}`)) {
-                            if (await isDir(`${langsDir}/${langs}`)) {
-                                await unlink(`${langsDir}/${langs}${modulo.path()}`);
+                        // Un `.on("change", ...)` de chokidar no tiene quien espere su promesa: si el cuerpo
+                        // rechaza, es un `unhandledRejection` que mata el proceso entero del watch por un
+                        // `.json` mal escrito. Todo el cuerpo va en `try/catch` y lo que antes rechazaba ahora
+                        // se registra con `error()` y termina ahí, sin tumbar nada más.
+                        try {
+                            info(`Module ${modulo.name()} has been changed`);
+                            const modificado = await ModuloJSON.load(basedir, file);
+
+                            // Se valida **antes de tocar el disco**, igual que en `run()`: si el `.json` que se
+                            // acaba de guardar tiene un problema, se avisa y no se escribe nada — ni encima de
+                            // lo que ya había.
+                            const problemas = [...modificado.validar(), ...this.problemasDeValor(modificado)];
+                            if (problemas.length > 0) {
+                                for (const problema of problemas) {
+                                    error(problema);
+                                }
+                                return;
                             }
+
+                            // `generateModule()` sobrescribe todo lo que este módulo tiene para sus idiomas
+                            // actuales — ya no hace falta borrar nada antes de regenerar (un `index.ts` por
+                            // idioma×módulo, no un fichero por clave). Lo que **no** sobrescribe es un idioma
+                            // que el módulo tenía y ha dejado de tener: eso se poda aparte, después.
+                            const langsRetirados = new Set(await readDir(langsDir));
+                            for (const lang of modificado.moduleLangs()) {
+                                langsRetirados.delete(flattenLang(lang));
+                            }
+                            await this.generateModule(modificado, langsDir, definitionsDir);
+
+                            // La poda es **solo** el directorio de este módulo dentro del idioma retirado
+                            // (`<lang>${modulo.path()}/${modulo.name()}`), nunca `<lang>${modulo.path()}`: ese
+                            // es el directorio del **grupo** (p. ej. `/pages`) y puede tener otros módulos
+                            // hermanos dentro. Es justo el fallo que tenía el `unlink()` de aquí antes de este
+                            // cambio —preexistente, no de esta tarea—: `unlink()` borra directorios en
+                            // recursivo (ver `@mr/core/cli/modules/fs.ts::unlink`), así que un `.json`
+                            // cualquiera que cambiara se llevaba **todos** los módulos hermanos de **todos**
+                            // los idiomas, y `generateModule()` solo regeneraba el que había cambiado.
+                            for (const lang of langsRetirados) {
+                                const moduleDir = `${langsDir}/${lang}${modificado.path()}/${modificado.name()}`;
+                                if (await isDir(moduleDir)) {
+                                    await unlink(moduleDir);
+                                }
+                            }
+                        } catch (e) {
+                            error(`Error regenerando el módulo ${modulo.name()} tras su cambio`, e);
                         }
-                        await this.generateModule(await ModuloJSON.load(basedir, file), langsDir, definitionsDir);
                     });
                 }
             }
@@ -144,18 +196,58 @@ export class Generate {
      * @param lang    Idioma que se está generando.
      * @returns El valor a usar, o `undefined` si la entrada no tiene nada que ofrecer para ese idioma.
      */
-    private static async resolverValor<T extends JSONValor>(valores: Record<string, T>, defecto: T|undefined, lang: string): Promise<T|undefined> {
-        let actual: Lang|null = await Lang.getByCode(lang);
+    private static resolverValor<T extends JSONValor>(valores: Record<string, T>, defecto: T|undefined, lang: string): T|undefined {
+        // **Lo declarado a mano gana siempre, lo conozca el catálogo o no.** La búsqueda de abajo entra por
+        // `Lang.getByCode()`, que a un código que no está en el catálogo le devuelve `en-US` sin decirlo, así
+        // que la vuelta siguiente ya no busca el idioma pedido sino el inglés. Con los códigos de siempre da
+        // igual —están todos—, pero un `ca-ES-valencia` escrito en el `.json`, con su valor al lado, salía
+        // generado en inglés: el bucle no llegaba a mirar su clave.
+        const propio = valores[lang];
+        if (propio != undefined) {
+            return propio;
+        }
+
+        let actual: Lang|null = Lang.getByCode(lang);
 
         while (actual != null) {
             const valor = valores[actual.code];
             if (valor != undefined) {
                 return valor;
             }
-            actual = await actual.parent;
+            actual = actual.parent;
         }
 
         return defecto;
+    }
+
+    /**
+     * Qué entradas del módulo se quedan sin valor para alguno de sus idiomas —ni propio, ni heredado
+     * por `resolverValor()`, ni `defecto`—, en el mismo formato de mensaje que usaba (y sigue usando,
+     * como defensa) el rechazo de en medio de `generateModule()`.
+     *
+     * Va en la misma pasada previa que `validar()`, antes de escribir nada: por separado, un módulo
+     * con esta única mancha pasaba `validar()`, `generateModule()` llegaba a escribir el `index.ts`
+     * de los idiomas anteriores a la entrada mala y rechazaba a mitad, dejando en `.src` ficheros a
+     * medio generar.
+     *
+     * @param modulo Módulo ya cargado del `.json`.
+     * @returns Los problemas encontrados, vacío si todas las entradas tienen valor en todos los
+     *          idiomas del módulo.
+     */
+    private static problemasDeValor(modulo: ModuloJSON): string[] {
+        const problemas: string[] = [];
+        const moduleLangs = modulo.moduleLangs();
+
+        for (const jsonItem of modulo.traducciones()) {
+            for (const lang of moduleLangs) {
+                const valor = this.resolverValor(jsonItem.values.valor, jsonItem.values.defecto, lang);
+                if (valor === undefined || valor === null) {
+                    problemas.push(`${modulo.path()}/${modulo.name()} › ${jsonItem.id}: sin valor para el idioma "${lang}"`);
+                }
+            }
+        }
+
+        return problemas;
     }
 
     /**
@@ -164,13 +256,10 @@ export class Generate {
      * @param modulo - Módulo de traducciones cargado desde JSON.
      * @param langsDir - Directorio de salida para idiomas.
      * @param definitionsDir - Directorio de salida para definiciones compartidas.
-     */
-    /**
-     * Genera los ficheros de un módulo.
-     *
      * @returns Las rutas que ha escrito, que es con lo que `run()` decide qué sobra en `.src`. Quien
-     *          lo llama desde el watch las ignora: ahí no se poda nada, solo se reescribe el módulo
-     *          que ha cambiado.
+     *          lo llama desde el watch las ignora: ahí no se poda con `limpiarHuerfanos()`, solo se
+     *          reescribe el módulo que ha cambiado (y se podan aparte sus idiomas retirados, ver
+     *          `loadModule()`).
      */
     private static async generateModule(modulo: ModuloJSON, langsDir: string, definitionsDir: string): Promise<string[]> {
         const escritos: string[] = [];
@@ -182,48 +271,49 @@ export class Generate {
 
         for (const lang of moduleLangs) {
 
-            const langdir = `${langsDir}/${lang.replace("-", "")}`;
+            const langdir = `${langsDir}/${flattenLang(lang)}`;
             const moduleDir = `${langdir}${modulo.path()}/${modulo.name()}`;
             await mkdir(moduleDir);
             const indexFileName = `${moduleDir}/index.ts`;
 
+            // Una entrada por `id`, para que `generateLangIndex()` las coloque todas dentro del mismo
+            // `index.ts` — ya no un fichero por clave, ver `@mr/core/i18n/src/CODEMAP.md`.
+            const entradas = new Map<string, IEntradaEmitida>();
+
             for (const jsonItem of jsonItems) {
-                const fileName = `${moduleDir}/${jsonItem.id}.ts`;
-
                 switch (jsonItem.tipo) {
-                    case "literal":
+                    case "literal": {
                         const literal = jsonItem as JSONItemLiteral;
-                        const valor = await this.resolverValor(literal.values.valor, literal.values.defecto, lang);
+                        const valor = this.resolverValor(literal.values.valor, literal.values.defecto, lang);
 
-                        if (valor) {
-                            const content = generateLiteral(lang, valor, literal, modulo, definition);
-                            await safeWrite(fileName, content, true);
-                            escritos.push(fileName);
+                        if (valor === undefined || valor === null) {
+                            return Promise.reject(`${modulo.path()}/${modulo.name()} › ${literal.id}: sin valor para el idioma "${lang}"`);
                         }
+                        entradas.set(literal.id, generateLiteral(lang, valor, literal, modulo, definition));
                         break;
-
-                    case "map":
+                    }
+                    case "map": {
                         const map = jsonItem as JSONItemMap;
-                        const valorMap = await this.resolverValor(map.values.valor, map.values.defecto, lang);
-                        if (valorMap) {
-                            const content = generateMap(lang, valorMap, map, modulo, definition);
-                            await safeWrite(fileName, content, true);
-                            escritos.push(fileName);
+                        const valorMap = this.resolverValor(map.values.valor, map.values.defecto, lang);
+                        if (valorMap === undefined || valorMap === null) {
+                            return Promise.reject(`${modulo.path()}/${modulo.name()} › ${map.id}: sin valor para el idioma "${lang}"`);
                         }
+                        entradas.set(map.id, generateMap(lang, valorMap, map, modulo, definition));
                         break;
-                    case "set":
+                    }
+                    case "set": {
                         const set = jsonItem as JSONItemSet;
-                        const valorSet = await this.resolverValor(set.values.valor, set.values.defecto, lang);
-                        if (valorSet) {
-                            const content = generateSet(lang, valorSet, set, modulo, definition);
-                            await safeWrite(fileName, content, true);
-                            escritos.push(fileName);
+                        const valorSet = this.resolverValor(set.values.valor, set.values.defecto, lang);
+                        if (valorSet === undefined || valorSet === null) {
+                            return Promise.reject(`${modulo.path()}/${modulo.name()} › ${set.id}: sin valor para el idioma "${lang}"`);
                         }
+                        entradas.set(set.id, generateSet(lang, valorSet, set, modulo, definition));
                         break;
+                    }
                 }
             }
 
-            await safeWrite(indexFileName, modulo.generateLangIndex(), true);
+            await safeWrite(indexFileName, modulo.generateLangIndex(entradas), true);
             escritos.push(indexFileName);
             definition.moduleInterface = modulo.generateIndex();
         }

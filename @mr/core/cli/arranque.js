@@ -9,6 +9,8 @@
  * (`@mr/core-i18n`). Aquí hay una sola.
  */
 const {spawn} = require("child_process");
+const {existsSync} = require("fs");
+const {dirname, join} = require("path");
 
 // Suprimir DEP0040 (módulo built-in `punycode` deprecado en Node 24). Origen: dd-trace y
 // @google-cloud/storage instrumentan / importan node-fetch@2.x, que carga whatwg-url@5.0.0 →
@@ -29,6 +31,23 @@ const {spawn} = require("child_process");
         return _emit(event, ...args);
     };
 }
+
+// El MaxListenersExceededWarning que `mrpack framework` suelta a puñados —«11 listeners added to
+// [PassThrough]»— **no es una fuga**, y por eso se sube el listón en vez de callar el aviso.
+//
+// Una sola llamada a `file.download()` deja once listeners sobre el mismo PassThrough porque cuatro
+// capas encadenan su propio `pipeline()` encima: node-fetch, teeny-request (dos veces),
+// `@google-cloud/storage` y los `eos` que Node añade por cada tramo. Son once por fichero y no crecen
+// con el tiempo; lo que pasa es que `framework` descarga el `stable.txt` de cada paquete, así que el
+// aviso sale una vez por descarga. Comprobado instrumentando `addListener` y volcando las once
+// trazas: ninguna de las once es código nuestro.
+//
+// **Subirlo y no silenciarlo** deja el detector de fugas haciendo su trabajo con otro umbral: algo
+// que se desmadre de verdad pasará de veinte y avisará igual. Filtrar el aviso era la otra opción y
+// no sale bien: no trae `code`, viene en varios sabores (`error`, `close`) y su traza se corta a diez
+// marcos que son **todos** de `node:internal`, así que no hay forma de distinguir por el origen el
+// ruido ajeno de una fuga nuestra — solo por el nombre, y eso ya es apagarlo del todo.
+require("events").defaultMaxListeners = 20;
 
 class Deferred {
     constructor() {
@@ -71,6 +90,26 @@ async function ejecutar(bin, modulo, workspace) {
 }
 
 /**
+ * Sube desde `desde` hasta el directorio que tiene el `yarn.lock`, que es la raíz del monorepo.
+ *
+ * Es el plan B de `PROJECT_CWD` —lo que exporta Yarn en todo lo que lanza— y existe para cuando el
+ * bin se invoca sin pasar por Yarn. Si no encuentra lockfile devuelve el punto de partida en vez de
+ * lanzar: un `MRPACK_ROOT` raro todavía es recuperable, y una excepción aquí deja la CLI sin
+ * arrancar.
+ */
+function raizDelMonorepo(desde) {
+    let dir = desde;
+    while (!existsSync(join(dir, "yarn.lock"))) {
+        const padre = dirname(dir);
+        if (padre === dir) {
+            return desde;
+        }
+        dir = padre;
+    }
+    return dir;
+}
+
+/**
  * Arranca una CLI: ejecuta su bundle y, si no está, lo compila y reintenta.
  *
  * Compilar aquí no es un lujo: es el único arranque posible en un clon limpio, donde `bin/min/` no
@@ -82,14 +121,20 @@ async function ejecutar(bin, modulo, workspace) {
  * @param {string} config.modulo    - Nombre del bundle en `min/`, sin el sufijo `-run`.
  * @param {string} config.workspace - Nombre npm del workspace, solo para el mensaje de error.
  * @param {string} config.bin       - El `__dirname` del `bin/` que llama. No se puede deducir aquí:
- *                                    `__dirname` en este fichero es el de `@mr/core-cli`.
+ *                                    `__dirname` en este fichero es el de `@mr/core-cli`. Es además
+ *                                    el punto de partida desde el que se busca la raíz.
  */
 module.exports = ({modulo, workspace, bin}) => {
-    // MRPACK_ROOT lo fija el bin invocante desde su propio `__dirname`, así que apunta a la raíz
-    // del monorepo con independencia del cwd con que Yarn PnP haya arrancado el proceso. El
-    // fallback existe solo por si se llamara de forma no estándar.
+    // **La raíz del monorepo no se cuenta en `..`, y se resuelve aquí para las dos CLI.** Antes la
+    // fijaba cada bin desde su propio `__dirname` contando niveles, y cada uno contaba los suyos
+    // porque cuelgan a distinta profundidad. Eso convierte mover un workspace de sitio en un
+    // `MRPACK_ROOT` que apunta fuera del repositorio, sin ningún aviso: es exactamente lo que pasó
+    // al traer `mrlang` a un monorepo donde su paquete cuelga un nivel más arriba.
+    //
+    // `PROJECT_CWD` lo exporta Yarn en todo lo que lanza y es el directorio del lockfile. Se respeta
+    // un `MRPACK_ROOT` ya puesto por si alguien necesita forzarlo desde fuera.
     if (!process.env.MRPACK_ROOT) {
-        process.env.MRPACK_ROOT = process.cwd();
+        process.env.MRPACK_ROOT = process.env.PROJECT_CWD ?? raizDelMonorepo(bin);
     }
     process.chdir(`${bin}/..`);
 

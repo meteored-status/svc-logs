@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 028c48d92b77cab7a10dffd9de54de75
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.2+3-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Mon, 28 Sep 2026 06:38:15 GMT
+ * Hash: 2d2b138233a994bbf919ab5f77fe2625
+ * Versión: 2026.9.28+1-juancmartinez
+ * Anterior: 2026.9.23+1-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-panel-frontend.git
  */
 
 /**
@@ -18,11 +18,11 @@
  * variable que en la del plural no existía.
  */
 
-import {JSONItem, JSONValue, JSONValuePlural, JSONValueSingular} from "../../data";
-import {Definition} from "../definition";
+import type {JSONItem, JSONValue, JSONValuePlural, JSONValueSingular} from "../../data";
+import type {Definition} from "../definition";
 import {definitionModulePath} from "./common";
 import {argumentoCounter} from "./plural";
-import {ModuloJSON} from "../json";
+import type {ModuloJSON} from "../json";
 import {pascalCase} from "../../util/case";
 
 /**
@@ -78,11 +78,15 @@ export const emitirValor = (value: JSONValue, item: JSONItem, module: ModuloJSON
 
     imports.push(`import pluralBuilder from "@mr/core-i18n/util/plural-function-builder";`);
     imports.push(`import {PluralValue} from "@mr/core-i18n/value/plural-value";`);
-    imports.push(`import {TPluralKey} from "@mr/core-i18n/value";`);
+    imports.push(`import type {TPluralKey} from "@mr/core-i18n/value";`);
 
     lineas.push(`const values${sufijo}: Partial<Record<TPluralKey, string>> = {`);
     for (const [categoria, forma] of Object.entries((value as JSONValuePlural).value)) {
-        lineas.push(`    ${categoria}: "${forma}",`);
+        // `JSON.stringify()` y no comillas a pelo: una forma plural con un salto de línea, una comilla
+        // o una barra generaba un `.ts` que no compila (`TS1002`). La rama `singular` no lo sufría
+        // porque escribe el valor entre backticks, que sí aguantan un salto; aquí hacía falta escapar
+        // de verdad, no solo cambiar de comilla.
+        lineas.push(`    ${categoria}: ${JSON.stringify(forma)},`);
     }
     lineas.push('};');
     // El `counter` solo se emite si la entrada lo declara; con un único parámetro el runtime lo deduce.

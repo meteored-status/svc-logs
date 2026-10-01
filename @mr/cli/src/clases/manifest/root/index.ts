@@ -1,16 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: d99d7838c71218692a90659479661dca
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.5.27+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 549c29ceaf7cfed2be24d6e031fd53ef
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import "dotenv/config";
 
 import {type IManifest, Manifest} from "../../../../manifest";
-
 import {ManifestLoader} from "..";
 import ManifestRootDeploymentLoader from "./deploy";
 

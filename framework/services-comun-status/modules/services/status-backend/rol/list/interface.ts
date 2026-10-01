@@ -1,12 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 13 Aug 2026 11:53:20 GMT
- * Hash: 05747c6b795db0bfb284bda1b552102c
- * Versión: 2026.8.13+2-bixus
- * Anterior: 2026.8.13+1-bixus
+ * Fecha: Fri, 11 Sep 2026 11:16:09 GMT
+ * Hash: 2cba4fa496236defe2267a58788636b1
+ * Versión: 2026.9.11+2-bixus
+ * Anterior: 2026.8.13+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import type {EGroupLevel} from "../../group/interface";
 import type {ERolStatus} from "../interface";
 import type {EUserStatus} from "../../user/interface";
 
@@ -56,6 +57,13 @@ export interface IListOUT {
  *                         nombre. No incluye a quienes reciban sus permisos por la jerarquía. Llega
  *                         **vacía** si quien pide el listado no tiene `status.user.list`: saber
  *                         quiénes son es ver el padrón, y eso no lo abre el permiso de roles.
+ * @property groups      - Grupos que conceden este rol, con el rango desde el que lo conceden. Llega
+ *                         **vacía** si quien pide el listado no tiene `status.group.list`, igual que
+ *                         `users` con `status.user.list`: saber qué grupos hay es cosa del permiso de
+ *                         grupos, no del de roles.
+ * @property groupCount  - Cuántos grupos lo conceden. **Va siempre**, con permiso o sin él, por lo mismo
+ *                         que `userCount`: es lo que dice a cuánta gente le cambia el acceso si se toca
+ *                         este rol, y con grupos anidados esa gente puede ser mucha más que la que se ve.
  * @property userCount   - Cuántos usuarios lo tienen asignado de forma directa. **Va siempre**, con
  *                         permiso o sin él: es información del rol (a cuánta gente le cambia el acceso
  *                         si deja de conceder), no del padrón.
@@ -73,6 +81,32 @@ export interface IRol {
     permissions: IRolPermission[];
     users: IRolUser[];
     userCount: number;
+    groups: IRolGroup[];
+    groupCount: number;
+}
+
+/**
+ * Grupo que concede este rol.
+ *
+ * Es la otra forma de tener un rol, y hasta que esto existió no se veía por ninguna parte: la ficha del rol
+ * enseñaba a quién se le había asignado a mano y callaba que un grupo entero lo estaba repartiendo. Con los
+ * grupos anidados eso es peor todavía, porque quien recibe el rol puede no estar ni en el grupo que lo
+ * concede.
+ *
+ * **Es solo de lectura desde la pantalla de roles.** Conceder o quitar un rol a un grupo se hace desde la
+ * pantalla del grupo, que es donde viven las comprobaciones —el veto de `PERMISOS_NO_DELEGABLES`, el
+ * subconjunto contra quien concede y la llave maestra—. Un segundo camino de escritura para algo que reparte
+ * autoridad obligaría a repetir las tres, con la garantía de que un día se separan.
+ *
+ * @property id       - Identificador del grupo.
+ * @property name     - Nombre del grupo.
+ * @property minLevel - Rango a partir del cual los miembros del grupo reciben el rol. Los rangos están
+ *                      anidados, así que `ADMIN` quiere decir administradores **y** propietarios.
+ */
+export interface IRolGroup {
+    id: number;
+    name: string;
+    minLevel: EGroupLevel;
 }
 
 /**

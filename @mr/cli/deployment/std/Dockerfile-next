@@ -1,20 +1,29 @@
 ARG BASE_IMAGE=node:lts-alpine
 
+# Etapa de build idéntica a la del `Dockerfile` genérico, y por los mismos motivos — ver los
+# comentarios de allí: no copia código, no declara los ARG de Datadog y desactiva el modo endurecido
+# de Yarn.
 FROM ${BASE_IMAGE} AS build
-ARG DD_GIT_REPOSITORY_URL
-ARG DD_GIT_COMMIT_SHA
 ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
-RUN apk add --no-cache tzdata
 RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
 COPY ./.yarn/plugins ./.yarn/plugins
 COPY ./.yarn/releases ./.yarn/releases
 COPY ./.yarnrc* ./
-COPY ./${RUTA}/${WS} ./${RUTA}/${WS}
-COPY ./package.json ./
-COPY ./yarn.lock ./
+COPY ./package.json ./yarn.lock ./
+COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}/
 ENV NODE_ENV=production
+ENV YARN_ENABLE_HARDENED_MODE=0
+# **`.yarn/cache` no se puede montar aquí, y el motivo no es evidente.** Con `enableGlobalCache: false`
+# no es una caché de descarga: es el almacén de paquetes en tiempo de ejecución. PnP resuelve cada
+# paquete desde su `.zip` dentro de `.yarn/cache`, y el `COPY --from=build /usr/src/app/.yarn` de la
+# etapa de abajo es lo que lo mete en la imagen. Montarla con `--mount=type=bind` deja los zips en el
+# montaje, que se descarta al acabar la instrucción: la imagen sale con un `.pnp.cjs` que apunta a
+# unos zips que no existen y el contenedor muere al arrancar con «Required package missing from disk».
+# Se probó, y es lo que pasó. Para saltarse la descarga de npm está la caché de capas del registro,
+# que reutiliza esta capa entera —zips incluidos— mientras no cambien `yarn.lock` ni el
+# `package.json` del workspace.
 RUN yarn workspaces focus --production ${WS}
 
 FROM ${BASE_IMAGE} AS app

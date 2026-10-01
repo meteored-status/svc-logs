@@ -1,20 +1,21 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Thu, 16 Jul 2026 07:20:29 GMT
- * Hash: 5837d2d170dff59a102084d196f78a0a
- * Versión: 2026.7.16+1-juancmartinez
- * Anterior: 2026.6.17+3-josantoniojimnez
- * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 4c6a481ab985c9c89b0749a636e3416d
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.7.16+1-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import type {Readable} from "node:stream";
+import type {CreateWriteStreamOptions} from "@google-cloud/storage";
+import {type File, Storage as StorageBase} from "@google-cloud/storage";
+import type {Metadata} from "@google-cloud/common";
 import fs from "node:fs";
-import {Readable} from "node:stream";
-import {CreateWriteStreamOptions, type File, Storage as StorageBase} from "@google-cloud/storage";
-import {Metadata} from "@google-cloud/common";
 
 import type {Google} from "@mr/core-workload/config/google";
 
-import {IFile} from "./file";
+import type {IFile} from "./file";
 import {buffer2stream, pipeline} from "../utiles/stream";
 import {error} from "../utiles/log";
 import {fileSize, readFile} from "../utiles/fs";
@@ -72,7 +73,6 @@ export class Storage implements IDocumento {
         }
     }
 
-
     public static async uploadStream(config: Google, buckets: string[], filename: string, type: string, datos: NodeJS.ReadableStream, options?: SaveOptions): Promise<void> {
         const promesas: Promise<void>[] = [];
         for (const actual of this.setFiles(config, buckets, filename, type, options)) {
@@ -88,7 +88,7 @@ export class Storage implements IDocumento {
         }
         const storage = this.getStorage(config);
         let i = 0;
-        for (let actual of await Promise.all(buckets.map((actual)=>storage.bucket(actual).file(file).get().catch(async ()=>null)))) {
+        for (const actual of await Promise.all(buckets.map((actual)=>storage.bucket(actual).file(file).get().catch(async ()=>null)))) {
             if (actual!=null) {
                 return new this(buckets[i], actual[0], actual[1]);
             }
@@ -146,7 +146,7 @@ export class Storage implements IDocumento {
 
         const salida: Storage[] = [];
         let i = 0;
-        for (let actual of await Promise.all(promesas)) {
+        for (const actual of await Promise.all(promesas)) {
             if (actual!=null) {
                 const files = actual[0];
                 const metadatas = await Promise.all(files.map((actual)=>actual.getMetadata()));

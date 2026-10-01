@@ -1,4 +1,12 @@
-import {ICoordenadas} from "../utiles/geopoint";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: bde18fb8cdba0d4bce87db029343e677
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {ICoordenadas} from "../utiles/geopoint";
 
 interface ECSAS {
     number?: number;

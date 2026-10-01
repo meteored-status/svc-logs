@@ -1,17 +1,18 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Thu, 03 Sep 2026 13:36:43 GMT
- * Hash: bafafb1524521e6788cf0be05fe64e75
- * Versión: 2026.9.3+3-juancmartinez
- * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 9f4b74195cb5349d62194f6d28856627
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.3+3-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {Configuracion} from "../utiles/config";
+import type {Configuracion} from "../utiles/config";
 import {mkdir, readJSON, safeWrite} from "../../utiles/fs";
 import {error, info} from "../../utiles/log";
-import {IDAOFactory} from "../data/dao/d-a-o-factory";
-import {SendEvent} from "../data/model/send-event";
-import {Receiver} from "../data/model/receiver";
+import type {IDAOFactory} from "../data/dao/d-a-o-factory";
+import type {SendEvent} from "../data/model/send-event";
+import type {Receiver} from "../data/model/receiver";
 import {CalculatorBuilder} from "../statistics/calculator-builder";
 
 interface StatisticsRecalculate {
@@ -19,8 +20,6 @@ interface StatisticsRecalculate {
 }
 
 export class StatisticsController {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(
         private readonly config: Configuracion,

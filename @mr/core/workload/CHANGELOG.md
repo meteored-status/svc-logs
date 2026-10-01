@@ -2,6 +2,17 @@
 
 ---
 
+## 2026.9.23 09:25 — [Jose]
+
+### Changed
+
+- **Código adaptado a `yarn lint`** (`@mr/core-lint`), sin cambios de comportamiento: `import type` en los
+  imports que solo traen tipos, llaves en todos los `if`/`else`/`for`/`while`, bloques de imports en su orden
+  y separados por una línea en blanco, fuera las dobles líneas en blanco, `Tipo[]` en vez de `Array<Tipo>` y
+  sin `/* STATIC */` en las clases que no tienen estáticos. Casi todo con el autofix; el orden de imports,
+  con un codemod que solo movía líneas enteras.
+- Variables en `snake_case` renombradas a `camelCase`.
+
 ## 2026.8.7 — [Jose]
 
 ### Changed

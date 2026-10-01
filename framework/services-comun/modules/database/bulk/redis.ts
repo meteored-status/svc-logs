@@ -1,15 +1,16 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Wed, 02 Sep 2026 12:14:50 GMT
- * Hash: 5158273d88f0db5cd566a3da0f4be3f1
- * Versión: 2026.9.2+2-juancmartinez
- * Anterior: 2026.8.13+2-davidmartinezmoya
- * Proyecto: git@github.com:alpred/meteored-svc-data-alertas.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 6b1fcda56cb3e4442a76be4359e434c9
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.2+2-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {arrayChop} from "../../utiles/array";
-import {Bulk, BulkConfig} from "./";
-import {Redis} from "../redis";
+import type {BulkConfig} from "./";
+import {Bulk} from "./";
+import type {Redis} from "../redis";
 
 export interface RedisBulkConfig<T> extends BulkConfig {
     buildKey: (item: T) => string;
@@ -68,8 +69,6 @@ export interface RedisHBulkConfig<T> extends BulkConfig {
 }
 
 export class RedisHBulk<T> extends Bulk<T> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(protected readonly client: Redis, config: RedisHBulkConfig<T>) {
         super(config);

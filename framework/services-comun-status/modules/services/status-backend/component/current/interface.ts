@@ -1,4 +1,12 @@
-import {IResolutionGuide, IResourceResponse} from "services-comun/modules/status/common/interface";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: e6f4b4d620d30ef609ee0943ca670ef5
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {IResolutionGuide, IResourceResponse} from "services-comun/modules/status/common/interface";
 
 export interface ICurrentOUT {
     services: IService[];

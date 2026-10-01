@@ -1,17 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 8fdcd73bc223b6a0f1d1dd9dbb8e58ee
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 26bb1225c6fb11402437bd78b5e57483
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Storage} from "@google-cloud/storage";
 
 import {buffer2stream, pipeline} from "services-comun/modules/utiles/stream";
-
 import {isFile, readFileString} from "@mr/core-cli/fs";
+
 import {calcularDiffOps, DIFF_CONTEXTO, indicesConContexto} from "../../utiles/diff";
 import {getProyectoUrl, type PaqueteDirectoryRootFiles} from "./root";
 import {stripAutoria} from "./file";

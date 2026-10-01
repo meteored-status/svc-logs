@@ -1,6 +1,15 @@
-import {Bulk, BulkConfig} from "./index";
-import {PostgreSQL} from "../postgresql";
-import {Transaction} from "../postgresql/transaction";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 61d77450e48ecd30db863505d307dd63
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {BulkConfig} from "./index";
+import {Bulk} from "./index";
+import type {PostgreSQL} from "../postgresql";
+import type {Transaction} from "../postgresql/transaction";
 
 export interface PostgreSQLBulkConfig<T> extends BulkConfig {
     query: string;
@@ -11,8 +20,6 @@ export interface PostgreSQLBulkConfig<T> extends BulkConfig {
 }
 
 export class PostgreSQLBulk<T> extends Bulk<T> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly db: PostgreSQL, config: PostgreSQLBulkConfig<T>, transaction?: Transaction) {
         super(config, transaction);

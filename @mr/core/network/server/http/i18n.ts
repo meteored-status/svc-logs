@@ -1,3 +1,13 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: aeb0812de27b1488247bb0862266fae2
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.17+2-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import {corto} from "@mr/core-i18n/langs";
 import type {Idioma as TIdioma, IdiomaCorto} from "@mr/core-i18n/langs";
 
 /**
@@ -47,6 +57,8 @@ export interface IIdioma {
  */
 export class Idioma implements IIdioma {
 
+    /* STATIC */
+
     /** Configuración global de idiomas, compartida por todas las instancias. */
     private static INICIAL: IIdiomas = {
         idiomas: [],
@@ -73,6 +85,7 @@ export class Idioma implements IIdioma {
         return new this(this.INICIAL, path);
     }
 
+    /* INSTANCE */
 
     /** Configuración global de idiomas usada para la detección. */
     private readonly data: IIdiomas;
@@ -105,8 +118,11 @@ export class Idioma implements IIdioma {
         if (this.idioma !== this.data.defecto) {
             this.path = this.path.slice(this.idioma.length + 1);
         }
-        this.idioma_corto = this.idioma.slice(0, 2) as IdiomaCorto;
-        this.defecto_corto = this.data.defecto.slice(0, 2) as IdiomaCorto;
+        // `corto()` y no un `slice(0, 2)` propio, que es lo que había: son la misma pregunta, y mientras
+        // fueron dos respuestas esta se quedó con la versión rota —`"fil"` salía como `"fi"`, que es finés
+        // y también está soportado, así que el cambiazo no lo detectaba nadie—.
+        this.idioma_corto = corto(this.idioma);
+        this.defecto_corto = corto(this.data.defecto);
     }
 
     /**

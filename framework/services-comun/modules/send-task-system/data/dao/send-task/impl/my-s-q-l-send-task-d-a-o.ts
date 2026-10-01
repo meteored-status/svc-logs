@@ -1,13 +1,16 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: 7a0f28eff52eb3327934631b9c4007e3
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 6a88c6597e1afe78051a886d2da7ae21
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {AbstractSendTaskDAO} from "../send-task-d-a-o";
-import {MySQL} from "../../../../../database/mysql";
-import {SendTask, TSendTaskStatus, TSendTaskType} from "../../../model/send-task";
+import type {MySQL} from "../../../../../database/mysql";
+import type {TSendTaskType} from "../../../model/send-task";
+import {SendTask, TSendTaskStatus} from "../../../model/send-task";
 import {Pagination} from "../../../../../database/pagination";
 
 type SendTaskRow = {

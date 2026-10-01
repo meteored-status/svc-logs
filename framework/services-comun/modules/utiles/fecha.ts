@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: b8000c46d87502ae3d772b0c85fbd935
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 interface IFormatoFecha {
     anno?: boolean;
     mes?: boolean;
@@ -18,6 +26,8 @@ export enum TTimeUnit {
 }
 
 export class Fecha {
+
+    /* STATIC */
 
     private static MESES: string[] = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto","Septiembre","Octubre","Noviembre", "Diciembre"]
     private static SEMANA: string[] = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]

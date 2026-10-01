@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 5bd7b397084f6bf26100b042466a26b7
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 export enum TSendTaskStatus {
     ACTIVE = 1,
     INACTIVE = 2
@@ -17,8 +25,6 @@ export interface ISendTask {
 }
 
 export class SendTask {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly _data: ISendTask) {
     }

@@ -1,13 +1,23 @@
-import {EventDAO, Search} from "../event-d-a-o";
-import {ElasticSearch} from "../../../../utiles/config";
-import {
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: ce1364c7f427965fdf146eb244acf455
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {Search} from "../event-d-a-o";
+import {EventDAO} from "../event-d-a-o";
+import type {ElasticSearch} from "../../../../utiles/config";
+import type {
     Elasticsearch,
     QueryDslQueryContainer,
     SearchRequest,
     SearchResponse,
     SortResults
 } from "../../../../../elasticsearch";
-import {ISendEvent, SendEvent, TEvent} from "../../../model/send-event";
+import type {ISendEvent, SendEvent} from "../../../model/send-event";
+import {TEvent} from "../../../model/send-event";
 import {SparkpostEvent} from "../../../model/sparkpost-event";
 import {ElasticSearchScroll} from "../../../../../database/scroll";
 
@@ -26,7 +36,6 @@ export class ElasticEventDAO extends EventDAO {
         super();
     }
 
-    /* STATIC */
     // public static getAlias(config: ElasticSearch): string {
     //     const suffix: string = PRODUCCION ? (TEST ? 'test' : 'produccion') : 'desarrollo';
     //     return `${config.eventIndex}-${suffix}`;

@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 7797beb3ca988899c30619ce1f2fee94
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: fd45ef57160cc909423461117134bc17
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -19,10 +19,10 @@
  * al bundle de las CLI a través de esta ruta.
  */
 
-import path from "node:path";
 import fs, {readFileSync, type PathLike, type PathOrFileDescriptor} from "node:fs";
 import {createHash} from "node:crypto";
 import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat, type FileHandle} from "node:fs/promises";
+import path from "node:path";
 
 import {error} from "./log";
 

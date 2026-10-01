@@ -1,6 +1,16 @@
-import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 61742cd4a0f0e8548890dc0e246dacc2
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {RequestResponse} from "services-comun/modules/net/request-backend";
+import {BackendRequest} from "services-comun/modules/net/request-backend";
+
 import {EService, SERVICES} from "../../config";
-import {IStatusOUT} from "./status/interface";
+import type {IStatusOUT} from "./status/interface";
 
 export class CurrentStatus extends BackendRequest {
     /* STATIC */

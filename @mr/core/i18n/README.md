@@ -129,25 +129,36 @@ soportados.includes("es-ES");  // true
 soportados.includes("zh");     // false
 ```
 
-### `soportado(lang): boolean`
+### `soportado(lang): lang is Idioma`
 
-Comprueba si un código de idioma pertenece a la lista de idiomas soportados.
+Comprueba si una cadena cualquiera es uno de los idiomas soportados.
 
 ```ts
 import {soportado} from "@mr/core-i18n/langs";
 
 soportado("pt-BR"); // true
 soportado("zh-CN"); // false
+
+// Y como es guarda de tipo, estrecha:
+const deFuera: string = req.params.locale;
+if (soportado(deFuera)) {
+    // aquí `deFuera` ya es `Idioma`
+}
 ```
 
-El parámetro está tipado como `Idioma`, así que para preguntarle por una cadena cualquiera
-—que es el caso interesante, validar lo que llega de fuera— hay que hacerle un cast antes. No
-es una guarda de tipo: devuelve `boolean`, no `lang is Idioma`.
+**Es una guarda de tipo, y es lo que hace usable la lista blanca**: se valida en el borde —el
+segmento de la URL, un `Accept-Language`, lo que mande un cliente— y a partir de ahí se trabaja
+con `Idioma` sin volver a comprobarlo. Recibía `Idioma`, así que para preguntarle por una cadena
+cualquiera había que hacerle un cast delante, que es exactamente lo que la pregunta pretendía
+evitar.
+
+Distingue mayúsculas de minúsculas, porque es pertenencia a una lista escrita a mano y no una
+comparación BCP 47: `soportado("es-es")` es `false`. La comparación insensible a la caja, que sí
+la manda BCP 47, la hace `getLang()` al elegir de qué fichero se carga un módulo.
 
 ### `corto(idioma): IdiomaCorto`
 
-Extrae el código corto ISO 639-1 de un idioma largo o corto, tomando los dos primeros
-caracteres.
+Devuelve la **subetiqueta primaria** de un idioma: lo que hay hasta el primer separador.
 
 ```ts
 import {corto} from "@mr/core-i18n/langs";
@@ -155,15 +166,17 @@ import {corto} from "@mr/core-i18n/langs";
 corto("es-ES"); // "es"
 corto("pt-BR"); // "pt"
 corto("en");    // "en"
+corto("fil");   // "fil"
 ```
 
-> **`corto("fil")` devuelve `"fi"`, que es finés.** Es el único código corto de tres letras de
-> la lista, y `slice(0, 2)` lo convierte en otro idioma **que también está soportado**, así que
-> nada aguas abajo puede detectar el cambiazo: no lanza, no devuelve `undefined` y el tipo
-> sigue siendo `IdiomaCorto`. Comprobado ejecutándolo. Si algún día se sirve filipino, hay que
-> arreglar `corto()` antes; mientras tanto, es una trampa dormida y no un fallo en producción.
-> (El filipino tiene además una segunda entrada por la vía tagalo, `"tl"`, que sí sobrevive
-> al recorte.)
+**Corta por el separador, no por los dos primeros caracteres.** Con el `slice(0, 2)` que hacía
+antes, `corto("fil")` devolvía `"fi"`, que es finés — y lo peligroso era que `"fi"` **también**
+está soportado: no lanzaba, no devolvía `undefined` y el tipo seguía siendo `IdiomaCorto`, así
+que nada aguas abajo podía detectar el cambiazo. Con códigos de escritura (`sr-Cyrl`) o de
+región numérica (`es-419`) el recorte fijo es sencillamente otra cosa.
+
+> La longitud de un `IdiomaCorto` **no es fija**: casi todos son los dos caracteres de
+> ISO 639-1, pero `"fil"` tiene tres. No hay que apoyarse en ella.
 
 ---
 
@@ -202,7 +215,7 @@ Lo que instancia el código generado. Nueve rutas, todas en el mapa `exports`:
 | `@mr/core-i18n/value/singular-value` | `SingularValue` |
 | `@mr/core-i18n/value/plural-value` | `PluralValue` |
 | `@mr/core-i18n/util/lang` | `getLang()` — resuelve el idioma pedido contra los que declara un módulo |
-| `@mr/core-i18n/util/plural-function-builder` | el constructor de reglas de plural sobre `Intl.PluralRules` |
+| `@mr/core-i18n/util/plural-function-builder` | el constructor de reglas de plural sobre `Intl.PluralRules`; si el tag no le vale, baja por `langChain()` antes de caer al inglés |
 
 **Lo que no está en esa tabla es interno**, y a propósito: `modules/index.ts` (la clase base
 `Translation`, de la que heredan las tres de arriba), `modules/value/value.ts` (`Value` y
@@ -239,9 +252,21 @@ proyecto, que es donde se trabaja. Aquí está el mapa del código: [`src/CODEMA
 ### Compilación
 
 ```bash
-yarn workspace @mr/core-i18n run compile          # una vez
+yarn run mrlang:build                             # desde la raíz
+yarn workspace @mr/core-i18n run compile          # lo mismo, sin el atajo
 yarn workspace @mr/core-i18n run compile:watch    # en watch
+yarn workspace @mr/core-i18n run typecheck        # solo los tipos, sin generar bundle
 ```
+
+**No hay «modo desarrollo»: `compile` ya es la compilación de producción** —minifica, inlina las
+constantes de entorno (`PRODUCCION`, `ENTORNO`…) y borra `bin/min/` antes—. El único eje es
+`--watch`, que desactiva la minificación para que reconstruir sea rápido. Las dos variantes corren
+`tsc --noEmit` en paralelo y la de una pasada **falla si hay errores de tipos**.
+
+> **Lo que `compile` no toca son los sellos, `bin/hash.md5` y `bin/versiones`.** Los escribe `mrpack`
+> cuando recompila él (ver «El bundle se rehace solo cuando toca»). Tras un `compile` a mano el
+> siguiente arranque de `mrpack` puede recompilar una vez más, para anotarlos. Es barato y no hace
+> falta evitarlo.
 
 No hace falta lanzarlo a mano: el arranque (`@mr/core-cli/arranque`) compila la primera vez que no encuentra
 `bin/min/mrlang-run.js`. esbuild bundlea los workspace devDeps (`@mr/core-cli`) y deja fuera las
@@ -256,24 +281,34 @@ produce, no los suyos.
 
 ### El bundle se rehace solo cuando toca
 
-`bin/hash.md5` guarda el md5 de `bin/min/` de la última compilación. `mrpack` lo compara al
-arrancar —en `devel`, `update` e `init`, y al terminar una tanda del gestor de frameworks— y si no
-cuadra, recompila en modo producción y vuelve a anotarlo.
+`mrpack` comprueba el bundle al arrancar —en `devel`, `update` e `init`, y al terminar una tanda del
+gestor de frameworks— y si está viejo lo recompila en modo producción (`checkMrlang()` en
+`@mr/cli/src/clases/framework/cliente.ts`). Mira dos sellos:
 
-Hace falta porque **el arranque solo compila cuando el bundle falta, no cuando está viejo**: tras
-actualizar el paquete, `mrlang` seguiría ejecutando el anterior sin que nada lo delatara. Mientras
-las dos CLI compartieron workspace no se notaba, porque `mrlang` se compilaba con `mrpack` en la
-misma pasada.
+| Fichero | Qué guarda | Qué caza |
+|---------|------------|----------|
+| `bin/versiones` | El `version` de `@mr/core-i18n` y de los workspace `@mr/*` que van dentro del bundle (sus `devDependencies`, recursivamente), tal como estaban al compilar | Que se ha actualizado el framework: cada envío con cambios sube el `version` |
+| `bin/hash.md5` | El md5 de `bin/min/` de la última compilación | Que alguien dejó ahí la salida de un `compile:watch`, sin minificar |
 
-De este directorio **`bin/min/` no se envía** con el framework: cada repo compila el suyo. Lo que
-viaja es `hash.md5`, 32 bytes, y es justo lo que dispara la recompilación — el hash de quien envió
-no coincide con el bundle local. Va en `.mr-nohash` para que recompilar en local no haga que el
-paquete parezca modificado.
+Si falta cualquiera de los dos, o alguno no cuadra, recompila y los vuelve a anotar. Si la compilación
+falla no anota nada, así que el siguiente arranque lo vuelve a intentar.
 
-> **`bin/mrlang.js` cuenta cuatro niveles hasta la raíz del monorepo, no tres.** Este workspace
-> cuelga de `@mr/core/`, mientras que `@mr/cli` colgaba directamente de `@mr/`. Esa cuenta vive en
-> un solo sitio: el bin fija `MRPACK_ROOT` y `src/main.ts` hace el `chdir` con esa variable en vez
-> de con un relativo propio.
+Hace falta porque **el arranque de `mrlang` solo compila cuando el bundle falta, no cuando está viejo**:
+tras actualizar el paquete seguiría ejecutando el anterior sin que nada lo delatara.
+
+`bin/versiones` es **local**: ni se versiona (`bin/*` en el `.gitignore`) ni se envía (`.mr-ignore`).
+Por eso no depende de lo que hiciera quien envió, y vale igual para un framework que llega por
+`mrpack framework` que por un `git pull` de lo que ha comiteado otro. Hasta el 2026-09-28 solo existía
+`hash.md5`, que compara el bundle local con él mismo: un envío que no tocaba `bin/` dejaba cada repo con
+el `mrlang` anterior hasta recompilarlo a mano.
+
+De este directorio **`bin/min/` no se envía** con el framework: cada repo compila el suyo.
+
+> **`bin/mrlang.js` ya no cuenta niveles hasta la raíz del monorepo.** Los contaba —cuatro, porque
+> este workspace cuelga de `@mr/core/` y `@mr/cli` colgaba de `@mr/`—, y esa cuenta es válida solo
+> para la disposición en la que se escribió: al mover el paquete, `MRPACK_ROOT` acababa apuntando
+> fuera del repositorio sin decir nada. Hoy la raíz la resuelve `@mr/core-cli/arranque` con
+> `PROJECT_CWD`, y el bin son dos líneas.
 
 ---
 

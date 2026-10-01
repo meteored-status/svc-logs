@@ -1,11 +1,13 @@
 /**
- * Editor: miguel
- * Fecha: Mon, 20 Jul 2026 11:26:48 GMT
- * Hash: 298d4288b1a4303bd82005129f7b8f00
- * Versión: 2026.7.20+1-miguel
- * Anterior: 2026.6.17+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-web-www.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 48ec62288751f3500caaa2b3825c4bbe
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.7.20+1-miguel
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
+
+import type {IncomingHttpHeaders} from "node:http";
 
 import {type Configuracion} from "@mr/core-workload/config";
 import type {Idioma} from "@mr/core-i18n/langs";
@@ -16,7 +18,6 @@ import type {Dominio} from "../server/http/config/dominio";
 import type {Idioma as IdiomaNet} from "../server/http/i18n";
 import type {IExpresion} from "../server/http/checkers";
 import type {TDevice} from "../server/http/config/device";
-import type {IncomingHttpHeaders} from "node:http";
 
 interface IConfig {
     dominio: Dominio;

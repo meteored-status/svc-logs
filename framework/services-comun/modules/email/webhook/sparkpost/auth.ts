@@ -1,12 +1,15 @@
 /**
- * Editor: Fran García
- * Fecha: Fri, 19 Jun 2026 07:29:05 GMT
- * Hash: fc78aab80742540eef1430e61bb5bdc3
- * Versión: 2026.6.19+1-frangarcia
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 01becdbd2e2c893ea5983d59a8678d53
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.19+1-frangarcia
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import type {Conexion} from "@mr/core-network/server/http/conexion";
+
 import {readJSONSync} from "../../../utiles/fs";
-import {Conexion} from "@mr/core-network/server/http/conexion";
 
 interface ICredenciales {
     username: string;

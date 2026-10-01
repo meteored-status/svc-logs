@@ -1,10 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 24 Jul 2026 06:25:35 GMT
- * Hash: 9794818a76a3a4c3b05132288124c9e9
- * Versión: 2026.7.24+1-josantoniojimnez
- * Anterior: 2026.5.27+2-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Tue, 22 Sep 2026 13:56:38 GMT
+ * Hash: f3e08ec44ea16e6eb7774d7e78cbdb40
+ * Versión: 2026.9.22+1-bixus
+ * Anterior: 2026.7.24+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations.ts";
@@ -96,7 +96,8 @@ interface IManifestDeploymentBuckets {
  * @property runtime - Entorno de ejecución del artefacto ({@link Runtime}).
  * @property target - Infraestructura de destino ({@link Target}).
  * @property alone - Solo `SERVICE`/`CRONJOB`/`JOB`. Si `true`, despliega en una sola zona. Por defecto `false`.
- * @property arch - Solo `SERVICE`/`CRONJOB`/`JOB`. Arquitecturas Docker. Por defecto `["linux/amd64","linux/arm64"]`.
+ * @property arch - Solo `SERVICE`/`CRONJOB`/`JOB`. Arquitecturas Docker. El modelo no le pone valor por
+ *                  defecto: omitido, `contenedor.sh` y `kustomizar.sh` usan `["linux/amd64"]`.
  * @property buckets - Solo `SERVICE`/`CRONJOB`/`JOB`. Buckets GCS divididos por entorno.
  * @property credenciales - Solo `SERVICE`/`CRONJOB`/`JOB`. Credenciales a montar en el contenedor.
  * @property imagen - Solo `SERVICE`/`CRONJOB`/`JOB`. Imagen Docker por entorno.

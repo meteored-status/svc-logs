@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 016b7d32b494c423e6546a2883bb3f39
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.6.17+7-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 94231d7d2ef22196fe6646b453b013e0
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -14,7 +14,5 @@
 import type {TParams} from "./value/value";
 
 export abstract class Translation<T extends TParams={}> {
-    /* STATIC */
-
     /* INSTANCE */
 }

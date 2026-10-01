@@ -1,16 +1,20 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Tue, 26 May 2026 09:10:16 GMT
- * Hash: 36e0ac7ab0312268f2fe3b4a7a934790
- * Versión: 2026.5.26+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 4b8c40ac33787885bbe285d444fed235
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.26+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import http, {IncomingMessage as IncomingMessageBase} from "node:http";
+import type {IncomingMessage as IncomingMessageBase} from "node:http";
+import http from "node:http";
 import https from "node:https";
+
 import {ErrorCode, type IRespuesta} from "@mr/core-network/client/http/interface";
 import {RequestError} from "@mr/core-network/client/http/error";
 
-import {RequestCache} from "./cache";
+import type {RequestCache} from "./cache";
 import {RequestCacheDisk} from "./cache/disk";
 import {PromiseDelayed} from "../utiles/promise";
 import {error} from "../utiles/log";

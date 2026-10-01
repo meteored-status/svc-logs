@@ -1,13 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 08 Sep 2026 06:45:12 GMT
- * Hash: 9ee2ea87e2999171fc18031549236e31
- * Versión: 2026.9.8+1-bixus
- * Anterior: 2026.9.4+2-bixus
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: e99c04c8357371e3ab53b1685880fdc7
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.8+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {INetServiceBase} from "@mr/core-network/server/http/config/net";
+import type {INetServiceBase} from "@mr/core-network/server/http/config/net";
 import {Service} from "@mr/core-network/server/http/service";
 
 export enum EService {

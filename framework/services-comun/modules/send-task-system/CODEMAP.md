@@ -10,7 +10,7 @@
 | Fichero | Símbolos exportados | Descripción |
 |---------|---------------------|--------------|
 | `send-task.ts` | `SendTask`, `ISendTask`, `TSendTaskStatus` (`ACTIVE`\|`INACTIVE`), `TSendTaskType` (`NEWSLETTER`\|`LOCATION`) | Definición de una tarea de envío recurrente: ventana de validez (`start_validity`/`end_validity`), tipo y estado |
-| `periodicity.ts` | `Periodicity`, `IPeriodicity` | Regla de recurrencia cron (`pattern` + `timezone`, vía `cron-parser`) asociada a una `SendTask`; `nextExecutionDate(limitDate)` calcula la siguiente ejecución tras esa fecha |
+| `periodicity.ts` | `Periodicity`, `IPeriodicity` | Regla de recurrencia cron (`pattern` + `timezone`, vía `cron-parser`) asociada a una `SendTask`; `nextExecutionDate(limitDate)` calcula la siguiente ejecución tras esa fecha (contando desde ahora, así que `limitDate` debe ser futura). Lee el patrón normalizado con `utiles/dia-semana.ts` y lanza si `cron-parser` no sabe leerlo |
 | `send-schedule.ts` | `SendSchedule` | Próxima fecha de ejecución (`sendDate`) planificada para una `SendTask` — una por tarea; se recalcula tras cada ejecución a partir de todas sus `Periodicity` |
 | `pending-send-task.ts` | `PendingSendTask`, `IPendingSendTask` | Entrada en la cola de pendientes (PubSub): `id` de la `SendTask`, `type`, `schedule_at`; `complete()` invoca el callback de confirmación de procesado del broker |
 | `send-task-instance.ts` | `SendTaskInstance` | Una ejecución concreta de una `SendTask` (agrupa los `Send` generados en esa pasada) |
@@ -50,16 +50,44 @@ patrón productor/consumidor: `GeneratorController` produce (`save()`), `Pending
 `SendTask`:
 
 ```
-GeneratorController.run(): Promise<void>
+GeneratorController.run(): Promise<IResumenGeneracion>   // {aplazadas}
   1. limitDate = now + cronStep minutos, redondeado al fin de hora
   2. pagina factory.sendTask.scheduled(limitDate, type, 2000)
   3. por página: junta Periodicity[] y SendSchedule por sendTask
-  4. filtra send-tasks sin periodicities o sin send-schedule (log de error, se omiten)
-  5. factory.pendingSendTask.save(new PendingSendTask(...)) por cada send-task válida
-  6. recalcula SendSchedule.sendDate = min(periodicities.nextExecutionDate(limitDate)) y bulk-update
-  7. borra send-schedules duplicados detectados
-  8. reintenta encolados fallidos hasta MAX_TRIES=3, con 5s de espera entre intentos
+  4. filtra send-tasks sin send-schedule (log de error, se omiten)
+  5. proximasEjecuciones(): min(periodicities.nextExecutionDate(limitDate)) por send-task; las que
+     no se pueden planificar (sin periodicities, o patrón ilegible) van a fallidas (log de error)
+  6. factory.pendingSendTask.save(new PendingSendTask(...)) solo por las válidas
+  7. SendSchedule.sendDate de TODAS: la próxima ejecución, o limitDate + 1 ms si es fallida; bulk-update
+  8. borra send-schedules duplicados detectados
+  9. reintenta encolados fallidos hasta MAX_TRIES=3, con 5s de espera entre intentos
 ```
+
+**`scheduled()` no pagina: vacía un conjunto.** Consulta siempre `send_date <= limitDate` desde el
+offset 0, y el bucle pide páginas hasta que llega una vacía. Así que **toda send-task que devuelve
+tiene que salir del conjunto** —replanificarse a después de `limitDate`—, o volverá en la página
+siguiente y el bucle no terminará. Por eso las fallidas del paso 5 se aplazan en vez de dejarse
+como estaban: no se envían, salen del lote y se reintentan en la siguiente ejecución, con su
+`error()` cada vez. Ojo: si el bulk-update del paso 7 falla, las de esa página vuelven igualmente, y
+se vuelven a encolar (preexistente, sin resolver).
+
+**El paso 5 va antes de encolar a propósito.** Si una send-task se encolara y después no se pudiera
+replanificar, se volvería a enviar. Antes, además, la excepción de una sola periodicidad abortaba
+toda la ejecución después de encolar su página.
+
+`run()` **ya no rechaza** por una periodicidad mala: quien quiera avisar tiene que mirar `aplazadas`
+(`newsletter-generate` lo pasa a `global_error`, que pone su monitor en error).
+
+### Utilidades de planificación (`utiles/`)
+
+| Fichero | Símbolos exportados | Descripción |
+|---------|---------------------|--------------|
+| `dia-semana.ts` | `normalizarPatron(patron)` | Quita del campo de día de la semana los días repetidos una vez resuelto el domingo (`0,7` → `7`, `1,1` → `1`), que `cron-parser` rechaza: los repetidos siempre, y el `0` repetido desde la 5.10.1, que es lo que cambió. **Solo reescribe un campo con repetidos**: cualquier otro patrón sale intacto. En particular no expande `*`, que con el día del mes restringido cambiaría los días que dispara (`0 9 15 * *` pasaría a diario). Nombres (`mon`), pasos, `L` y `#` tampoco se tocan. Solo lectura: el patrón normalizado no se guarda. Lógica pura, sin imports |
+| `proxima-ejecucion.ts` | `proximasEjecuciones(sendTasks, periodicitiesBySendTask, limitDate)`, `IProximasEjecuciones`, `IEjecucionFallida` | Fecha nueva de **cada** send-task de un lote: su próxima ejecución, o `limitDate + 1 ms` para las que no se pueden planificar, que separa en `fallidas`. Fuera del controlador para poder probarlo: el arnés de `spec/` no compila `d-a-o-factory.ts` |
+
+Pruebas: `spec/send-task-system/utiles/dia-semana.spec.ts` (incluye que las 255 combinaciones de
+días 0-7, en orden, al revés y con un repetido, disparan las mismas 40 fechas que la lista sin
+repetir, con el día del mes `*`, `15` y `L`) y `spec/send-task-system/utiles/proxima-ejecucion.spec.ts`.
 
 ---
 

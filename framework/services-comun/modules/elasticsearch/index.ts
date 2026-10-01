@@ -1,10 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
- * Hash: ad8bad837a970dcf11222a50938c53b6
- * Versión: 2026.8.5+1-josantoniojimnez
- * Anterior: 2026.8.3+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 5489904bd50135cf1cc3e3a4452e0f36
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {ClientOptions} from "@elastic/elasticsearch/client";
@@ -498,7 +498,6 @@ export class Elasticsearch {
         } else {
             return Promise.reject(new Error("Elastic disabled"));
         }
-
 
         return cliente;
     }

@@ -1,5 +1,13 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 5f448cf0acbcd5da7587e7502de9e14f
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {Cache, CacheBuilder as CacheBuilderBase, type ICacheConfigDefault, type ICacheDoc} from ".";
-import {ICacheDiskConfig} from "./disk";
+import type {ICacheDiskConfig} from "./disk";
 
 export class MemoryCache<T> extends Cache<T>{
     /* INSTANCE */

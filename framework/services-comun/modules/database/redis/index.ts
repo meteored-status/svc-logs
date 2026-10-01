@@ -1,18 +1,18 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Wed, 02 Sep 2026 12:14:50 GMT
- * Hash: 972aeb9c4ce350f3fde85d1931c694c2
- * Versión: 2026.9.2+2-juancmartinez
- * Anterior: 2026.8.13+2-davidmartinezmoya
- * Proyecto: git@github.com:alpred/meteored-svc-data-alertas.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 769dc5d5fdf471c046143cc4642aa2d4
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.23+2-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import {createClient, type RedisClientType} from "redis";
 import process from "node:process";
 
 import type {IPodInfo} from "@mr/core-workload/config/pod";
 
 import {error, info, warning} from "../../utiles/log";
-import {createClient, type RedisClientType} from "redis";
 import {readJSON} from "../../utiles/fs";
 import {md5} from "../../utiles/hash";
 import {random} from "../../utiles/random";
@@ -367,8 +367,8 @@ export class Redis implements AsyncDisposable {
 
         if (data) {
             if (Array.isArray(data)) {
-                // Si es un array, devolvemos el primero que no sea null
-                return data.map(aData => JSON.parse(aData.toString('utf-8')) as T);
+                // Si es un array, las claves que no existen llegan como null (ver `get`) y se mantienen como null
+                return (data as (Buffer|null)[]).map(aData => aData ? JSON.parse(aData.toString('utf-8')) as T : null) as T[];
             }
             return JSON.parse(data.toString('utf-8')) as T;
         }
@@ -480,7 +480,7 @@ export class Redis implements AsyncDisposable {
      * @param items Conjunto de inserciones, cada una con clave, campo, valor, TTL y ámbito de clave.
      */
     public async bulkHSet(items: IHInsert[]): Promise<void> {
-        if (items.length === 0) return;
+        if (items.length === 0) {return;}
 
         const cluster = await this.cluster;
 
@@ -697,7 +697,6 @@ export class Redis implements AsyncDisposable {
         return `${namespace}:${this.config.servicio}:${key}`;
     }
 }
-
 
 class RedisCluster implements AsyncDisposable {
     /* STATIC */

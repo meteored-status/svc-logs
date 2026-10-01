@@ -1,14 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 784581b2bfc173a13a77b41996026d84
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 18612026d4cbec37b936ec8c81004ec4
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {Colors} from "@mr/core-cli/colors";
 import util from "node:util";
+
+import {Colors} from "@mr/core-cli/colors";
+
 import {horaLocal} from "../utiles/fecha";
 
 interface ILogConfig {

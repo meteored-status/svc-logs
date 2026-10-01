@@ -1,5 +1,13 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 1c3646b2343e730dd76b1cbec39c33af
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {mergeDeep} from "../../utiles/object";
-import {Client, ISpec as IClientSpec} from "./client";
+import type {Client, ISpec as IClientSpec} from "./client";
 import {warning} from "../../utiles/log";
 
 interface ISpec<K> {
@@ -9,8 +17,6 @@ interface ISpec<K> {
 }
 
 export class Spec<K> {
-    /* STATIC */
-
     /* INSTANCE */
     private _data?: K;
 

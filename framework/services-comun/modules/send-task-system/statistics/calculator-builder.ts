@@ -1,7 +1,16 @@
-import {Calculator} from "./calculator";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: e5f13f1453c93c8c50c242265f8250da
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {Calculator} from "./calculator";
 import {SparkpostCalculator} from "./impl/sparkpost-calculator";
-import {SendEvent, TEvent} from "../data/model/send-event";
-import {SparkpostEvent} from "../data/model/sparkpost-event";
+import type {SendEvent} from "../data/model/send-event";
+import {TEvent} from "../data/model/send-event";
+import type {SparkpostEvent} from "../data/model/sparkpost-event";
 
 export class CalculatorBuilder {
     /* STATIC */

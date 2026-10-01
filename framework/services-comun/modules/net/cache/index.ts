@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 7b7a07cc007e80f1ee10e2147ee1ce82
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import type {OutgoingHttpHeaders} from "node:http";
 
 import type {Conexion} from "@mr/core-network/server/http/conexion";
@@ -20,8 +28,6 @@ export interface INetCacheV1 {
 }
 
 export abstract class NetCache {
-    /* STATIC */
-
     /* INSTANCE */
     protected constructor() {
 
@@ -64,8 +70,6 @@ export interface IRequestCacheV1 {
 }
 
 export abstract class RequestCache {
-    /* STATIC */
-
     /* INSTANCE */
     protected constructor() {
 

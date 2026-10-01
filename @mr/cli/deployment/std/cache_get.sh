@@ -6,6 +6,16 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
+# El bucket de la caché sale de `_K8S_CACHE` si el trigger la define; si no, de la etiqueta
+# `k8s-cache` de `labels.json`, como siempre.
+buckets() {
+  if [[ -n "${_K8S_CACHE}" ]]; then
+    echo "${_K8S_CACHE}"
+  else
+    configl ".labels[\"k8s-cache\"]"
+  fi
+}
+
 parseBucket() {
   BUCKET="${1}"
 
@@ -15,7 +25,7 @@ parseBucket() {
 export -f parseBucket
 
 echo "Descargando caché de dependencias"
-configl ".labels[\"k8s-cache\"]" | xargs -I '{}' -P 10 bash -c "parseBucket {}"
+buckets | xargs -I '{}' -P 10 bash -c "parseBucket {}"
 if [[ -f .yarn/cache/.md5 ]]; then
   cp .yarn/cache/.md5 yarn.md5
 else

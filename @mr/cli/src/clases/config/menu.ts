@@ -1,15 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: a645831c73d315ef689b6438157e7d50
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.20+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 3e09f709420dbec3b5aa451670457628
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-
 import {Colors} from "@mr/core-cli/colors";
+
 import {Render, prepararTTY, restaurarTTY} from "../../utiles/tty";
 
 /**

@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
- * Hash: 3c134abb8351f1296976302ed446d7f5
- * Versión: 2026.8.5+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: b44a9388ff8f23c5e4100f1203b5f998
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Bulk} from ".";
@@ -23,8 +24,6 @@ export interface BulkAutoConfig extends BulkConfig {
  * marcha. Cada tanda se envía con una instancia de `Bulk` de un solo uso (ver {@link sendEjecutar}).
  */
 export class BulkAuto extends BulkBase {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly interval: number;
     private sending: boolean;

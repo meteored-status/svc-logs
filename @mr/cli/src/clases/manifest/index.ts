@@ -1,16 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: cd4419a8ada472b3c66a25d1c0dda88a
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Thu, 01 Oct 2026 06:34:06 GMT
+ * Hash: 45747355d5271ff947996d8fe03a26b0
+ * Versión: 2026.10.1+2-bixus
+ * Anterior: 2026.9.23+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {ManifestRoot} from "@mr/core-dev/manifest/root";
 import {md5} from "services-comun/modules/utiles/hash";
-
 import {readJSON, readJSONSync, safeWrite} from "@mr/core-cli/fs";
+
 import {Log} from "../log";
 import type {IPackageJsonLegacy} from "../packagejson";
 

@@ -1,17 +1,18 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 024be95e13f493275031c813396746b6
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 8f9544e94dc93adf58b5ce604a18763a
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {confirm} from "@inquirer/prompts";
 
 import {isDir, isFile, readDir, readFileString, readJSON, safeWrite} from "@mr/core-cli/fs";
-import {compararVersiones, maquetarVersion} from "../../utiles/version";
 import {Colors} from "@mr/core-cli/colors";
+
+import {compararVersiones, maquetarVersion} from "../../utiles/version";
 import type {IPackageJson} from "../packagejson";
 import {PaqueteDirectoryRoot, type PaqueteDirectoryRootFiles} from "./root";
 import {PaqueteStorage} from "./storage";

@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
- * Hash: 9c424a1c4f3e2fab26feb0bbf4374c1a
- * Versión: 2026.8.5+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: dba68804c04f4dec54d90cea90c192c3
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {BulkOperationContainer, ESBulkOperation, Script} from "..";
@@ -138,19 +139,19 @@ export class BulkOperationScript<T extends object|undefined> extends BulkOperati
  */
 export class BulkOperationUpdate<T extends object> extends BulkOperationDoc<Partial<T>> {
     /* STATIC */
-    public static build<T extends object>(index: string, id: string, doc: Partial<T>, crear=false, upsert?: T, retry_on_conflict?: number): BulkOperationUpdate<T> {
-        return new this<T>(index, id, doc, crear, upsert, retry_on_conflict);
+    public static build<T extends object>(index: string, id: string, doc: Partial<T>, crear=false, upsert?: T, retryOnConflict?: number): BulkOperationUpdate<T> {
+        return new this<T>(index, id, doc, crear, upsert, retryOnConflict);
     }
 
     /* INSTANCE */
     protected documento: ESBulkOperation<T>;
 
-    private constructor(index: string, id: string, doc: Partial<T>, private crear=false, private upsert?: T, retry_on_conflict?: number) {
+    private constructor(index: string, id: string, doc: Partial<T>, private crear=false, private upsert?: T, retryOnConflict?: number) {
         super({
             update: {
                 _index: index,
                 _id: id,
-                retry_on_conflict
+                retry_on_conflict: retryOnConflict
             },
         }, doc);
         if (!this.crear) {

@@ -1,12 +1,19 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 835e3674c7e6f0512deb43d9a0b97274
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import path from "node:path";
 
-import {CacheAdapter, ICacheAdapter, ICacheGetOptions, ICacheMetadata, ICacheSetOptions} from "../adapter";
+import type {ICacheAdapter, ICacheGetOptions, ICacheMetadata, ICacheSetOptions} from "../adapter";
+import {CacheAdapter} from "../adapter";
 import {exists, mkdir, readFile, readJSON, safeWrite} from "../../utiles/fs";
 import {info} from "../../utiles/log";
 
 export class CacheAdapterDisk<T extends ICacheMetadata> extends CacheAdapter<T>{
-    /* STATIC */
-
 
     /* INSTANCE */
     private async isCacheOK(control: string): Promise<T> {

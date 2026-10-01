@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 07 Aug 2026 08:55:42 GMT
- * Hash: 5d2dbd6e2f5348a8ae4be7cd38040783
- * Versión: 2026.8.7+1-bixus
- * Anterior: 2026.6.17+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 80e9d7bd3393992dc7571ad69984bdd1
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.8.7+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import chokidar from "chokidar";
@@ -12,10 +12,11 @@ import os from "node:os";
 
 import type {NetCache} from "services-comun/modules/net/cache";
 import {Idioma, type IIdiomas} from "@mr/core-network/server/http/i18n";
-import {Net} from "@mr/core-network/server/http/config/net";
+import type {Net} from "@mr/core-network/server/http/config/net";
 import {NetCacheDisk} from "services-comun/modules/net/cache/disk";
 import {Respuesta} from "@mr/core-network/server/http/respuesta";
-import {RouteGroup, type RouteGroupError} from "@mr/core-network/server/http/routes/group";
+import type {RouteGroup} from "@mr/core-network/server/http/routes/group";
+import {type RouteGroupError} from "@mr/core-network/server/http/routes/group";
 import {Routes} from "@mr/core-network/server/http/routes";
 import type {IUpgradeHandler} from "@mr/core-network/server/http/upgrade";
 import type {IWSHandler} from "@mr/core-network/server/websocket/handler";

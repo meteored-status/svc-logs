@@ -1,11 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: a5b06b3f76f40580fbf06ab2ff3d2c92
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: e60eb9f8f7b4c497d117dc3f44c5e768
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.5.18+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {Conexion} from "./conexion";
+import type {Conexion} from "./conexion";
 
 /**
  * Códigos de estado HTTP representados por las clases de error de este módulo.
@@ -68,6 +70,8 @@ export abstract class HttpErrorMensaje extends HttpError {
  */
 export class HttpError301 extends HttpError {
 
+    /* STATIC */
+
     /**
      * Crea una redirección permanente hacia la URL indicada.
      * @param location - URL de destino de la redirección.
@@ -76,6 +80,7 @@ export class HttpError301 extends HttpError {
         return new this(location);
     }
 
+    /* INSTANCE */
 
     /** URL de destino de la redirección. */
     public readonly location: string;
@@ -95,6 +100,8 @@ export class HttpError301 extends HttpError {
  */
 export class HttpError404 extends HttpErrorMensaje {
 
+    /* STATIC */
+
     /**
      * Crea un error 404 con el mensaje e información adicional indicados.
      * @param message - Mensaje descriptivo del error.
@@ -103,6 +110,8 @@ export class HttpError404 extends HttpErrorMensaje {
     public static build(message: string, extra?: unknown): HttpError404 {
         return new this(message, extra);
     }
+
+    /* INSTANCE */
 
     protected constructor(message: string, extra?: unknown) {
         super(404, message, extra);
@@ -115,6 +124,8 @@ export class HttpError404 extends HttpErrorMensaje {
  */
 export class HttpError410 extends HttpErrorMensaje {
 
+    /* STATIC */
+
     /**
      * Crea un error 410 con el mensaje e información adicional indicados.
      * @param message - Mensaje descriptivo del error.
@@ -123,6 +134,8 @@ export class HttpError410 extends HttpErrorMensaje {
     public static build(message: string, extra?: unknown): HttpError410 {
         return new this(message, extra);
     }
+
+    /* INSTANCE */
 
     protected constructor(message: string, extra?: unknown) {
         super(410, message, extra);
@@ -135,6 +148,8 @@ export class HttpError410 extends HttpErrorMensaje {
  */
 export class HttpError500 extends HttpErrorMensaje {
 
+    /* STATIC */
+
     /**
      * Crea un error 500 con el mensaje e información adicional indicados.
      * @param message - Mensaje descriptivo del error.
@@ -143,6 +158,8 @@ export class HttpError500 extends HttpErrorMensaje {
     public static build(message: string, extra?: unknown): HttpError500 {
         return new this(message, extra);
     }
+
+    /* INSTANCE */
 
     protected constructor(message: string, extra?: unknown) {
         super(500, message, extra);

@@ -1,3 +1,12 @@
+/**
+ * Editor: Bixus
+ * Fecha: Mon, 28 Sep 2026 06:47:01 GMT
+ * Hash: e71e14c9338355fb9ec460fa79c95efc
+ * Versión: 2026.9.28+2-bixus
+ * Anterior: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ */
+
 import {Deferred} from "services-comun/modules/utiles/promise";
 
 import type {IResponse} from "../..";
@@ -117,13 +126,11 @@ export class Result {
      *         fallbackHTTP(d1, d2); // solo resuelve los aún pendientes
      *     });
      * ```
-     *
-     * @returns Promesa que resuelve cuando todos los mensajes han llegado, o rechaza
-     *   en cuanto cualquiera falla (los `Deferred` pendientes quedan sin liquidar).
      */
     public pipe<A>(d1: Deferred<IResponse<A>>): Promise<void>;
     public pipe<A, B>(d1: Deferred<IResponse<A>>, d2: Deferred<IResponse<B>>): Promise<void>;
     public pipe<A, B, C>(d1: Deferred<IResponse<A>>, d2: Deferred<IResponse<B>>, d3: Deferred<IResponse<C>>): Promise<void>;
+    public pipe<A, B, C, D>(d1: Deferred<IResponse<A>>, d2: Deferred<IResponse<B>>, d3: Deferred<IResponse<C>>, d4: Deferred<IResponse<D>>): Promise<void>;
     public pipe(...deferreds: Deferred<IResponse<unknown>>[]): Promise<void> {
         const promises = deferreds.map(deferred => {
             const p = this.next<unknown>();

@@ -1,15 +1,17 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: 532959ad6618a645a6bd2b02ffdaac73
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0a8b25ce370443b405fe332549c038bc
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {error, info} from "../../utiles/log";
-import {IDAOFactory} from "../data/dao/d-a-o-factory";
+import type {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {PromiseDelayed} from "../../utiles/promise";
-import {SendTaskController} from "../controller/send-task-controller";
-import {PendingSendTask} from "../data/model/pending-send-task";
+import type {SendTaskController} from "../controller/send-task-controller";
+import type {PendingSendTask} from "../data/model/pending-send-task";
 
 export type ControllerBuilder = (sendTask: PendingSendTask, factory: IDAOFactory) => SendTaskController;
 

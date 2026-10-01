@@ -83,7 +83,7 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
 | `runtime` | `Runtime` | ✅ | todos | Entorno de ejecución del artefacto. |
 | `target` | `Target` | ✅ | todos | Infraestructura de destino. |
 | `alone` | `boolean` | — | SERVICE/CRONJOB/JOB | Solo despliega en una zona. |
-| `arch` | `string[]` | — | SERVICE/CRONJOB/JOB | Arquitecturas Docker. Por defecto `["linux/amd64","linux/arm64"]`. |
+| `arch` | `string[]` | — | SERVICE/CRONJOB/JOB | Arquitecturas Docker. Omitido, `contenedor.sh` y `kustomizar.sh` usan `["linux/amd64"]`. |
 | `buckets` | `{ produccion, test }` | — | SERVICE/CRONJOB/JOB | Buckets GCS por entorno. |
 | `credenciales` | `IManifestDeploymentCredenciales[]` | — | SERVICE/CRONJOB/JOB | Credenciales a montar. |
 | `imagen` | `IManifestDeploymentImagen` | — | SERVICE/CRONJOB/JOB | Imagen Docker por entorno. |

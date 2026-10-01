@@ -1,8 +1,14 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 597cd88ea388bbadeb5934aefdcd30db
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {Transaction} from "../transaction/transaction";
 
 export class GoogleCloudTransaction extends Transaction {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor() {
         super();

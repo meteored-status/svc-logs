@@ -1,4 +1,12 @@
 /**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: ca7b1a6d26319ee4e7704358f4dbb196
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+/**
  * Créditos: https://github.com/morganherlocker/cubic-spline
  * */
 export class Spline {
@@ -8,24 +16,24 @@ export class Spline {
         let h = 0;
         let k = 0;
         while (h < m && k <= m) {
-            let i_max = 0;
+            let iMax = 0;
             let max = -Infinity;
             for (let i = h; i < m; i++) {
                 const v = Math.abs(A[i][k]);
                 if (v > max) {
-                    i_max = i;
+                    iMax = i;
                     max = v;
                 }
             }
 
-            if (A[i_max][k] === 0) {
+            if (A[iMax][k] === 0) {
                 k++;
             } else {
-                this.swapRows(A, h, i_max);
+                this.swapRows(A, h, iMax);
                 for (let i = h + 1; i < m; i++) {
                     const f = A[i][k] / A[h][k];
                     A[i][k] = 0;
-                    for (let j = k + 1; j <= m; j++) A[i][j] -= A[h][j] * f;
+                    for (let j = k + 1; j <= m; j++) {A[i][j] -= A[h][j] * f;}
                 }
                 h++;
                 k++;
@@ -63,7 +71,7 @@ export class Spline {
     }
 
     private static swapRows(m: Float64Array[], k: number, l: number): void {
-        let p = m[k];
+        const p = m[k];
         m[k] = m[l];
         m[l] = p;
     }
@@ -129,7 +137,7 @@ export class Spline {
     }
 
     public at(x: number): number {
-        let i = this.getIndexBefore(x);
+        const i = this.getIndexBefore(x);
         const t = (x - this.xs[i - 1]) / (this.xs[i] - this.xs[i - 1]);
         const a =
             this.ks[i - 1] * (this.xs[i] - this.xs[i - 1]) -

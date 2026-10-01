@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: d305bbbb383aeaa97c8f18953a2ce8a9
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.8.5+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 8a248346aa86de4b466484ca514756fe
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -12,6 +12,7 @@ import {resolve} from "node:path";
 
 import {isDir, isFile, readDir, unlink} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
+
 import {Log} from "../log";
 
 /**
@@ -44,7 +45,7 @@ export async function initGithub(basedir: string): Promise<void> {
         // lstat().isSymbolicLink() devuelve false en Windows para junctions,
         // por eso se usa readlink como detector universal de enlace.
         const actual = await readlink(githubPath).catch(() => undefined);
-        if (actual === destinoEfectivo) return; // ya está correcto
+        if (actual === destinoEfectivo) {return;} // ya está correcto
 
         // Es un directorio real, fichero o enlace incorrecto — eliminar
         Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgYellow], "Corrigiendo .github/ → symlink a @mr/core/dev/.github"));

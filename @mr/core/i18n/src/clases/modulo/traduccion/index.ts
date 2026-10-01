@@ -1,15 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: d450347b29e2614d8f34ae2d0a3a6419
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 584b506e68bb0025c1b7581ec9cafd09
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {createHash} from "node:crypto";
 
 import {safeWrite} from "@mr/core-cli/fs";
+
 import type {Idiomas, TIdiomas} from "../../idioma";
 import {IdiomasLoader} from "../../idioma/loader";
 import type {ITraduccionJSON} from "./loader/json";

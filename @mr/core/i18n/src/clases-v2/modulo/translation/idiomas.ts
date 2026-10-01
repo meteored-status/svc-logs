@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: e90fa9e6e97abdab04c8ecdad12e7359
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.4+2-bixus
+ * Fecha: Mon, 28 Sep 2026 12:17:55 GMT
+ * Hash: 83f27a60bb052bb2d6d8f884ea9762f4
+ * Versión: 2026.9.28+2-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -14,7 +14,42 @@
  * otras— y porque la comprobación necesita el módulo entero, no una entrada suelta.
  */
 
-import {JSONItem} from "../../data";
+import type {JSONItem} from "../../data";
+import {Lang} from "../../lang/lang";
+
+/**
+ * La lengua de un código, sin región ni variante: `es-MX` → `es`, `pt-BR` → `pt`.
+ *
+ * @param code Código de idioma.
+ */
+const lengua = (code: string): string => code.split(/[-_]/)[0].toLowerCase();
+
+/**
+ * Si la entrada cubre un idioma que no tiene escrito **heredándolo de un antecesor de su misma lengua**, que es
+ * lo que hace el generador con `resolverValor()`: un `es-MX` sin valor propio sale con el de `es`, y eso no es un
+ * descuido sino la herencia funcionando.
+ *
+ * La cadena es la del catálogo (`Lang`), la misma que recorre el generador, pero **se corta en cuanto cambia de
+ * lengua**: `es-MX` → `es` vale, `es-MX` → `es` → `en` ya no, porque lo que sale en pantalla es inglés, que es
+ * justo lo que el aviso quiere cazar. Lo mismo `ca` → `es-ES`: el catálogo lo declara así, pero a quien lee en
+ * catalán le sale castellano.
+ *
+ * @param idioma El idioma que le falta a la entrada.
+ * @param suyos  Los idiomas que la entrada sí tiene escritos.
+ */
+const heredaDeSuLengua = (idioma: string, suyos: Set<string>): boolean => {
+    const suya = lengua(idioma);
+    for (let actual = Lang.getByCode(idioma).parent; actual != null; actual = actual.parent) {
+        if (lengua(actual.code) !== suya) {
+            return false;
+        }
+        if (suyos.has(actual.code)) {
+            return true;
+        }
+    }
+
+    return false;
+};
 
 /**
  * Los idiomas del módulo: la unión de los que traen sus entradas.
@@ -40,6 +75,10 @@ const idiomasDelModulo = (items: JSONItem[]): string[] =>
  * todavía no está en un idioma no avisa de nada: lo que se detecta es la **incoherencia dentro del módulo**,
  * que es lo que de verdad es un descuido — cuarenta y cuatro entradas con catalán y una sin.
  *
+ * Un idioma que falta pero **se hereda de otro de su misma lengua** no cuenta como falta (ver
+ * `heredaDeSuLengua()`): dejar `es-MX` sin escribir porque vale el de `es` es la forma normal de usar la
+ * herencia, y avisar de eso llenaba la salida de falsos positivos que tapaban los de verdad.
+ *
  * Va por el canal de avisos y **no corta la generación**, como el del contador: traducir un módulo entrada a
  * entrada es un estado legítimo mientras se está haciendo, y romperle el build a quien está en mitad de eso
  * sería la forma más rápida de que alguien lo desactive.
@@ -56,7 +95,7 @@ export const avisosDeIdioma = (items: JSONItem[]): {id: string; aviso: string}[]
     const salida: {id: string; aviso: string}[] = [];
     for (const item of items) {
         const suyos = new Set(Object.keys(item.values.valor));
-        const faltan = idiomas.filter(idioma => !suyos.has(idioma));
+        const faltan = idiomas.filter(idioma => !suyos.has(idioma) && !heredaDeSuLengua(idioma, suyos));
         if (faltan.length == 0) {
             continue;
         }

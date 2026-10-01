@@ -6,6 +6,16 @@ set -euo pipefail
 
 source @mr/cli/deployment/std/aliases.sh
 
+# La organización de GitHub sale de `_K8S_GITHUB` si el trigger la define; si no, de la etiqueta
+# `k8s-github` de `labels.json`, como siempre.
+companies() {
+  if [[ -n "${_K8S_GITHUB:-}" ]]; then
+    echo "${_K8S_GITHUB}"
+  else
+    configl ".labels[\"k8s-github\"]"
+  fi
+}
+
 if [[ -f "DESPLEGAR.txt" ]]; then
   parseRepository() {
     local COMPANY="${1}"
@@ -22,7 +32,7 @@ if [[ -f "DESPLEGAR.txt" ]]; then
   }
   export -f parseRepository
 
-  configl ".labels[\"k8s-github\"]" | xargs -I '{}' -P10 -n1 bash -c "parseRepository {}"
+  companies | xargs -I '{}' -P10 -n1 bash -c "parseRepository {}"
 else
     echo "Omitiendo clonado de kustomizer"
 fi

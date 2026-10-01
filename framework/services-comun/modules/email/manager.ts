@@ -1,3 +1,11 @@
+/**
+ * Editor: David Martínez Moya
+ * Fecha: Wed, 23 Sep 2026 05:54:45 GMT
+ * Hash: 9c4482797ba7ed889f6eee4738d8664e
+ * Versión: 2026.9.23+1-davidmartinezmoya
+ * Proyecto: git@github.com:alpred/meteored-svc-panel-usuarios.git
+ */
+
 import type {TransmissionOptions} from "sparkpost";
 
 export interface IMailManager {
@@ -85,6 +93,7 @@ export interface IMail {
     contents: IContent[];
     delivery?: string;
     attachments?: IAttachment[];
+    inline_images?: IAttachment[];
     campaign?: string;
     options?: TransmissionOptions;
 }

@@ -1,17 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: cf5f668ec4f5269fec770ede22d0238b
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.6.17+6-juancmartinez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 9b041b6028f0d8bafd67fa6d15e0fa80
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {SingularValue} from "./value/singular-value";
 import {PluralValue} from "./value/plural-value";
-import pluralBuilder from "./util/plural-function-builder";
 import {Literal} from "./literal";
 import {TranslationMap} from "./translation-map";
+import pluralBuilder from "./util/plural-function-builder";
 
 const v1 = '<b>Povolte nám</b> přistup ke své poloze <b>trvale</b>, abychom mohli aktualizovat polohu, kde se nacházíte a poskytovat vám předpovědi počasí, výstrahy, teplotu v oznamovací liště, widgety a oznamování důležitých události pro dané místo, i když je aplikace zavřená nebo se nepoužívá.';
 
@@ -32,7 +32,6 @@ const var2 = new PluralValue<{
 console.log(var2.value({
     hola: "2"
 }))
-
 
 const l1 = new Literal(var1);
 console.log(l1.render());

@@ -1,12 +1,15 @@
-import {
-    CronExpressionParser,
-    CronExpression,
-    CronHour,
-    CronMinute,
-    HourRange,
-    SixtyRange,
-    CronFieldCollection, CronSecond, CronDayOfMonth, CronMonth, CronDayOfWeek
-} from "cron-parser";
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 29 Sep 2026 06:49:18 GMT
+ * Hash: 31343ae98f8fc06dd89535f5d7007d0f
+ * Versión: 2026.9.29+1-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
+ */
+
+import {CronExpressionParser} from "cron-parser";
+
+import {normalizarPatron} from "../../utiles/dia-semana";
 
 export interface IPeriodicity {
     id?: number;
@@ -16,8 +19,6 @@ export interface IPeriodicity {
 }
 
 export class Periodicity {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly _data: IPeriodicity) {
     }
@@ -45,15 +46,21 @@ export class Periodicity {
     /**
      * Devuelve la fecha de la siguiente ejecución de la tarea.
      * Lo hace a partir de una fecha límite.
+     *
+     * El patrón se lee normalizado con `normalizarPatron()` (`../../utiles/dia-semana`): `cron-parser`
+     * rechaza un día de la semana repetido (`1,1`; y `0,7`, dos domingos, desde la 5.10.1) aunque el
+     * patrón sea inequívoco.
+     *
      * @param limitDate Fecha límite de inicio para la siguiente ejecución.
+     * @throws {Error} Si `cron-parser` no sabe leer el patrón.
      */
     public nextExecutionDate(limitDate: Date = new Date()): Date {
-        const interval = CronExpressionParser.parse(this.pattern, {
+        const interval = CronExpressionParser.parse(normalizarPatron(this.pattern), {
             tz: this.timezone
         });
         do {
             const nextDate = interval.next().toDate();
-            if (nextDate > limitDate) return nextDate;
+            if (nextDate > limitDate) {return nextDate;}
         } while (true);
     }
 }

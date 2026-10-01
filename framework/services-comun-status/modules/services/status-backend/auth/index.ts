@@ -1,16 +1,18 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 26 Aug 2026 09:06:22 GMT
- * Hash: ac9494a0e3c94f2eec14293aa2493cb9
- * Versión: 2026.8.26+2-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 10e7ea88b78281cd7c271d7b3aa4d93b
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.8.26+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
-import {EService, SERVICES} from "../../config";
-import {IImpersonateEndIN, IImpersonateIN} from "./impersonate/interface";
-import {ILoginIN, ILoginOUT} from "./login/interface";
+import type {RequestResponse} from "services-comun/modules/net/request-backend";
+import {BackendRequest} from "services-comun/modules/net/request-backend";
 
+import {EService, SERVICES} from "../../config";
+import type {IImpersonateEndIN, IImpersonateIN} from "./impersonate/interface";
+import type {ILoginIN, ILoginOUT} from "./login/interface";
 import {auditRequest} from "../audit/request";
 
 export class Auth extends BackendRequest {

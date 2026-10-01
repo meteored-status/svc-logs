@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 14365d79b10f6c4a5a6f9e2838e0ed51
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {
     createPoolCluster,
     escape,
@@ -9,7 +17,8 @@ import {
     type ResultSetHeader,
     type SslOptions,
 } from "mysql2/promise";
-import {FSWatcher, watch} from "node:fs";
+import type {FSWatcher} from "node:fs";
+import {watch} from "node:fs";
 
 import type {ICacheConfig} from "./cache";
 import {PromiseDelayed} from "../../utiles/promise";
@@ -76,7 +85,7 @@ interface IBulkOptions extends IQueryOptions {
 export interface IInsert {
     table: string;
     query: string;
-    params: Array<any>;
+    params: any[];
     duplicate?: string[];
 }
 

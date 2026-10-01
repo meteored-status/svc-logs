@@ -1,11 +1,14 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 15 May 2026 12:09:04 GMT
- * Hash: b82eb8f484fa3c20f3c622b668494c04
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: a04a9c7c8e55a08c9e0ef8d754642031
+ * Versión: 2026.9.23+2-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {type IManifestDeployment, ManifestDeployment} from "./deploy";
 import {ManifestRoot} from "@mr/core-dev/manifest/root";
+
+import {type IManifestDeployment, ManifestDeployment} from "./deploy";
 
 /**
  * Estructura del fichero `mrpack.json` raíz del monorepo.
@@ -22,8 +25,6 @@ export interface IManifest {
  * Extiende {@link ManifestRoot} e implementa {@link IManifest}.
  */
 export class Manifest extends ManifestRoot<IManifest> implements IManifest {
-    /* STATIC */
-
     /* INSTANCE */
     public deploy: ManifestDeployment;
 

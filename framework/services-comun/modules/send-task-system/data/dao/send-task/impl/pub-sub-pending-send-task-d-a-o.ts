@@ -1,17 +1,18 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: f26f01eb966232ff74bdf64702f0c700
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: b3eae00f98332a357e8519b5b792c1f9
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {AbstractPendingSendTaskDAO, Callback} from "../pending-send-task-d-a-o";
-import {ConfigDataQueue, PubSub} from "../../../../../messages/pubsub/v2";
+import type {Callback} from "../pending-send-task-d-a-o";
+import {AbstractPendingSendTaskDAO} from "../pending-send-task-d-a-o";
+import type {ConfigDataQueue, PubSub} from "../../../../../messages/pubsub/v2";
 import {PendingSendTask} from "../../../model/pending-send-task";
 
 export class PubSubPendingSendTaskDAO extends AbstractPendingSendTaskDAO {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly client: PubSub, private readonly configDataQueue: ConfigDataQueue) {
         super();

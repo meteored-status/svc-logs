@@ -1,27 +1,29 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: a28b6a43231e02b202fe7048baf08915
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: da7e14055ecc36c5270e810a4d26a3a8
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {Configuracion} from "@mr/core-workload/config";
 
-import {SendDAO} from "./send/send-d-a-o";
+import type {SendDAO} from "./send/send-d-a-o";
 import {ElasticSendDAO} from "./send/impl/elastic-send-d-a-o";
-import elastic from "../../../utiles/elastic";
-import {EventDAO} from "./event/event-d-a-o";
+import type {EventDAO} from "./event/event-d-a-o";
 import {ElasticEventDAO} from "./event/impl/elastic-event-d-a-o";
-import {ReceiverDAO} from "./receiver/receiver-d-a-o";
+import type {ReceiverDAO} from "./receiver/receiver-d-a-o";
 import {ElasticReceiverDAO} from "./receiver/impl/elastic-receiver-d-a-o";
 import {MySQL} from "../../../database/mysql";
-import {SendTaskDAO} from "./send-task/send-task-d-a-o";
+import type {SendTaskDAO} from "./send-task/send-task-d-a-o";
 import {MySQLSendTaskDAO} from "./send-task/impl/my-s-q-l-send-task-d-a-o";
-import {PendingSendTaskDAO} from "./send-task/pending-send-task-d-a-o";
+import type {PendingSendTaskDAO} from "./send-task/pending-send-task-d-a-o";
 import {PubSubPendingSendTaskDAO} from "./send-task/impl/pub-sub-pending-send-task-d-a-o";
-import {ConfigDataQueue, PubSub} from "../../../messages/pubsub/v2";
-import {SendScheduleDAO} from "./send-task/send-schedule-d-a-o";
-import {PeriodicityDAO} from "./send-task/periodicity-d-a-o";
+import type {ConfigDataQueue, PubSub} from "../../../messages/pubsub/v2";
+import type {SendScheduleDAO} from "./send-task/send-schedule-d-a-o";
+import type {PeriodicityDAO} from "./send-task/periodicity-d-a-o";
+import elastic from "../../../utiles/elastic";
 
 export type PubSubConfig = {
     client: PubSub;

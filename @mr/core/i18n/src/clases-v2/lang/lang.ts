@@ -1,13 +1,14 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 33343199bd5109fba643ad1b2e17697a
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: c96df0287c63fb2a70e33be2a90b1612
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.17+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {readJSON} from "@mr/core-cli/fs";
+import {langChain} from "../../../modules/util/lang";
+import catalogo from "./assets/langs.json";
 
 /**
  * Modelo del catálogo de idiomas cargado desde `assets/langs.json`.
@@ -26,37 +27,70 @@ interface ILang {
 export class Lang {
     /* STATIC */
 
-    private static CATALOG: Record<string, ILang>|null = null;
-
     /**
-     * Carga el catálogo de idiomas en memoria para consultas posteriores.
+     * El catálogo **se importa, no se lee**, y eso es lo que quita de en medio el problema de la
+     * ruta. Leerlo con `readJSON()` obligaba a nombrar el fichero desde algún directorio de
+     * referencia —el cwd, `__dirname`— y ninguno servía: el bundle vive en `bin/min/` y el `.json`
+     * se queda en `src/`, así que la ruta que había era la del monorepo de origen y aquí no
+     * resolvía. Con un import estático el empaquetador lo incrusta (son 10 kB) y no hay ninguna
+     * ruta que resolver en ejecución, ni E/S, ni nada asíncrono que esperar.
      */
-    private static async loadCatalog(): Promise<void> {
-        // Ruta desde la raíz del monorepo, que es el cwd que fija `main.ts`. Es un asset del
-        // propio paquete, pero no se puede resolver contra `__dirname`: el bundle vive en
-        // `bin/min/` y el `.json` se queda en `src/`, así que la única referencia estable es esta.
-        const data: ILang[] = await readJSON("@mr/core/i18n/src/clases-v2/lang/assets/langs.json");
-        this.CATALOG = {};
-        for (const lang of data) {
-            this.CATALOG[lang.code] = lang;
-        }
-    }
+    private static readonly CATALOG: Record<string, ILang> = Object.fromEntries(
+        (catalogo as ILang[]).map((lang) => [lang.code, lang]),
+    );
 
     /**
-     * Obtiene un idioma por código y aplica fallback a `en-US` si no existe.
+     * El catálogo indexado en minúsculas, porque en BCP 47 la caja no distingue idiomas: `ca-es` y `ca-ES`
+     * son el mismo. Sin esto, un `.json` escrito con otra caja se comportaba como un código desconocido.
+     */
+    private static readonly INDICE: Record<string, string> = Object.fromEntries(
+        Object.keys(this.CATALOG).map((code) => [code.toLowerCase(), code]),
+    );
+
+    /**
+     * Idioma al que se rinde la jerarquía cuando ya no queda nada por probar.
+     */
+    private static readonly DEFECTO: string = "en-US";
+
+    /**
+     * Obtiene un idioma por código, esté o no en el catálogo.
+     *
+     * **Un código que el catálogo no conoce ya no se sustituye por `en-US`.** Eso era lo que hacía que un
+     * tag BCP 47 cualquiera no llegara ni a intentarse: `getByCode("ca-ES-valencia")` devolvía el inglés, y
+     * quien recorriera la jerarquía a partir de ahí estaba recorriendo la del inglés. Ahora se sintetiza un
+     * idioma con ese código y con el padre que dice el truncado de subtags de RFC 4647 —`ca-ES-valencia` →
+     * `ca-ES` → `ca`—, así que la cadena entra en el catálogo en cuanto alcanza un código declarado y sigue
+     * por la herencia de siempre.
+     *
+     * La cadena **siempre termina**: cada salto acorta el código, y el último salto posible es a `en-US`,
+     * que está en el catálogo y no tiene padre.
      *
      * @param code - Código solicitado.
      * @returns Instancia de idioma resuelta.
      */
-    public static async getByCode(code: string): Promise<Lang> {
-        if (!this.CATALOG) {
-            await this.loadCatalog();
+    public static getByCode(code: string): Lang {
+        const real = this.INDICE[code.toLowerCase()];
+        if (real != undefined) {
+            return new Lang(this.CATALOG[real]);
         }
-        const data = this.CATALOG![code]??this.CATALOG!["en-US"];
-        if (!data) {
-            throw new Error(`No se ha encontrado el idioma con código ${code}`);
+
+        return new Lang({code, parent_code: this.padreDe(code)});
+    }
+
+    /**
+     * El padre de un código que no está en el catálogo: el siguiente de su cadena de truncado o, si ya no
+     * queda ninguno, el idioma por defecto.
+     *
+     * @param code - Código no declarado en el catálogo.
+     * @returns El código del padre, o `undefined` si el propio código ya es el defecto.
+     */
+    private static padreDe(code: string): string|undefined {
+        const siguiente = langChain(code).at(1);
+        if (siguiente != undefined) {
+            return siguiente;
         }
-        return new Lang(data);
+
+        return code.toLowerCase() != this.DEFECTO.toLowerCase() ? this.DEFECTO : undefined;
     }
 
     /* INSTANCE */
@@ -84,7 +118,7 @@ export class Lang {
     /**
      * Idioma padre resuelto; `null` cuando el idioma no tiene jerarquía superior.
      */
-    public get parent(): Promise<Lang> | null {
+    public get parent(): Lang | null {
         if (!this.parentCode) {
             return null;
         }

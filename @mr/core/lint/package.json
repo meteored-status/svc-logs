@@ -1,0 +1,28 @@
+{
+  "name": "@mr/core-lint",
+  "version": "2026.9.30+1-bixus",
+  "description": "Linter de las convenciones de MR{FW}",
+  "author": "José Antonio Jiménez",
+  "type": "module",
+  "config": {
+    "subible": true,
+    "tipo": "core"
+  },
+  "scripts": {
+    "test": "yarn node --test \"spec/**/*.spec.js\""
+  },
+  "exports": {
+    ".": "./index.js",
+    "./config": "./config.js"
+  },
+  "dependencies": {
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=10"
+  },
+  "devDependencies": {
+    "eslint": "^10.11.0"
+  }
+}

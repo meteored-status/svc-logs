@@ -1,10 +1,10 @@
 /**
- * Editor: Juanmi
- * Fecha: Mon, 29 Jun 2026 09:44:53 GMT
- * Hash: d298e7445502db871ca01832a422c64a
- * Versión: 2026.6.29+1-juanmi
- * Anterior: 2026.5.18+2-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 3827e6c24921531a26cf4a79e5684b9a
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.6.29+1-juanmi
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {error} from "services-comun/modules/utiles/log";
@@ -17,27 +17,24 @@ import type {Respuesta} from "./respuesta";
  * Contrato que deben implementar los manejadores de error HTTP.
  * Se invoca cuando ningún grupo de rutas ha podido procesar la petición,
  * o cuando el procesamiento lanza una excepción no controlada.
+ *
+ * @property handleError - Gestiona un error HTTP enviando la respuesta adecuada al cliente.
+ *     `conexion` es la respuesta HTTP activa, `status` el código de estado HTTP del error,
+ *     `mensaje` un texto descriptivo del error y `extra` información adicional opcional para
+ *     depuración.
  */
 export interface IErrorHandler {
-    /**
-     * Gestiona un error HTTP enviando la respuesta adecuada al cliente.
-     * @param conexion - Respuesta HTTP activa.
-     * @param status   - Código de estado HTTP del error.
-     * @param mensaje  - Mensaje descriptivo del error.
-     * @param extra    - Información adicional opcional para depuración.
-     */
     handleError: (conexion: Respuesta, status: number, mensaje: string, extra?: unknown) => Promise<number>;
 }
 
 /**
  * Contrato que deben implementar los manejadores de shutdown HTTP.
  * Se invoca cuando el servidor está en proceso de apagado y no puede atender más peticiones.
+ *
+ * @property handleShutdown - Notifica al cliente que el servidor está cerrando. `conexion` es la
+ *     respuesta HTTP activa.
  */
 export interface IShutdownHandler {
-    /**
-     * Notifica al cliente que el servidor está cerrando.
-     * @param conexion - Respuesta HTTP activa.
-     */
     handleShutdown: (conexion: Respuesta) => Promise<number>;
 }
 

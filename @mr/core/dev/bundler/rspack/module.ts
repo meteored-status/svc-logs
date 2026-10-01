@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 22 May 2026 05:52:12 GMT
- * Hash: 8f0ee6f65d20e7c2906eb4d97a490f35
- * Versión: 2026.5.22+1-josantoniojimnez
- * Anterior: 2026.5.21+1-josantoniojimnez
+ * Editor: Pedro
+ * Fecha: Fri, 25 Sep 2026 07:09:17 GMT
+ * Hash: 996fa7725b22d9a3c5bca5fc850f042f
+ * Versión: 2026.9.25+1-pedro
+ * Anterior: 2026.5.22+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-panel-intranet.git
  */
 
 import {CssExtractRspackPlugin, type ModuleOptions} from "@rspack/core";
@@ -123,6 +124,7 @@ export function Module({componentes, desarrollo, test, rules}: IModuleConfig): M
                 },
                 transform: {
                     decoratorMetadata: true,
+                    decoratorVersion: '2023-11',
                 },
             },
         },

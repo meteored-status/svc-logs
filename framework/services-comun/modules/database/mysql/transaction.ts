@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: f9b18c66456ebbe232be96473bbdce18
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {type Pool, type PoolConnection, type PoolNamespace, type ResultSetHeader} from "mysql2/promise";
 
 import {type MySQL, type TipoRegistro} from "./";
@@ -63,7 +71,7 @@ export class Transaction extends TransactionBase {
     }
 
     private async executeQuery<T>(sql: string, params: any[]=[]): Promise<T[]> {
-        if (!PRODUCCION) info(`Transaction ${this.hash} => QUERY: ${sql} | PARAMS: [${params}]`);
+        if (!PRODUCCION) {info(`Transaction ${this.hash} => QUERY: ${sql} | PARAMS: [${params}]`);}
         const connection = await this.connection;
         const [rows] = await connection.query(sql, params);
         return rows as T[];
@@ -80,22 +88,22 @@ export class Transaction extends TransactionBase {
     }
 
     public async insert(sql: string, params: TipoRegistro[]=[]): Promise<ResultSetHeader> {
-        if (!PRODUCCION) info(`Transaction ${this.hash} => INSERT: ${sql} | PARAMS: [${params}]`);
+        if (!PRODUCCION) {info(`Transaction ${this.hash} => INSERT: ${sql} | PARAMS: [${params}]`);}
         return await this.execute(sql, params);
     }
 
     public async update(sql: string, params: TipoRegistro[]=[]): Promise<ResultSetHeader> {
-        if (!PRODUCCION) info(`Transaction ${this.hash} => UPDATE: ${sql} | PARAMS: [${params}]`);
+        if (!PRODUCCION) {info(`Transaction ${this.hash} => UPDATE: ${sql} | PARAMS: [${params}]`);}
         return await this.execute(sql, params);
     }
 
     public async delete(sql: string, params: TipoRegistro[]=[]): Promise<ResultSetHeader> {
-        if (!PRODUCCION) info(`Transaction ${this.hash} => DELETE: ${sql} | PARAMS: [${params}]`);
+        if (!PRODUCCION) {info(`Transaction ${this.hash} => DELETE: ${sql} | PARAMS: [${params}]`);}
         return await this.execute(sql, params);
     }
 
     public async truncate(table: string): Promise<ResultSetHeader> {
-        if (!PRODUCCION) info(`Transaction ${this.hash} => TRUNCATE: ${table}`);
+        if (!PRODUCCION) {info(`Transaction ${this.hash} => TRUNCATE: ${table}`);}
         return await this.execute(`TRUNCATE TABLE ${table}`);
     }
 
@@ -144,22 +152,22 @@ export function transactional(db: MySQL, name: string = '', level: TIsolationLev
                 if (!t) {
                     t = await db.transaction();
                     await t.start(level, name);
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);
+                    if (!PRODUCCION) {info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);}
                 } else {
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);
+                    if (!PRODUCCION) {info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);}
                 }
                 let salida;
                 try {
                     salida = await originalMethod.apply(this, [...args, t]);
                     if (initial) {
                         await t.commit();
-                        if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT`);
+                        if (!PRODUCCION) {info(`Transaction ${t.hash} => COMMIT`);}
                     }
                 } catch (e) {
                     if (initial) {
                         error(`Transaction ${t.hash} failed: `, e);
                         await t.rollback();
-                        if (!PRODUCCION) warning(`Transaction ${t.hash} => ROLLBACK`);
+                        if (!PRODUCCION) {warning(`Transaction ${t.hash} => ROLLBACK`);}
                         salida = Promise.reject(e);
                     } else {
                         throw e;

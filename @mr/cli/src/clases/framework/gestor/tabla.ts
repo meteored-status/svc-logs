@@ -1,18 +1,19 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: d97b6634cfcf8fd44c69d00e41cdfb43
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0ff8f2512a9a920f05682c4bbb408dce
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import readline from "node:readline";
 
+import {Colors} from "@mr/core-cli/colors";
+
 import {maquetarVersion, parsearFechaVersion} from "../../../utiles/version";
 import {interceptarSalida} from "../../../utiles/output-capture";
 import {anchoVisible, Render} from "../../../utiles/tty";
-import {Colors} from "@mr/core-cli/colors";
 import {EstadoArchivo, OrigenArchivo, type IArchivoCambiado} from "../../paquete";
 import {FrameworkUpdates} from "../../workspace/service";
 import {Accion, type IPaqueteGestion} from "./datos";
@@ -155,6 +156,8 @@ export class GestorTabla {
     private get anchoAcciones(): number {
         return this.slots.reduce((acc, s, i) => acc + (i > 0 ? 2 : 0) + 2 + s.ancho, 0);
     }
+
+    /* STATIC */
 
     /**
      * `true` si el paquete puede enviarse directamente: instalado, subible, sin update pendiente y con cambios locales.

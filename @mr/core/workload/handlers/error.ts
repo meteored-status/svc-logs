@@ -1,10 +1,11 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: e45a92ed24bb258631d3b5ff055871a9
- * Versión: 2026.6.17+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 41d427e0c78b3b8bf99eda174fdf0db3
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
-
 
 import type {Conexion} from "@mr/core-network/server/http/conexion";
 import type {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";

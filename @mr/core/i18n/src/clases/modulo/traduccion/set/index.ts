@@ -1,12 +1,14 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 2fc18f5fabfbbce1bf7b57d57bf87bc8
- * Versión: 2026.9.7+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 726d4146c29b376cccaa0c3224c84c2b
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {type ITraduccion as ITraduccionBase, Traduccion, TraduccionTipo} from "..";
+import type {TraduccionTipo} from "..";
+import {type ITraduccion as ITraduccionBase, Traduccion} from "..";
 import type {Modulo} from "../..";
 import params from "./params";
 import simple from "./simple";
@@ -32,8 +34,6 @@ interface ITraduccion extends ITraduccionBase<ITraduccionSetValues> {
 }
 
 export class TraduccionSet extends Traduccion<ITraduccionSetValues> {
-    /* STATIC */
-
     /* INSTANCE */
     protected herencia: string;
     protected herenciaClass: string;

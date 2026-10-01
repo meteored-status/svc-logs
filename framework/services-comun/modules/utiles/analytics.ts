@@ -1,9 +1,17 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 77e521de08f5e5e14683f7933a3fe2fe
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {exists, readJSON} from "./fs";
 const {BetaAnalyticsDataClient} = require('@google-analytics/data');
 
-
-
 class GAnalytics4 {
+
+    /* STATIC */
 
     private static async loadGAnalytics4Id() {
         const file = "files/credenciales/analytics.json";

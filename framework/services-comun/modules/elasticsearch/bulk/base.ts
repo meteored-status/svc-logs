@@ -1,21 +1,22 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
- * Hash: 76c7680af352f9f1b1c76597c905cbbb
- * Versión: 2026.8.5+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: ba7f6a5a825ada19d612197b4918946a
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {BulkError} from "./error";
+import type {BulkOperation} from "./operation";
 import {
-    BulkOperation,
     BulkOperationCreate,
     BulkOperationDelete,
     BulkOperationIndex,
     BulkOperationScript,
     BulkOperationUpdate,
 } from "./operation";
-import {Elasticsearch, Refresh, Script} from "..";
+import type {Elasticsearch, Refresh, Script} from "..";
 
 /**
  * Configuración con la que se instancia {@link BulkBase} (y sus subclases {@link "./index.ts".Bulk}
@@ -77,8 +78,6 @@ export interface IBulkParamsUpdate<T> extends IBulkParamsID {
  * (envío periódico automático).
  */
 export abstract class BulkBase {
-    /* STATIC */
-
     /* INSTANCE */
     protected readonly config: BulkConfig;
     protected readonly operaciones: BulkOperation[];
@@ -125,7 +124,7 @@ export abstract class BulkBase {
     }
 
     /** Encola una operación `update` sobre un documento existente. */
-    public update<T extends object>({index, id, doc, crear, upsert, retry_on_conflict}: IBulkParamsUpdate<T>): BulkOperation {
-        return this.push(BulkOperationUpdate.build(this.checkOperacion(index), id, doc, crear, upsert, retry_on_conflict));
+    public update<T extends object>({index, id, doc, crear, upsert, retry_on_conflict: retryOnConflict}: IBulkParamsUpdate<T>): BulkOperation {
+        return this.push(BulkOperationUpdate.build(this.checkOperacion(index), id, doc, crear, upsert, retryOnConflict));
     }
 }

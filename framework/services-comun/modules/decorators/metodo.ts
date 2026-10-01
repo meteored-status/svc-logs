@@ -1,5 +1,14 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0ff7437fe82a0ff1e8dee9f2e9d1723f
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {HttpError} from "@mr/core-network/server/http/error";
 import {RequestError} from "@mr/core-network/client/http/error";
+
 import {PromiseDelayed} from "../utiles/promise";
 
 declare var PRODUCCION: boolean;
@@ -41,14 +50,14 @@ function decoratorPrint({target, propertyKey, prefix}: IPrint, ...args: any[]): 
 function parseParams(a?: boolean|string, b?: boolean|string): {forzar: boolean, prefix?: string} {
     let forzar=false;
     let prefix: string|undefined;
-    if (typeof a=="boolean") {
+    if (typeof a==="boolean") {
         forzar = a;
-        if (typeof b == "string") {
+        if (typeof b === "string") {
             prefix = b;
         }
     } else {
         prefix = a;
-        if (typeof b == "boolean") {
+        if (typeof b === "boolean") {
             forzar = b;
         }
     }

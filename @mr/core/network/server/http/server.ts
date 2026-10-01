@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 07 Aug 2026 08:55:42 GMT
- * Hash: cdb1673094b59c386a3e0b6e4eeae654
- * Versión: 2026.8.7+2-bixus
- * Anterior: 2026.7.27+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
+ * Fecha: Tue, 29 Sep 2026 06:26:43 GMT
+ * Hash: 70d0e20fe6790ab664f724499fbd6722
+ * Versión: 2026.9.29+1-bixus
+ * Anterior: 2026.9.28+3-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import formidable, {type Fields, type Files} from "formidable";
@@ -482,9 +482,15 @@ export class Server {
      * 3. Activa un timeout de respuesta lenta si está configurado.
      *
      * Flujo para métodos con cuerpo (`POST`, `PUT`):
-     * - **JSON / multipart / octet-stream**: parsea con `formidable`.
-     * - **Otros** (`application/x-www-form-urlencoded`, texto…): acumula chunks
-     *   y parsea con `qs` si el tipo es `urlencoded`.
+     * - **multipart / octet-stream**: parsea con `formidable`.
+     * - **Otros** (`application/json`, `application/x-www-form-urlencoded`, texto…):
+     *   acumula chunks y parsea con `JSON.parse`/`qs` según el tipo. JSON se acumula a
+     *   mano en vez de pasar por `formidable` para que `postRAW` sean los bytes tal cual
+     *   llegaron: `formidable` solo expone los `fields` ya parseados, así que `postRAW`
+     *   tenía que reconstruirse con `JSON.stringify(fields)`, que no es necesariamente
+     *   idéntico byte a byte al body original (orden de claves, escapado…). Eso rompe a
+     *   cualquier consumidor que verifique una firma HMAC sobre el body crudo (p. ej. los
+     *   webhooks de Stripe en `panel-usuarios-payments-webhook`).
      *
      * @param request         - Petición entrante de Node.js.
      * @param response        - Respuesta de Node.js.
@@ -559,7 +565,7 @@ export class Server {
             });
         } else {
             const type = conexion.getHeaders()["content-type"]?.toLowerCase() ?? "";
-            if (type.includes("json") || type.includes("multipart") || type.includes("octet-stream")) {
+            if (type.includes("multipart") || type.includes("octet-stream")) {
                 formidable({
                     encoding: "utf-8",
                     keepExtensions: true,
@@ -629,6 +635,17 @@ export class Server {
                     conexion.postRAW = Buffer.concat(chunks).toString("utf-8");
                     if (type.includes("urlencoded")) {
                         conexion.post = parse(conexion.postRAW, QS_PARSE_OPTIONS);
+                    } else if (type.includes("json") && conexion.postRAW.length > 0) {
+                        try {
+                            conexion.post = JSON.parse(conexion.postRAW);
+                        } catch (err) {
+                            // 400 y no 500: el cuerpo que no se deja parsear lo ha mandado mal el cliente, y el
+                            // servicio no ha fallado en nada. Con un 500 contaría como error del servidor en las
+                            // métricas y en los reintentos de quien llama, que volvería a mandar el mismo cuerpo roto.
+                            warning("Petición con JSON mal formado", conexion.get, err);
+                            conexion.error(400, (err as Error).message, err).finally(() => undefined);
+                            return;
+                        }
                     }
                     conexion.iniciado();
                     request.removeAllListeners();
