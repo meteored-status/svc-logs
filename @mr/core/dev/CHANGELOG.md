@@ -2,6 +2,14 @@
 
 ---
 
+## 2026.10.1 13:29 — [Jose]
+
+### Changed
+
+- **`manifest/README.md` documenta qué son `deploy.kustomize[].dir` y `.name` en un despliegue
+  `lambda`**: las dos partes del nombre del servicio o job de Cloud Run, y que admiten `${ENTORNO}` y
+  `${ZONA}` (lo resuelve `kustomizar.sh` de `@mr/cli`).
+
 ## 2026.9.23 11:39 — [Jose]
 
 ### Changed

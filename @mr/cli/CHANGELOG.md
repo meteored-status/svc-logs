@@ -2,6 +2,16 @@
 
 ---
 
+## 2026.10.1 13:29 — [Jose]
+
+### Added
+
+- **`deploy.kustomize[].dir` y `.name` admiten `${ENTORNO}` y `${ZONA}` en los despliegues `lambda`**,
+  que `kustomizar.sh` resuelve en cada zona de destino. Sirve para desplegar desde un mismo workspace
+  varios servicios o jobs de Cloud Run con distinto nombre. Afecta al nombre del servicio o job, al
+  del trigger de Cloud Scheduler y a la URI `:run` que llama. Cualquier otro `${...}` que quede sin
+  resolver hace fallar el despliegue con un mensaje.
+
 ## 2026.10.1 13:08 — [Jose]
 
 ### Fixed

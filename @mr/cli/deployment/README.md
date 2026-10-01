@@ -406,6 +406,18 @@ Tras aplicar la plantilla, `parseWorkspaceLambdaZona()` añade las variables de
 ya fijas de la plantilla (`DATADOG`, `ENTORNO`, `ZONA`, `CLOUD_RUN_REGION`,
 `SIDECAR`) sin pisarlas.
 
+### Nombre del servicio o job
+
+Cada elemento de `deploy.kustomize` es un despliegue, con nombre `<dir>-<name>`: el del
+servicio o job de Cloud Run y, con zona, el del trigger de Cloud Scheduler. Así un mismo
+workspace puede desplegar varias lambdas con distinto nombre y la misma imagen.
+
+`dir` y `name` admiten `${ENTORNO}` y `${ZONA}`, que `parseWorkspaceLambdaZona()` resuelve
+en cada zona de destino (por ejemplo `"name": "logs-${ZONA}"`). Cualquier otro `${...}`
+hace fallar `kustomizar.sh` en vez de desplegar un nombre a medias. Cambiar el nombre de
+una lambda ya desplegada crea un servicio nuevo y deja el anterior —y su trigger— sin
+borrar.
+
 ### Región y zona de destino
 
 Por defecto un workspace `lambda` se despliega **una vez por cluster** del entorno:

@@ -155,8 +155,8 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
 
 | Campo | Tipo | Obligatorio | Descripción |
 |-------|------|:-----------:|-------------|
-| `name` | `string` | ✅ | Nombre del workspace en el proyecto kustomize. |
-| `dir` | `string` | — | Subdirectorio del overlay. Por defecto `"services"`. |
+| `name` | `string` | ✅ | Nombre del workspace en el proyecto kustomize. Con `target: "lambda"`, segunda parte del nombre del servicio o job de Cloud Run (`<dir>-<name>`); admite `${ENTORNO}` y `${ZONA}`. |
+| `dir` | `string` | — | Subdirectorio del overlay. Por defecto `"services"`. Con `target: "lambda"`, primera parte del nombre del servicio o job; admite `${ENTORNO}` y `${ZONA}`. |
 | `credenciales` | `Record<string, string>` | — | Secretos de credenciales `{ nombre: ruta }`. |
 | `ssl` | `Record<string, string>` | — | Secretos SSL `{ nombre: ruta }`. |
 

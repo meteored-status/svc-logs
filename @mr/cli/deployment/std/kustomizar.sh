@@ -150,6 +150,17 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     REGION="${2}"
     ZONA="${3}"
 
+    # `dir` y `name` de `deploy.kustomize` (argumentos 4 y 5) pueden llevar `${ENTORNO}` y `${ZONA}`, para
+    # desplegar varias lambdas con distinto nombre. Se resuelven en variables `local` porque esta función se
+    # llama una vez por zona: sobre las globales, la segunda zona heredaría el nombre ya resuelto de la primera.
+    local KUSTOMIZER SERVICIO
+    KUSTOMIZER=$(echo "${4}" | sed "s/\${ENTORNO}/${_ENTORNO}/g" | sed "s/\${ZONA}/${ZONA}/g")
+    SERVICIO=$(echo "${5}" | sed "s/\${ENTORNO}/${_ENTORNO}/g" | sed "s/\${ZONA}/${ZONA}/g")
+    if [[ "${KUSTOMIZER}-${SERVICIO}" == *'${'* ]]; then
+      echo "Variable sin resolver en el nombre de ${WORKSPACE}: \"${KUSTOMIZER}-${SERVICIO}\" (solo se admiten \${ENTORNO} y \${ZONA})"
+      exit 1
+    fi
+
     if [[ "$(configw "${RUTA}" '.deploy.type')" == "service" ]]; then
       COMANDO="services"
       TYPE="service"
@@ -422,12 +433,12 @@ if [[ -f "DESPLEGAR.txt" ]]; then
             echo "No hay ningún cluster con zona en \"${_ENTORNO}\" para desplegar ${WORKSPACE} (${SERVICIO}) en solitario"
             exit 1
           fi
-          parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}"
+          parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
         else
           REGIONES=$(confige '.[] | .zone')
           for REGION in ${REGIONES}; do
             ZONA=$(confige ".[] | select(.zone == \"${REGION}\") | .resourceLabels.zona")
-            parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}"
+            parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
           done
         fi
       fi
