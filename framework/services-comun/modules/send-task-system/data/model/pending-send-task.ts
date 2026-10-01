@@ -1,11 +1,13 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: 6da29c4d4633e087aae54b2b2276d931
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 6d5105bd61af2f659013c41f9f7f1619
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {TSendTaskType} from "./send-task";
+import type {TSendTaskType} from "./send-task";
 
 export interface IPendingSendTask {
     id: number;
@@ -14,8 +16,6 @@ export interface IPendingSendTask {
 }
 
 export class PendingSendTask {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly _data: IPendingSendTask, private readonly _onComplete?: () => void) {
     }

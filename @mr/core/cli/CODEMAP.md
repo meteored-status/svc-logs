@@ -101,6 +101,14 @@ Tres detalles que no se ven leyendolo por encima:
 - **La supresion de `DEP0040` no es cosmetica en `mrpack`**: `dd-trace` y `@google-cloud/storage`
   llegan a `punycode` por `node-fetch@2` en runtime. Comprobado quitandola: `mrpack` emite el aviso
   y `mrlang` no —no tiene esas dependencias—, pero se deja para los dos porque es inocua.
+- **`defaultMaxListeners` sube a 20, y eso tampoco es cosmetico.** Una sola `file.download()` de
+  `@google-cloud/storage` deja once listeners sobre el mismo PassThrough —node-fetch, teeny-request
+  dos veces, el propio storage y los `eos` que Node anade por cada tramo del `pipeline`—, asi que
+  `mrpack framework` sacaba un `MaxListenersExceededWarning` por descarga. No es una fuga: son once
+  por fichero y no crecen. Se sube el limite en vez de callar el aviso, para que el detector siga
+  sirviendo con otro umbral. Filtrarlo no vale: no trae `code`, viene en varios sabores (`error`,
+  `close`) y su traza se corta a diez marcos que son todos de `node:internal`, asi que por el origen
+  no se distingue el ruido ajeno de una fuga nuestra.
 - **Compila cuando el bundle falta, no cuando esta viejo.** Lo segundo lo detecta `mrpack`
   comparando el `bin/hash.md5` de cada CLI.
 
@@ -151,12 +159,30 @@ subclase, y delega en dos hooks: `parsePositionals` (opcional, no-op por defecto
 (abstracto). `Modulo.run()` arranca el comando dentro de un `PromiseDelayed()` y se traga el
 rechazo `undefined`, que es como los comandos senalan «ya he escrito yo el error».
 
-`this.root` sale de `process.env.MRPACK_ROOT`, con `process.cwd()` de reserva. Lo fija el `bin` de
-cada CLI desde su propio `__dirname` — **cada uno cuenta una profundidad distinta**, porque
-`@mr/cli` cuelga de dos niveles y `@mr/core/i18n` de tres.
+`this.root` sale de `process.env.MRPACK_ROOT`, que fija `arranque.js` y **ya no se calcula contando
+`..`**: es `PROJECT_CWD` —lo que exporta Yarn en todo lo que lanza— y, si no lo hay, el primer
+directorio con `yarn.lock` subiendo desde el `bin` que llama.
+
+Antes lo fijaba cada bin desde su propio `__dirname` contando niveles, y **cada uno contaba los
+suyos** porque cuelgan a distinta profundidad. Eso convierte mover un workspace de sitio en un
+`MRPACK_ROOT` que apunta fuera del repositorio, sin ningun aviso: paso de verdad al llevar `mrlang`
+a un monorepo donde su paquete cuelga un nivel mas arriba, y el generador habria buscado los
+proyectos de traduccion fuera del repo. Resolverlo en el arranque compartido lo arregla para las
+dos CLI a la vez y les quita la cuenta de encima.
 
 Las dos CLI extienden esta clase antes de usarla: `mrpack` directamente, y `mrlang` a traves de su
 propio `Modulo` (`@mr/core-i18n/src/modulo.ts`), que le anade el cierre de la conexion MySQL.
+
+## Sin scripts, y comprobado que no hacen falta
+
+Este paquete no declara ningun script ni `typescript` en sus `devDependencies`, que seria lo que
+haria falta para un `typecheck` propio. No es un olvido: **sus `.ts` los comprueba el `tsc` de cada
+CLI**, porque el mapa `exports` apunta a los fuentes y no a nada compilado, asi que entran en el
+programa de quien los importa.
+
+Verificado metiendo un error de tipos a proposito en `modules/log.ts` y compilando `@mr/core-i18n`:
+sale como `../core-cli/modules/log.ts(39,7): error TS2322`. Anadir `typescript` aqui romperia la
+regla que sostiene el paquete —una base que no arrastra dependencias— a cambio de nada.
 
 ## Dependencias
 

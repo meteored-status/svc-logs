@@ -1,15 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 1dbc0d20c67897e754e403efd3e47671
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.20+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: b92bbfe09c34a5c8eed243dfa5ca12e2
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Runtime} from "@mr/core-dev/manifest/deployment";
-
 import {isDir, isFile, readDir, readJSON, safeWrite} from "@mr/core-cli/fs";
+
 import {type GrupoWorkspace, type IConfigServices, grupoDeploy} from "../workspace/service";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 
@@ -32,7 +32,6 @@ export interface IInfoWorkspace {
     ejecutable: boolean;
     grupo: GrupoWorkspace;
 }
-
 
 /**
  * Ruta absoluta del fichero de configuración personal de workspaces.

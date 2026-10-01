@@ -1,14 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 9ab9d1d78ac9eabd8ef687eca52cc729
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 9f744f70115b31d2b617cbf37b4bc79c
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {type IModulo, type IModuloConfig, Modulo} from "@mr/core-cli/modulo";
 import {Colors} from "@mr/core-cli/colors";
+
 import {run} from "../clases/auto-doc";
 
 export interface IAutoDocConfig extends IModuloConfig {

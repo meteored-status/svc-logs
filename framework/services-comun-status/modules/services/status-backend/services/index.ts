@@ -1,8 +1,18 @@
-import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
-import {EService, SERVICES} from "../../config";
-import {IGetUserServicesOUT} from "./user-services/interface";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: f7808385bcdef7a60dcc7d3deed68e82
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {RequestResponse} from "services-comun/modules/net/request-backend";
+import {BackendRequest} from "services-comun/modules/net/request-backend";
 import {logRejection} from "services-comun/modules/decorators/metodo";
-import {ISaveIN, ISaveOUT} from "./save/interface";
+
+import {EService, SERVICES} from "../../config";
+import type {IGetUserServicesOUT} from "./user-services/interface";
+import type {ISaveIN, ISaveOUT} from "./save/interface";
 
 export class Services extends BackendRequest {
     /* STATIC */

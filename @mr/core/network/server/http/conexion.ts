@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 11:31:45 GMT
- * Hash: 1fe1e58718dc150633313808c0d477b8
- * Versión: 2026.5.18+4-josantoniojimnez
- * Anterior: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: b9c656643fdb6eedc6101aa370ebe671
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.5.18+4-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {Files} from "formidable";
@@ -53,6 +54,8 @@ enum TStatus {
  * cambios.
  */
 export class Conexion extends Respuesta {
+
+    /* STATIC */
 
     /**
      * Construye una respuesta de éxito de la API con la estructura estándar `IRespuestaOK`.
@@ -111,6 +114,8 @@ export class Conexion extends Respuesta {
             },
         };
     }
+
+    /* INSTANCE */
 
     /** Contexto inmutable de la petición HTTP entrante. */
     public readonly request: RequestContext;

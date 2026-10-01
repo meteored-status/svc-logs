@@ -1,18 +1,18 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 7d8f81fbf070be765a436cc88934d318
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 731e1c988c3badd63d2cdd1163fd35df
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {spawn as spawnProcess} from "node:child_process";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-
 import {readFileBuffer, readFileString, safeWrite, unlink} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
+
 import {Comando} from "./comando";
 import {Log} from "./log";
 

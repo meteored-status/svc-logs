@@ -117,7 +117,11 @@ mrpack/
 │   │   ├── datadog.ts               DATADOG — static-analysis.datadog.yml
 │   │   ├── devel.ts                 DEVEL — devel.js
 │   │   ├── editorconfig.ts          EDITORCONFIG — .editorconfig
-│   │   └── ignore.ts                IGNORE — .gitignore
+│   │   ├── ignore.ts                IGNORE — .gitignore
+│   │   ├── lint.ts                  checkLint() — devDependencies, scripts `lint`/`lint:fix` y
+│   │   │                            eslint.config.mjs de la raíz, a partir de @mr/core-lint
+│   │   └── workspace-deps.ts        checkWorkspaceDeps() — `workspace:*` en las devDependencies
+│   │                                que apuntan a otro workspace del monorepo
 │   │
 │   ├── manifest/
 │   │   ├── index.ts                 ManifestLoader<T,K> — cargador base abstracto de mrpack.json
@@ -411,6 +415,7 @@ export async function add(basedir:string, frameworks:string[], visitados?:Set<st
 export async function remove(basedir:string, frameworks:string[]): Promise<boolean>
 export async function checkCliente(basedir:string): Promise<string|undefined>   // hash local vs MD5
 export async function recompilarCliente(basedir:string, hash:string, config?:{reiniciar?:boolean;skipInstall?:boolean}): Promise<void>
+export async function checkMrlang(basedir:string): Promise<void>   // recompila mrlang si bin/versiones o bin/hash.md5 no cuadran
 export async function getAutor(): Promise<string>              // git config user.name
 export async function getClienteHash(basedir:string): Promise<string>
 export async function getClienteMD5(basedir:string): Promise<string>
@@ -419,6 +424,16 @@ export async function leerDepsMrFramework(localDir:string): Promise<string[]>
 export async function encontrarWorkspacesConDep(basedir:string, npmName:string): Promise<string[]>
 export async function limpiarDevDepsConsumidores(basedir:string, npmNames:string[]): Promise<void>
 ```
+
+**`checkMrlang()` decide por las versiones de las fuentes, no solo por el md5 del bundle.**
+`herramientaDesactualizada()` compara dos sellos de `@mr/core/i18n/bin/`:
+- `versiones`: el `version` de `@mr/core-i18n` y de sus workspace `@mr/*` bundleados, que calcula
+  `getHerramientaVersiones()` recorriendo las `devDependencies` con `leerDepsMrFramework()`. Es local:
+  lo ignoran el `.gitignore` y el `.mr-ignore`.
+- `hash.md5`: el md5 de `bin/min/`.
+
+Con solo el md5, un envío que cambiaba el generador sin tocar `bin/` no se detectaba. Si la compilación
+falla, `recompilarHerramienta()` no anota nada: `Comando()` resuelve también con `status` distinto de 0.
 
 ### `gestor/datos.ts`
 ```ts
@@ -544,6 +559,44 @@ export async function init(basedir:string): Promise<boolean>
 //        → initWorkspaces → initConfig → initYarnRC → mrlang init (si existe i18n)
 // Retorna true si hubo cambios que requieren reinstalar
 ```
+
+`checkCliente()` añade `@mr/core/dev`, `@mr/core/i18n`, `@mr/core/lint` y `@mr/core/network` si faltan
+(`framework/cliente.ts → add()`), así que `@mr/core-lint` llega a cualquier monorepo con el primer
+`init`.
+
+### `clases/init/workspace-deps.ts`
+```ts
+export async function checkWorkspaceDeps(basedir: string): Promise<boolean>
+// Lo llama init() después de initWorkspaces(); si devuelve true, init() reinstala.
+```
+
+Pone `workspace:*` en cualquier `devDependency` que apunte a otro workspace del monorepo y no use ya el
+protocolo `workspace:` (en la práctica, `"*"`). Con `"*"`, Yarn resuelve el local solo mientras nombre y
+versión casen; si no, va a npm, y un paquete público con el nombre de uno nuestro entraría sin que nadie
+lo pidiera. Recorre **todos** los workspaces de los globs de la raíz, no solo los que normaliza
+`initWorkspace()`: los casos estaban sobre todo en `packages/` y `framework/`. Va después de
+`initWorkspaces()` porque esa reescribe los `package.json` de los servicios.
+
+### `clases/init/lint.ts`
+```ts
+export async function checkLint(basedir: string, paquete: IPackageJson): Promise<void>
+// Lo llama initBase() sobre el package.json raíz, en el sitio donde antes se borraban sus
+// devDependencies.
+```
+
+Las `devDependencies` de la raíz **se fijan, no se completan**: quedan exactamente `eslint` (con la
+versión que declara `@mr/core/lint/package.json`, el único sitio donde se cambia) y
+`@mr/core-lint: workspace:*`. Además escribe los scripts `lint`/`lint:fix` y un `eslint.config.mjs` de
+una línea que reexporta `@mr/core-lint/config`. Es un fichero y no un enlace simbólico porque, con PnP,
+un enlace a `@mr/core/dev` importaría como `@mr/core-dev`, que no declara `@mr/core-lint`.
+
+Si `@mr/core/lint` no está, deja la raíz como estaba antes del linter: sin `devDependencies`, sin los
+scripts y sin el config. `initBase()` vuelve a instalar cuando las `devDependencies` cambian, porque si
+no el `yarn.lock` no las tendría y el siguiente `yarn lint` no encontraría `eslint`.
+
+> **Un `init` con un `mrpack` compilado anterior a esto borra las `devDependencies` de la raíz**: es lo
+> que hacía antes. Pasó al probarlo, con el bundle de `bin/min/` sin recompilar. Se arregla solo en
+> cuanto `checkCliente()` recompila el cliente, que es lo que hace un `update`.
 
 ### `clases/update.ts`
 ```ts

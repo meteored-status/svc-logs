@@ -126,6 +126,51 @@ Consulta la documentación completa en [`@mr/core/i18n/README.md`](../@mr/core/i
 
 ---
 
+## Paquete `@mr/core-log`
+
+**Ruta:** `@mr/core/log/`
+**Nombre npm:** `@mr/core-log`
+
+El logging de los servicios: recoger lo que un servicio deja escrito y llevarlo a donde toque —consola,
+Datadog o la ingesta remota de `status-external`—. **Esqueleto**: de los tres destinos solo está el de
+WebSocket, y no sustituye todavía a `services-comun/modules/utiles/log`.
+Consulta la documentación completa en [`@mr/core/log/README.md`](../@mr/core/log/README.md).
+
+> Antes de enchufarlo en un servicio, leer la sección «Lo que hay que saber antes de enchufarlo» del
+> README: no hay acuse de recibo, los logs salen agrupados (hasta 100 por frame o 1 s, salvo los de
+> severidad `ERROR` o superior, que no esperan), y el destino encadena los envíos a propósito —sin eso,
+> cada log de una ráfaga abre su propio socket—.
+>
+> **`logger` e `interface` tienen que seguir siendo utilizables desde el navegador**: nada de `NodeJS.*`
+> ni de `import` de Node en esos dos. Lo vigila `tsconfig.browser.json`, que corre el primero en el
+> script `test` del workspace. El destino de WebSocket sí es solo de Node.
+>
+> `IWire` (`@mr/core-log/interface`) es la **declaración única** del cuerpo que acepta la ingesta de
+> logs; `services/status-external` lo importa de aquí. No al revés: el emisor no puede importar del
+> receptor, porque `@mr/core-*` lo tienen todos los proyectos y `services-comun-status` no.
+
+---
+
+## Paquete `@mr/core-lint`
+
+**Ruta:** `@mr/core/lint/`
+**Nombre npm:** `@mr/core-lint`
+
+El linter de estas convenciones: un plugin de ESLint con las reglas que ninguna herramienta estándar
+expresa (bloques de imports, comentarios de sección, inicialización en el constructor, firmas en una
+línea, objeto de configuración, JSDoc de tipos, una sola cabecera de autoría) y la configuración del
+monorepo, `@mr/core-lint/config`.
+`yarn lint` y `yarn lint:fix` desde la raíz; `mrpack init` deja la raíz preparada.
+Consulta la documentación completa en [`@mr/core/lint/README.md`](../@mr/core/lint/README.md).
+
+> Antes de terminar un cambio de código, **los ficheros que has tocado tienen que quedar sin errores**:
+> `yarn eslint <ficheros>`. No todo `yarn lint`: en un monorepo que acaba de recibir el linter puede
+> haber errores en código de framework que no es de esa tarea, y ese código no se toca ahí (ver
+> «Frameworks del monorepo»). Los avisos (`warn`) son deuda conocida en reglas que aún no están
+> limpias; no hace falta arreglarlos, pero sí no añadir nuevos en lo que se toca.
+
+---
+
 ## Paquete `@mr/core-network`
 
 **Ruta:** `@mr/core/network/`
@@ -372,6 +417,8 @@ Estos paquetes **no se editan directamente** en el monorepo como código de nego
 - **Firmas de funciones y métodos:** todos los parámetros en la definición deben ir en **una sola línea** (sin saltos de línea dentro de `(...)`).
 
 - **Parámetros opcionales o con valor por defecto:** en lugar de usar `?` o `=` directamente en parámetros posicionales, agruparlos en un **objeto de configuración** (último parámetro). Por defecto, desestructurarlo en la firma con sus defaults. Si la línea de la firma queda demasiado larga o el objeto tiene muchas propiedades, se permite mantener `config` en la firma y desestructurarlo al inicio de la función/método (en una o varias líneas) para mejorar la legibilidad.
+
+  **Excepción:** si hay **un solo** parámetro opcional o con valor por defecto y es el **último**, puede quedarse posicional (`buscar(id: number, transaction?: Transaction)`, `render(params: T = {})`): un objeto de configuración con una sola propiedad no ordena nada. Con dos o más, van al objeto de configuración; ahí `transaction?: Transaction` al final no cuenta como el que sobra, porque es como se pasa la transacción en todo el acceso a datos. Lo comprueba `mrpack/config-object-params`.
 
   ```ts
   // ✅ Correcto

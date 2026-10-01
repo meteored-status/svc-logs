@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 03 Sep 2026 14:04:25 GMT
- * Hash: f101a57e000e7ac3f11dda3dbf4998c7
- * Versión: 2026.9.3+2-bixus
- * Anterior: 2026.9.2+1-bixus
+ * Fecha: Thu, 17 Sep 2026 14:19:23 GMT
+ * Hash: ae1a6bf06efa9ffde9176fb412414644
+ * Versión: 2026.9.17+2-bixus
+ * Anterior: 2026.9.3+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -27,9 +27,11 @@
  *
  * **`ca` es también el valenciano, y no por descuido.** El valenciano no tiene código propio: ni ISO 639-1 ni
  * 639-3 lo separan del catalán, y la única forma normalizada de nombrarlo es la variante BCP 47 `ca-ES-valencia`.
- * Aquí no cabe por dos motivos concretos, no por criterio: la columna `user.lang` es `VARCHAR(10)` y esa etiqueta
- * mide catorce, y el catálogo de `mrlang` no la conoce —ni sabría a qué idioma caer—. Los textos están escritos
- * eligiendo, cuando las dos normas discrepan, las formas que valen en ambas.
+ * Aquí no cabe por un motivo concreto, no por criterio: la columna `user.lang` es `VARCHAR(10)` y esa etiqueta
+ * mide catorce. El otro motivo que hubo —que el catálogo de `mrlang` no la conocía ni sabría a qué idioma caer—
+ * ya no aplica: desde `@mr/core-i18n` 2026.9.17, un código que el catálogo no declara se resuelve truncando
+ * subtags (RFC 4647), así que `ca-ES-valencia` cae a `ca` solo. Los textos están escritos eligiendo, cuando las
+ * dos normas discrepan, las formas que valen en ambas.
  */
 export const IDIOMAS = ["es", "en", "fr", "ca"] as const;
 

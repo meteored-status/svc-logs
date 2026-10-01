@@ -30,6 +30,10 @@
   `yarn run <workspace> run devel` (`run dev` en vez de `run devel` si su framework es Next.js).
   Ojo: esto **ejecuta**, no compila — para compilar ese workspace usa `run packd` (ver arriba).
 - Forzar todos los workspaces también en modo ejecución (incluye deshabilitados): `yarn run devel-f`
+- Lint de todo el monorepo: `yarn lint` (`yarn lint:fix` aplica los arreglos automaticos). Antes de dar un
+  cambio por terminado, los ficheros tocados tienen que quedar sin errores (`yarn eslint <ficheros>`); no se
+  arreglan errores de framework ajeno a la tarea. Los `warn` son deuda conocida. Configuracion y reglas en
+  `@mr/core/lint/` (ver su `README.md`).
 - Actualizacion de stack del monorepo: `yarn run update`
 - Tras update, aplicar migraciones automatizadas SIEMPRE: `yarn run patch:apply`.
 - Ejecutar scripts de un workspace desde raiz: `yarn run www-frontend <script>` (atajo de `yarn workspace www-frontend <script>`).

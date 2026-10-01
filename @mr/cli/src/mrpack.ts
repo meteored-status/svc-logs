@@ -1,16 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: d7c8c76774d3d7f0a7e5a2c0db23a79c
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: a3a09475fc3c5d1eedb422c2709451f6
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {readJSON} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
-import type {IPackageJson} from "./clases/packagejson";
 import {type IModulo, type IModuloConfig, Modulo} from "@mr/core-cli/modulo";
+
+import type {IPackageJson} from "./clases/packagejson";
 import {ModuloConfig} from "./modulos/config";
 import {ModuloDevel} from "./modulos/devel";
 import {ModuloDeploy} from "./modulos/deploy";

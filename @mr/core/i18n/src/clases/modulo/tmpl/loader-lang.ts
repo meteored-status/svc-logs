@@ -1,12 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 54b14c9d402a3c91095b74796c9fad10
- * Versión: 2026.9.7+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 4dabf2214fdcf32390c8475d20d35164
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {ModuloJSON} from "../json";
+import type {ModuloJSON} from "../json";
 
 interface IParametros {
     lang: string;

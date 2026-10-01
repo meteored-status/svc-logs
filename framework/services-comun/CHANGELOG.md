@@ -2,6 +2,106 @@
 
 ---
 
+## 2026.10.1 08:17 — [Juan C. Martínez]
+
+### Fixed
+- `modules/net/cache/disk.ts` — `RequestCacheDisk`: las entradas de caché **nunca caducaban**.
+  `save()` escribía `expires` como `Date`, que `JSON.stringify` convierte en un string ISO, y
+  `RequestCache.checkMetadata()` lo compara con `Date.now()` (`"2026-09-30T…" < 1790…` es `NaN` →
+  siempre `false`), así que lo cacheado se seguía sirviendo indefinidamente. Ahora `save()` guarda
+  `expires` como número (`getTime()`, conforme a `IRequestCacheV1`).
+- Mismo fichero, `RequestCacheDisk.loadMetadata()`: normaliza `expires` a número al leer, para que
+  los ficheros que **ya hay en disco** con fecha en string también caduquen sin tener que borrarlos.
+  Un `expires` ilegible (`NaN`) se rechaza como caché inválida en vez de tratarse como «no caduca».
+- Solo `RequestCacheDisk`: `NetCacheDisk` ya guardaba un número, y `RequestCacheValkey` y la clase
+  base `RequestCache` no se tocan.
+
+### Added
+- `spec/net/cache/disk.spec.ts` — pruebas de `RequestCacheDisk` (`expires` string/número, pasado/futuro,
+  ilegible, y que `save()` escriba un número).
+
+## 2026.9.29 08:19 — [Juan C. Martínez]
+
+### Fixed
+- `modules/send-task-system/controller/generator-controller.ts` — `GeneratorController.run()`: si
+  la próxima ejecución de una sola send-task no se podía calcular, la excepción abortaba toda la
+  ejecución **después** de encolar su página: las send-tasks de esa página se quedaban sin
+  replanificar —y se volvían a encolar en la siguiente ejecución— y las páginas siguientes no se
+  procesaban. Ahora se planifica antes de encolar, y la send-task que no se puede planificar (patrón
+  ilegible o sin periodicities) se registra con `error()`, **no se encola y se aplaza** a un
+  milisegundo después de `limitDate`; el resto sigue.
+- Mismo método: una send-task **sin periodicities** dejaba `run()` en un bucle infinito.
+  `SendTaskDAO.scheduled()` vacía un conjunto (`send_date <= limitDate`, siempre desde el offset 0)
+  y el bucle pide páginas hasta que llega una vacía, así que la que no se replanifica vuelve en cada
+  página. Ahora se aplaza como las anteriores, lo que la saca del lote.
+- `modules/send-task-system/data/model/periodicity.ts` — `nextExecutionDate()` lee el patrón con
+  `normalizarPatron()`. `cron-parser` ya rechazaba valores repetidos en un campo, pero hasta la
+  5.10.1 se le escapaba el `0` (lo comprobaba con `if (duplicate)`), así que `0,7` —dos domingos—
+  pasaba. Desde la 5.10.1 falla con «CronDayOfWeek Validation error, duplicate values found: 0», y
+  era lo que paraba el cronjob `newsletter-generate` de meteored-svc-newsletter.
+
+### Changed
+- `GeneratorController.run()` devuelve `IResumenGeneracion` (`{aplazadas}`) en vez de `void`, y ya
+  **no rechaza** por una periodicidad que no se puede planificar. Quien avisara a partir de ese
+  rechazo tiene que mirar `aplazadas`: `newsletter-generate` lo pone en `global_error` para que su
+  monitor siga en error mientras haya alguna.
+
+### Added
+- `modules/send-task-system/utiles/dia-semana.ts` — `normalizarPatron()`. Solo reescribe un campo de
+  día de la semana con repetidos; cualquier otro patrón sale intacto (en particular, no expande
+  `*`). No lee nombres (`sun,7`) ni otros campos (`0,0` en el minuto, que la 5.10.1 también
+  rechaza): esos se aplazan con su `error()`.
+- `modules/send-task-system/utiles/proxima-ejecucion.ts` — `proximasEjecuciones()`: la planificación
+  de un lote y el aplazamiento de lo que no se puede planificar, fuera del controlador para poder
+  probarlo.
+- `spec/send-task-system/utiles/dia-semana.spec.ts` y `proxima-ejecucion.spec.ts`.
+
+---
+
+## 2026.9.28 09:43 — [Jose]
+
+### Fixed
+- `modules/database/mysql/cache/index.ts` — `Cache.get()`: si la consulta fallaba, la promesa
+  rechazada se quedaba en `running` y todas las peticiones posteriores con esa clave recibían el
+  mismo error sin volver a consultar, hasta reiniciar el proceso. Un corte breve de MySQL dejaba
+  rota cada clave que se hubiera pedido durante el corte. Afecta a todo `db.select(..., {cache})`,
+  sea con la caché de disco, la de memoria o la mock. Ahora la clave se libera también cuando la
+  consulta falla.
+
+### Added
+- `spec/database/mysql/cache.spec.ts` — pruebas de `Cache.get()`: reintento tras un fallo y
+  una sola consulta para peticiones simultáneas.
+
+---
+
+## 2026.9.23 09:25 — [Jose]
+
+### Changed
+
+- **Código adaptado a `yarn lint`** (`@mr/core-lint`), sin cambios de comportamiento: `import type` en los
+  imports que solo traen tipos, llaves en todos los `if`/`else`/`for`/`while`, bloques de imports en su orden
+  y separados por una línea en blanco, fuera las dobles líneas en blanco, `Tipo[]` en vez de `Array<Tipo>` y
+  sin `/* STATIC */` en las clases que no tienen estáticos. Casi todo con el autofix; el orden de imports,
+  con un codemod que solo movía líneas enteras.
+- **`console.log` sustituido por el logger** en `elasticsearch/bulk` (a `error`: son fallos) y
+  `net/cache/valkey` (a `info`). Siguen saliendo por consola, ahora con la traza delante.
+- **Propiedades inicializadas en el constructor** y no en la declaración en `database/pagination`,
+  `database/postgresql`, `messages/eventarc/publisher`, `messages/pubsub/v2` y
+  `send-task-system/sender`. Mismo orden de ejecución que antes.
+- Variables en `snake_case` renombradas a `camelCase`; la documentación de los miembros de
+  `email/managers/spark_post.ts`, al bloque JSDoc del tipo. `strip_tags` y `str_word_count` conservan el
+  nombre, que es API pública y el de la función de PHP que replican: llevan una excepción local.
+
+## 2026.9.23 08:20 — [Juan C. Martínez]
+
+### Fixed
+
+- **`Redis.loadJSON` con varias claves ya no revienta si alguna no existe.** `get` devuelve `null`
+  en la posición de cada clave inexistente, y `loadJSON` hacía `.toString()` sobre ella
+  (`Cannot read properties of null (reading 'toString')`). Ahora esas posiciones se devuelven como
+  `null` y el llamante decide qué hacer con ellas. Se veía en `/app/warnings/v4/loc/...` de
+  data-alertas cuando una localidad apuntaba a alertas ya caducadas.
+
 ## 2026.9.4 15:20 — [Jose]
 
 ### Removed

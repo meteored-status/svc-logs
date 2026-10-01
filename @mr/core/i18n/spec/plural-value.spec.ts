@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 4b7c7ebc8dc5effaa0c170289f1f01f6
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.3+4-bixus
+ * Fecha: Fri, 18 Sep 2026 09:12:41 GMT
+ * Hash: c083c9f5608329e35631f43110b604d1
+ * Versión: 2026.9.18+1-bixus
+ * Anterior: 2026.9.16+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -103,11 +103,22 @@ describe("PluralValue · las categorías que el catálogo no declara", () => {
         // El catálogo del panel escribe dos formas —`one` y `other`— porque son las que hacen falta para
         // contar cosas del día a día. Pero CLDR le da a los tres idiomas latinos una tercera, `many`, que
         // el catálogo no menciona en ninguna de sus 52 entradas.
-        assert.deepEqual(new Intl.PluralRules("es").resolvedOptions().pluralCategories, ["one", "many", "other"]);
-        assert.deepEqual(new Intl.PluralRules("fr").resolvedOptions().pluralCategories, ["one", "many", "other"]);
-        assert.deepEqual(new Intl.PluralRules("ca").resolvedOptions().pluralCategories, ["one", "many", "other"]);
+        //
+        // **Se comprueba qué categorías hay, no en qué orden vienen.** La versión anterior comparaba
+        // la lista contra `["one", "many", "other"]` y empezó a fallar sola: `pluralCategories` sale hoy
+        // en orden alfabético (`many, one, other`) en el V8 de Node 22 / ICU 76. El orden es un detalle
+        // del motor que ECMA-402 no fija, así que fijarlo aquí no probaba nada de CLDR y convertía una
+        // subida de Node en un test rojo.
+        for (const idioma of ["es", "fr", "ca"]) {
+            const categorias = new Intl.PluralRules(idioma).resolvedOptions().pluralCategories;
+
+            assert.ok(categorias.includes("many"), `premisa: ${idioma} declara la categoría many`);
+            assert.equal(categorias.length, 3, `premisa: ${idioma} tiene tres categorías, una más que las escritas`);
+        }
         // En inglés no existe: por eso esto no se ve nunca en el idioma por defecto.
-        assert.deepEqual(new Intl.PluralRules("en").resolvedOptions().pluralCategories, ["one", "other"]);
+        const enIngles = new Intl.PluralRules("en").resolvedOptions().pluralCategories;
+        assert.ok(!enIngles.includes("many"), "premisa: en inglés no hay `many`");
+        assert.equal(enIngles.length, 2, "premisa: en inglés son exactamente las dos que el catálogo escribe");
     });
 
     it("premisa: `many` no es «un número grande», es el millón justo", () => {

@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 02fdba470d369634f344d13a05f20fbd
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 export interface ITask {
     psRun: ()=>Promise<void>;
     psCancelado: (code: ETaskCancel, mensaje: string)=>Promise<void>;
@@ -13,8 +21,6 @@ export enum ETaskCancel {
 }
 
 export abstract class Task<T> implements ITask {
-    /* STATIC */
-
     /* INSTANCE */
     protected constructor() {
     }

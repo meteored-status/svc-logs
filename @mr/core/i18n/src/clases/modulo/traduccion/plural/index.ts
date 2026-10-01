@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: bfddad85c2a7d5814d759ccd4d5cce2f
- * Versión: 2026.9.7+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 1c1082a6f625f4a6ada2b166c94d91f7
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -72,7 +73,7 @@ export class TraduccionPlural extends Traduccion<ITraduccionPluralGenValues> {
     protected parseValores(jerarquia: string[]): [string, string] {
         const values: string[] = [];
         const traduccion = this.valores(jerarquia);
-        let defecto = traduccion[""];
+        const defecto = traduccion[""];
         for (const key of Object.keys(traduccion).filter(key=>key!="")) {
             const valor = traduccion[key];
             values.push(`    ${key}: \`${valor}\``);

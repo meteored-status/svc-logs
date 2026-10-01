@@ -1,17 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: cf7bf494c774944c74e4ee4760d7b41a
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 044a150374264ae779bb98372b60afb5
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import chokidar from "chokidar";
 
 import {Colors} from "@mr/core-cli/colors";
-
 import {isFile, readJSON} from "@mr/core-cli/fs";
+
 import {Idiomas, type TIdiomas} from ".";
 
 export class IdiomasLoader extends Idiomas {

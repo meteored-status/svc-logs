@@ -1,16 +1,19 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: e83caf074d0d684489b52e7e5d2c4d09
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 78fadb5c904d65b6bd02b5b97b2d3e8c
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {SendDAO} from "../send-d-a-o";
-import {Elasticsearch} from "../../../../../elasticsearch";
-import {Send, TSend, TStatus} from "../../../model/send";
-import {ElasticSearch} from "../../../../utiles/config";
+import type {Elasticsearch} from "../../../../../elasticsearch";
+import type {Send} from "../../../model/send";
+import {TSend, TStatus} from "../../../model/send";
+import type {ElasticSearch} from "../../../../utiles/config";
 import {SparkpostSend} from "../../../model/sparkpost-send";
-import {IMail} from "../../../../../email/manager";
+import type {IMail} from "../../../../../email/manager";
 
 interface IDocument {
     id: string;

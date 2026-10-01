@@ -1,30 +1,31 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 31 Aug 2026 06:46:28 GMT
- * Hash: ac925c64be2f2b7911d598397a03f09b
- * Versión: 2026.8.31+1-bixus
- * Anterior: 2026.8.26+2-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: dde50148ca6cefe50045c258eb09b056
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.8.31+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
+import type {RequestResponse} from "services-comun/modules/net/request-backend";
+import {BackendRequest} from "services-comun/modules/net/request-backend";
 import {logRejection} from "services-comun/modules/decorators/metodo";
 
 import {auditRequest} from "../audit/request";
 import {EService, SERVICES} from "../../config";
-import {IHolidayDeleteIN, IHolidayExcludeIN, IHolidayIN, IHolidayRestoreIN} from "./holiday/interface";
-import {IHolidaysOUT} from "./holidays/interface";
-import {IListOUT} from "./list/interface";
-import {IMatesOUT} from "./mates/interface";
-import {IMineOUT} from "./mine/interface";
-import {IOrderIN} from "./order/interface";
-import {IRequestActionIN, IRequestIN, IRequestTokenIN, IRequestTokenOUT} from "./request/interface";
-import {IOverrideDeleteIN, IOverrideIN} from "./override/interface";
-import {IResetIN} from "./reset/interface";
-import {IRosterIN} from "./roster/interface";
-import {ISkipDeleteIN, ISkipIN} from "./skip/interface";
-import {ISwapDeleteIN, ISwapIN} from "./swap/interface";
-import {ITodayOUT} from "./today/interface";
+import type {IHolidayDeleteIN, IHolidayExcludeIN, IHolidayIN, IHolidayRestoreIN} from "./holiday/interface";
+import type {IHolidaysOUT} from "./holidays/interface";
+import type {IListOUT} from "./list/interface";
+import type {IMatesOUT} from "./mates/interface";
+import type {IMineOUT} from "./mine/interface";
+import type {IOrderIN} from "./order/interface";
+import type {IRequestActionIN, IRequestIN, IRequestTokenIN, IRequestTokenOUT} from "./request/interface";
+import type {IOverrideDeleteIN, IOverrideIN} from "./override/interface";
+import type {IResetIN} from "./reset/interface";
+import type {IRosterIN} from "./roster/interface";
+import type {ISkipDeleteIN, ISkipIN} from "./skip/interface";
+import type {ISwapDeleteIN, ISwapIN} from "./swap/interface";
+import type {ITodayOUT} from "./today/interface";
 
 export class OnCall extends BackendRequest {
     /* STATIC */

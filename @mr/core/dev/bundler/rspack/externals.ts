@@ -1,14 +1,15 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 62c9244bfc3579e4fde583b83e94df46
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: e9fc37e4e41909890d3fd275c2bf54e4
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {Externals as TExternals} from "@rspack/core";
 
 import {Runtime} from "@mr/core-dev/manifest/deployment";
-
 
 /**
  * Paquetes npm que usan ESM nativo en la versión major indicada.

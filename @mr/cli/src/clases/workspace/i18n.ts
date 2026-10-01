@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 5a7464320d6329ac11e16edb624259d0
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.20+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 6c641544aa8843c6f69eef664faf8f4c
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -11,12 +11,12 @@ import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
 import chokidar from "chokidar";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-
 import {Colors} from "@mr/core-cli/colors";
+import {readJSON} from "@mr/core-cli/fs";
+
 import type {IConfigServices} from "./service";
 import {type IWorkspace, Workspace} from "../workspace";
 import {Log} from "../log";
-import {readJSON} from "@mr/core-cli/fs";
 import type {IPackageJson} from "../packagejson";
 
 export interface IService extends IWorkspace {

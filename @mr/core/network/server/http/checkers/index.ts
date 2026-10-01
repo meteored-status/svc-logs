@@ -1,11 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: 08432203ebd250aeb755cd0f644c9e84
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 43fa7c3ee0d187cb8520eb9919023acc
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.5.18+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {URLSearchParams} from "node:url";
+import type {URLSearchParams} from "node:url";
 
 import type {Idioma} from "../i18n";
 import type {IQuery, Query} from "./query";
@@ -15,7 +17,7 @@ import {Exact} from "./query/exact";
 import {Prefix} from "./query/prefix";
 import {Options} from "./query/options";
 import {Cualquiera} from "./query/cualquiera";
-import {CustomSpecification} from "../schema/spec";
+import type {CustomSpecification} from "../schema/spec";
 
 /**
  * Configuración de visibilidad en la documentación generada del servicio.

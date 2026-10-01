@@ -83,7 +83,7 @@ steps:
     #####
     # INSTALAR LAS DEPENDENCIAS DEL PROYECTO
     #####
-  - name: 'node:24.14-alpine'
+  - name: 'node:lts-alpine'
     entrypoint: 'yarn'
     args:
       - install
@@ -204,18 +204,26 @@ availableSecrets:
   secretManager:
     - versionName: "projects/${PROJECT_ID}/secrets/alpred-lectura/versions/1"
       env: 'GITTOKEN'
-#substitutions:
+# Valores por defecto de las sustituciones opcionales: el trigger que las defina las sobrescribe, y
+# en el que no, llegan vacías a los scripts en vez de hacer fallar el build.
+substitutions:
+  _CLUSTER: ''
+  _K8S_CACHE: ''
+  _K8S_GITHUB: ''
 #  _ENTORNO: 'test'
 options:
   automapSubstitutions: true
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
   env:
     - '_AUTORIZAR=${_AUTORIZAR}'
+    - '_CLUSTER=${_CLUSTER}'
     - '_DESPLEGAR=${_DESPLEGAR}'
     - '_DESPLEGAR_LATEST=${_DESPLEGAR_LATEST}'
     - '_ENTORNO=${_ENTORNO}'
     - '_GENERAR=${_GENERAR}'
     - '_GENERAR_FORZAR=${_GENERAR_FORZAR}'
+    - '_K8S_CACHE=${_K8S_CACHE}'
+    - '_K8S_GITHUB=${_K8S_GITHUB}'
     - '_MYSQL=${_MYSQL}'
     - 'COMMIT_SHA=${COMMIT_SHA}'
     - 'PROJECT_ID=${PROJECT_ID}'

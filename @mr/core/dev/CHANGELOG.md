@@ -2,6 +2,188 @@
 
 ---
 
+## 2026.9.23 11:39 — [Jose]
+
+### Changed
+
+- **Parámetros opcionales: uno solo al final puede quedarse posicional.** La excepción de
+  `transaction?: Transaction` se generaliza a cualquier opcional único en última posición; con dos o más
+  siguen yendo al objeto de configuración.
+
+## 2026.9.23 09:05 — [Jose]
+
+### Added
+
+- **`@mr/core-lint` en `.github/copilot-instructions.md` y `yarn lint` en `AGENTS.md`**: los ficheros que
+  toca un cambio tienen que quedar sin errores de lint. Todo `yarn lint` no, porque en un monorepo que
+  acaba de recibir el linter hay errores en framework ajeno a la tarea. Los `warn` son deuda conocida.
+
+### Changed
+
+- **Código adaptado a `yarn lint`** (`@mr/core-lint`), sin cambios de comportamiento: `import type` en los
+  imports que solo traen tipos, llaves en todos los `if`/`else`/`for`/`while`, bloques de imports en su orden
+  y separados por una línea en blanco, fuera las dobles líneas en blanco, `Tipo[]` en vez de `Array<Tipo>` y
+  sin `/* STATIC */` en las clases que no tienen estáticos. Casi todo con el autofix; el orden de imports,
+  con un codemod que solo movía líneas enteras.
+- Variables en `snake_case` renombradas a `camelCase` en `bundler/rspack/plugins.ts`.
+- **Excepción a los parámetros opcionales: `transaction?: Transaction` como último parámetro.** Era el
+  idiom de todo el acceso a datos (189 casos) y la convención no lo recogía; ahora sí, y la regla
+  `mrpack/config-object-params` lo admite por nombre.
+
+## 2026.9.23 07:52 — [Jose]
+
+### Removed
+
+- **Fuera `haiku-mechanic`.** Quedan tres subagentes: `opus-planner`, `fable-architect` y
+  `sonnet-builder`, que absorbe lo mecánico determinista dentro de su propio cambio en vez de que se
+  trocee en una subtarea aparte.
+
+  Los números, medidos antes de decidirlo: **dos invocaciones en mes y medio**, frente a 86 de
+  `sonnet-builder` y 25 de `opus-planner`. Haiku 4.5 cuesta la mitad que Sonnet 5 ($1/$5 por MTok
+  frente a $2/$10) sobre subtareas que por definición son pequeñas —unos cuatro céntimos de
+  diferencia por subtarea—, y cada vez que una tarea «mecánica» resultaba no serlo, su propio prompt
+  mandaba rehacerla en `sonnet-builder`: se pagaba dos veces. Con la prioridad del proyecto
+  —calidad > ausencia de errores > coste—, un agente cuya única justificación era el coste, y que
+  ahorraba céntimos, estaba mal colocado en esa escala. También tenía una quinta parte de contexto
+  que el resto (200K frente a 1M).
+
+  Lo que sí queda pendiente, y es el hueco de verdad que destapó esta revisión: **las reglas de
+  estilo de `copilot-instructions.md` no las hace cumplir nada**. No hay eslint, ni prettier, ni
+  biome, ni un script `lint`/`format` en ningún workspace — solo un `.editorconfig` con charset,
+  EOL e indentación. Sin dos líneas en blanco seguidas, llaves siempre, los tres bloques de
+  imports, `Tipo[]`, SQL en mayúsculas: hoy dependen de quien escribe. Eso no se arregla eligiendo
+  tier de modelo.
+
+---
+
+## 2026.9.22 17:52 — [Jose]
+
+### Fixed
+
+- **`claude doctor` no comprueba lo que la política decía que comprobara.** Lista reglas
+  descartadas solo para las `mcp__` con paréntesis, no para una `Agent(<nombre>)` mal escrita.
+  Tampoco ayuda el aviso de arranque: comprueba **el nombre de la herramienta**, y `Agent` es
+  conocida, así que una regla que apunte a un subagente inexistente no salta — justo el fallo que
+  habría que cazar. Lo que sí lo enseña es `/permissions`, que lista las reglas en efecto y el
+  `settings.json` del que sale cada una.
+
+---
+
+## 2026.9.22 17:34 — [Jose]
+
+### Fixed
+
+- **Las reglas de permisos pasan a la forma documentada, `Agent(<nombre-del-subagente>)`.** La
+  entrada de las 16:25 las escribió como `Agent(subagent_type:opus-planner)`; esa forma no aparece
+  en la documentación de permisos, que para subagentes documenta `Agent(my-custom-agent)`. El
+  razonamiento sobre por qué las reglas de `model` no bastan sigue siendo correcto —un parámetro
+  que la llamada omite no casa nunca— y se mantienen para cubrir un override explícito; lo que
+  estaba mal era el vehículo.
+- **«No hay aviso» era falso, y el motivo de la sustitución estaba incompleto.** La entrada de las
+  17:16 decía que un modelo no permitido corre con el heredado *en silencio*. La documentación de
+  subagentes dice lo contrario: «In interactive sessions, Claude Code shows a warning naming the
+  requested model and the model the subagent runs on». Y la sustitución tiene dos escalones: un
+  alias de familia bloqueado cae primero a la versión más nueva de esa familia que la allowlist
+  permita, y solo al modelo heredado si no permite ninguna. Para `fable` el resultado coincide, así
+  que la recomendación no cambia — el motivo sí.
+- **Quien lo decide es la allowlist `availableModels` de la organización, no la licencia
+  individual.** La entrada anterior lo atribuía a los «puestos estándar» y marcaba como inferencia
+  algo que ya estaba documentado. Corregido en la política, en el prompt del agente y en el CODEMAP.
+- **«Comprueba antes que quien va a contestar es Fable» no daba ningún mecanismo.** Ahora sí: el
+  aviso de sesión interactiva que nombra los dos modelos. Se advierte además de que en headless la
+  documentación no lo menciona, y de que `permissions.ask` no vale para esto, porque casa por
+  nombre de subagente y no dice nada del modelo.
+- **`haiku-mechanic` no podía crear ficheros.** Su `description` le asigna «generar documentación
+  simple ya especificada palabra por palabra», pero sus `tools` eran `Read, Edit, Grep, Glob`: sin
+  `Write`, esa parte de su encargo era imposible. Añadido, con una línea en el prompt que acota
+  para qué es.
+- `.claude/agents/opus-planner.md` → la revisión final se describía como suya «siempre», y en la
+  política es condicional (solo si la tarea activó el criterio del paso 1). Alineado con la política.
+
+---
+
+## 2026.9.22 17:16 — [Jose]
+
+### Changed
+
+- **`fable-architect` no está disponible en todos los puestos, y eso ahora está escrito.** Fable no
+  entra en los puestos estándar, y `.claude/` viaja por symlink a todos los monorepos consumidores,
+  así que hay quien lo tiene y quien no. El modo de fallo es el peor posible: la llamada **no da
+  error**. Según la documentación de subagentes, cuando el modelo del frontmatter no está permitido
+  el subagente se ejecuta con el modelo heredado del hilo principal, sin avisar y devolviendo un
+  informe con la misma forma — y `permissions.ask` sigue pidiendo confirmación igual, porque casa
+  por `subagent_type`, así que confirmar tampoco significa que Fable haya corrido.
+
+  La política (sección «Si tu cuenta no tiene Fable») manda, en ese caso, no invocarlo: la revisión
+  va a `opus-planner` con encuadre adversarial explícito y el informe dice que no corrió en Fable.
+  El prompt de `fable-architect` sigue valiendo como guion con cualquier modelo; lo que no vale es
+  dar por hecho de qué modelo viene un informe.
+
+  Medido lo de la allowlist de organización; que un puesto sin Fable sustituya en silencio en vez
+  de dar error es inferencia, y así queda marcado en el documento.
+
+---
+
+## 2026.9.22 16:25 — [Jose]
+
+### Added
+
+- **Cuarto subagente de delegación: `fable-architect` (`model: fable`).** Los otros tres responden
+  a «¿cómo hacemos esto bien?»; este responde a «¿qué estamos dando por cierto que no lo es?». Se
+  invoca cuando un fallo ya se ha intentado arreglar dos o más veces y cada intento destapó una
+  causa distinta —señal de que se está depurando contra un modelo equivocado del sistema—, para
+  una revisión adversarial antes de mergear, cuando el invariante cruza muchos subsistemas, o
+  cuando se depende de un comportamiento que nadie ha medido. Su prompt le dice explícitamente
+  dónde suelen estar las suposiciones frágiles de este monorepo (qué hace de verdad `mrpack`, cómo
+  resuelve TypeScript los paths heredados entre workspaces, dónde hace falta de verdad la extensión
+  `.ts` en un import, a qué apunta cada credencial «local», el ciclo de vida de las cachés en Cloud
+  Build, y que editar «en la raíz» es editar el framework de todos los consumidores por symlink).
+  Sin ese anclaje el agente degenera en escepticismo genérico, que es justo lo que no hace falta.
+
+  Va con `tools` acotadas —`Read, Grep, Glob, Bash, WebFetch`—: necesita poder **medir**, que es el
+  núcleo de su encargo, pero no escribir. Dejarle `Edit`/`Write` al agente más caro contradecía su
+  propio prompt («no lo uses para implementar»).
+
+  No se le escriben prompts prescriptivos: los procedimientos paso a paso y las listas de
+  comprobación que funcionan con los otros agentes le **bajan** la calidad a este.
+
+### Changed
+
+- `.claude/agents/opus-planner.md` → el cuarto agente entra en su vocabulario. Sin esto,
+  `fable-architect` quedaba **fuera del único circuito capaz de invocarlo**: quien produce los
+  planes con agente asignado es `opus-planner`, y su paso 2 solo enumeraba tres. Se añade también
+  el criterio de traspaso en la revisión final, y en «Reglas generales» de la política, la señal de
+  que hay que dejar de reasignar a `opus-planner` (mismo fallo, dos o más intentos, una causa
+  distinta cada vez).
+- `.claude/settings.json` → `permissions.ask` pasa a pedir confirmación por `subagent_type`
+  (`opus-planner`, `fable-architect`), no solo por `model`. **Las reglas `Agent(model:opus)` que
+  había no se disparaban nunca:** `Tool(param:valor)` casa contra un parámetro de la llamada y
+  «a parameter the model omits is never matched», así que al despachar por `subagent_type` —que es
+  como se despacha siempre— el parámetro `model` no viaja; lo fija el frontmatter del subagente. Se
+  mantienen `Agent(model:opus)` y `Agent(model:fable)` para cubrir un override explícito de modelo
+  en la llamada. `sonnet-builder` y `haiku-mechanic` siguen sin interrupciones.
+- `.claude/delegacion-multimodelo.md` → el apartado de gasto ya no habla solo de Opus y explica el
+  matiz de arriba, que llevaba mal escrito desde que se introdujo la regla de Opus. Se desempata
+  además la zona gris con `opus-planner`: la revisión final es siempre suya, y los criterios que se
+  solapaban («revisión adversarial antes de mergear», «cruza muchos ficheros») se acotan a cambios
+  difíciles de revertir y a invariantes que cruzan varios workspaces.
+
+---
+
+## 2026.9.22 09:02 — [Jose]
+
+### Fixed
+
+- **El valor por defecto documentado de `deploy.arch` no era el que se aplica.** El README del
+  manifest y el JSDoc de `IDeployment` decían `["linux/amd64","linux/arm64"]`, pero el modelo no le
+  pone ninguno (`this.arch = deploy.arch`) y quienes resuelven la omisión son `contenedor.sh` y
+  `kustomizar.sh`, los dos con `["linux/amd64"]`. Quien omitiera el campo esperando una imagen
+  multiarch se llevaba solo amd64 — y quien lo escribiera confiando en el README, una rama arm64
+  emulada que cuesta trece veces más. Ver la sección «Arquitecturas» de
+  `@mr/cli/deployment/README.md`.
+
+---
+
 ## 2026.9.3
 
 ### Changed — convenciones

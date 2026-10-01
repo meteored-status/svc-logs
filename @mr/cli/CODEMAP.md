@@ -167,6 +167,26 @@ No contiene código TypeScript: son scripts Bash (`deployment/std/*.sh`), planti
 (`mrpack.json` raíz y por workspace) a través de los comandos `configg`/`configw`
 (`deployment/std/bin/`, wrappers de `jq`).
 
+Los dos pasos caros del pipeline son `Compilar` y `Generar Contenedor`. Solo el segundo tiene
+caché, y no por falta de intentarlo con el primero.
+
+`Generar Contenedor` está diseñado alrededor de poder saltarse la instalación de dependencias: la
+stage `build` de los dos Dockerfiles genéricos no ve el código del workspace, y las capas se guardan
+entre despliegues en el tag `buildcache_<ENTORNO>` del propio registro. El contexto se recorta con
+`Dockerfile.dockerignore` / `Dockerfile-next.dockerignore`, que BuildKit resuelve por Dockerfile y
+no desde la raíz del monorepo. Lo que **no** se puede hacer es montar `.yarn/cache` desde el
+contexto: es el almacén de paquetes en tiempo de ejecución de la imagen, no una caché de descarga, y
+montarlo produce contenedores que arrancan rotos.
+
+`Compilar` es, al 87%, el `next build` del workspace Next, y ahí **no hay caché**: se probó
+persistir la de webpack (`.next/cache`) entre builds y se quitó porque en Cloud Build solo valía
+cuatro segundos, contra el 43% que daba en local. El porqué está medido en el README, en la sección
+«Caché de compilación de webpack, y por qué no se quedó»; conviene leerla antes de reintentarlo.
+
+Los mecanismos se explican, con sus porqués y con lo que no se puede tocar sin romperlos, en las
+secciones «Caché del contenedor» y la citada del [`README.md`](./deployment/README.md) del
+directorio.
+
 **Depende de (en tiempo de ejecución del pipeline):** los artefactos de `yarn mrpack deploy`
 (`output/`, `version.txt`, `hash.txt` de cada workspace) y el esquema de `manifest/` (bloque 5)
 para decidir si compilar/desplegar. **No depende de** ni es importado por ningún fichero

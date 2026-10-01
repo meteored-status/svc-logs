@@ -1,5 +1,14 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 37917fed3b75cef7372ee179d0881732
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {Pool} from "pg";
+
 import {debug, warning} from "../../../utiles/log";
-import {Pool} from "pg";
 
 export class Lock {
     /* STATIC */

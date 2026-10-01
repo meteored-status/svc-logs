@@ -1,10 +1,18 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 12241425c13b4f598e2736e51cc6db1c
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 export function mergeDeep(target: any, ...sources: any[]): any {
-    if (!sources.length) return target;
+    if (!sources.length) {return target;}
     const source = sources.shift();
     if (source) {
         for (const key in source) {
             if (typeof source[key] === 'object') {
-                if (!target[key]) Object.assign(target, {[key]: {}});
+                if (!target[key]) {Object.assign(target, {[key]: {}});}
                 mergeDeep(target[key], source[key]);
             } else {
                 Object.assign(target, {[key]: source[key]});

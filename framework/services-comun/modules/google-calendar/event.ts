@@ -1,4 +1,13 @@
-import {Attendee, IAttendee} from "./attendee";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 90a6c3fb6fc3fc58aa94f27af38d3761
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {IAttendee} from "./attendee";
+import {Attendee} from "./attendee";
 
 export interface IEvent {
     type: "VEVENT"|"VTIMEZONE";
@@ -88,7 +97,7 @@ export class Event {
 
     public mainName(): string|undefined {
         const match: RegExpMatchArray|null = this.summary.match(/^([.\w\sáéíóúÁÉÍÓÚ]+) - Guardia$/);
-        if (match) return match[1].trim();
+        if (match) {return match[1].trim();}
         return undefined;
     }
 

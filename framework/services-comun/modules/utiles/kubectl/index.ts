@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: e0e4be849e9cf453dc5524a34d223888
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {info} from "../log";
 import {spawn} from "./process";
 import {Pod} from "./pod";
@@ -6,7 +14,6 @@ interface IConfig {
     context?: string;
     namespace?: string;
 }
-
 
 export class Kubectl {
     /* STATIC */

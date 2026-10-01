@@ -1,9 +1,10 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Thu, 03 Sep 2026 13:36:43 GMT
- * Hash: 7228a44531696a0c1af52d26f9f9066a
- * Versión: 2026.9.3+3-juancmartinez
- * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 54175d1dace0cb3b512805436e4ff44e
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.3+3-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 export type TEvent = "message_event" | "track_event" | "gen_event" | "unsubscribe_event" | "relay_event" | "ab_test_event" | "ingest_event";
@@ -83,8 +84,6 @@ interface IMessageDelayEvent extends IMessageIDEvent {
     type: "delay";
 }
 
-
-
 /**
  * Discrimina los eventos que traen información de rebote dentro del payload genérico.
  *
@@ -103,8 +102,6 @@ export interface ITrackEvent extends IEvent {
     rcpt_to: string;
 }
 
-
-
 /** GEN EVENTS */
 
 interface IGenEvent extends IEvent {
@@ -112,8 +109,6 @@ interface IGenEvent extends IEvent {
     type: TGenEvent;
     rcpt_to: string;
 }
-
-
 
 /** UNSUBSCRIBE EVENTS */
 
@@ -123,21 +118,15 @@ export interface IUnsubscribeEvent extends IEvent {
     rcpt_to: string;
 }
 
-
-
 /** RELAY EVENTS */
 interface IRelayEvent extends IEvent {
 
 }
 
-
-
 /** AB TEST EVENTS */
 interface IABTestEvent extends IEvent {
 
 }
-
-
 
 /** INGEST EVENTS */
 interface IIngestEvent extends IEvent {

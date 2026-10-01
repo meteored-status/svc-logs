@@ -13,6 +13,11 @@
         ]
     },
     "permissions": {
-        "ask": ["Agent(model:opus)"]
+        "ask": [
+            "Agent(opus-planner)",
+            "Agent(fable-architect)",
+            "Agent(model:opus)",
+            "Agent(model:fable)"
+        ]
     }
 }

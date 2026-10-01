@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:25:23 GMT
- * Hash: f7f62ad3d1c8e42364324c4fd481bc9a
- * Versión: 2026.6.17+5-josantoniojimnez
- * Anterior: 2026.6.17+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: b7c129548fb3d6ceec406f69138947ef
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+5-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {ConfiguracionNet} from "@mr/core-workload/config/net";
@@ -12,8 +13,6 @@ import {Engine as EngineServer} from "@mr/core-workload/engine/server";
 import {error, info} from "./utiles/log";
 
 export abstract class EngineServerTask<T extends ConfiguracionNet=ConfiguracionNet> extends EngineServer<T> {
-    /* STATIC */
-
     /* INSTANCE */
     private checking: boolean;
 

@@ -1,7 +1,16 @@
-import ical from "node-ical";
-import {Readable} from "node:stream";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 2872526d98843a2265cbc057593157dc
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
 
-import {Event, IEvent} from "./event";
+import type {Readable} from "node:stream";
+import ical from "node-ical";
+
+import type {IEvent} from "./event";
+import {Event} from "./event";
 import {readJSON, safeWriteStream} from "../utiles/fs";
 
 interface IConfigCalendar {

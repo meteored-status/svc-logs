@@ -1,16 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: fea5afba69c3d31f6ebaef54248b8cf0
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.8.31+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 117f76afe05ff05e77af6ae7554c0570
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {Manifest} from "@mr/core-dev/manifest";
 import {BuildFW} from "@mr/core-dev/manifest/build";
-
 import {readJSON} from "@mr/core-cli/fs";
+
 import type {IPackageJson as IPackageJsonBase} from "../packagejson";
 
 /**
@@ -142,10 +142,10 @@ export function checkDependencies(config: Manifest, dependencies: Record<string,
  */
 function mrNombreADir(root: string, nombre: string): string | undefined {
     const coreMatch = nombre.match(/^@mr\/core-(.+)$/);
-    if (coreMatch) return `${root}/@mr/core/${coreMatch[1]}`;
+    if (coreMatch) {return `${root}/@mr/core/${coreMatch[1]}`;}
     const userMatch = nombre.match(/^@mr\/user-(.+)$/);
-    if (userMatch) return `${root}/@mr/user/${userMatch[1]}`;
-    if (nombre === "@mr/cli") return `${root}/@mr/cli`;
+    if (userMatch) {return `${root}/@mr/user/${userMatch[1]}`;}
+    if (nombre === "@mr/cli") {return `${root}/@mr/cli`;}
     return undefined;
 }
 
@@ -158,14 +158,14 @@ function mrNombreADir(root: string, nombre: string): string | undefined {
  * @returns El rango de versión más reciente entre `a` y `b`.
  */
 function versionMasReciente(a: string, b: string): string {
-    if (a === "*") return b;
-    if (b === "*") return a;
+    if (a === "*") {return b;}
+    if (b === "*") {return a;}
     const parsear = (v: string): number[] =>
         v.replace(/^[^0-9]*/, "").split(/[-+]/)[0].split(".").map(n => parseInt(n, 10) || 0);
     const [aMaj, aMin = 0, aPat = 0] = parsear(a);
     const [bMaj, bMin = 0, bPat = 0] = parsear(b);
-    if (bMaj !== aMaj) return bMaj > aMaj ? b : a;
-    if (bMin !== aMin) return bMin > aMin ? b : a;
+    if (bMaj !== aMaj) {return bMaj > aMaj ? b : a;}
+    if (bMin !== aMin) {return bMin > aMin ? b : a;}
     return bPat > aPat ? b : a;
 }
 
@@ -194,19 +194,19 @@ export async function resolverDepsTransitivas(root: string, devDeps: Record<stri
     const resultado: Record<string, string> = {};
 
     for (const nombre of Object.keys(devDeps)) {
-        if (!nombre.startsWith("@mr/")) continue;
-        if (visitados.has(nombre)) continue;
+        if (!nombre.startsWith("@mr/")) {continue;}
+        if (visitados.has(nombre)) {continue;}
         visitados.add(nombre);
 
         const dir = mrNombreADir(root, nombre);
-        if (dir === undefined) continue;
+        if (dir === undefined) {continue;}
 
         const pkg = await readJSON<IPackageJsonBase>(`${dir}/package.json`).catch(() => undefined);
-        if (pkg === undefined) continue;
+        if (pkg === undefined) {continue;}
 
         for (const [dep, version] of Object.entries(pkg[campo] ?? {})) {
-            if (dep.startsWith("@mr/")) continue;
-            if (version.startsWith("workspace:")) continue;
+            if (dep.startsWith("@mr/")) {continue;}
+            if (version.startsWith("workspace:")) {continue;}
             resultado[dep] = resultado[dep] !== undefined
                 ? versionMasReciente(resultado[dep], version)
                 : version;

@@ -1,4 +1,12 @@
-import {TMetodo} from "@mr/core-network/server/http/conexion";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 6247724add086113f0ad8b41f5b0c81e
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {TMetodo} from "@mr/core-network/server/http/conexion";
 
 export enum TStatus {
     OK = 3,

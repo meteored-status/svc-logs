@@ -1,16 +1,18 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Thu, 03 Sep 2026 13:36:43 GMT
- * Hash: 5871bee4dac7d0603dbf632b779267e9
- * Versión: 2026.9.3+3-juancmartinez
- * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: b660cfd0088932fb948ea855d0d8a66a
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.3+3-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {ReceiverDAO} from "../receiver-d-a-o";
-import {ElasticSearch} from "../../../../utiles/config";
-import {Elasticsearch, SearchHit, SearchRequest, SortResults} from "../../../../../elasticsearch";
+import type {ElasticSearch} from "../../../../utiles/config";
+import type {Elasticsearch, SearchHit, SearchRequest, SortResults} from "../../../../../elasticsearch";
 import {Receiver} from "../../../model/receiver";
-import {ElasticSearchBulk, ElasticSearchBulkConfig} from "../../../../../database/bulk/elastic";
+import type {ElasticSearchBulkConfig} from "../../../../../database/bulk/elastic";
+import {ElasticSearchBulk} from "../../../../../database/bulk/elastic";
 import {ElasticSearchScroll} from "../../../../../database/scroll";
 import type {TBounceCategory} from "../../../../../email/webhook/sparkpost/bounce-class";
 
@@ -125,7 +127,6 @@ export class ElasticReceiverDAO extends ReceiverDAO {
                 request.search_after = scroll.control;
             }
         }
-
 
         const salida = await this.client.search<IDocument>(request);
 

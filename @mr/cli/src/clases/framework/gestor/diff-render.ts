@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 6693849d1d9830f9a2fe6ee38718ec5f
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 6cfde3b4659f6750c6ea07c4f75d0920
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -12,9 +12,10 @@
  * usadas por la vista de diff de {@link GestorTabla}. No dependen del estado de la tabla.
  */
 
+import {Colors} from "@mr/core-cli/colors";
+
 import {calcularDiffOps, DIFF_CONTEXTO, indicesConContexto} from "../../../utiles/diff";
 import {anchoVisible} from "../../../utiles/tty";
-import {Colors} from "@mr/core-cli/colors";
 import {EstadoArchivo, type IArchivoCambiado} from "../../paquete";
 
 /**
@@ -81,8 +82,8 @@ function lcsOps(aL: string[], bL: string[], offsetA: number, offsetB: number): I
  * Alinea dos arrays de ops (ambos generados desde la misma base) en filas side-by-side,
  * sincronizando por número de línea base (`noA`).
  */
-function alinearOps(opsL: IDiffOp[], opsR: IDiffOp[]): Array<{left: IDiffOp|null; right: IDiffOp|null}> {
-    const rows: Array<{left: IDiffOp|null; right: IDiffOp|null}> = [];
+function alinearOps(opsL: IDiffOp[], opsR: IDiffOp[]): {left: IDiffOp|null; right: IDiffOp|null}[] {
+    const rows: {left: IDiffOp|null; right: IDiffOp|null}[] = [];
     let iL = 0, iR = 0;
     while (iL < opsL.length || iR < opsR.length) {
         const opL = iL < opsL.length ? opsL[iL] : null;

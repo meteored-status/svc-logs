@@ -1,19 +1,18 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Fri, 17 Jul 2026 10:46:55 GMT
- * Hash: 185e75d3cb24c520c2422b4032cd0ce4
- * Versión: 2026.7.17+1-josantoniojimnez
- * Anterior: 2026.5.21+4-chema
- * Proyecto: https://github.com/meteored-status/svc-logs.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 7d101a4c93064278ba047d8e204bc166
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.7.17+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {type IManifest, Manifest} from "@mr/core-dev/manifest";
 import {existsSync, type PathLike, type PathOrFileDescriptor, readFileSync, statSync} from "node:fs";
 
+import {type IManifest, Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 
 import configuracion from "./configuracion.ts";
-
 
 export function isFileSync(file: PathLike): boolean {
     return existsSync(file) && statSync(file).isFile();

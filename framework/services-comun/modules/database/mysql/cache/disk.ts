@@ -1,6 +1,15 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 7de2e020bea072223941183aaabef677
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {stringify, parse} from "@ungap/structured-clone/json";
 
-import {Cache, CacheBuilder as CacheBuilderBase, ICacheBuilder, type ICacheConfigDefault, type ICacheDoc} from ".";
+import type {ICacheBuilder} from ".";
+import {Cache, CacheBuilder as CacheBuilderBase, type ICacheConfigDefault, type ICacheDoc} from ".";
 import type {TipoRegistro} from "../index";
 import {error} from "../../../utiles/log";
 import {isFile, mkdir, readFileString, safeWrite, unlink} from "../../../utiles/fs";

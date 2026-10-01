@@ -1,22 +1,37 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: 91435ce47cde4567e163f81d4ac9b58a
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 29 Sep 2026 06:49:18 GMT
+ * Hash: 1e9541bbe1b1a8f5c8437095640038b6
+ * Versión: 2026.9.29+1-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
  */
 
 import moment from "moment-timezone";
-import {SendTask, TSendTaskType} from "../data/model/send-task";
+
+import type {SendTask, TSendTaskType} from "../data/model/send-task";
 import {error, info} from "../../utiles/log";
 import {PendingSendTask} from "../data/model/pending-send-task";
-import {IDAOFactory} from "../data/dao/d-a-o-factory";
-import {Periodicity} from "../data/model/periodicity";
-import {SendSchedule} from "../data/model/send-schedule";
+import type {IDAOFactory} from "../data/dao/d-a-o-factory";
+import type {Periodicity} from "../data/model/periodicity";
+import type {SendSchedule} from "../data/model/send-schedule";
 import {PromiseDelayed} from "../../utiles/promise";
+import {proximasEjecuciones} from "../utiles/proxima-ejecucion";
 
 type Retry = {
     sendTask: SendTask;
     scheduleAt: number;
+}
+
+/**
+ * Resumen de una ejecución de {@link GeneratorController.run}.
+ *
+ * @property aplazadas - Send-tasks que no se han podido planificar (sin periodicidades, o con un
+ *                       patrón que `cron-parser` no sabe leer): no se han encolado y se reintentan
+ *                       en la siguiente ejecución. Mientras sea mayor que cero hay algo que corregir.
+ */
+export interface IResumenGeneracion {
+    aplazadas: number;
 }
 
 export class GeneratorController {
@@ -31,7 +46,16 @@ export class GeneratorController {
     ) {
     }
 
-    public async run(): Promise<void> {
+    /**
+     * Encola las send-tasks de su tipo cuyo envío toca antes de `limitDate` y las replanifica.
+     *
+     * Una send-task que no se puede planificar no para al resto: se registra con `error()`, no se
+     * encola y se aplaza a la siguiente ejecución (ver `proximasEjecuciones()`). Por eso esto **no
+     * rechaza** por un patrón malo: quien quiera alertar tiene que mirar `aplazadas`.
+     *
+     * @returns Cuántas send-tasks se han aplazado.
+     */
+    public async run(): Promise<IResumenGeneracion> {
         // Fecha límite de envío
         const limitDate: Date = moment().add(this.cronStep, "minute").endOf("hour").toDate();
 
@@ -42,7 +66,8 @@ export class GeneratorController {
 
         let scheduledSendTasks;
 
-        let errorQueue: Retry[] = [];
+        const errorQueue: Retry[] = [];
+        let aplazadas = 0;
 
         while (scheduledSendTasks = await sendTaskPagination.next()) {
             info(`Procesando página ${sendTaskPagination.page - 1} (${scheduledSendTasks.length} send-tasks)`);
@@ -73,23 +98,32 @@ export class GeneratorController {
                 }
             });
 
-            // Filtramos las send-tasks que no tienen periodicities o send-schedules asociadas
+            // Filtramos las send-tasks que no tienen send-schedule asociada (las que no tienen
+            // periodicities las aplaza proximasEjecuciones(), más abajo)
             scheduledSendTasks = scheduledSendTasks.filter(sendTask => {
-                const hasPeriodicities = periodicitiesBySendTask[sendTask.id!] && periodicitiesBySendTask[sendTask.id!].length > 0;
                 const hasSendSchedule = !!sendSchedulesBySendTask[sendTask.id!];
-                if (!hasPeriodicities) {
-                    error(`La send-task ${sendTask.id} no tiene periodicities asociadas. Se omite su procesamiento.`);
-                }
                 if (!hasSendSchedule) {
                     error(`La send-task ${sendTask.id} no tiene send-schedule asociada. Se omite su procesamiento.`);
                 }
-                return hasPeriodicities && hasSendSchedule;
+                return hasSendSchedule;
             });
+
+            // Planificamos ANTES de encolar. Las que no se pueden planificar no se encolan, pero sí se
+            // aplazan a la siguiente ejecución: si se quedaran como estaban, scheduled() las volvería a
+            // devolver en cada página y este bucle no terminaría nunca.
+            const {fechas: nextDateBySendTask, validas, fallidas} = proximasEjecuciones(scheduledSendTasks, periodicitiesBySendTask, limitDate);
+            fallidas.forEach(({sendTask, periodicities, error: err}) => {
+                error(`La send-task ${sendTask.id} no se puede planificar (${periodicities.map(p => p.pattern).join(" | ") || "sin periodicities"}). Se aplaza a la siguiente ejecución sin encolarla.`, err);
+            });
+            if (fallidas.length > 0) {
+                error(`Página ${sendTaskPagination.page - 1}: ${fallidas.length} send-tasks aplazadas por no poder planificarlas`);
+            }
+            aplazadas += fallidas.length;
 
             const okQueue: SendTask[] = [];
 
             // Crear envíos pendientes
-            await Promise.all(scheduledSendTasks.map(async sendTask => {
+            await Promise.all(validas.map(async sendTask => {
                 const scheduleAt = sendSchedulesBySendTask[sendTask.id!].sendDate.getTime()||Date.now();
                 await this.factory.pendingSendTask.save(new PendingSendTask({
                     id: sendTask.id!,
@@ -108,17 +142,12 @@ export class GeneratorController {
 
             info(`Send-tasks procesadas correctamente: ${okQueue.length}`);
 
-            // Replanificar las send-tasks que se han procesado correctamente
+            // Replanificar todas las send-tasks de la página: las válidas a su próxima ejecución y las
+            // fallidas al aplazamiento
             const bulkSchedules = await this.factory.sendSchedule.createBulk();
-            scheduledSendTasks.map(sendTask => {
-                const periodicities: Periodicity[] = periodicitiesBySendTask[sendTask.id!];
-
-                const nextPeriodicity: Periodicity = periodicities.reduce((previous: Periodicity, current: Periodicity) => {
-                    return previous.nextExecutionDate(limitDate) < current.nextExecutionDate(limitDate) ? previous : current;
-                });
-
+            scheduledSendTasks.forEach(sendTask => {
                 const schedule: SendSchedule = sendSchedulesBySendTask[sendTask.id!];
-                schedule.sendDate = nextPeriodicity.nextExecutionDate(limitDate);
+                schedule.sendDate = nextDateBySendTask[sendTask.id!];
                 bulkSchedules.update(schedule);
             });
 
@@ -142,11 +171,13 @@ export class GeneratorController {
                 error(`Error al procesar la cola de send-tasks fallidas:`, err);
             });
         }
+
+        return {aplazadas};
     }
 
     private async processErrorQueue(errorQueue: Retry[], tries: number = 1): Promise<void> {
         info(`Reintentando envío de ${errorQueue.length} send-tasks fallidas (intento ${tries})`);
-        let newErrorQueue: Retry[] = [];
+        const newErrorQueue: Retry[] = [];
 
         await Promise.all(errorQueue.map(async retry => {
             const {sendTask, scheduleAt} = retry;

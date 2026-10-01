@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 2d903484cbef504d0604b19a0841aa68
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import type {CustomSpecification, FieldDefinition} from "../spec";
 
 /**
@@ -32,7 +40,7 @@ type Prettify<T> = {
  */
 export type ResolveType<T extends FieldDefinition> =
     T extends { type: 'array' }
-        ? Array<ResolveType<T['items']>>
+        ? ResolveType<T['items']>[]
         : T extends { type: 'object' }
             ? SchemedType<T['properties']>
             : T extends { type: keyof TypeMap }

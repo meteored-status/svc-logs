@@ -1,11 +1,14 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 8246f79083f591b0e272225ef1edeed0
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: b7b661693f53843f675e204359f63292
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {GlideClient, GlideClusterClient, Logger, TimeUnit} from "@valkey/valkey-glide";
+import type {GlideClient} from "@valkey/valkey-glide";
+import {GlideClusterClient, Logger, TimeUnit} from "@valkey/valkey-glide";
 import process from "node:process";
 
 import type {IPodInfo} from "@mr/core-workload/config/pod";

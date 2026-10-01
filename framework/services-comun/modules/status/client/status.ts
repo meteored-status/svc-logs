@@ -1,13 +1,16 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 52de4b5d56a5740ccf20b7a28d6eb859
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: d6a091f996445b523ed1d06a6d1a2172
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {IPodInfo} from "@mr/core-workload/config/pod";
+
 import {Component} from "./component";
-import {Client} from "./client";
+import type {Client} from "./client";
 
 export class Status {
     /* STATIC */

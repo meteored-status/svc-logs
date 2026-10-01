@@ -1,0 +1,45 @@
+# Qué no se manda al builder cuando se construye con este Dockerfile.
+#
+# BuildKit busca `<nombre del Dockerfile>.dockerignore` antes que el `.dockerignore` de la raíz del
+# contexto, así que este fichero viaja con el Dockerfile dentro del framework y llega a todos los
+# proyectos a la vez que él, sin depender de que nadie regenere ficheros en la raíz del monorepo.
+# El precio es que solo cubre a este Dockerfile: un workspace con `Dockerfile` propio necesita su
+# propio `Dockerfile.dockerignore` al lado.
+#
+# Si alguna versión de BuildKit no lo soportara, lo ignora en silencio y el contexto se manda entero
+# como antes: se pierde la mejora, no se rompe el build. Se comprueba en el log del paso, en la
+# línea `transferring context`.
+#
+# Cuidado al añadir cosas: la etapa `app` copia `output/`, `assets/`, `.next/`, `public/`, `app.js`,
+# `mrpack.json` y los `package.json`, y la etapa `build` necesita `.yarn/plugins`, `.yarn/releases`,
+# `.yarnrc.yml`, `package.json` y `yarn.lock`. Nada de eso puede entrar aquí.
+
+.git
+.github
+.idea
+.run
+.claude
+.codex
+
+# Las regenera `yarn workspaces focus` dentro del contenedor, y suman más de 250 MB.
+.yarn/unplugged
+.yarn/install-state.gz
+
+# La caché de Yarn del monorepo (~300 MB) tampoco se copia: la etapa `build` se descarga su propio
+# subconjunto de producción, que es el que acaba dentro de la imagen. Ojo, no confundir con la
+# `.yarn/cache` **de dentro del contenedor**, que sí es imprescindible en la imagen final — ver el
+# comentario largo del Dockerfile.
+.yarn/cache
+
+# El mapa de PnP del build local. El de la imagen sale de la etapa `build`, no del contexto.
+.pnp.*
+
+# Caché de compilación de Next: la escribe `next build` y no la lee `next start`. Iba dentro de la
+# imagen, se subía al registro y se descargaba en cada arranque de pod sin que nadie la usara.
+**/.next/cache
+
+**/tmp
+**/*.tsbuildinfo
+**/node_modules
+**/coverage
+.DS_Store

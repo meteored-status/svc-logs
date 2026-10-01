@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 03ff26edd49775cde108e5d4a7b1f788
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 class Cookies {
     public set(key: string, value: string, expires?: Date, domain?: string, path?: string): void {
         const componentes:string[] = [];
@@ -20,7 +28,7 @@ class Cookies {
         const cantidad = cookies.length;
 
         for(let i=0;i<cantidad;i++) {
-            let actual = cookies[i].trim().split("=");
+            const actual = cookies[i].trim().split("=");
             if (actual[0]==key) {
                 return decodeURIComponent(actual[1]);
             }

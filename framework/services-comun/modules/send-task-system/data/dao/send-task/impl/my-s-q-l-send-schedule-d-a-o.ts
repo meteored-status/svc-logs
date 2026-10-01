@@ -1,7 +1,16 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: de34de465320828fe60e534497ca9bfe
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {AbstractSendScheduleDAO} from "../send-schedule-d-a-o";
-import {MySQL} from "../../../../../database/mysql";
+import type {MySQL} from "../../../../../database/mysql";
 import {SendSchedule} from "../../../model/send-schedule";
-import {MySQLBulkConfig, MySQL as MySQLBulk} from "../../../../../database/bulk/my-s-q-l";
+import type {MySQLBulkConfig} from "../../../../../database/bulk/my-s-q-l";
+import {MySQL as MySQLBulk} from "../../../../../database/bulk/my-s-q-l";
 
 export class MySQLSendScheduleDAO extends AbstractSendScheduleDAO {
     /* STATIC */

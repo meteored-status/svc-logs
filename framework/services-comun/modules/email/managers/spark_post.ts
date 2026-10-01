@@ -1,23 +1,24 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:41:12 GMT
- * Hash: f3026b32b27dce5756f510f6e42f90cd
- * Versión: 2026.5.27+2-davidmartinezmoya
- * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 5c4d0e18eb4ae3d544e7e3248369c309
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.23+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {
+import SparkPost from "sparkpost";
+
+import type {
     IActor,
     IHTMLInlineContent,
     IMail,
     IMailManager,
     ITemplateContent,
     ITextInlineContent,
-    TContentTypes
 } from "../manager";
+import {TContentTypes} from "../manager";
 import {readJSON} from "../../utiles/fs";
-
-import SparkPost from "sparkpost";
 
 /**
  * Opciones de construccion del manager de SparkPost.
@@ -49,14 +50,15 @@ type SparkPostConfig = {
 
 /**
  * Resultado simplificado de una transmision de SparkPost.
+ *
+ * @property results - Datos de la transmision: `total_rejected_recipients` (numero de
+ *     destinatarios rechazados), `total_accepted_recipients` (numero de destinatarios aceptados)
+ *     e `id` (identificador de la transmision).
  */
 interface ISendResult {
     results: {
-        /** Numero de destinatarios rechazados. */
         total_rejected_recipients: number;
-        /** Numero de destinatarios aceptados. */
         total_accepted_recipients: number;
-        /** Identificador de la transmision. */
         id: string;
     }
 }
@@ -217,7 +219,7 @@ export class SparkPostManager implements IMailManager {
      */
     public async sendToList(listId: string, data: IMail): Promise<ISendResult> {
 
-        const data_transmission: SparkPost.CreateTransmission = {
+        const dataTransmission: SparkPost.CreateTransmission = {
             options: {
                 ...data.options ?? {},
                 start_time: data.delivery,
@@ -242,11 +244,11 @@ export class SparkPostManager implements IMailManager {
         const template = data.contents.find(content => content.type === TContentTypes.TEMPLATE);
         if (template) {
             const content: ITemplateContent<any> = template as ITemplateContent<any>;
-            data_transmission.content = {
-                ...data_transmission.content,
+            dataTransmission.content = {
+                ...dataTransmission.content,
                 template_id: content.name,
             };
-            data_transmission.substitution_data = content.value;
+            dataTransmission.substitution_data = content.value;
         } else {
             const html = data.contents.find(content => content.type === TContentTypes.HTML);
             const text = data.contents.find(content => content.type === TContentTypes.TEXT);
@@ -254,18 +256,19 @@ export class SparkPostManager implements IMailManager {
             const htmlContent: IHTMLInlineContent | undefined = html ? html as IHTMLInlineContent : undefined;
             const textContent: ITextInlineContent | undefined = text ? text as ITextInlineContent : undefined;
 
-            data_transmission.content = {
-                ...data_transmission.content,
+            dataTransmission.content = {
+                ...dataTransmission.content,
                 html: htmlContent?.value,
                 text: textContent?.value,
-                attachments: data.attachments // EN el template no se pueden enviar attachments.
+                attachments: data.attachments, // EN el template no se pueden enviar attachments.
+                inline_images: data.inline_images
             };
         }
 
         const client = await this.getAdminClient();
 
         // Enviamos la transmisión
-        return await client.transmissions.send(data_transmission);
+        return await client.transmissions.send(dataTransmission);
     }
 
     /**
@@ -276,7 +279,7 @@ export class SparkPostManager implements IMailManager {
      */
     public async send(data: IMail): Promise<ISendResult> {
         // Creamos la estructura de datos de la transmisión con los datos base
-        const data_transmission: SparkPost.CreateTransmission = {
+        const dataTransmission: SparkPost.CreateTransmission = {
             options: {
                 ...data.options ?? {},
                 start_time: data.delivery,
@@ -307,11 +310,11 @@ export class SparkPostManager implements IMailManager {
         const template = data.contents.find(content => content.type === TContentTypes.TEMPLATE);
         if (template) {
             const content: ITemplateContent<any> = template as ITemplateContent<any>;
-            data_transmission.content = {
-                ...data_transmission.content,
+            dataTransmission.content = {
+                ...dataTransmission.content,
                 template_id: content.name,
             };
-            data_transmission.substitution_data = content.value;
+            dataTransmission.substitution_data = content.value;
         } else {
             const html = data.contents.find(content => content.type === TContentTypes.HTML);
             const text = data.contents.find(content => content.type === TContentTypes.TEXT);
@@ -319,11 +322,12 @@ export class SparkPostManager implements IMailManager {
             const htmlContent: IHTMLInlineContent | undefined = html ? html as IHTMLInlineContent : undefined;
             const textContent: ITextInlineContent | undefined = text ? text as ITextInlineContent : undefined;
 
-            data_transmission.content = {
-                ...data_transmission.content,
+            dataTransmission.content = {
+                ...dataTransmission.content,
                 html: htmlContent?.value,
                 text: textContent?.value,
-                attachments: data.attachments // EN el template no se pueden enviar attachments.
+                attachments: data.attachments, // EN el template no se pueden enviar attachments.
+                inline_images: data.inline_images
             };
         }
 
@@ -331,7 +335,7 @@ export class SparkPostManager implements IMailManager {
 
         try {
             // Enviamos la transmisión
-            return await client.transmissions.send(data_transmission);
+            return await client.transmissions.send(dataTransmission);
         } catch (error: any) {
             throw error;
         }

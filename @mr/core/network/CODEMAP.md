@@ -226,14 +226,28 @@ WSPool                                    (singleton por socket+reconnect)
   getCircuitState()                 → CircuitState
 ```
 
+**Conexiones:** `minConnections` es cuántas se mantienen calientes, **no un tope**. `getConnection()` es
+`available.pop() ?? addConnection()`, así que el número real lo marca la concurrencia de peticiones en
+vuelo: N peticiones lanzadas a la vez abren N conexiones, aunque sean `head()`. Quien necesite una sola
+tiene que encadenar sus envíos.
+**Devolución al pool (`get`):** `stream()` la devuelve a `available` en cuanto llega el último frame,
+**antes** de cederlo, con `liberar()` (idempotente; el `finally` la vuelve a llamar para los caminos de
+error, reconexión y `.return()`). Tiene que ser antes porque `Result.next()` lee un frame y abandona el
+generator, que se queda suspendido en ese `yield` y nunca llega a su `finally`.
 **Circuit breaker:** `Closed` → tras 5 fallos → `Open` (30s) → `HalfOpen` → prueba → `Closed`.
 **Reconexión:** backoff exponencial (100ms base, 5s máx), hasta 3 intentos sin frames entregados.
 **Heartbeat:** timeout configurable (45s por defecto); cierra la conexión si no llegan mensajes.
 
+**URL del endpoint:** `get()` la normaliza con `normalizar()` — `http`/`https` → `ws`/`wss`, y el puerto
+del esquema si no lo trae. **Puede llevar ruta**, y cuando varios servicios comparten dominio tiene que
+llevarla: es lo único que mira el VirtualService de Istio, y lo que no la lleva se lo queda el servicio
+por defecto. Se parsea con `URL` justamente por eso — la comprobación anterior (`/:\d+$/` sobre el final
+de la cadena) pegaba el puerto detrás de la ruta.
+
 ```
 IWSPoolConfig
-  socket: string
-  minConnections?: number        — mínimo 10
+  socket: string                 — admite ruta; ver arriba
+  minConnections?: number        — 10 por defecto, mínimo 1; suelo en caliente, no techo
   reconnect?: boolean            — true por defecto
   requestTimeoutMs?: number      — 30 000 ms por defecto
   heartbeatTimeoutMs?: number    — 45 000 ms por defecto

@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: b20b5995e67d21e2b7936b11426bef15
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.17+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: db925b27fdfc111adeefdab3c96d988b
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -36,8 +36,6 @@ export interface IWorkspace {
  * Gestiona el watcher de ficheros y propaga los eventos de cambio a sus workspaces dependientes.
  */
 export class Workspace {
-    /* STATIC */
-
     /* INSTANCE */
     protected readonly nombre: string;
     protected readonly root: string;

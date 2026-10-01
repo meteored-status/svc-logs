@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: d10bc73f58a46d91dd280c34b4067033
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: d6f5fbe1a581d730af6b515506a28065
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -39,7 +39,7 @@ class ManifestWorkspaceDeploymentImagenLoader {
         }
 
         if (imagen.produccion) {
-            if (typeof imagen.produccion=="string") {
+            if (typeof imagen.produccion==="string") {
                 data.produccion = ManifestWorkspaceDeploymentImagenEntornoLoader.check();
                 data.produccion.base = imagen.produccion;
                 if (name) {
@@ -50,7 +50,7 @@ class ManifestWorkspaceDeploymentImagenLoader {
             }
         }
         if (imagen.test) {
-            if (typeof imagen.test=="string") {
+            if (typeof imagen.test==="string") {
                 data.test = ManifestWorkspaceDeploymentImagenEntornoLoader.check();
                 data.test.base = imagen.test;
                 if (name) {

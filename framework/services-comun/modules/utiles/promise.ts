@@ -1,10 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 23 Jul 2026 10:11:20 GMT
- * Hash: 630273dd7c6490a520c439fc97028753
- * Versión: 2026.7.23+1-josantoniojimnez
- * Anterior: 2026.7.20+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-web-www.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 1caf1e1d34f11ba48d7698b33833195a
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.7.23+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 export async function PromiseDelayed(delay: number = 0): Promise<void> {
@@ -18,7 +18,7 @@ export async function PromiseDelayed(delay: number = 0): Promise<void> {
 type PromiseFunction<T> = (item: T)=>Promise<T>;
 export async function PromiseChain<T>(listado: T[], createPromise: PromiseFunction<T>): Promise<T[]> {
     const salida:T[] = [];
-    for (let actual of listado) {
+    for (const actual of listado) {
         const resultado = await createPromise(actual);
         salida.push(resultado);
     }

@@ -1,6 +1,15 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: aa60023c7817eca68502e97c46567292
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {AbstractPeriodicityDAO} from "../periodicity-d-a-o";
-import {MySQL} from "../../../../../database/mysql";
-import {IPeriodicity, Periodicity} from "../../../model/periodicity";
+import type {MySQL} from "../../../../../database/mysql";
+import type {IPeriodicity} from "../../../model/periodicity";
+import {Periodicity} from "../../../model/periodicity";
 
 export class MySQLPeriodicityDAO extends AbstractPeriodicityDAO {
     /* STATIC */

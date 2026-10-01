@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 9c2ae191adc78c772cb8c50c0ef56d0d
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 export interface IElevationConfig {
     api_key: string;
 }
@@ -35,9 +43,9 @@ export class Client {
     }
 
     public async elevation(lat: number, lon: number): Promise<IElevationResult> {
-        if (!this.config) return Promise.reject('Not configuration found');
+        if (!this.config) {return Promise.reject('Not configuration found');}
         const data: IElevationResult = await fetch(`${Client._BASE_URL}?locations=${lat},${lon}&key=${this.config.api_key}`).then(async response => await response.json());
-        if (data.status != "OK") return Promise.reject(data.status);
+        if (data.status != "OK") {return Promise.reject(data.status);}
         return data;
     }
 }

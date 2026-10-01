@@ -1,17 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 4877b1e28b3ea7e8fff2619442c38d6d
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.20+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 513963b97aecab30bf9547aafe0008a4
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import chokidar from "chokidar";
 
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
-
 import {isDir, readDir} from "@mr/core-cli/fs";
+
 import {GRUPOS, cargarConfig} from "./config/datos";
 import {actualizarTodo} from "./framework";
 import {init} from "./init";
@@ -91,8 +91,8 @@ async function ejecutarWorkspaces(basedir: string, path: string, watch: boolean)
         return [];
     }
 
-    const workspaces_list = await readDir(`${basedir}/${path}`);
-    return Promise.all(workspaces_list.map(workspace=>ejecutarWorkspace(basedir, path, workspace, watch)));
+    const workspacesList = await readDir(`${basedir}/${path}`);
+    return Promise.all(workspacesList.map(workspace=>ejecutarWorkspace(basedir, path, workspace, watch)));
 }
 
 async function ejecutarWorkspace(basedir: string, path: string, workspace: string, watch: boolean): Promise<Workspace> {
@@ -107,7 +107,7 @@ async function ejecutarWorkspace(basedir: string, path: string, workspace: strin
 }
 
 async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, dependencias: Workspace[]): Promise<boolean> {
-    const config_global = await cargarConfig(basedir);
+    const configGlobal = await cargarConfig(basedir);
 
     const groups = GRUPOS;
     const workspacesList: Record<string, string[]> = {};
@@ -132,8 +132,8 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
             nombre: "i18n",
             root: basedir,
             pad: length,
-            global: config_global,
-            watch: config_global.workspaces?.i18n?.watch ?? false,
+            global: configGlobal,
+            watch: configGlobal.workspaces?.i18n?.watch ?? false,
         });
         await i18n.init();
         dependencias.push(i18n);
@@ -153,7 +153,7 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
                 ejecutar: ejecucion.ejecutar,
                 forzar: ejecucion.forzar,
                 watch: ejecucion.watch,
-                global: config_global,
+                global: configGlobal,
             });
             serviciosCreados.push({nombre: workspace, service: devel});
         }
@@ -182,12 +182,12 @@ async function ejecutarServices(ejecucion: IConfigEjecucion, basedir: string, de
             persistent: true,
         }).on("change", ()=>{
             cargarConfig(basedir)
-                .then(async (config_global)=>{
+                .then(async (configGlobal)=>{
                     for (const actual of services) {
-                        actual.updateGlobal(config_global);
+                        actual.updateGlobal(configGlobal);
                     }
                     if (i18n!=undefined) {
-                        i18n.updateGlobal(config_global);
+                        i18n.updateGlobal(configGlobal);
                     }
                 })
                 .catch((err)=>{

@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: d6f6a196922f5ea9f98a7b82ff913efd
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 interface BuilderConfig {
     header: string;
     pretty: boolean;
@@ -11,8 +19,6 @@ const DEFAULT_BUILDER_CONFIG: BuilderConfig = {
 }
 
 export class XMLBuilder {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly config: BuilderConfig;
     public constructor(config?: Partial<BuilderConfig>) {
@@ -29,8 +35,6 @@ export class XMLBuilder {
 }
 
 export class XMLNode {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly name: string;
     private readonly children: XMLNode[];

@@ -1,17 +1,17 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Fri, 03 Jul 2026 06:33:38 GMT
- * Hash: 91166193aa509d6b7a336f2469401863
- * Versión: 2026.7.3+1-juancmartinez
- * Proyecto: git@github.com:alpred/meteored-svc-translation.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: afc96e6de3c1d7b4ac15d070e6b0d771
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.7.3+1-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {TransactionManager} from "./transaction-manager";
+import type {TransactionManager} from "./transaction-manager";
 import {error, info} from "../../utiles/log";
 import {md5} from "../../utiles/hash";
 import {random} from "../../utiles/random";
-import {IsolationLevel} from "./isolation";
-
+import type {IsolationLevel} from "./isolation";
 
 export interface ITransaction {
     begin(): Promise<void>;
@@ -22,8 +22,6 @@ export interface ITransaction {
 }
 
 export abstract class Transaction implements ITransaction {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly _hash: string;
 
@@ -56,24 +54,24 @@ export const transactional = (getTM: () => TransactionManager, {name, isolationL
             if (!t) {
                 t = await getTM().get();
                 await t.begin(isolationLevel);
-                if (!PRODUCCION) info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);
+                if (!PRODUCCION) {info(`Transaction ${t.hash} => BEGIN${name ? `: ${name}` : ``}`);}
             } else {
-                if (!PRODUCCION) info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);
+                if (!PRODUCCION) {info(`Transaction ${t.hash} => JOIN${name ? `: ${name}` : ``}`);}
             }
             let salida;
             try {
                 salida = await originalMethod.apply(this, [...args, t]);
                 if (initial) {
                     await t.commit();
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => COMMIT${name ? `: ${name}` : ``}`);
+                    if (!PRODUCCION) {info(`Transaction ${t.hash} => COMMIT${name ? `: ${name}` : ``}`);}
                 } else {
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => LEAVE${name ? `: ${name}` : ``}`);
+                    if (!PRODUCCION) {info(`Transaction ${t.hash} => LEAVE${name ? `: ${name}` : ``}`);}
                 }
             } catch (e) {
                 if (initial) {
                     error(`Transaction ${t.hash} failed: `, e);
                     await t.rollback();
-                    if (!PRODUCCION) info(`Transaction ${t.hash} => ROLLBACK${name ? `: ${name}` : ``}`);
+                    if (!PRODUCCION) {info(`Transaction ${t.hash} => ROLLBACK${name ? `: ${name}` : ``}`);}
                     salida = Promise.reject(e);
                 } else {
                     throw e;

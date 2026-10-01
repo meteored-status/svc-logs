@@ -1,9 +1,15 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 228ae9c6f170c5b5300c0f35df6ae72d
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {ReceiverIdentifier} from "../receiver-identifier";
-import {SparkpostSend} from "../../data/model/sparkpost-send";
+import type {SparkpostSend} from "../../data/model/sparkpost-send";
 
 export class SparkpostReceiverIdentifier extends ReceiverIdentifier {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(send: SparkpostSend) {
         super(send);

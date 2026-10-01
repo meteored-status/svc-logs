@@ -1,14 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 738f039874dc74021ebfe8f1a1eb6275
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.3+4-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: b01149cfe0359a073c82a033aa753379
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {TParams, Value} from "./value";
-import {TPluralKey} from ".";
+import type {TParams} from "./value";
+import {Value} from "./value";
+import type {TPluralKey} from ".";
 
 export type TPluralFunction = (i: number) => TPluralKey;
 
@@ -41,8 +42,6 @@ export type TPluralFunction = (i: number) => TPluralKey;
  * delante la página entera en vez de pintar un texto con menos matiz del que podría.
  */
 export class PluralValue<T extends TParams={}> extends Value<T> {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly counter: string|undefined;
 

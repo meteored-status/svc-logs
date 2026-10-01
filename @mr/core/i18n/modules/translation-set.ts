@@ -1,18 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 72a28354183230e2b888de6852f09552
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.3+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: d7fd3f855ef03c0c46b499bb14e78c07
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Translation} from ".";
-import {TParams, Value} from "./value/value";
+import type {TParams, Value} from "./value/value";
 
 export class TranslationSet<T extends TParams={}> extends Translation<T> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(protected readonly values: Value[]) {
         super();

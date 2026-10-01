@@ -1,16 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: a71e5f2ad34e542c53427e341cd04f75
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 5658d147214faf7bfb64d4be5409731f
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import chokidar from "chokidar";
 
-
 import {isDir, isFile, mkdir, readDir, readJSON, safeWrite} from "@mr/core-cli/fs";
+
 import type {Idiomas, TIdiomas} from "../idioma";
 import {type IModuloConfig as IModuloConfigBase, type IPackageConfig, Modulo} from ".";
 import type {Traduccion} from "./traduccion/loader";

@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: bb10ff238d16b8de4a0e51ccf0202556
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 export interface ICoordenadas {
     lon: number;
     lat: number;
@@ -20,6 +28,8 @@ export interface IGeoPoint {
 }
 
 export class Coordenadas {
+    /* STATIC */
+
     private static parseSeconds(seconds: string): number {
         const len = seconds.length-2;
         const divisor = 3600*(10**len);

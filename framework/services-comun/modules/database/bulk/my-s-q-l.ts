@@ -1,6 +1,15 @@
-import {Bulk, BulkConfig} from "./index";
-import {MySQL as MySQLConnectionPool} from "../mysql"
-import {Transaction} from "../mysql/transaction";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 49d96c64e53b9b4c663196edd3debbbb
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {BulkConfig} from "./index";
+import {Bulk} from "./index";
+import type {MySQL as MySQLConnectionPool} from "../mysql"
+import type {Transaction} from "../mysql/transaction";
 
 export interface MySQLBulkConfig<T> extends BulkConfig {
     query: string;
@@ -10,8 +19,6 @@ export interface MySQLBulkConfig<T> extends BulkConfig {
 }
 
 export class MySQL<T> extends Bulk<T> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly db: MySQLConnectionPool, config: MySQLBulkConfig<T>, transaction?: Transaction) {
         super(config, transaction);

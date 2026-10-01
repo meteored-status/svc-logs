@@ -1,11 +1,18 @@
-import {IDAOFactory} from "../data/dao/d-a-o-factory";
-import {Send, TStatus} from "../data/model/send";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0c80b1b1f0b8ecbbd75f3e61565d8792
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {IDAOFactory} from "../data/dao/d-a-o-factory";
+import type {Send} from "../data/model/send";
+import {TStatus} from "../data/model/send";
 import {error, info} from "../../utiles/log";
 import {SenderBuilder} from "../sender/sender-builder";
 
 export abstract class SendPendingController {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly factory: IDAOFactory) {
     }

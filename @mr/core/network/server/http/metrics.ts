@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: 985bb90fae96a7a7dbb757310dcecb16
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: e7dcd2392793464d7dfeb4502b1ee679
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.5.18+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 /**
@@ -149,5 +151,4 @@ function escape(value: string): string {
  * Singleton de métricas usado por `Server.onRequest` y el handler `/admin/metrics/`.
  */
 export const metricas = new Metricas();
-
 

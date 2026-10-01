@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 18 Aug 2026 12:16:10 GMT
- * Hash: 48f068dade9924e1b5eb1aaedb4db371
- * Versión: 2026.8.18+1-bixus
- * Anterior: 2026.6.2+1-juancmartinez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 8dba6d989baa586147a5ea6e50c47f9c
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.8.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -34,8 +34,6 @@ export interface LockDAO {
  * 4. Si ocurre un error en el paso 2, llamar a `errorProcessing()` para liberar ambos locks.
  */
 export class MessageManager {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly lockMessageProcessingKey: string;
     private readonly lockMessageProcessedKey: string;

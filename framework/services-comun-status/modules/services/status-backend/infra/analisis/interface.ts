@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 14:26:51 GMT
- * Hash: 6d541eab72935fe11f53de66e8c38a07
- * Versión: 2026.9.7+2-bixus
- * Anterior: 2026.9.1+2-bixus
+ * Fecha: Mon, 28 Sep 2026 15:07:30 GMT
+ * Hash: 9f9e80cf2d2c90a8e08f34118bb8df2b
+ * Versión: 2026.9.28+2-bixus
+ * Anterior: 2026.9.7+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -111,6 +111,45 @@ export interface IHallazgoOUT {
 }
 
 /**
+ * Que alguien ha dado por esperado a un hallazgo del análisis, y con qué.
+ *
+ * Vive aparte de `IHallazgoOUT` y no mezclada con él porque los dos tienen dueño distinto: el hallazgo lo calcula
+ * el análisis en cada pasada y nunca se guarda, y esto sí se persiste —en `infra_anomaly_accepted`— y es lo único
+ * de los dos que tiene autor y fecha de alta.
+ *
+ * @property id             - Id de la aceptación, para poder deshacerla.
+ * @property date            - La fecha con la que se guardó la aceptación, `YYYY-MM-DD`. No tiene por qué coincidir
+ *                            al carácter con la `date` del hallazgo que la acompaña en `IHallazgoAceptadoOUT.finding`
+ *                            —la fecha de un escalón puede migrar unos días mientras la racha no se asienta, y esto
+ *                            es la que se guardó al aceptar, no la que el análisis ve hoy.
+ * @property note            - Por qué se aceptó.
+ * @property accepted        - Cuándo se aceptó, en milisegundos epoch.
+ * @property acceptedBy      - Id de quien lo aceptó, o `null` si su cuenta se ha borrado después.
+ * @property acceptedByName  - Su nombre en el momento de leerlo, o `null` si no se sabe —cuenta borrada, o nunca se
+ *                            tecleó un `accepted_by`—.
+ */
+export interface IAceptacionOUT {
+    id: number;
+    date: string;
+    note: string;
+    accepted: number;
+    acceptedBy: number|null;
+    acceptedByName: string|null;
+}
+
+/**
+ * Un hallazgo del análisis emparejado con la aceptación que lo calla.
+ *
+ * @property finding    - El hallazgo tal como lo ve **esta** pasada del análisis —con su `date` de hoy, que para un
+ *                        escalón puede no ser la misma que la de `acceptance.date`—.
+ * @property acceptance - Con qué se aceptó.
+ */
+export interface IHallazgoAceptadoOUT {
+    finding: IHallazgoOUT;
+    acceptance: IAceptacionOUT;
+}
+
+/**
  * Lo detectado en el consumo de Cloudflare.
  *
  * **No lleva tendencia, y no es un olvido.** Una tendencia sobre este histórico sería falsa: el consumo de la cuenta
@@ -122,9 +161,14 @@ export interface IHallazgoOUT {
  *
  * @property from     - Primer día de la ventana analizada, `YYYY-MM-DD`.
  * @property to       - Último día.
- * @property findings - Lo encontrado, ya ordenado: primero por severidad y luego por fecha, de lo más reciente a lo
- *                      más antiguo. Ordenar aquí y no en la pantalla es a propósito — el criterio es del análisis, y
- *                      la portada enseña «los tres primeros» sin tener que saber cuál es el criterio.
+ * @property findings - Lo encontrado que **sigue sin explicación**, ya ordenado: primero por severidad y luego por
+ *                      fecha, de lo más reciente a lo más antiguo. Ordenar aquí y no en la pantalla es a propósito —
+ *                      el criterio es del análisis, y la portada enseña «los tres primeros» sin tener que saber cuál
+ *                      es el criterio. Un hallazgo que alguien ha aceptado **no** sale aquí: sale en `accepted`.
+ * @property accepted - Los hallazgos que alguien ha marcado como esperados, con la aceptación que los calla. Aparte
+ *                      de `findings` y no mezclados con un campo `accepted` en cada uno: la portada y el correo solo
+ *                      necesitan preguntar «¿qué sigue sin explicar?», que es justo `findings`, sin tener que filtrar
+ *                      nada.
  * @property months   - Meses naturales **completos** que hay en el índice, contando solo los que tienen todos sus
  *                      días. Es lo que dice si se puede hablar de tendencia.
  * @property trend    - Si hay histórico suficiente para una tendencia con la estacionalidad descontada. Viaja
@@ -135,6 +179,37 @@ export interface IAnalisisOUT {
     from: string;
     to: string;
     findings: IHallazgoOUT[];
+    accepted: IHallazgoAceptadoOUT[];
     months: number;
     trend: boolean;
+}
+
+/**
+ * Lo que hace falta para marcar un hallazgo como esperado.
+ *
+ * **Solo `kind`, `metric` y `date` identifican el hallazgo — no viajan `value` ni `reference`.** Lo que se guarda de
+ * nivel es lo que el servidor recalcule al aceptar, no lo que la pantalla tuviera pintado cuando alguien pulsó el
+ * botón, que puede llevar minutos de retraso sobre el análisis real.
+ *
+ * @property kind   - Qué tipo de hallazgo es. Solo los de `ACEPTABLES` se pueden aceptar; el resto lo rechaza el
+ *                    flow con un mensaje explicable.
+ * @property metric - Sobre qué métrica.
+ * @property date   - La fecha del hallazgo **tal como la ve el análisis en este momento**, `YYYY-MM-DD`. Tiene que
+ *                    casar exacta con la de un hallazgo de `findings`, o el flow rechaza con «ese escalón ya no está
+ *                    en el análisis, recarga la página» — la tolerancia de fechas es solo para **releer** una
+ *                    aceptación ya guardada contra pasadas futuras, no para darla de alta.
+ * @property note   - Por qué se acepta. Obligatoria, de 1 a 255 caracteres tras quitar los espacios de los extremos.
+ */
+export interface IAceptarIN {
+    kind: EHallazgo;
+    metric: string;
+    date: string;
+    note: string;
+}
+
+/**
+ * @property id - Id de la aceptación a deshacer.
+ */
+export interface IAceptarDeleteIN {
+    id: number;
 }

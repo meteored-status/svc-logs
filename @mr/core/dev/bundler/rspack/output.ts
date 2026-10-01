@@ -1,12 +1,14 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 984273ce026e9fe912f57c7da3aabc58
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 4e95766be16060fa8fac7c6e48778cc4
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import path from "node:path";
 import {type Filename, type Output as TOutput} from "@rspack/core";
+import path from "node:path";
 
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 
@@ -41,6 +43,8 @@ interface IOutputConfig {
  * @property clean         - Si `true`, rspack limpia el directorio de salida antes de cada build.
  */
 export class Output implements TOutput {
+    /* INSTANCE */
+
     public readonly uniqueName: string;
     public readonly path: string;
     public readonly filename: Filename;
@@ -54,6 +58,8 @@ export class Output implements TOutput {
         this.uniqueName = path.basename(basedir);
         this.clean = clean;
     }
+
+    /* STATIC */
 
     /** Configuración de salida para un bundle Node.js. */
     protected static buildNode({basedir}: IOutputConfig): Output {

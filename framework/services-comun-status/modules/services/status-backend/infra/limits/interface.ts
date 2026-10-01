@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 14:26:51 GMT
- * Hash: 0ba18e5983beef913846be778d96795e
- * Versión: 2026.9.7+2-bixus
- * Anterior: 2026.9.1+3-bixus
+ * Fecha: Mon, 28 Sep 2026 15:07:30 GMT
+ * Hash: 1058ada234f7bf7d9e4169cc7e92a12e
+ * Versión: 2026.9.28+2-bixus
+ * Anterior: 2026.9.7+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -50,10 +50,14 @@ export interface ILimitDateOUT {
  *                     `bound` que la serie prestada es solo una cota superior. Importa al teclear: el tope es
  *                     suyo y hay que apuntarlo igual, pero el porcentaje que se verá después sale de una serie
  *                     que es de otro.
+ *
+ *                     `unlimited` dice que la línea no tiene límite por naturaleza, así que dejarla sin tope es lo
+ *                     correcto y no un olvido. Importa al teclear por lo mismo que lo demás: sin decirlo, un campo
+ *                     vacío en esa línea parece que falta rellenarlo.
  */
 export interface ILimitsOUT {
     dates: ILimitDateOUT[];
-    metrics: {metric: string; unit: string; agg: string; apiConfirmed: boolean; mirrors?: string; bound?: boolean}[];
+    metrics: {metric: string; unit: string; agg: string; apiConfirmed: boolean; mirrors?: string; bound?: boolean; unlimited?: boolean}[];
 }
 
 /**

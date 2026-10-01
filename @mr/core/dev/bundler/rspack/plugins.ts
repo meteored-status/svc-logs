@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 3f414cf7ac78b05bbbc51fbf059b0071
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 1d81582150a1bb7612838cd42583db23
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {RspackManifestPlugin} from "rspack-manifest-plugin";
@@ -46,15 +48,15 @@ function buildBrowser(prefix: string): TPlugins {
             fileName: "stats.json",
             filter: (obj) => !obj.path.includes(".js.map"),
             generate: (_, files, entries) => {
-                const entrypoints_final: Record<string, string[]> = {
+                const entrypointsFinal: Record<string, string[]> = {
                     "_": files.map((elemento) => elemento.path.replace("auto/", "")),
                 };
                 for (const actual of Object.keys(entries)) {
-                    entrypoints_final[`${actual}.js`] = entries[actual]
+                    entrypointsFinal[`${actual}.js`] = entries[actual]
                         .filter((elemento) => !elemento.includes(".js.map"))
                         .map((elemento) => `/${prefix}js/bundle/${elemento}`);
                 }
-                return entrypoints_final;
+                return entrypointsFinal;
             },
         }),
     ];

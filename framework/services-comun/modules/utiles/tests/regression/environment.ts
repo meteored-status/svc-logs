@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 12725ea9304ba121095adb4d1ef4826a
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {readJSON} from "services-comun/modules/utiles/fs";
 //import {EService, SERVICES} from "../../../../../services-comun-meteored/modules/services/config";
 
@@ -13,7 +21,6 @@ export type GKE = {
     context: string;
     namespace: string;
 }
-
 
 export class Env {
     /* STATIC */

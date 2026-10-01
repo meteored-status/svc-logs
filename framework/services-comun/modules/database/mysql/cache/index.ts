@@ -1,7 +1,16 @@
+/**
+ * Editor: Bixus
+ * Fecha: Mon, 28 Sep 2026 07:47:02 GMT
+ * Hash: 3b9059d2b43a4202f9cd4bc0e06f03f1
+ * Versión: 2026.9.28+2-bixus
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ */
+
 import type {TipoRegistro} from "..";
 import {error} from "../../../utiles/log";
 import {PromiseDelayed} from "../../../utiles/promise";
-import {ICacheDiskConfig} from "./disk";
+import type {ICacheDiskConfig} from "./disk";
 
 type QueryFailover<T> = (sql: string, params: TipoRegistro[])=>Promise<T[]>;
 
@@ -57,14 +66,21 @@ export abstract class Cache<T> implements ICache<T> {
 
     private async getEjecutar(key: string, sql: string, params: TipoRegistro[], fn: QueryFailover<T>, cfg: ICacheConfigGet): Promise<T[]> {
         // const time = Date.now();
-        let data = await this.fromCache(key);
+        const data = await this.fromCache(key);
         if (data!=undefined && this.checkCache(data)) {
             // error("SI", Date.now()-time);
             delete this.running[key];
             return data.docs;
         }
 
-        const docs = await fn(sql, params);
+        let docs: T[];
+        try {
+            docs = await fn(sql, params);
+        } catch (err) {
+            // Sin esto la promesa rechazada se queda en `running` y la clave falla para siempre.
+            delete this.running[key];
+            return Promise.reject(err);
+        }
 
         PromiseDelayed()
             .then(()=>this.cachear(key, cfg, docs))

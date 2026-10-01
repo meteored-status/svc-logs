@@ -1,6 +1,16 @@
-import {Duration, PubSub as PubSubBase, Subscription, Topic} from "@google-cloud/pubsub";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: d65f81d7fffc01af9915c0453c4fea95
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
 
-import {ETaskCancel, TaskBuilder} from "./task";
+import type {Subscription, Topic} from "@google-cloud/pubsub";
+import {Duration, PubSub as PubSubBase} from "@google-cloud/pubsub";
+
+import type {TaskBuilder} from "./task";
+import {ETaskCancel} from "./task";
 import {Mensaje} from "./mensaje";
 import {PubSubError, PubSubErrorStep, PubSubErrorTipo} from "./error";
 import {info, warning} from "../../utiles/log";
@@ -17,6 +27,8 @@ interface IDesuscribirConfig {
 }
 
 export class PubSub<T> {
+    /* STATIC */
+
     private static DEADLINE = 60;
     private static TIMEOUT = (this.DEADLINE-1)*1000;
 

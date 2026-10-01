@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: ac27f7fe4616677dd4654523d4a53e66
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 export enum TEvent {
     SPAKPOST = 1,
 }
@@ -11,8 +19,6 @@ export interface ISendEvent {
 }
 
 export abstract class SendEvent {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly _data: ISendEvent) {
     }

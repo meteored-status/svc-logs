@@ -17,7 +17,6 @@ en el plan —decisiones de arquitectura no resueltas, implicaciones de segurida
 previstas, casos borde que cambian el diseño—, no la resuelvas por tu cuenta improvisando: detente,
 explica qué encontraste, y señala que debería reasignarse a opus-planner antes de continuar.
 
-No te encargues de tareas puramente mecánicas y deterministas (formateo, imports, búsqueda/
-reemplazo literal) si se pueden separar como subtarea aparte para haiku-mechanic — pero si ya las
-tienes que tocar como parte natural de tu propio cambio, hazlo tú mismo en vez de fragmentar
-artificialmente el trabajo.
+Lo puramente mecánico y determinista —formateo, imports, búsqueda y reemplazo literal— es tuyo
+también: hazlo dentro de tu propio cambio en vez de fragmentar artificialmente el trabajo. Hubo un
+agente aparte para eso y se quitó por no compensar.

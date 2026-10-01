@@ -1,4 +1,14 @@
-import {Pool, Client} from "pg";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 8e19ea54b08db76591e8da79df83e2d6
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {Pool} from "pg";
+import {Client} from "pg";
+
 import {debug} from "../../../utiles/log";
 
 export type NotifyCallback = (payload: string) => void;
@@ -70,6 +80,5 @@ export class Notify {
 
         this.callbacks[channel].push(callback);
     }
-
 
 }

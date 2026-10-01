@@ -1,20 +1,19 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: b6ec99df0b716a67c1fcf6801f6ff721
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.8.5+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 09:57:26 GMT
+ * Hash: ecf27697a730755ef084f39dc1e0cf41
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.23+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {md5} from "services-comun/modules/utiles/hash";
-
 import {BuildFW} from "@mr/core-dev/manifest/build";
 import type {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
-
 import {isDir, isFile, readDir, readFileString, readJSON, safeWrite, unlink} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
+
 import {Comando} from "./comando";
 import {Log} from "./log";
 import type {IManifestLegacy} from "./manifest/workspace/legacy";
@@ -24,13 +23,6 @@ import {ManifestRootLoader} from "./manifest/root";
 import {ManifestWorkspaceLoader} from "./manifest/workspace";
 import {add, checkCliente as checkClienteFW, checkMrlang, recompilarCliente} from "./framework";
 import {install} from "./yarn";
-
-import APP from "./init/app";
-import ATTRIBUTES from "./init/attributes";
-import DEVEL from "./init/devel";
-import DATADOG from "./init/datadog";
-import EDITORCONFIG from "./init/editorconfig";
-import IGNORE from "./init/ignore";
 import {checkDependencies, resolverDepsTransitivas, versionMasReciente} from "./init/dependencias";
 import {getBundlerNormalizado} from "./bundler";
 import {checkScripts} from "./init/scripts";
@@ -40,6 +32,14 @@ import {initGithub, initAgents, initClaude, initClaudeDir, initContributing} fro
 import {initYarnRC} from "./init/yarnrc";
 import {initConfig, type IWorkspaces} from "./init/config-workspaces";
 import {initRun} from "./init/run";
+import {checkLint} from "./init/lint";
+import {checkWorkspaceDeps} from "./init/workspace-deps";
+import APP from "./init/app";
+import ATTRIBUTES from "./init/attributes";
+import DEVEL from "./init/devel";
+import DATADOG from "./init/datadog";
+import EDITORCONFIG from "./init/editorconfig";
+import IGNORE from "./init/ignore";
 
 interface IConfiguracion {
     // openTelemetry: boolean;
@@ -60,6 +60,9 @@ export async function init(basedir: string): Promise<boolean> {
     await corregirGITs(basedir);
 
     const config = await initWorkspaces(basedir, workspaces);
+    // Después de initWorkspaces(), que reescribe los package.json de los servicios: si fuera antes,
+    // lo que corrige esta se perdería en esa escritura.
+    const cambioDeps = await checkWorkspaceDeps(basedir);
     await initConfig(basedir, workspaces);
     await initRun(basedir, workspaces);
 
@@ -83,7 +86,7 @@ export async function init(basedir: string): Promise<boolean> {
 
     Log.groupEnd();
 
-    if (cambio || config.cambio) {
+    if (cambio || config.cambio || cambioDeps) {
         await install(basedir, {verbose:false});
 
         return true;
@@ -179,6 +182,7 @@ async function checkCliente(basedir: string): Promise<void> {
     await add(basedir, [
         "@mr/core/dev",
         "@mr/core/i18n",
+        "@mr/core/lint",
         "@mr/core/network",
     ]);
     if (hash!=undefined) {
@@ -201,6 +205,7 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
     const scripts: string[] = [];
 
     const paquete = await readJSON<IPackageJsonBase>(`${basedir}/package.json`);
+    const devDependencies = JSON.stringify(paquete.devDependencies ?? {});
     paquete.scripts = {
         // "mrlang": "yarn workspace @mr/core-i18n mrlang",
         // "mrpack": "yarn workspace @mr/cli mrpack",
@@ -306,9 +311,7 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
     if (paquete.dependencies!=undefined) {
         delete paquete.dependencies;
     }
-    if (paquete.devDependencies!=undefined) {
-        delete paquete.devDependencies;
-    }
+    await checkLint(basedir, paquete);
 
     paquete.resolutions??={};
     delete paquete.resolutions["@elastic/elasticsearch"];
@@ -342,7 +345,9 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
 
     await checkRootManifest(basedir);
 
-    if (!bin) {
+    // Las `devDependencies` de la raíz las fija `checkLint()`: si han cambiado, el `yarn.lock` no las
+    // tiene todavía y el siguiente `yarn lint` no encontraría `eslint`.
+    if (!bin || devDependencies!==JSON.stringify(paquete.devDependencies ?? {})) {
         await install(basedir, {verbose:false});
     }
 

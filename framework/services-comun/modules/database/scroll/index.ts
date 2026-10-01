@@ -1,10 +1,16 @@
-import {SortResults} from "../../elasticsearch";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 29f5c2f28515f3d4f6dc380cec925bdb
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {SortResults} from "../../elasticsearch";
 
 export type TCloseFunction = () => Promise<void>;
 
 export abstract class Scroll<T> {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly _id: string;
     private _close: TCloseFunction | undefined;
@@ -35,8 +41,6 @@ export abstract class Scroll<T> {
 }
 
 export class ElasticSearchScroll extends Scroll<SortResults> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(id: string, close?: TCloseFunction) {
         super(id, close);

@@ -1,12 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 24 Aug 2026 11:07:07 GMT
- * Hash: f37c89c28bd772b9e2fc8404b42974b1
- * Versión: 2026.8.24+1-bixus
- * Anterior: 2026.8.13+2-bixus
+ * Fecha: Tue, 15 Sep 2026 08:43:57 GMT
+ * Hash: 5da3db8079608a3604be1a6ba7e82602
+ * Versión: 2026.9.15+1-bixus
+ * Anterior: 2026.9.11+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import type {EGroupLevel} from "../../group/interface";
 import type {ERolStatus} from "../../rol/interface";
 import type {EUserStatus} from "../interface";
 
@@ -92,6 +93,30 @@ export interface IDepartment {
  * @property departments - Identificadores de departamento (`EDepartment`) a los que pertenece.
  * @property roles       - Identificadores de rol asignados. Son los roles **directos**: los
  *                         permisos que hereda por la jerarquía `role.parent` no se reflejan aquí.
+ * @property groupRoles  - Identificadores de rol que le llegan **por sus grupos**, sea la pertenencia
+ *                         directa o por anidamiento, ya cruzados con el rango que tiene en cada uno. Van
+ *                         aparte de `roles` y no mezclados porque no se gestionan en el mismo sitio: un rol
+ *                         directo se quita de la ficha del usuario y uno de grupo solo se quita sacándolo
+ *                         del grupo o cambiando lo que el grupo concede.
+ *
+ *                         **Los dos conjuntos se solapan**: un rol puede estar en las dos listas, y
+ *                         entonces quitar el directo no se lo quita a la persona — lo sigue teniendo por el
+ *                         grupo. La pantalla tiene que distinguirlo, porque la casilla de un rol que solo
+ *                         llega por grupo no se puede desmarcar.
+ *
+ *                         Llega **vacía** sin `status.group.list`, igual que `groups`: de dónde salen los
+ *                         permisos de alguien es información de los grupos.
+ * @property groups      - Grupos a los que pertenece, con su rango. Van **los directos y los que le llegan
+ *                         por anidamiento**, distinguidos por `IUserGroup.directo` para que la pantalla los
+ *                         pinte de forma distinta: son dos cosas que se gestionan en sitios distintos —el
+ *                         directo se quita de la lista de miembros de ese grupo, el indirecto solo se quita
+ *                         sacándolo del grupo que lo trae, o deshaciendo la arista—.
+ *
+ *                         Llega **vacía** sin `status.group.list`, igual que pasa con las identidades en
+ *                         otros listados: saber qué grupos hay es cosa del permiso de grupos.
+ * @property groupCount  - A cuántos grupos pertenece en total, directos e indirectos. **Va siempre**, con
+ *                         permiso o sin él, y por eso es lo único que distingue «no pertenece a ninguno» de
+ *                         «pertenece pero no puedes verlos»: con permiso, `groups.length` es esta cifra.
  */
 export interface IUser {
     id: number;
@@ -106,4 +131,42 @@ export interface IUser {
     avatar?: string;
     departments: number[];
     roles: number[];
+    groupRoles: number[];
+    groups: IUserGroup[];
+    groupCount: number;
+}
+
+/**
+ * Grupo al que pertenece un usuario, con el rango que tiene en él.
+ *
+ * **Lleva el nombre dentro y no solo el id**, al contrario que `IUser.departments` y `IUser.roles`, que se
+ * resuelven contra los catálogos que viajan en `IListOUT`. Aquí no hay catálogo de grupos que viaje, y no se
+ * añade: esto es de solo lectura, así que un catálogo solo serviría para resolver nombres — que es
+ * exactamente lo que evita traerlos ya puestos. Mismo criterio que `IRolGroup` en `rol/list`.
+ *
+ * **De solo lectura desde la ficha del usuario.** Meter o sacar a alguien de un grupo se hace desde la
+ * pantalla del grupo, que es donde están las reglas: solo se toca a quien está por debajo, no se reparte un
+ * rango por encima del propio y el grupo no puede quedarse sin propietario. Un segundo camino de escritura
+ * obligaría a repetirlas, y es el mismo motivo por el que la ficha del rol tampoco deja tocar sus grupos.
+ * Ojo: departamentos y roles **sí** se editan desde aquí, así que la diferencia llama la atención — la
+ * diferencia es que aquellos son una simple pertenencia y esta lleva un rango con reglas propias.
+ *
+ * @property id      - Identificador del grupo.
+ * @property name    - Nombre del grupo.
+ * @property level   - Rango **efectivo**: el que tiene de verdad, contando el que le llega por grupos
+ *                     anidados y quedándose con el mayor si llega por varios caminos (`gruposEfectivos()`).
+ * @property directo - Si figura en la lista de miembros de ese grupo. A `false` pertenece **por
+ *                     anidamiento**: está en otro grupo que es miembro de este, y por eso recibe lo que este
+ *                     concede sin aparecer en él.
+ *
+ *                     Es la distinción que hace útil esta lista y no un adorno: sin ella, «por qué esta
+ *                     persona puede esto» no tiene respuesta visible en ninguna pantalla del panel. Alguien
+ *                     puede ser propietario efectivo de un grupo sin estar en su lista de miembros, y quien
+ *                     mire esa lista no lo va a encontrar.
+ */
+export interface IUserGroup {
+    id: number;
+    name: string;
+    level: EGroupLevel;
+    directo: boolean;
 }
