@@ -15,7 +15,7 @@ spec:
       template:
         spec:
           containers:
-            - image: europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${IMAGEN}:${VERSION}
+            - image: ${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}
               env:
                 - name: DATADOG
                   value: "false"
