@@ -369,6 +369,17 @@ monta `/workspace` dentro de un contenedor y todo el árbol del build pasa por a
 
 ---
 
+## Imagen en el despliegue GKE
+
+Con los overlays `entornos/` y `clientes/`, `updateImagen()` (en `kustomizar.sh`) reescribe
+la imagen que referencian los manifiestos del repo de kustomize
+(`europe-west1-docker.pkg.dev/<proyecto>/<kustomize.dir>/<workspace>`) con
+`kustomize edit set image <nombre>=<imagen>:<versión>`. Así apunta a la imagen que ha
+subido `contenedor.sh`: `deploy.imagen.<entorno>.registro`, `.paquete` y `.nombre`, con
+los mismos valores por defecto (`europe-west1-docker.pkg.dev`, `services` y el nombre del
+workspace). Con el overlay `_all/`, la imagen la monta `kustomizar/build.sh`, que vive en
+el repo de kustomize.
+
 ## Plantillas Cloud Run
 
 Usadas por `kustomizar.sh` cuando el workspace tiene `deploy.target = "lambda"`:
@@ -379,9 +390,16 @@ Usadas por `kustomizar.sh` cuando el workspace tiene `deploy.target = "lambda"`:
 | `cloud-run-job.yml` | `Job` (Cloud Run v1) | Job puntual o cronjob con VPC y tmpfs; el scheduler se crea/actualiza/elimina según `deploy.schedule` y `deploy.type` |
 | `cloud-run.yml` | `Service` (Knative) | Plantilla de referencia simplificada sin VPC (solo consulta) |
 
-Los placeholders `${PROJECT_ID}`, `${KUSTOMIZER}`, `${IMAGEN}`, `${VERSION}`,
-`${ENTORNO}` y `${ZONA}` son sustituidos por `kustomizar.sh` con `sed` antes de
-aplicar la plantilla.
+Los placeholders `${REGISTRO}`, `${PAQUETE}`, `${NOMBRE}`, `${PROJECT_ID}`,
+`${KUSTOMIZER}`, `${IMAGEN}`, `${VERSION}`, `${ENTORNO}` y `${ZONA}` son sustituidos por
+`kustomizar.sh` con `sed` antes de aplicar la plantilla.
+
+La imagen del contenedor (`${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}`) sale de
+`deploy.imagen.<entorno>.registro`, `.paquete` y `.nombre`, con los mismos valores por
+defecto que usa `contenedor.sh` al subirla (`europe-west1-docker.pkg.dev`, `services` y
+el nombre del workspace): `imagenSubida()` es la misma para Cloud Run y para GKE. El
+nombre del servicio o job (`${KUSTOMIZER}-${IMAGEN}`) sigue saliendo de
+`deploy.kustomize[].dir` y `.name`.
 
 Tras aplicar la plantilla, `parseWorkspaceLambdaZona()` añade las variables de
 `deploy.env` (si existen) al `env` del contenedor mediante `yq`, sumándose a las

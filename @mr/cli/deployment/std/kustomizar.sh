@@ -12,15 +12,42 @@ export BASETOP
 export PROJECT_ID
 
 if [[ -f "DESPLEGAR.txt" ]]; then
+  # Deja en `REGISTRO`, `PAQUETE` y `NOMBRE` dónde ha subido `contenedor.sh` la imagen del workspace de
+  # `RUTA`, a partir de `deploy.imagen.<entorno>` y con sus mismos valores por defecto. Si no coinciden, el
+  # despliegue apunta a una imagen que no existe.
+  imagenSubida() {
+    RUTA="${1}"
+    WORKSPACE="${2}"
+
+    REGISTRO=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .registro // empty")
+    if [[ -z "${REGISTRO}" || "${REGISTRO}" == "null" ]]; then
+      REGISTRO="europe-west1-docker.pkg.dev"
+    fi
+    PAQUETE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .paquete // empty")
+    if [[ -z "${PAQUETE}" || "${PAQUETE}" == "null" ]]; then
+      PAQUETE="services"
+    fi
+    NOMBRE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .nombre // empty")
+    if [[ -z "${NOMBRE}" || "${NOMBRE}" == "null" ]]; then
+      NOMBRE="${WORKSPACE}"
+    fi
+  }
+  export -f imagenSubida
+
   updateImagen() {
     KUSTOMIZER="${1}"
     DIR="${2}"
     WORKSPACE="${3}"
     VERSION="${4}"
 
+    # La parte de antes del `=` es el nombre con el que referencian la imagen los manifiestos del repo de
+    # kustomize, y por eso no cambia; la de después, la que se ha subido de verdad.
+    imagenSubida "${RUTA}" "${WORKSPACE}"
+    IMAGEN="${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:${VERSION}"
+
     cd "${DIR}"
-    kustomize edit set image "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
-    kustomize edit set image "europe-west1-docker.pkg.dev/\\\${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}:${VERSION}"
+    kustomize edit set image "europe-west1-docker.pkg.dev/${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}=${IMAGEN}"
+    kustomize edit set image "europe-west1-docker.pkg.dev/\\\${PROJECT_ID}/${KUSTOMIZER}/${WORKSPACE}=${IMAGEN}"
     cd "${BASETOP}"
   }
   export -f updateImagen
@@ -146,7 +173,14 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       echo "" >> "${LAMBDA_SCRIPT}"
     fi
 
+    # La imagen es la que ha subido `contenedor.sh`; el nombre del servicio o job sigue saliendo de
+    # `deploy.kustomize` (`${KUSTOMIZER}-${IMAGEN}`).
+    imagenSubida "${RUTA}" "${WORKSPACE}"
+
     cat "${BASETOP}/@mr/cli/deployment/std/cloud-run-${TYPE}.yml" \
+      | sed "s#\${REGISTRO}#${REGISTRO}#g" \
+      | sed "s#\${PAQUETE}#${PAQUETE}#g" \
+      | sed "s#\${NOMBRE}#${NOMBRE}#g" \
       | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" \
       | sed "s/\${KUSTOMIZER}/${KUSTOMIZER}/g" \
       | sed "s/\${IMAGEN}/${SERVICIO}/g" \
