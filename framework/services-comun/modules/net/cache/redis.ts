@@ -1,17 +1,20 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 8d9b7f3111da97034e267c32eb78a53a
- * Versión: 2026.6.17+3-josantoniojimnez
- * Anterior: 2026.6.2+2-juancmartinez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: db688ed1f5fb7828818899a52fab17ea
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {Conexion} from "@mr/core-network/server/http/conexion";
+import type {Conexion} from "@mr/core-network/server/http/conexion";
 import type {Configuracion} from "@mr/core-workload/config";
 import {TDevice} from "@mr/core-network/server/http/config/device";
 
-import {INetCache, INetCacheV1, IRouteGroupCache, NetCache} from ".";
-import {IRedisOptions, Redis} from "../../database/redis";
+import type {INetCache, INetCacheV1, IRouteGroupCache} from ".";
+import {NetCache} from ".";
+import type {IRedisOptions} from "../../database/redis";
+import {Redis} from "../../database/redis";
 import {md5} from "../../utiles/hash";
 
 export class NetCacheRedis extends NetCache {

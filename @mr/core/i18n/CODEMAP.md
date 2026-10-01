@@ -29,15 +29,15 @@ lo que se importa de fuera, asi que quien viene por los tipos no se lleva el CLI
 │  ├─ mrlang.js         entrada; fija MRPACK_ROOT
 │  └─ min/              bundle generado (gitignored)
 ├─ modules/             LOS IDIOMAS Y EL RUNTIME
-│  ├─ langs.ts          tipos de idioma, `soportados`, `soportado()`, `corto()`
+│  ├─ langs.ts          tipos de idioma, `soportados`, `soportado()` (guarda), `corto()`
 │  ├─ index.ts          Translation (base abstracta) — INTERNO, no exportado
 │  ├─ literal.ts        Literal
 │  ├─ translation-map.ts
 │  ├─ translation-set.ts
 │  ├─ example.ts        demo suelta — INTERNO, no exportado
 │  ├─ util/
-│  │  ├─ lang.ts                     getLang()
-│  │  └─ plural-function-builder.ts  reglas CLDR sobre Intl.PluralRules
+│  │  ├─ lang.ts                     getLang(), flattenLang(), langChain()
+│  │  └─ plural-function-builder.ts  reglas CLDR sobre Intl.PluralRules (con fallback por langChain)
 │  └─ value/
 │     ├─ index.ts       TPluralKey
 │     ├─ value.ts       Value, TParams — INTERNO, no exportado
@@ -78,7 +78,7 @@ Diez rutas, todas declaradas en el mapa `exports` del `package.json`:
 | `@mr/core-i18n/value` | `modules/value/index.ts` | `TPluralKey` |
 | `@mr/core-i18n/value/singular-value` | `modules/value/singular-value.ts` | `SingularValue` |
 | `@mr/core-i18n/value/plural-value` | `modules/value/plural-value.ts` | `PluralValue`, `TPluralFunction` |
-| `@mr/core-i18n/util/lang` | `modules/util/lang.ts` | `getLang()` |
+| `@mr/core-i18n/util/lang` | `modules/util/lang.ts` | `getLang()`, `flattenLang()`, `langChain()` |
 | `@mr/core-i18n/util/plural-function-builder` | `modules/util/plural-function-builder.ts` | el builder, por defecto |
 
 **La ruta publica no coincide con la del fichero, y es deliberado**: el `modules/` de delante no
@@ -122,11 +122,12 @@ Dos consecuencias que conviene tener presentes:
 - `IdiomaCorto`
   - Union literal de 40 codigos ISO 639-1
   - Ejemplos: `"es"`, `"en"`, `"pt"`, `"fil"`, `"ur"`
-  - **Uno no es de dos letras**: `"fil"`. Ver el aviso de `corto`
+  - **Uno no es de dos letras**: `"fil"`. La longitud no es fija y no hay que apoyarse en ella
 - `IdiomaLargo`
-  - Union literal de 26 codigos BCP 47 (`idioma-REGION`)
+  - Union literal de 26 codigos con variante, hoy todos `idioma-REGION`
   - Ejemplos: `"es-ES"`, `"es-MX"`, `"pt-BR"`, `"en-GB"`, `"ru-RU"`
-  - Solo `idioma-REGION`: no caben las variantes con subetiqueta (`ca-ES-valencia`)
+  - **Lista blanca cerrada**: la forma que admite es BCP 47 entero —`ca-ES-valencia` cabria—, pero
+    solo entra lo que alguien da de alta aqui y en `soportados`
 - `Idioma`
   - `IdiomaCorto | IdiomaLargo`
 
@@ -135,11 +136,11 @@ Dos consecuencias que conviene tener presentes:
 - `soportados: Idioma[]`
   - Array canonico con todos los idiomas validos
   - **66 entradas** (40 cortos + 26 largos), sin repetidos
-- `soportado(lang: Idioma): boolean`
-  - Valida pertenencia a `soportados`
-  - No es guarda de tipo: devuelve `boolean`, no `lang is Idioma`
+- `soportado(lang: string): lang is Idioma`
+  - Valida pertenencia a `soportados`, y **estrecha el tipo**: es la puerta de entrada de la lista blanca
+  - Sensible a la caja, porque es pertenencia a una lista y no una comparacion BCP 47
 - `corto(idioma: Idioma): IdiomaCorto`
-  - Devuelve los dos primeros caracteres del codigo (`slice(0, 2)`)
+  - Devuelve la subetiqueta primaria: lo que hay hasta el primer separador
 
 ## Detalle de implementacion (`modules/langs.ts`)
 
@@ -169,26 +170,30 @@ export const soportado = (lang: Idioma): boolean => soportados.includes(lang);
 
 - Complejidad O(n)
 - Mantiene semantica directa y unica fuente de verdad en `soportados`
-- El parametro es `Idioma`, asi que para validar una cadena que llega de fuera —el caso para el
-  que existe la funcion— hay que castear antes de preguntar
+- El parametro es `string` y el retorno `lang is Idioma`, que es lo que permite validar en el borde
+  una cadena que llega de fuera —el caso para el que existe la funcion— sin castear antes de preguntar
 
 ### `corto`
 
 ```ts
-export const corto = (idioma: Idioma): IdiomaCorto => idioma.slice(0, 2) as IdiomaCorto;
+export const corto = (idioma: Idioma): IdiomaCorto => idioma.split(/[-_]/)[0] as IdiomaCorto;
 ```
 
-- Normaliza variantes regionales al idioma base
+- Normaliza cualquier variante al idioma base
 - Ejemplos:
   - `"es-ES" -> "es"`
   - `"pt-BR" -> "pt"`
   - `"en" -> "en"`
+  - `"fil" -> "fil"`
 
-**Trampa conocida: `corto("fil") -> "fi"`.** `"fil"` es filipino y `"fi"` es fines, y `"fi"`
-esta tambien en la lista de soportados, asi que el resultado es un idioma **valido y
-equivocado**: no lanza, no devuelve `undefined` y el tipo declarado se cumple. Comprobado
-ejecutandolo. No hay incidencia porque `corto()` **no tiene ningun llamante en el monorepo**;
-si algun dia se sirve filipino, hay que arreglar la funcion antes de usarla.
+**Corta por el separador, no por los dos primeros caracteres.** Con el `slice(0, 2)` que hacia antes,
+`corto("fil") -> "fi"`: `"fil"` es filipino y `"fi"` es fines, y `"fi"` esta **tambien** en la lista de
+soportados, asi que el resultado era un idioma valido y equivocado — no lanzaba, no devolvia `undefined` y
+el tipo declarado se cumplia. Con codigos de escritura (`sr-Cyrl`) o de region numerica (`es-419`) el
+recorte fijo es sencillamente otra cosa.
+
+Lo llama `@mr/core-network/server/http/i18n`, que tenia su propia copia del `slice(0, 2)` — y por eso se
+quedo con la version rota cuando esta se arreglo. Es la unica forma de que no vuelva a pasar.
 
 ## Dependencias
 
@@ -236,7 +241,7 @@ Quien importa que, hoy:
 | `Idioma`, `IdiomaCorto` (solo tipos) | `services-comun`: `modules/utiles/idioma.ts` |
 | `soportados` (unico import de valor) | el `mrlang` de este mismo workspace: `src/clases/init.ts`, como `langs` por defecto cuando no se puede leer el `i18n/package.json` del proyecto. Import relativo (`../../modules/langs`), no por nombre de paquete |
 | `soportado`, `corto` | sin llamantes |
-| El **runtime** (`literal`, `value/*`, `util/*`, `translation-*`) | el **codigo generado** en `i18n/.src/` de cada proyecto: 4.396 imports a `literal`, 4.260 a `value/singular-value`, 212 a cada uno de `value`, `value/plural-value` y `util/plural-function-builder`, 86 a `translation-map`, 70 a `util/lang` y 35 a `translation-set` (cifras de este repo) |
+| El **runtime** (`literal`, `value/*`, `util/*`, `translation-*`) | el **codigo generado** en `i18n/.src/` de cada proyecto: 4.396 imports a `literal`, 4.260 a `value/singular-value`, 212 a cada uno de `value`, `value/plural-value` y `util/plural-function-builder`, 86 a `translation-map`, 70 a `util/lang` y 35 a `translation-set` (cifras de este repo, contadas cuando se generaba un fichero por clave; desde el 2026-09-25 cada `index.ts` de idioma×módulo importa cada simbolo **una vez**, ver `src/CODEMAP.md`) |
 | `tsconfig.json` | el workspace `i18n/` de cada proyecto, en su `extends` |
 | `TranslationMap` (solo tipo) | `status-frontend`: `component/session/permission-rules.ts` — el unico consumidor **a mano** del runtime en todo el monorepo |
 
@@ -244,8 +249,9 @@ El runtime lo consume casi en exclusiva codigo que nadie escribe. La consecuenci
 saber si un cambio aqui rompe algo, lo que hay que mirar es `src/clases-v2/modulo/`, que es quien
 decide que se importa, y despues regenerar.
 
-Del resto, lo que se consume de verdad son **los tipos y el array**. Las dos funciones estan exportadas y
-sin usar, que es justo por lo que la trampa del `"fil"` no ha dado nunca la cara.
+Del resto, lo que se consume de verdad son **los tipos y el array**. `corto()` lo llama
+`@mr/core-network/server/http/i18n` (antes tenia su propia copia); `soportado()` sigue sin llamantes en
+este repo, aunque es la guarda con la que se valida un idioma que llega de fuera.
 
 **No confundir `corto()` con `parseIdioma()`**, de `services-comun/modules/utiles/idioma.ts`:
 suenan a lo mismo y no hacen lo mismo. `parseIdioma()` solo recorta cuando el sufijo es
@@ -261,29 +267,38 @@ fuera:
 | `bin/mrlang.js` | Entrada. Fija `MRPACK_ROOT` desde su `__dirname` y delega en `@mr/core-cli/arranque`, que ejecuta `bin/min/mrlang-run.js` y lo compila si no existe |
 | `bin/min/` | Bundle generado por esbuild. Gitignored, y **no se envía** con el framework |
 | `bin/hash.md5` | El md5 de `bin/min/` de la última compilación. Lo compara `mrpack` al arrancar para saber si hay que rehacer el bundle |
-| `bin/.mr-ignore` | `min` — el bundle no viaja en el envío |
+| `bin/.mr-ignore` | `min` y `versiones` — ni el bundle ni su sello de versiones viajan en el envío |
 | `bin/.mr-nohash` | `hash.md5` — viaja, pero recompilar en local no marca el paquete como modificado |
 | `src/main.ts` | `chdir` a `MRPACK_ROOT` y `MRLang.run()` |
 | `src/esbuild.config.mjs` | Build: bundlea los workspace devDeps, deja fuera las `dependencies` |
 
 **El bundle se rehace solo.** El arranque compila cuando **falta**, y `mrpack` cuando esta
-**viejo**: compara `bin/hash.md5` con el md5 de `bin/min/` en `devel`/`update`/`init` y al terminar
-una tanda del gestor de frameworks (`checkMrlang()`, en
-`@mr/cli/src/clases/framework/cliente.ts`). Lo que dispara la recompilacion tras una
-actualizacion es que el `hash.md5` recibido —del que envio— no cuadra con el bundle local; sin
-fichero de hash tambien recompila, para sembrarlo.
+**viejo**, en `devel`/`update`/`init` y al terminar una tanda del gestor de frameworks
+(`checkMrlang()`, en `@mr/cli/src/clases/framework/cliente.ts`). Lo que dispara la recompilacion
+tras una actualizacion es `bin/versiones`, un sello **local** con el `version` de `@mr/core-i18n` y
+de los workspace `@mr/*` que van dentro del bundle: si no cuadra con los `package.json` de ahora,
+recompila. `bin/hash.md5` (md5 de `bin/min/`) sigue cazando una salida de `compile:watch` dejada
+ahi. Sin alguno de los dos ficheros tambien recompila, para sembrarlos. Ver README, «El bundle se
+rehace solo cuando toca».
 
-**La profundidad del workspace importa y esta escrita en un solo sitio.** `@mr/core/i18n` cuelga
-de tres niveles de la raiz del monorepo, mientras que `@mr/cli` colgaba de dos, asi que
-`bin/mrlang.js` resuelve `../../../..` y no `../../..`. `src/main.ts` **no** cuenta `..` por su
-cuenta: usa `MRPACK_ROOT`, que es lo que evita tener la misma cuenta en dos ficheros.
+**La profundidad del workspace ya no importa, y ese es el arreglo.** `bin/mrlang.js` contaba
+cuatro `..` hasta la raiz del monorepo, una cuenta que solo valia para la disposicion en la que se
+escribio; al mover el paquete a un monorepo donde cuelga un nivel mas arriba, `MRPACK_ROOT`
+apuntaba fuera del repositorio y en silencio. Hoy el bin no calcula nada: la raiz la resuelve
+`@mr/core-cli/arranque` con `PROJECT_CWD` (o subiendo hasta el `yarn.lock`), una sola vez y para
+las dos CLI. `src/main.ts` sigue haciendo el `chdir` con esa variable.
 
-Dos rutas del CLI se resuelven contra la raiz del monorepo, que es el cwd tras ese `chdir`:
+De las dos rutas que se resolvian contra esa raiz, **ya solo queda una**:
 
-- El catalogo de idiomas, `src/clases-v2/lang/assets/langs.json`, que `Lang.loadCatalog()` lee
-  como `@mr/core/i18n/src/clases-v2/lang/assets/langs.json`. No se puede resolver contra
-  `__dirname` porque el bundle vive en `bin/min/` y el asset se queda en `src/`.
-- Las rutas de `i18n/.json` e `i18n/.src` del proyecto.
+- Las rutas de `i18n/.json` e `i18n/.src` del proyecto, que sí son relativas al repo donde se
+  ejecuta y por tanto es correcto resolverlas contra el cwd.
+- El catalogo de idiomas **ya no se lee, se importa**. `lang.ts` hace
+  `import catalogo from "./assets/langs.json"`, asi que el empaquetador lo incrusta (son 10 kB) y no
+  hay ninguna ruta que resolver en ejecucion. Se intento antes contra `__dirname` y no valia —el
+  bundle vive en `bin/min/` y el asset en `src/`—, pero esa era la pregunta equivocada: un asset
+  del propio paquete no hay que encontrarlo, hay que llevarselo dentro. De paso `Lang` deja de ser
+  asincrono entero (`loadCatalog()` desaparece, `getByCode()` devuelve `Lang` y `parent` devuelve
+  `Lang|null`), y con el `Generate.resolverValor()`, su unico llamante.
 
 ## Flujo de uso tipico
 
@@ -305,6 +320,17 @@ yarn workspace @mr/core-i18n test
 
 34 pruebas en cinco ficheros (`lang`, `plural-value`, `translation-map`, `translation-set`,
 `value`). Vinieron de `services-comun/spec/traduccion/v2/` con el codigo que prueban.
+
+Desde entonces se sumaron `langs.spec.ts` y `plural-function-builder.spec.ts` (runtime, ver el
+CHANGELOG), y el 2026-09-25 `generate-lang-index.spec.ts` — el primero que prueba algo de `src/`
+(el generador `clases-v2/`, no el runtime de `modules/`) y no de `services-comun`. Hoy son **68
+pruebas en ocho ficheros**. Ese último spec tiene que precargar `require.cache` para
+`@mr/core-cli/fs` antes de importar nada de `src/clases-v2/modulo/json.ts`: fuera del bundle de
+esbuild —que es donde corre `mrlang` de verdad— nada resuelve el `import {isFile, readJSON} from
+"@mr/core-cli/fs"` de su cabecera, porque `@mr/core-cli/modules/fs.ts` importa `./log` sin
+extensión y esta arnés (`tsconfig.spec.json`, con `moduleResolution: node16`) no lo tolera. Es la
+misma razón por la que no hay pruebas de `Generate`/`generate.ts`: ese fichero importa `chokidar`
+—puro ESM— y el `tsc` de este arnés (CommonJS) no lo compila ni con el `require.cache` precargado.
 
 > **`tmp/spec` no se limpia entre ejecuciones.** El script compila con `tsc -p tsconfig.spec.json`
 > y lanza `node --test "tmp/spec/**/*.spec.js"`, asi que un `.spec.ts` borrado sigue ejecutandose
@@ -337,5 +363,5 @@ print("descuadre:", set(u("IdiomaCorto") + u("IdiomaLargo")) ^ set(sop) or "ning
 PY
 ```
 
-Si se anade un idioma cuyo codigo corto no sea de dos letras, hay que revisar `corto()` — hoy
-solo lo incumple `"fil"`, y sin consecuencias porque nadie la llama.
+Un idioma cuyo codigo corto no sea de dos letras ya no necesita revisar `corto()`: corta por el
+separador, asi que `"fil"` sale entero.

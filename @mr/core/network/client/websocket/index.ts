@@ -1,3 +1,12 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Thu, 24 Sep 2026 14:39:55 GMT
+ * Hash: 7ccaa9d6b60fdea1b45b5a3243fd7ab5
+ * Versión: 2026.9.24+1-juancmartinez
+ * Anterior: 2026.9.23+1-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
+ */
+
 import {formats} from "dd-trace/ext";
 import tracer from "dd-trace";
 import crypto from "node:crypto";
@@ -34,8 +43,10 @@ const enum EWSRequestType {
 /**
  * Configuración necesaria para crear o recuperar un {@link WSPool}.
  * @property socket - URL del endpoint WebSocket al que conectarse (p. ej. `"ws://localhost:8080"`).
- * @property minConnections - Número mínimo de conexiones que el pool mantendrá abiertas en todo momento.
- *   Si se omite se aplica el valor por defecto {@link WSPool.MIN_CONNECTIONS}.
+ * @property minConnections - Número de conexiones que el pool mantendrá abiertas en todo momento. Es un
+ *   suelo en caliente, **no un techo**: si hacen falta más a la vez, `getConnection()` las crea sobre la
+ *   marcha. Si se omite se aplica el valor por defecto {@link WSPool.MIN_CONNECTIONS}; el mínimo aceptado
+ *   es 1, para que la primera petición no pague el handshake.
  * @property reconnect - Si `true` (valor por defecto), cuando la conexión activa se pierde inesperadamente
  *   los frames pendientes en la cola se descartan y la petición se reenvía automáticamente sobre una conexión
  *   nueva. Si `false`, el error se propaga al consumidor del generator.
@@ -103,7 +114,7 @@ interface ISocketConnection {
 export class WSPool {
     /* STATIC */
 
-    /** Número mínimo de conexiones abiertas por defecto cuando no se especifica en la configuración. */
+    /** Número de conexiones abiertas **por defecto**, cuando no se especifica en la configuración. */
     private static readonly MIN_CONNECTIONS = 10;
 
     /** Tiempo máximo (ms) de espera para que un WebSocket complete el handshake de apertura. */
@@ -152,6 +163,38 @@ export class WSPool {
     private static readonly CIRCUIT_OPEN_DURATION_MS = 30000;
 
     /**
+     * Normaliza la URL del endpoint: `http`/`https` pasan a `ws`/`wss`, y si no se ha indicado puerto se
+     * pone el que toque.
+     *
+     * **Se parsea la URL en vez de mirar cómo acaba la cadena**, y eso es lo que permite endpoints con
+     * ruta. Antes se comprobaba con `/:\d+$/` si la cadena terminaba en `:puerto`: una URL con ruta nunca
+     * termina así, de modo que el puerto se pegaba **detrás de la ruta**
+     * (`wss://host/status/external/:443`) y la conexión no llegaba a ninguna parte. Y una que sí traía
+     * puerto pero también ruta se llevaba un segundo puerto encima.
+     *
+     * La ruta hace falta: cuando varios servicios comparten dominio, es lo único que mira el
+     * VirtualService de Istio para decidir a cuál va el upgrade, y lo que no la lleva se lo queda el
+     * servicio por defecto. Sin poder mandarla, un cliente de fuera del clúster no tiene forma de llegar
+     * al servicio que busca.
+     *
+     * `URL` borra el puerto de la serialización cuando es el de por defecto del esquema —80 en `ws:`, 443
+     * en `wss:`—, así que cuando hay que ponerlo se compone la cadena a mano.
+     *
+     * La ruta vacía se deja fuera en lugar de escribirla como `/`, que es lo que haría `URL.href`: así
+     * **para un endpoint sin ruta esto devuelve exactamente la misma cadena que devolvía antes**, y el
+     * cambio solo se nota donde antes no funcionaba.
+     */
+    private static normalizar(socket: string): string {
+        const url = new URL(socket.startsWith("http") ? socket.replace("http", "ws") : socket);
+        const ruta = `${url.pathname !== "/" ? url.pathname : ""}${url.search}`;
+        if (url.port !== "") {
+            return `${url.protocol}//${url.host}${ruta}`;
+        }
+
+        return `${url.protocol}//${url.hostname}:${url.protocol === "wss:" ? 443 : 80}${ruta}`;
+    }
+
+    /**
      * Obtiene (o crea) el pool asociado al endpoint indicado.
      * Implementa el patrón singleton por socket: llamadas sucesivas con la misma
      * URL devuelven siempre la misma instancia.
@@ -159,16 +202,8 @@ export class WSPool {
      * @returns La instancia de {@link WSPool} para ese endpoint.
      */
     public static get(cfg: IWSPoolConfig): WSPool {
-        if (cfg.socket.startsWith("http")) {
-            cfg.socket = cfg.socket.replace("http", "ws");
-        }
-        if (!cfg.socket.match(/:\d+$/)) {
-            if (cfg.socket.startsWith("wss://")) {
-                cfg.socket += ":443";
-            } else {
-                cfg.socket += ":80";
-            }
-        }
+        cfg.socket = WSPool.normalizar(cfg.socket);
+
         return this.POOLS[`${cfg.socket}${cfg.reconnect !== false ? "-reconnect" : ""}`] ??= new WSPool(cfg);
     }
 
@@ -228,7 +263,13 @@ export class WSPool {
      */
     private constructor({socket, minConnections=WSPool.MIN_CONNECTIONS, reconnect=true, requestTimeoutMs=WSPool.REQUEST_TIMEOUT_MS, heartbeatTimeoutMs=WSPool.HEARTBEAT_TIMEOUT_MS}: IWSPoolConfig) {
         this.socket = socket;
-        this.minConnections = Math.max(minConnections, WSPool.MIN_CONNECTIONS);
+        // El suelo es 1, no `MIN_CONNECTIONS`. Antes se subía cualquier valor hasta 10, lo que convertía
+        // el «por defecto» de la configuración en un mínimo obligatorio y dejaba `minConnections` sin
+        // poder bajar de ahí — justo lo contrario de lo que decía su documentación. Diez conexiones
+        // calientes son razonables para quien atiende peticiones y una barbaridad para quien solo emite
+        // (un logger, por ejemplo), multiplicadas por procesos y réplicas. Y bajarlo no limita nada: el
+        // pool crece bajo demanda, así que esto solo dice cuántas hay listas antes de la primera.
+        this.minConnections = Math.max(minConnections, 1);
         this.reconnect = reconnect;
         this.requestTimeoutMs = requestTimeoutMs;
         this.heartbeatTimeoutMs = heartbeatTimeoutMs;
@@ -533,8 +574,6 @@ export class WSPool {
      * @template T - Tipo de los parámetros de la petición.
      * @param method - Nombre del método/acción que el servidor debe ejecutar.
      * @param params - Parámetros opcionales de la petición.
-     * @returns Promesa que resuelve cuando el mensaje se ha encolado en el socket,
-     *   o rechaza si no hay conexión disponible o el circuit breaker está abierto.
      */
     public async head<T>(method: string, params?: T): Promise<void> {
         const { conexion, carrier } = await this.prepare(method, EWSRequestType.Head);
@@ -680,6 +719,9 @@ export class WSPool {
      * 1. Registra un listener de mensajes que encola los frames destinados a este UUID.
      * 2. Envía el mensaje JSON (con `_datadog` para propagación de traza) y el buffer binario si se proporcionó.
      * 3. Cede (`yield`) cada {@link IStreamFrame} de la cola hasta que `streamDone` sea `true`.
+     *    En cuanto `streamDone` es `true`, devuelve la conexión al pool **antes** de ceder el último
+     *    frame: el consumidor habitual (`Result.next()`) lee uno solo y abandona el generator, así
+     *    que lo que se deje para el `finally` no se ejecuta nunca.
      * 4. Usa `Promise.race` entre la llegada de nuevos mensajes, {@link ISocketConnection.abort}
      *    y el timeout global para detectar cierres o expiración.
      * 5. Si el socket se cierra y `reconnect === true`, descarta la cola y repite desde el paso 1.
@@ -767,6 +809,35 @@ export class WSPool {
 
                 conexion.ws.addEventListener("message", messageHandler);
 
+                // Libera la conexión de esta petición una sola vez: quita el listener y la devuelve
+                // al pool (o la cierra si quedó marcada como EOL). Se llama desde dos sitios: en
+                // cuanto el servidor señala el fin del stream, ANTES de ceder el último frame, y en
+                // el `finally`, para los caminos de error, reconexión y `.return()` del consumidor.
+                //
+                // Hay que liberarla antes del último `yield` porque el consumidor habitual
+                // (`Result.next()`) lee un solo frame y abandona el generator: queda suspendido en
+                // ese `yield` y el `finally` no llega a ejecutarse nunca. Si la liberación dependiera
+                // solo del `finally`, cada petición dejaría su socket abierto y fuera de `available`,
+                // y la siguiente abriría uno nuevo: un socket y un listener más por cada petición.
+                const socket = conexion;
+                let liberada = false;
+                const liberar = (): void => {
+                    if (liberada) {
+                        return;
+                    }
+                    liberada = true;
+                    socket.ws.removeEventListener("message", messageHandler);
+                    if (socket.eol === 0 && !shouldReconnect) {
+                        // Completado con éxito: devolver la conexión al pool
+                        this.available.push(socket);
+                    } else if (socket.eol > 0) {
+                        // Conexión marcada como EOL (heartbeat timeout, shutdown, etc.):
+                        // closeHandler no la cerrará si estaba en uso, así que lo hacemos aquí
+                        socket.ws.close(socket.eol);
+                    }
+                    // shouldReconnect && eol===0: caída de red → closeHandler ya gestionó el socket
+                };
+
                 try {
                     // Enviar petición
                     conexion.ws.send(JSON.stringify({
@@ -813,6 +884,15 @@ export class WSPool {
                                 }
                             }
                         }
+                        if (streamDone) {
+                            // El servidor ya envió el último frame y está todo en la cola: la conexión
+                            // no va a recibir nada más para esta petición. Se libera ahora, antes de
+                            // ceder, junto con el timer y el contador del circuit breaker, que de otro
+                            // modo esperarían a un `finally` que el consumidor puede no provocar.
+                            liberar();
+                            clearTimeout(requestTimeoutTimer);
+                            this.circuitFailures = 0;
+                        }
                         while (queue.length > 0) {
                             reconnectAttempts = 0; // progreso real → resetear contador
                             yield queue.shift()!;
@@ -827,17 +907,8 @@ export class WSPool {
                         throw dropError;
                     }
                 } finally {
-                    // Siempre liberar el listener
-                    conexion.ws.removeEventListener("message", messageHandler);
-                    if (conexion.eol === 0 && !shouldReconnect) {
-                        // Completado con éxito: devolver la conexión al pool
-                        this.available.push(conexion);
-                    } else if (conexion.eol > 0) {
-                        // Conexión marcada como EOL (heartbeat timeout, shutdown, etc.):
-                        // closeHandler no la cerrará si estaba en uso, así que lo hacemos aquí
-                        conexion.ws.close(conexion.eol);
-                    }
-                    // shouldReconnect && eol===0: caída de red → closeHandler ya gestionó el socket
+                    // Si el stream terminó con normalidad ya se liberó antes del último `yield`
+                    liberar();
                 }
 
                 if (!shouldReconnect) {

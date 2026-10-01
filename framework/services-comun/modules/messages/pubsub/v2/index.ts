@@ -1,11 +1,20 @@
-import {
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: f32e301eef4c7660ec078b6b24f1e306
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {
     PublishOptions,
-    PubSub as OriginalPubSub,
     SubscriptionOptions, Topic
 } from "@google-cloud/pubsub";
+import {PubSub as OriginalPubSub} from "@google-cloud/pubsub";
+import type {MessageOptions} from "@google-cloud/pubsub/build/src/topic";
+
 import {readJSON} from "../../../utiles/fs";
 import {Message} from "./message";
-import {MessageOptions} from "@google-cloud/pubsub/build/src/topic";
 
 export type PubSubBuild = {
     credenciales?: string;
@@ -29,9 +38,10 @@ export class PubSub {
     }
 
     /* INSTANCE */
-    private _client: Promise<OriginalPubSub>|null = null;
+    private _client: Promise<OriginalPubSub>|null;
     private _topics: Record<string, Promise<Topic>>;
     private constructor(private readonly credenciales: string, private readonly topic?: string, private readonly subscription?: string) {
+        this._client = null;
         this._topics = {};
     }
 
@@ -60,7 +70,7 @@ export class PubSub {
 
         const pubsubTopic = await (this._topics[targetTopic]??=this.initClient().then(client => {
             const newTopic = client.topic(targetTopic);
-            if(publishOptions) newTopic.setPublishOptions(publishOptions);
+            if(publishOptions) {newTopic.setPublishOptions(publishOptions);}
             return newTopic;
         }));
 

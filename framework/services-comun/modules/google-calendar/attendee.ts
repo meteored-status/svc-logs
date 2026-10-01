@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: cf0e78eb2e5724418d2e83733e43afee
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 export interface IAttendee {
     val: string;
     params: {
@@ -6,8 +14,6 @@ export interface IAttendee {
 }
 
 export class Attendee {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly _data: IAttendee) {
     }

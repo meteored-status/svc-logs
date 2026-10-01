@@ -1,7 +1,15 @@
-import path from "node:path";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 14c5859432945dbbff2b9ad2f8bd619d
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import type {Readable} from "node:stream";
 import fs, {existsSync, readFileSync, statSync, type PathLike, type PathOrFileDescriptor} from "node:fs";
 import {mkdir as mkdirOriginal, readdir, readFile, rename as renameOriginal, rm, stat, type FileHandle} from "node:fs/promises";
+import path from "node:path";
 
 import {error, warning} from "./log";
 import {md5} from "./hash";

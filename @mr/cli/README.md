@@ -635,6 +635,14 @@ necesarios para que el monorepo funcione correctamente.
 
 Entre otras acciones:
 - Descarga automáticamente los paquetes `@mr/core/*` ausentes.
+- En **todos** los workspaces, las `devDependencies` que apuntan a otro workspace del mismo monorepo
+  pasan a `workspace:*` (`init/workspace-deps.ts → checkWorkspaceDeps()`). Con `"*"`, Yarn podría
+  resolverlas contra npm si el nombre o la versión dejaran de casar con el workspace local.
+- Deja la raíz preparada para `yarn lint` (`init/lint.ts → checkLint()`): fija sus
+  `devDependencies` a `eslint` y `@mr/core-lint` —la versión de `eslint` sale de
+  `@mr/core/lint/package.json`—, escribe los scripts `lint`/`lint:fix` y un `eslint.config.mjs` de una
+  línea que reexporta `@mr/core-lint/config`. Cualquier otra `devDependency` de la raíz desaparece: la
+  raíz no es sitio para dependencias de nadie. Si faltara `@mr/core/lint`, la deja sin linter, como antes.
 - Crea (o corrige) el enlace `.github` → `@mr/core/dev/.github`. En **Linux/macOS** se
   crea un symlink relativo estándar; en **Windows** se usa una *junction* de directorio,
   que no requiere permisos de administrador ni Developer Mode.

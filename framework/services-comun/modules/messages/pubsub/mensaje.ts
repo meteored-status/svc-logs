@@ -1,6 +1,14 @@
-import {Message} from "@google-cloud/pubsub";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: abecaeaf54a6fca3095cdd6a5e8b29fb
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
 
-import {ETaskCancel, ITask, TaskBuilder} from "./task";
+import type {Message} from "@google-cloud/pubsub";
+
+import type {ETaskCancel, ITask, TaskBuilder} from "./task";
 import {error} from "../../utiles/log";
 
 enum MensajeEstado {

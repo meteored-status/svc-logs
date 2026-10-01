@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 95abe71cbfef9b762e4b0b9ee958f53d
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 91368c85fa66b8cb084701276f4869de
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -11,6 +11,7 @@ import {rename} from "node:fs/promises";
 
 import {isDir, readDir} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
+
 import {Comando} from "../comando";
 import {Log} from "../log";
 

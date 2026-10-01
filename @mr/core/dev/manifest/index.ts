@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 147d5f45aa5606ccaf49447c676e20c6
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: f9ee0e6652ccbe8bb51add4efba0beda
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {type IManifestDeployment, ManifestDeployment} from "./deployment/index.ts";
@@ -40,8 +42,6 @@ export interface IManifest {
  * ```
  */
 export class Manifest extends ManifestRoot<IManifest> implements IManifest {
-    /* STATIC */
-
     /* INSTANCE */
     public enabled: boolean;
     public deploy: ManifestDeployment;

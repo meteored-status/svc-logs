@@ -1,3 +1,10 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: a8fcfb4598d500df352915181f57e479
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
 
 /**
  * MemoryStore basado en Valkey/Redis.
@@ -18,7 +25,6 @@ export class DefaultValkey {
     /* INSTANCE */
     public constructor() {
     }
-
 
     public async get<T>(namespace: string, ids: (string | number)[]): Promise<T | null> {
         return null

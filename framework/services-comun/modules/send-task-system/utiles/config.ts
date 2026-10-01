@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 4695866e6051e7e4b7e0d753b745de36
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: c391ecffe7a5f0bc62a48413352d74ac
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Configuracion as ConfigGenerico, type IConfiguracion as IConfigGenerico} from "@mr/core-utils/config";
@@ -14,8 +16,6 @@ export interface IElasticSearch extends IConfigGenerico {
 }
 
 export class ElasticSearch extends ConfigGenerico<IElasticSearch> implements IElasticSearch {
-
-    /* STATIC */
 
     /* INSTANCE */
     public readonly sendIndex: string;
@@ -38,8 +38,6 @@ export interface IPubSubConfig extends IConfigGenerico {
 }
 
 export class PubSubConfig extends ConfigGenerico<IPubSubConfig> implements IPubSubConfig {
-
-    /* STATIC */
 
     /* INSTANCE */
     public readonly topic: string;
@@ -66,8 +64,6 @@ export interface IConfiguracion extends IConfigGenerico {
 }
 
 export class Configuracion extends ConfigGenerico<IConfiguracion> implements IConfiguracion {
-
-    /* STATIC */
 
     /* INSTANCE */
     public readonly elasticSearch: ElasticSearch;

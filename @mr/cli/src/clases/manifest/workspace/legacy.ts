@@ -1,16 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 99eff19f5af804c5ad60c00f6e5d41bc
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: d556d0d05b26c94f4e094b648aad7fb0
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {IManifestDeploymentCredenciales} from "@mr/core-dev/manifest/deployment/credenciales";
 import type {IManifestDeploymentKustomize} from "@mr/core-dev/manifest/deployment/kustomize";
 import type {IManifestDeploymentStorage} from "@mr/core-dev/manifest/deployment/storage";
-import {ManifestDeploymentKind, Runtime} from "@mr/core-dev/manifest/deployment";
+import type {ManifestDeploymentKind, Runtime} from "@mr/core-dev/manifest/deployment";
 import type {IManifestBuildBundle} from "@mr/core-dev/manifest/build/bundle";
 import type {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 

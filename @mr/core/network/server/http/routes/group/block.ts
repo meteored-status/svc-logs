@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 06 Aug 2026 08:53:31 GMT
- * Hash: f3f763899c01b9f4587f86e852c5b9a3
- * Versión: 2026.8.6+1-bixus
- * Anterior: 2026.5.18+2-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-estaticos
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: f997e2a15842116ef7f2a030c6eef479
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.8.6+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {IRouteGroupCache, NetCache} from "services-comun/modules/net/cache";
@@ -93,6 +93,8 @@ interface IRouteGroupFinal {
  * 4. En cada petición, {@link check} evalúa las expresiones en orden y delega al handler.
  */
 export class RouteGroupBlock {
+
+    /* STATIC */
 
     /**
      * Construye e inicializa un nuevo bloque de rutas a partir de su configuración.
@@ -187,6 +189,8 @@ export class RouteGroupBlock {
 
         return salida;
     }
+
+    /* INSTANCE */
 
     /** `true` cuando las expresiones están cargadas y el bloque puede recibir tráfico. */
     public ok: boolean;

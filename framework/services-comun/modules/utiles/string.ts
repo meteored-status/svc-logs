@@ -1,9 +1,10 @@
 /**
- * Editor: Diego Jesús Ramos Rodríguez
- * Fecha: Wed, 15 Jul 2026 11:44:16 GMT
- * Hash: 38230e889d1de87ed13d413527077404
- * Versión: 2026.7.15+2-diegojesusramosrodriguez
- * Proyecto: https://github.com/alpred-cms/svc-portadillas.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: e00d01e5723c43b65c39bd9c75daad62
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.7.15+2-diegojesusramosrodriguez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 const comments: RegExp = /<!--[\s\S]*?-->/gi;
@@ -609,6 +610,7 @@ const URL_INVALID: string[] = [
     '/'
 ];
 
+// eslint-disable-next-line @typescript-eslint/naming-convention -- API pública, con el nombre de la función de PHP que replica.
 export const strip_tags = (text: string, allowed: string = '') => {
     allowed = (allowed.toLowerCase().match(/<[a-z][a-z0-9]*>/g)||[]).join('');
     return text.replace(comments, '').replace(tags, (str:string, tag:string) => {
@@ -619,7 +621,7 @@ export const strip_tags = (text: string, allowed: string = '') => {
 export const fromEntities = (text: string, exclude: string[] = []) => {
     return text.replace(new RegExp(`(${DECODED_ENTITIES.filter(e => !exclude.includes(e)).join('|')})`, 'g'), (entity:string) => {
         const pos: number = DECODED_ENTITIES.indexOf(entity);
-        if (pos >= 0) return ENCODED_ENTITIES[pos];
+        if (pos >= 0) {return ENCODED_ENTITIES[pos];}
         return '';
     });
 };
@@ -627,7 +629,7 @@ export const fromEntities = (text: string, exclude: string[] = []) => {
 export const toEntities = (text: string) => {
     return text.replace(new RegExp(`(${ENCODED_ENTITIES.join('|')})`, 'g'), (entity:string) => {
         const pos: number = ENCODED_ENTITIES.indexOf(entity);
-        if (pos >= 0) return DECODED_ENTITIES[pos];
+        if (pos >= 0) {return DECODED_ENTITIES[pos];}
         return '';
     });
 };
@@ -635,7 +637,7 @@ export const toEntities = (text: string) => {
 export const toEntitiesSVG = (text: string) => {
     return text.replace(new RegExp(`(${ENCODED_ENTITIES_SVG.join('|')})`, 'g'), (entity:string) => {
         const pos: number = ENCODED_ENTITIES_SVG.indexOf(entity);
-        if (pos >= 0) return DECODED_ENTITIES_SVG[pos];
+        if (pos >= 0) {return DECODED_ENTITIES_SVG[pos];}
         return '';
     });
 }
@@ -644,6 +646,7 @@ export const removeAccents = (text: string) => {
     return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 };
 
+// eslint-disable-next-line @typescript-eslint/naming-convention -- API pública, con el nombre de la función de PHP que replica.
 export const str_word_count = (text: string, additionals: string = '') => {
     const words: string[] = [];
 
@@ -688,7 +691,7 @@ export const capitalize = (str: string): string => {
 }
 
 export const toStringID = (str: string): string => {
-    if(!str) return "";
+    if(!str) {return "";}
 
     return str.normalize('NFD') // Descompone los caracteres con acentos
         .replace(/[\u0300-\u036f]/g, '') // Elimina los diacríticos (acentos)

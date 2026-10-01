@@ -1,9 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 11:19:03 GMT
- * Hash: 3ce498b1f5d929d205e2d44d9a12338b
- * Versión: 2026.5.18+3-josantoniojimnez
- * Anterior: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 918b8f29db48a81d2a047f80f6897501
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.5.18+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 /**
@@ -114,6 +115,18 @@ export interface INetService extends INetServiceBase, INetPuertos {
  * @property uploadDir      - Directorio temporal donde se almacenan los ficheros subidos. Por defecto `"files/tmp"`.
  * @property maxFileSize    - Tamaño máximo de fichero aceptado en subidas (bytes). Por defecto 8 MB.
  * @property slow           - Umbral de petición lenta en ms. Por defecto 1000 ms.
+ * @property maxRequestBodySize - Tamaño máximo en bytes del cuerpo de una petición HTTP
+ *     (POST/PUT/PATCH/DELETE). Por defecto 10 MB.
+ * @property trustProxy     - Si `true`, el servidor confía en las cabeceras `X-Forwarded-*` y
+ *     `X-Real-IP` para resolver IP cliente, host y protocolo. En producción detrás de Istio/ASM
+ *     debe ser `true`. Por defecto: `PRODUCCION`.
+ * @property keepAliveTimeout - Timeout en ms para conexiones keep-alive. Debe ser mayor que el
+ *     `keepalive` del proxy upstream (típicamente 60 s en Envoy) para evitar cerrar el TCP cuando
+ *     el proxy lo está reutilizando. Por defecto `75_000`.
+ * @property headersTimeout - Timeout en ms para recibir las cabeceras de una petición. Debe ser
+ *     mayor que {@link INet.keepAliveTimeout} para evitar 408 espurios. Por defecto `80_000`.
+ * @property shutdownTimeout - Tiempo máximo en ms que el servidor espera a drenar conexiones tras
+ *     recibir `SIGTERM`/`SIGINT` antes de cerrar forzosamente. Por defecto `25_000`.
  */
 export interface INet {
     puertos: INetPuertos;
@@ -125,29 +138,10 @@ export interface INet {
     uploadDir: string;
     maxFileSize: number;
     slow: number;
-    /** Tamaño máximo en bytes del cuerpo de una petición HTTP (POST/PUT/PATCH/DELETE). Por defecto 10 MB. */
     maxRequestBodySize: number;
-    /**
-     * Si `true`, el servidor confía en las cabeceras `X-Forwarded-*` y `X-Real-IP` para
-     * resolver IP cliente, host y protocolo. En producción detrás de Istio/ASM debe ser `true`.
-     * Por defecto: `PRODUCCION`.
-     */
     trustProxy: boolean;
-    /**
-     * Timeout en ms para conexiones keep-alive. Debe ser mayor que el `keepalive` del
-     * proxy upstream (típicamente 60 s en Envoy) para evitar cerrar el TCP cuando el
-     * proxy lo está reutilizando. Por defecto `75_000`.
-     */
     keepAliveTimeout: number;
-    /**
-     * Timeout en ms para recibir las cabeceras de una petición. Debe ser mayor que
-     * {@link keepAliveTimeout} para evitar 408 espurios. Por defecto `80_000`.
-     */
     headersTimeout: number;
-    /**
-     * Tiempo máximo en ms que el servidor espera a drenar conexiones tras recibir
-     * `SIGTERM`/`SIGINT` antes de cerrar forzosamente. Por defecto `25_000`.
-     */
     shutdownTimeout: number;
 }
 
@@ -165,6 +159,8 @@ export interface INet {
  *   en `cfg.http` / `cfg.https`.
  */
 export class Net implements INet {
+
+    /* STATIC */
 
     /**
      * Construye una configuración {@link INet} a partir de la descripción de un servicio,
@@ -241,6 +237,8 @@ export class Net implements INet {
         };
 
     }
+
+    /* INSTANCE */
 
     public readonly puertos: NetPuertos;
     public readonly endpoints: NetEndpoints;

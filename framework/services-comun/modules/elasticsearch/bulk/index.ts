@@ -1,14 +1,15 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
- * Hash: b2e0ab9f38947a22661f1db02c0a39ea
- * Versión: 2026.8.5+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 8f7147c8f16a0aaf87d59cd88dcf74bf
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {BulkBase, type BulkConfig} from "./base";
 import {BulkError} from "./error";
-import {Elasticsearch} from "../index";
+import type {Elasticsearch} from "../index";
 import {error} from "../../utiles/log";
 import {
     type BulkOperation,
@@ -148,7 +149,7 @@ export class Bulk extends BulkBase {
                     const op = operaciones[i];
                     const obj = data.items[i];
                     if (obj === null) {
-                        console.log("Tenemos un item a NULL", i, len, operaciones.length, data.items.length);
+                        error("Tenemos un item a NULL", i, len, operaciones.length, data.items.length);
                         continue;
                     }
                     const item = obj.index ?? obj.create ?? obj.update ?? obj.delete!;
@@ -176,7 +177,7 @@ export class Bulk extends BulkBase {
                 if (err instanceof Error) {
                     lastError = err;
                     const size = operaciones.reduce((acc, op) => acc + op.size, 0);
-                    console.log(`Ha fallado bulk de ${operaciones.length} operaciones (${size} bytes): ${err.message}`);
+                    error(`Ha fallado bulk de ${operaciones.length} operaciones (${size} bytes): ${err.message}`);
                 }
                 reintentos--;
                 if (reintentos>0) {

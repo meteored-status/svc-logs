@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: eb57a67c10801649122dbecc8d8dd1a8
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 47013af4c214213f613315cfa4d25904
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -13,6 +13,7 @@
  */
 
 import {Colors} from "@mr/core-cli/colors";
+
 import {maquetarVersion} from "../../utiles/version";
 
 /**

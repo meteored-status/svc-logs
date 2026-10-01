@@ -1,4 +1,14 @@
-import {ESeverity, type IHistogram} from "../../interface";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: c5bb00f2a73f68d6e8394ddc24b8ec71
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.14+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {ESeverity} from "../../interface";
+import {type IHistogram} from "../../interface";
 
 export interface IListIN {
     projects: string;
@@ -36,10 +46,23 @@ export interface IListOUT {
     histogram: IHistogram;
 }
 
+/**
+ * Un registro del listado.
+ *
+ * @property region - Zona del despliegue desde la que se escribió. **Opcional, y hay que tratarlo como
+ *                    tal**: el campo se añadió al índice el 2026-09-14 y solo lo mandan los emisores que
+ *                    usan `@mr/core-log`, así que los logs de antes no lo traen — y quien loguea desde un
+ *                    navegador no tiene ninguna. Un log sin región no es un log de ningún sitio, es uno del
+ *                    que no se sabe.
+ * @property host   - Máquina o pod que lo escribió. Es lo que separa dos réplicas del mismo servicio
+ *                    cuando solo una falla. Opcional por lo mismo que `region`.
+ */
 export interface ILog {
     timestamp: number;
     project: string;
     service: string;
+    region?: string;
+    host?: string;
     type: string;
     severity: ESeverity;
     message: string;

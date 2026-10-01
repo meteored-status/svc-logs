@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: dc7eb5552f981de0f007a2e6aefb9b6a
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: b5b00d33aceae63d5d1b5075efefd517
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import chokidar from "chokidar";
@@ -15,8 +17,6 @@ import {info} from "./utiles/log";
 import {PromiseDelayed} from "./utiles/promise";
 
 export abstract class EngineEvent<T extends Configuracion=Configuracion> extends EngineBase<T> {
-    /* STATIC */
-
     /* INSTANCE */
     // protected constructor(configuracion: T, inicio: number) {
     //     super(configuracion, inicio);

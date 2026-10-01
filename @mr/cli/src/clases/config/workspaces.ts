@@ -1,13 +1,14 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: d0be335841ec2a1a73c2c433a5ede83d
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.20+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 3bf3055e458c64d604b8d01dbcb864c7
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Colors} from "@mr/core-cli/colors";
+
 import {Log} from "../log";
 import {flagsWorkspace} from "../workspace/service";
 import {cargarConfig, existeI18n, guardarConfig, type IInfoWorkspace, listarWorkspacesConInfo} from "./datos";

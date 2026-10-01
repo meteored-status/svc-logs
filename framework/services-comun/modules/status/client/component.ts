@@ -1,14 +1,16 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: da19c6f698edd816fc919b12eb7edcf6
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 8730acfad72a73ce0189e400d5ac6f59
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {IPodInfo} from "@mr/core-workload/config/pod";
 
 import type {IComponent} from "../common/interface";
-import {Monitor} from "./monitor";
+import type {Monitor} from "./monitor";
 
 export class Component {
     /* STATIC */

@@ -54,6 +54,40 @@ const pool = WSPool.get({
 | `pool.getCircuitState()` | `CircuitState` | Estado actual del circuit breaker (`"closed"`, `"open"`, `"half-open"`). |
 | `pool.destroy(code?, reason?)` | `void` | Cierra todas las conexiones y elimina el singleton. |
 
+### Cuántas conexiones abre
+
+`minConnections` (10 por defecto, mínimo 1) es cuántas se mantienen **calientes**, no un tope.
+`getConnection()` hace `available.pop() ?? addConnection()`, así que el número real lo marca la
+concurrencia: N peticiones lanzadas a la vez abren N conexiones, aunque sean `head()` — la conexión no
+vuelve a `available` hasta que la promesa del envío resuelve, y en una ráfaga síncrona eso es siempre
+después. Quien necesite una sola conexión tiene que encadenar sus envíos, no bajar `minConnections`.
+
+En un `get()`, la conexión vuelve a `available` en cuanto llega el último frame (`done`, o un error del
+servidor), **antes** de que el generator lo ceda. Así que `await (await pool.get(...)).next()` —leer un
+frame y abandonar el `Result`— basta para que la conexión se reutilice; no hace falta agotar el
+generator ni llamar a `return()`. Hasta el 2026-09-24 se devolvía en el `finally` del generator, que con
+ese patrón no se ejecutaba nunca: cada petición dejaba su socket abierto y la siguiente abría otro.
+Un stream que se abandona **antes** de su último frame sí retiene la conexión hasta que se cierre con
+`result.generator.return()`.
+
+### La URL del endpoint
+
+`WSPool.get()` normaliza el `socket` antes de nada: `http`/`https` pasan a `ws`/`wss`, y si no lleva
+puerto se le pone el del esquema (80 u 443).
+
+**Puede llevar ruta, y a menudo tiene que llevarla.** Cuando varios servicios comparten dominio, la ruta
+es lo único que mira el VirtualService de Istio para decidir a qué servicio va el upgrade; sin ella se lo
+queda el servicio por defecto, así que el síntoma de omitirla no es un fallo de conexión sino que la
+petición acaba en otro sitio.
+
+```ts
+// Dentro del clúster: por nombre de servicio, sin ruta.
+WSPool.get({socket: "ws://status-external:8080"});
+
+// Desde fuera: dominio compartido, y la ruta que enruta.
+WSPool.get({socket: "https://status.meteored.com/status/external/"});
+```
+
 ---
 
 ## `Result`
@@ -70,7 +104,7 @@ import {Result} from "@mr/core-network/client/websocket/result";
 |--------|-------------|
 | `result.next<T>()` | Consume el siguiente frame y devuelve `Promise<IResponse<T>>`. |
 | `result.consume<T>(promise, deferred?)` | Consume una promesa del generator ya lanzada. Sin `Deferred` devuelve la promesa; con `Deferred` resuelve/rechaza el Deferred (sin fallback HTTP). |
-| `result.pipe(d1, d2?, d3?)` | Consume N frames en paralelo resolviendo Deferreds independientemente. En error los Deferreds quedan pendientes para fallback HTTP. |
+| `result.pipe(d1, d2?, d3?, d4?)` | Consume N frames en paralelo resolviendo Deferreds independientemente. En error los Deferreds quedan pendientes para fallback HTTP. |
 | `result.generator` | Generator raw para uso con `for await…of`. |
 
 ---

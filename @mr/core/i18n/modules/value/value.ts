@@ -1,16 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 8c82e76964bc3962dd72c3b1b78e720a
- * Versión: 2026.9.7+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: f64f2a409afac9df87fc02daefaebf50
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 export type TParams = Record<string, string|number>;
 
 export abstract class Value<T extends TParams={}> {
-    /* STATIC */
-
     /* INSTANCE */
     protected readonly params: string[];
     private readonly paramsRegex: RegExp[];

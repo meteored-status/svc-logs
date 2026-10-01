@@ -1,11 +1,15 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: 05b2cb453d0b3a2b1c228cd5aca14a26
- * Versión: 2026.6.17+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: e197bc5f51a66919430267e7d8207e29
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {Configuracion, type IConfiguracion} from "@mr/core-utils/config";
+import type {Configuracion} from "@mr/core-utils/config";
+import {type IConfiguracion} from "@mr/core-utils/config";
+
 import {GoogleStorage, type IGoogleStorage} from "./storage";
 
 /**

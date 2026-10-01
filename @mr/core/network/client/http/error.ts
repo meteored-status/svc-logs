@@ -1,6 +1,15 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: eccd2deea5738e9896d1c52f9bc545e1
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {CustomError} from "services-comun/modules/utiles/error";
 
-import {ErrorCode, type IErrorInfo} from "./interface";
+import type {ErrorCode} from "./interface";
+import {type IErrorInfo} from "./interface";
 
 /**
  * Datos necesarios para construir un {@link RequestError}.

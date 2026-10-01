@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 6ac840e8b30f1e5363bb28790bc020d1
- * Versión: 2026.9.7+1-bixus
+ * Fecha: Fri, 18 Sep 2026 09:12:41 GMT
+ * Hash: 3713ec812159d83e5acc633970dec97e
+ * Versión: 2026.9.18+1-bixus
+ * Anterior: 2026.9.16+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -57,7 +58,7 @@ export class ModuloGenerate<T extends IGenerateConfig> extends Modulo<T> {
 
     protected mostrarAyuda(): void {
         console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Descripción")}: Genera las clases de traducción a partir de los JSON.`);
-        console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Uso")}:         ${Colors.colorize([Colors.FgBlue], "yarn mrlang")} ${Colors.colorize([Colors.FgGreen], "pull")} ${Colors.colorize([Colors.FgYellow], "[opciones]")}`);
+        console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Uso")}:         ${Colors.colorize([Colors.FgBlue], "yarn mrlang")} ${Colors.colorize([Colors.FgGreen], "generate")} ${Colors.colorize([Colors.FgYellow], "[opciones]")}`);
         console.log("");
         console.group();
 

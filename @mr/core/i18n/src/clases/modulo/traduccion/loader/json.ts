@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: acfb36f158205805a4bb775b1b446c3d
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0cf05aff10da2e61c85f2ec21fe7120f
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -43,6 +43,8 @@ interface ITraduccionJSONParcial<T=ITraduccionValues> {
 }
 
 export class TraduccionLoaderJSON extends TraduccionLoader {
+    /* STATIC */
+
     protected static async build(modulo: Modulo, id: string, data: ITraduccionJSON): Promise<Traduccion> {
         switch(data.tipo) {
             case TraduccionTipo.literal:

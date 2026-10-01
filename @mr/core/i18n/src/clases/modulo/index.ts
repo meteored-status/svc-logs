@@ -1,19 +1,20 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 0aaa76184b2320d2dd53fc2dbb8fa547
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: c11a6ddda5a4e6f381ed88286201597b
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {createHash} from "node:crypto";
 
 import {mkdir, safeWrite} from "@mr/core-cli/fs";
+
 import type {Idiomas, TIdiomas} from "../idioma";
 import {IdiomasLoader} from "../idioma/loader";
-import {IModuloJSON} from "./json";
-import {Traduccion} from "./traduccion/loader";
+import type {IModuloJSON} from "./json";
+import type {Traduccion} from "./traduccion/loader";
 
 export interface IModulo {
     id: string;
@@ -126,7 +127,7 @@ export abstract class Modulo<T extends IModuloConfig=IModuloConfig> {
     public async refreshHash(): Promise<string> {
         const traducciones: NodeJS.Dict<string> = {};
         for (const [key, value] of Object.entries(this.values)) {
-            if (value==undefined) continue;
+            if (value==undefined) {continue;}
 
             traducciones[key] = await value.refreshHash();
         }

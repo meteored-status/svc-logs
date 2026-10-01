@@ -1,19 +1,18 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 4b38a0db8114d839979f82e65c5c5c97
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0a32eea7690a9461c638e978c6d93346
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import path from "node:path";
 
 import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
-import {Manifest} from "@mr/core-dev/manifest";
+import type {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
 import {md5} from "services-comun/modules/utiles/hash";
-
 import {
     isDir,
     isFile,
@@ -24,6 +23,7 @@ import {
     safeWrite,
     unlink,
 } from "@mr/core-cli/fs";
+
 import {Comando} from "../comando";
 import {Log} from "../log";
 import type {IPackageJson} from "../packagejson";

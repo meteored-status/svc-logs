@@ -1,5 +1,13 @@
-import {SendEvent} from "../../model/send-event";
-import {Scroll} from "../../../../database/scroll";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 427765690894c1eecb8314c4adc40493
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {SendEvent} from "../../model/send-event";
+import type {Scroll} from "../../../../database/scroll";
 
 export interface Search {
     size?: number;
@@ -18,8 +26,6 @@ interface IEventDAO {
 }
 
 export abstract class EventDAO implements IEventDAO {
-    /* STATIC */
-
     /* INSTANCE */
     public abstract save(event: SendEvent): Promise<SendEvent>;
 

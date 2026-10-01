@@ -3,10 +3,13 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
+# Los clusters se filtran por `_CLUSTER` si el trigger la define; si no, por `_ENTORNO`, como siempre.
+ENTORNO_CLUSTER="${_CLUSTER:-${_ENTORNO}}"
+
 if [[ -f "DESPLEGAR.txt" ]]; then
-  echo "Obteniendo clusteres para \"${_ENTORNO}\""
-  gcloud container clusters list --project "${PROJECT_ID}" --filter="resourceLabels.entorno=${_ENTORNO}" --format=json > entornos.json
-  gcloud container clusters list --project "${PROJECT_ID}" --filter="(resourceLabels.entorno=${_ENTORNO}) AND (resourceLabels.clientes=true)" --format=json > clientes.json
+  echo "Obteniendo clusteres para \"${ENTORNO_CLUSTER}\""
+  gcloud container clusters list --project "${PROJECT_ID}" --filter="resourceLabels.entorno=${ENTORNO_CLUSTER}" --format=json > entornos.json
+  gcloud container clusters list --project "${PROJECT_ID}" --filter="(resourceLabels.entorno=${ENTORNO_CLUSTER}) AND (resourceLabels.clientes=true)" --format=json > clientes.json
 
   parseCluster() {
       local INDICE="${1}"
@@ -26,13 +29,20 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     REGION="$(path1 "${HASH}")"
     NOMBRE="$(path2 "${HASH}")"
     CLUSTER="$(path3 "${HASH}")"
+    CLIENTES="$(echo "${HASH}" | cut -d'/' -f4)"
 
     gcloud container clusters get-credentials "${NOMBRE}" --region "${REGION}" --project "${PROJECT_ID}"
-    kubectl get namespaces -o json | jq '[.items[] | select(.metadata.labels.mrpress == "true") | .metadata.name] | join(",")' | tr -d '"' > "namespaces_${CLUSTER}.txt"
+    kubectl get namespaces -o json > "namespaces_raw_${CLUSTER}.json"
+    jq '[.items[].metadata.name]' "namespaces_raw_${CLUSTER}.json" > "namespaces_all_${CLUSTER}.json"
+    # Solo los clusters de clientes despliegan por namespace (`kustomizar.sh`).
+    if [[ "${CLIENTES}" == "true" ]]; then
+      jq '[.items[] | select(.metadata.labels.mrpress == "true") | .metadata.name] | join(",")' "namespaces_raw_${CLUSTER}.json" | tr -d '"' > "namespaces_${CLUSTER}.txt"
+    fi
+    rm "namespaces_raw_${CLUSTER}.json"
   }
   export -f initCluster
 
-  gcloud container clusters list --project "${PROJECT_ID}" --filter="(resourceLabels.entorno=${_ENTORNO}) AND (resourceLabels.clientes=true)" --format=json | jq '.[] | [.zone, .name, .resourceLabels.zona] | join("/")' - | xargs -I '{}' -P 1 bash -c "initCluster {}"
+  gcloud container clusters list --project "${PROJECT_ID}" --filter="resourceLabels.entorno=${ENTORNO_CLUSTER}" --format=json | jq '.[] | [.zone, .name, .resourceLabels.zona, .resourceLabels.clientes] | join("/")' - | xargs -I '{}' -P 1 bash -c "initCluster {}"
 else
   echo "Omitiendo listado de clusters"
 fi

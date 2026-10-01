@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: f99c7c9639f07701f7f59b3975bd000f
- * Versión: 2026.6.17+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: e5b1323138c815d617d2f0691cf04aa5
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import cluster, {type Worker} from "node:cluster";
@@ -151,11 +153,11 @@ export class Main {
     private readonly slaves: Map<Worker, ClusterStatus>;
     protected cronjob: boolean;
 
-    protected constructor(engine: IEngine, configLoader: IConfiguracionLoader, {minimo_hilos = 1}: IMainConfig = {}) {
+    protected constructor(engine: IEngine, configLoader: IConfiguracionLoader, {minimo_hilos: minimoHilos = 1}: IMainConfig = {}) {
         this.engine = engine;
         this.configLoader = configLoader;
         this.unix = Date.now();
-        this.minimoHilos = minimo_hilos;
+        this.minimoHilos = minimoHilos;
         this.slaves = new Map<Worker, ClusterStatus>();
         this.cronjob = false;
     }

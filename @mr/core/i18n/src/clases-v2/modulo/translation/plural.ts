@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: bcf7d85612d3958ff52827d4455abd2d
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.3+3-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 82ba24d6f989b6927e7838adc4fcf352
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -14,7 +14,7 @@
  * `set` puede llevar plurales dentro— y porque la validación tiene que poder preguntarlo sin generar nada.
  */
 
-import {JSONItem, JSONValor, JSONValorMap, JSONValorSet, JSONValue, JSONValuePlural} from "../../data";
+import type {JSONItem, JSONValor, JSONValorMap, JSONValorSet, JSONValue, JSONValuePlural} from "../../data";
 
 /**
  * Un valor con la etiqueta de dónde sale: el código de idioma, `defecto`, y dentro de un `map` o un `set`, su

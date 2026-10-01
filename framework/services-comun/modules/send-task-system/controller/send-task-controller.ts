@@ -1,21 +1,22 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: 34afa83336bdde8789be67585a5ef451
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: d09bfe1884f296f84a1e6f2640e952fb
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {Send, TStatus} from "../data/model/send";
+import type {Send} from "../data/model/send";
+import {TStatus} from "../data/model/send";
 import {SendTaskInstance} from "../data/model/send-task-instance";
 import {SenderBuilder} from "../sender/sender-builder";
-import {IDAOFactory} from "../data/dao/d-a-o-factory";
+import type {IDAOFactory} from "../data/dao/d-a-o-factory";
 import {ReceiverIdentifierBuilder} from "../receiver/receiver-identifier-builder";
 import {Receiver} from "../data/model/receiver";
-import {PendingSendTask} from "../data/model/pending-send-task";
+import type {PendingSendTask} from "../data/model/pending-send-task";
 
 export abstract class SendTaskController {
-    /* STATIC */
-
     /* INSTANCE */
     protected constructor(
         private readonly _sendTask: PendingSendTask,

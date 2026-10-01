@@ -1,12 +1,13 @@
 {
   "name": "@mr/core-i18n",
-  "version": "2026.9.7+1-bixus",
+  "version": "2026.9.29+1-juancmartinez",
   "description": "Utilidades relacionadas con las traducciones de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
     "mrlang": "yarn workspace @mr/core-i18n node --no-warnings bin/mrlang",
     "compile": "node src/esbuild.config.mjs",
     "compile:watch": "node src/esbuild.config.mjs --watch",
+    "typecheck": "yarn tsc --noEmit -p tsconfig.json",
     "test": "yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
   },
   "bin": {
@@ -36,7 +37,7 @@
   "devDependencies": {
     "@mr/core-cli": "workspace:*",
     "@tsconfig/node24": "^24.0.5",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.19.0",
     "@types/source-map-support": "^0.5.10",
     "esbuild": "^0.28.2",
     "typescript": "^6.0.3"

@@ -1,15 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 516f0d00e97154ce8bb30350eb487ecd
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: cbe22fc4d978544bf1030646e8cfc1d8
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import path from "node:path";
 
 import {mkdir, readDir, safeWrite} from "@mr/core-cli/fs";
+
 import type {IEntradaActualizacion} from "../../paquete/file";
 import type {IPaqueteGestion} from "./datos";
 

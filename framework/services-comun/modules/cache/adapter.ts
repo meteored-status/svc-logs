@@ -1,4 +1,12 @@
-import {ConfigCache} from "./config";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 0182741db1b56472f375b468b6d10c94
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {ConfigCache} from "./config";
 
 export interface ICacheMetadata {
     borrada: boolean;
@@ -26,8 +34,6 @@ export interface ICacheSetOptions<T extends ICacheMetadata=ICacheMetadata> exten
 }
 
 export abstract class CacheAdapter<T extends ICacheMetadata=ICacheMetadata> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(protected readonly config: ConfigCache) {
     }

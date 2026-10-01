@@ -90,13 +90,13 @@ mrlang/
 │   │   ├── json.ts               ModuloJSON extends Modulo — un módulo = un fichero .json plano
 │   │   ├── definition.ts        Definition — genera `index.ts`/`bundle.ts` de definiciones compartidas por idioma
 │   │   └── translation/
-│   │       ├── common.ts        LANG_REGEXPS, definitionModulePath(), langModulePath()
+│   │       ├── common.ts        LANG_REGEXPS, definitionModulePath(), langModulePath(), IEntradaEmitida
 │   │       ├── idiomas.ts       avisosDeIdioma() — entradas a las que les falta un idioma que el resto sí tiene
 │   │       ├── plural.ts        tienePlural(), problemasDePlural(), avisosDePlural(), argumentoCounter() — el contador de un plural
 │   │       ├── valor.ts         emitirValor() — escribe UN SingularValue/PluralValue; lo comparten los tres
-│   │       ├── literal.ts       generateLiteral() — envuelve un valor en Literal
-│   │       ├── map.ts           generateMap()     — envuelve varios en TranslationMap, por clave
-│   │       └── set.ts           generateSet()     — envuelve varios en TranslationSet, ordenados
+│   │       ├── literal.ts       generateLiteral() — una entrada: un valor envuelto en Literal
+│   │       ├── map.ts           generateMap()     — una entrada: varios en TranslationMap, por clave
+│   │       └── set.ts           generateSet()     — una entrada: varios en TranslationSet, ordenados
 │   │
 │   │   Los tres se diferencian **solo en qué envuelven**. Lo que declara el valor está en `valor.ts`
 │   │   y no copiado tres veces, que es lo que los hizo divergir: `set.ts` no pasaba `params` al
@@ -423,6 +423,14 @@ unión de lo que traen sus entradas: un módulo escrito entero en dos idiomas **
 una decisión y no un olvido. Lo que se detecta es la **incoherencia dentro del módulo** — cuarenta y cuatro
 entradas con catalán y una sin.
 
+**Lo que se hereda de la misma lengua no es una falta.** Un `es-MX` sin escribir en una entrada que tiene `es`
+sale generado con el de `es` (`Generate.resolverValor()`), así que avisar de él era un falso positivo — y en un
+proyecto con variantes regionales, cientos, que tapaban los de verdad. `heredaDeSuLengua()` recorre la cadena
+del catálogo (`Lang`), la misma que el generador, pero **se corta en cuanto cambia la lengua**: `es-MX` → `es`
+cubre; `es-MX` → `es` → `en` no, porque a quien lee en español le sale inglés; y `ca` → `es-ES` tampoco, aunque
+el catálogo lo declare así, porque a quien lee en catalán le sale castellano. Un hermano (`en-GB` para `en-CA`)
+no cubre nunca: no está en la cadena.
+
 Va por el mismo canal que `avisosDePlural()` (`ModuloJSON.avisos()` → `warning()`) y **no corta la
 generación**: traducir un módulo entrada a entrada es un estado legítimo mientras se está haciendo, y romperle
 el build a quien está en mitad de eso es la forma más rápida de que alguien lo desactive.
@@ -439,9 +447,34 @@ suelta dentro del `case "literal"`, así que un `map` o un `set` hacían `valor[
 herencia entera — con los idiomas de hoy daba igual, porque el defecto es inglés y la cadena de `es` acaba en
 inglés, pero un idioma con padre distinto del defecto habría partido la pantalla en dos.
 
-**Valida antes de tocar el `.src`.** `run()` carga los módulos, junta lo que devuelva `validar()` de cada uno y,
-si hay algo, lo escribe con `error()` y rechaza **sin generar nada** — antes el borrado del `.src` era lo
-primero, así que un `.json` mal escrito dejaba el workspace sin nada generado.
+**Antes de la cadena mira la clave tal cual, y eso es lo que hace que un idioma nuevo funcione.** `Lang.getByCode()`
+devuelve `en-US` cuando el código no está en el catálogo, y lo hace en silencio, así que la primera vuelta del bucle
+ya no buscaba el idioma pedido sino el inglés: un `ca-ES-valencia` escrito en el `.json`, **con su valor al lado**,
+se generaba en inglés. Con los 91 códigos del catálogo no se notaba —están todos—; con un tag BCP 47 cualquiera es
+el caso normal.
+
+Y si la clave no está declarada, **la jerarquía se deriva truncando subtags** (RFC 4647 §3.4, en `langChain()` de
+`@mr/core-i18n/util/lang`): `ca-ES-valencia` → `ca-ES` → `ca`, y desde el primer código que sí esté en el catálogo
+sigue la herencia declarada de siempre. Antes esa cadena no existía y un idioma no declarado se rendía al `defecto`
+de la entrada; ahora un módulo traducido al catalán sirve al valenciano sin que nadie dé de alta el código.
+
+**El nombre del directorio de un idioma lo pone `flattenLang()`** (`@mr/core-i18n/util/lang`), la misma función
+que usa `getLang()` en el runtime para buscarlo. Estuvieron separadas: aquí era `lang.replace("-", "")` —que en
+JS sustituye solo la **primera** ocurrencia— y allí un `replace(/[-_]/g, "")`. Con dos subtags coincidían por
+casualidad; con tres dejaban de coincidir, y `ca-ES-valencia` se escribía en `caES-valencia` para buscarse en
+`caESvalencia`. En el loader dinámico eso era una caída muda al inglés; en `bundle.ts`, un `import caES-valencia
+from ...` que ni siquiera es sintaxis válida.
+
+**Valida antes de tocar el `.src`, en dos pasadas juntas.** `run()` carga los módulos, junta lo que devuelva
+`validar()` (nombres mal escritos, ver `ModuloJSON` más abajo) **y** `Generate.problemasDeValor()` (una
+entrada sin valor para algún idioma del módulo, ni propio ni heredado ni `defecto`) de cada uno y, si hay
+algo, lo escribe con `error()` y rechaza **sin generar nada** — antes el borrado del `.src` era lo primero,
+así que un `.json` mal escrito dejaba el workspace sin nada generado. `problemasDeValor()` vivía antes
+**dentro** de `generateModule()`, a mitad del bucle por idiomas: un módulo con una sola entrada así podía
+dejar escritos varios `index.ts` de idiomas anteriores a esa entrada antes de rechazar —alguno importando un
+`XParams` que `definitions/` de ese módulo todavía no exportaba, porque eso se reescribe una sola vez al
+final—. El chequeo de dentro de `generateModule()` se queda, como defensa; el mensaje es el mismo formato en
+los dos sitios (`<módulo> › <entrada>: sin valor para el idioma "<idioma>"`).
 
 **Y no borra `.src`: genera encima y poda al final** (`limpiarHuerfanos()`). Borrarlo en bloque dejaba el
 directorio incompleto durante toda la generación, y en ese hueco cualquiera que compile —un `tsc`, el
@@ -450,19 +483,69 @@ que existían hace un segundo y van a volver a existir. Pasó de verdad, y cuest
 error no señala a quien lo provocó.
 
 Generando encima, lo peor que puede ver quien lea a la vez es un fichero con el contenido **anterior**, que
-compila. Y el orden de escritura ya lo permitía sin saberlo: `generateModule()` escribe las claves de un
-idioma **antes** que su `index.ts`, así que un índice nunca apunta a un fichero que todavía no está.
+compila — con una salvedad, y es del propio módulo consigo mismo: dentro de un módulo, el `index.ts` de cada
+idioma se escribe **antes** que su `definitions/`, que se reescribe una sola vez al final con los tipos de
+todos los idiomas ya vistos, así que hay una ventana estrecha entre esos dos `await` en la que un `index.ts`
+recién escrito puede importar un `XParams` que `definitions/` todavía no exporta. Las dos pasadas previas de
+arriba evitan el caso que antes se colaba a mitad de generación; no esta ventana.
+
+**Un `index.ts` por idioma×módulo, con todas sus entradas dentro — no un fichero por clave.** Hasta el
+2026-09-25 se escribía `langs/<idioma>/<ruta>/<módulo>/<clave>.ts` por cada entrada, más un `index.ts` que
+las importaba todas **estáticamente**. Esa división no le daba nada al cliente —las claves de un idioma
+acababan en el mismo chunk—, pero multiplicaba ~20× los módulos que ve webpack: ~49.800 ficheros en
+`meteored-svc-panel-frontend`, ~46.000 módulos por compilador, y el `next build --webpack` de
+`panel-frontend-business` tardaba 14 min, 9 de ellos en `optimize-chunk-modules` (la concatenación de
+módulos). Con un fichero por idioma×módulo son 2.277 ficheros y el mismo build tarda 65 s.
+
+La división que **sí** importa no cambia: el `import()` dinámico de `definitions/<módulo>/index.ts` sigue
+apuntando a `langs/${idioma}/<ruta>/<módulo>` —mismo camino, mismo `webpackChunkName`—, así que sigue
+saliendo un chunk por idioma×módulo (2.090 en business, los mismos que antes) y el cliente solo descarga su
+idioma. Comprobado además que el resultado en runtime es idéntico: compilados con esbuild el `.src` anterior
+y el nuevo, las 47.450 entradas de los 2.277 índices dan el mismo valor con ocho contadores distintos.
+
+Cada entrada va en **su propia IIFE** (`const aceptar = (() => { …; return literal.render(); })();`), para
+que las variables internas de los emisores —`value`, `singularValue`, `literal`, `translationMap`…— no
+choquen entre entradas. No se usa un sufijo por `id` porque `altitud_2` y `altitud2` darían el mismo
+PascalCase. La cabecera importa solo `type {<Módulo> as Module}`; los `XKeys`/`XParams` llegan con los
+imports de cada entrada, deduplicados en un `Set` —importarlos también en la cabecera daría TS2300—.
+
+Una entrada **sin valor** para un idioma (ni propio, ni heredado, ni `defecto`) rechaza la generación con
+módulo, entrada e idioma —detectado ya en la pasada previa de `run()` (`problemasDeValor()`, arriba); ver
+también el watch, más abajo—. Antes no se escribía su fichero pero el `index.ts` lo importaba igual, y el
+fallo salía después, como un «Cannot find module» en el build.
 
 `limpiarHuerfanos()` recorre `.src` al final y quita lo que no se acaba de escribir —una entrada borrada del
 `.json`, un idioma retirado, un módulo entero que ya no existe—; primero los ficheros y después los
 directorios de más profundo a menos, para que uno que se queda vacío se vaya en la misma pasada. Para eso
-`generateModule()` **devuelve las rutas que ha escrito**; quien lo llama desde el watch las ignora, porque ahí
-no se poda nada.
+`generateModule()` **devuelve las rutas que ha escrito**; quien lo llama desde el watch las ignora —ahí no se
+llama a `limpiarHuerfanos()`, que recorre `.src` entero—, pero desde el 2026-09-25 el watch poda por su
+cuenta, a su escala: ver el punto siguiente.
+
+**El watch (`--watch`) valida, no tumba el proceso, y poda solo lo suyo.** `loadModule()` registra un
+`chokidar.watch()` por `.json`, y su `on("change", ...)` es una función asíncrona sin nadie que espere su
+promesa: hasta el 2026-09-25, si `generateModule()` rechazaba —lo que empezó a pasar con la entrada sin
+valor de arriba—, ese rechazo era un `unhandledRejection` que mataba el proceso de watch entero por un
+`.json` mal escrito. Ahora todo el cuerpo va en `try/catch`, y valida (`validar()` + `problemasDeValor()`)
+**antes** de tocar el disco: si hay problemas, los registra con `error()` y no escribe nada, igual que
+`run()`.
+
+`generateModule()` sobrescribe todo lo que el módulo tiene para sus idiomas *actuales* —un `index.ts` por
+idioma×módulo, no hace falta borrar antes de regenerar—, pero no toca un idioma que el módulo *tenía* y ha
+dejado de declarar. Eso se poda aparte, después de generar, y **solo** sobre el directorio propio del
+módulo para ese idioma (`${langsDir}/${idioma}${modulo.path()}/${modulo.name()}`).
+
+Antes de este cambio, lo que había ahí era `unlink(`${langsDir}/${idioma}${modulo.path()}`)` —**sin**
+`/${modulo.name()}`—, y ese es el directorio del *grupo* (p. ej. `/pages`), no el del módulo; `unlink()`
+sobre un directorio hace `rmdir` en recursivo (`@mr/core/cli/modules/fs.ts::unlink`). Cualquier `.json` que
+cambiara se llevaba **todos** los módulos hermanos de **todos** los idiomas, y solo `generateModule()`
+regeneraba el que había cambiado — un fallo preexistente (de antes de esta tarea), que quedó al descubierto
+al revisar este mismo bloque para el `try/catch`.
 
 Comprobado sobre los 4.406 ficheros generados del proyecto: el resultado es **byte a byte el mismo** que con
 el borrado en bloque. Y comprobado que la poda poda, que es lo que el borrado hacía gratis: quitando una clave
 de un `.json` desaparece su fichero en los tres idiomas, y retirando un módulo entero desaparecen sus cuatro
-directorios.
+directorios. (Eso era con el esquema de un fichero por clave; al pasar a un `index.ts` por idioma×módulo, la
+misma poda es la que borró los ~47.500 ficheros por clave antiguos sin código aparte.)
 
 ```ts
 export class Generate {
@@ -498,11 +581,41 @@ export interface IModuloJSON extends IModulo { traducciones: JSONItem[] }
 export class ModuloJSON extends Modulo {
     public static async load(baseDir: string, file: string): Promise<ModuloJSON>
     public name(): string; public path(): string; public traducciones(): JSONItem[]
+    public validar(): string[]                        // datos que faltan o `id`s que rompen el index.ts
+    public avisos(): string[]
     public moduleLangs(): string[]                    // unión de idiomas presentes en cualquier traducción
-    public generateLangIndex(): string                 // clase `<Modulo>` que implementa la interfaz del módulo
+    public generateLangIndex(entradas: Map<string, IEntradaEmitida>): string
+    // el index.ts entero de un idioma: imports deduplicados, una IIFE por entrada y la clase `<Modulo>`
     public generateIndex(): string                     // interfaz TS del módulo (usada por definition.ts)
 }
 ```
+
+**`validar()` comprueba, desde el 2026-09-25, que un `id` no rompa el `index.ts` que va a declararlo.** Con
+cada entrada como `const <id> = (() => {...})();` en la raíz del fichero (ver abajo), y la clase envolvente
+llamada `pascalCase(nombre del módulo)`, hay tres formas de que eso no compile o compile mal:
+
+- **`id` es palabra reservada de JavaScript** (`public`, `static`, `let`…) — no es un nombre de constante
+  válido. Lista en `PALABRAS_RESERVADAS`, en `json.ts`.
+- **`id`, o `pascalCase(nombre del módulo)`, coincide con un nombre que la cabecera o los emisores ya
+  declaran en la raíz** — `Module` (el tipo de la cabecera), o `Literal`/`SingularValue`/`PluralValue`/
+  `TPluralKey`/`pluralBuilder`/`TranslationMap`/`TranslationSet` (lo que importan `valor.ts`/`literal.ts`/
+  `map.ts`/`set.ts`). Lista en `NOMBRES_RESERVADOS_INDEX`, documentada ahí mismo: **quien añada un import
+  nuevo a esos emisores tiene que añadirlo también a esa lista**, o el choque no se detecta.
+- **Dos entradas generan el mismo nombre de tipo** —`params` → `XParams`, `map` → `XKeys`—. Se agrupa por
+  el nombre del tipo, no por `pascalCase(id)`: un `map` sin params (`FooBarKeys`) y un literal con params
+  (`FooBarParams`) comparten PascalCase pero no chocan, y compilan. Antes de este cambio un choque de
+  verdad daba `TS2300` (la cabecera vieja importaba el mismo tipo dos veces); con la cabecera reducida a
+  solo `Module` y los imports deduplicados en un `Set` (ver `generateLangIndex()`, abajo), **compila y
+  hace lo incorrecto en silencio**, una entrada usando los `params` de la otra.
+
+  Lo de `pascalCase(nombre del módulo)` contra `NOMBRES_RESERVADOS_INDEX` sí es una restricción **nueva**:
+  un `literal.json` o un `translation-map.json` compilaban con el esquema de un fichero por clave (el
+  `index.ts` no importaba esos símbolos) y hoy generarían `class Literal` junto a `import {Literal}`.
+
+- **`id` no es un identificador de JavaScript** (empieza por dígito, lleva guion, punto, espacio…). Se
+  comprueba con la gramática de ECMAScript —`IDENTIFICADOR` en `json.ts`, con las clases Unicode
+  `ID_Start`/`ID_Continue`—, **no** con un regex ASCII: el proyecto tiene `id`s con tilde (`cerrar_sesión`,
+  `un_día_prueba`, `un_envío`) que son identificadores válidos, y `[A-Za-z_$][\w$]*` los rechazaría.
 
 ### `clases-v2/modulo/definition.ts` — `Definition`
 ```ts
@@ -520,32 +633,52 @@ Acumula, mientras se generan las traducciones de un módulo, los tipos de parám
 (`addParamDefinition`) y las claves de `map`/`set` (`addRecordDefinitionEntry`) que después
 emite en un único fichero de definiciones compartido por todos los idiomas de ese módulo.
 
+Los nombres de idioma que emite —la lista `IDIOMAS`, los `import` de `bundle.ts` y las claves del `Record`—
+salen todos de `flattenLang()`, porque son a la vez nombre de directorio e **identificador JavaScript**.
+
 ### `clases-v2/modulo/translation/`
 ```ts
 // common.ts
-export const LANG_REGEXPS: {regex:RegExp; lang:string}[]     // normaliza es-XX→es, en-XX→en, pt→pt_PT, pt-BR→pt
+export const LANG_REGEXPS: {regex:RegExp; lang:string}[]     // normaliza es-XX→es, en-XX→en, pt/pt-PT→pt-PT, pt-BR→pt
 export function definitionModulePath(module: ModuloJSON): string
 export function langModulePath(modulePath: string, moduleName: string, lang: string): string
 
+export interface IEntradaEmitida { imports: string[]; lineas: string[]; expresion: string }
+
 // literal.ts / map.ts / set.ts
-export default (lang: string, value: ..., item: JSONItem, module: ModuloJSON, definition: Definition) => string
-// Cada una es una función-plantilla que devuelve el .ts final para ese idioma/ítem, importando
-// el runtime v2 correspondiente (services-comun/modules/traduccion/v2/*) y registrando tipos
-// de parámetros/claves en `definition` cuando aplica
+export default (lang: string, value: ..., item: JSONItem, module: ModuloJSON, definition: Definition) => IEntradaEmitida
+// Cada una emite UNA entrada para ese idioma: los imports del runtime (@mr/core-i18n/*), las
+// declaraciones y la expresión final (`literal.render()`, `translationMap`…), y registra tipos de
+// parámetros/claves en `definition` cuando aplica. No escriben fichero: las junta generateLangIndex()
 ```
+
+**Lo que sale de `LANG_REGEXPS` es un locale de `Intl`, no un nombre de juego de reglas de CLDR.** Se emite
+tal cual en `pluralBuilder('<lang>')`, así que tiene que ser un tag BCP 47 válido. Decía `pt_PT` —que es el
+nombre CLDR del juego de reglas, con guion bajo— y `new Intl.PluralRules("pt_PT")` lanza: el portugués de
+Portugal acababa con las reglas del inglés, y la forma `many` (de un millón en adelante) no se usaba nunca.
 
 ### `clases-v2/lang/lang.ts` — `Lang`
 ```ts
 export class Lang {
-    public static async getByCode(code: string): Promise<Lang>   // fallback a "en-US" si no existe; lanza si tampoco existe
+    public static getByCode(code: string): Lang    // del catálogo, o sintetizado por truncado de subtags
     public get code(): string
     public get parentCode(): string|undefined
-    public get parent(): Promise<Lang>|null                       // resuelve el idioma padre (jerarquía de fallback plural)
+    public get parent(): Lang|null                 // el idioma padre, ya resuelto
 }
 ```
-Catálogo cargado una única vez (caché estática) desde `lang/assets/langs.json`. Usado por
-`generateModule()` (en `generate.ts`) para resolver el valor de un `literal` subiendo por la
-jerarquía de idiomas cuando el idioma exacto no tiene traducción propia.
+Catálogo **importado**, no leído (`import catalogo from "./assets/langs.json"`), una sola vez al cargar el
+módulo — de ahí que nada de esto sea asíncrono. Lo usa `resolverValor()` (en `generate.ts`) para subir por la
+jerarquía cuando el idioma que se está generando no tiene valor propio.
+
+**Un código que el catálogo no declara ya no se sustituye por `en-US`.** Eso hacía que un tag BCP 47 cualquiera
+ni se intentara: `getByCode("ca-ES-valencia")` devolvía el inglés, y la jerarquía que se recorría después era la
+del inglés. Ahora se sintetiza un `Lang` con ese código y con el padre que dice `langChain()` —el *Lookup* de
+RFC 4647, `ca-ES-valencia` → `ca-ES` → `ca`—, de forma que la cadena entra en el catálogo en cuanto alcanza un
+código declarado. Termina siempre: cada salto acorta el código y el último posible es `en-US`, que está en el
+catálogo y no tiene padre.
+
+La búsqueda en el catálogo **ignora la caja** (índice en minúsculas), porque en BCP 47 `ca-es` y `ca-ES` son el
+mismo idioma.
 
 ### `clases-v2/util/case.ts`
 ```ts

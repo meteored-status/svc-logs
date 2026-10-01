@@ -1,18 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 9e430ef29dce6b0fbb8d28b60fef0ce5
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.6.25+5-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 522f3519ab5463d29ec003f5a835977c
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.17+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import {flattenLang} from "../../../modules/util/lang";
 import {pascalCase} from "../util/case";
 import {langModulePath} from "./translation/common";
 
 export class Definition {
-    /* STATIC */
-
     /* INSTANCE */
 
     private readonly _paramDefinitions: Record<string, string[]>;
@@ -101,7 +100,7 @@ export class Definition {
         }
 
         // Idiomas disponibles
-        lines.push(`const IDIOMAS = [${this._langs.map(lang => `'${lang.replace('-', '')}'`).join(', ')}];`);
+        lines.push(`const IDIOMAS = [${this._langs.map(lang => `'${flattenLang(lang)}'`).join(', ')}];`);
         lines.push('');
 
         lines.push(`export default (lang: string, defecto?: string): Promise<${pascalCase(this._name)}> => import(/* webpackChunkName: "i18n/langs/[request]${this._dir}/${this._name}" */ \`i18n/.src/langs/\${getLang(IDIOMAS, lang, defecto)}${this._dir}/${this._name}\`).then(m => m.default);`);
@@ -120,18 +119,18 @@ export class Definition {
         lines.push(`import {${pascalCase(this._name)}} from ".";`);
         lines.push('');
 
-        this._langs.map(lang => lang.replace('-', '')).forEach(lang => {
+        this._langs.map(flattenLang).forEach(lang => {
             lines.push(`import ${lang} from "${langModulePath(this._dir, this._name, lang)}";`);
         });
         lines.push('');
 
         // Idiomas disponibles
-        lines.push(`const IDIOMAS: string[] = [${this._langs.map(lang => `'${lang.replace('-', '')}'`).join(', ')}] as const;`);
+        lines.push(`const IDIOMAS: string[] = [${this._langs.map(lang => `'${flattenLang(lang)}'`).join(', ')}] as const;`);
         lines.push(`type TLang = typeof IDIOMAS[number];`)
         lines.push('');
 
         lines.push(`const langs: Record<TLang, ${pascalCase(this._name)}> = {`);
-        this._langs.map(lang => lang.replace('-', '')).forEach(lang => {
+        this._langs.map(flattenLang).forEach(lang => {
             lines.push(`    ${lang}: ${lang},`);
         });
         lines.push(`};`);

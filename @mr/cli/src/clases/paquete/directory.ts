@@ -1,17 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 3f23a7b2dd6cbdd2ae4f04c3d9925ebc
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.3+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 5a2d9086374c05be1a728da0212d66b1
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import JSZip from "jszip";
+import type JSZip from "jszip";
 
 import {md5} from "services-comun/modules/utiles/hash";
-
 import {isDir, isFile, mkdir, readDir, readFileString, unlink} from "@mr/core-cli/fs";
+
 import {PaqueteFile, type IPaqueteFile, type IUpdateTracker, type PaqueteFileFiles} from "./file";
 
 /**

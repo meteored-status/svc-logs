@@ -1,13 +1,17 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Wed, 17 Jun 2026 07:58:02 GMT
- * Hash: 9986be48e620822f2a82ee5af68aee02
- * Versión: 2026.6.17+1-juancmartinez
- * Anterior: 2026.6.16+1-juancmartinez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: bbb58bc168cc59f3976ad3e5d822725b
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.6.17+1-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {Pool, PoolConfig, QueryResult} from "pg";
-import {FSWatcher, watch} from "node:fs";
+import type {PoolConfig, QueryResult} from "pg";
+import {Pool} from "pg";
+import type {FSWatcher} from "node:fs";
+import {watch} from "node:fs";
+
 import {Transaction} from "./transaction";
 import {arrayChop} from "../../utiles/array";
 import {PromiseDelayed} from "../../utiles/promise";
@@ -85,7 +89,7 @@ type TInstance = "primary" | "read" | "notify";
 export interface IInsert {
     table: string;
     query: string;
-    params: Array<any>;
+    params: any[];
     pk?: string[];
     duplicate?: string[];
 }
@@ -93,13 +97,12 @@ export interface IInsert {
 export type TListener = (payload: any) => void;
 
 class PostgreSQLCluster {
-    /* STATIC */
-
     /* INSTANCE */
-    private readonly instances: Partial<Record<TInstance, IPostgreSQLHost>> = {};
+    private readonly instances: Partial<Record<TInstance, IPostgreSQLHost>>;
     private _notify: Notify|undefined;
 
     public constructor(private readonly database?: string) {
+        this.instances = {};
     }
 
     public add(instance: TInstance, host: IPostgreSQLHost): void {

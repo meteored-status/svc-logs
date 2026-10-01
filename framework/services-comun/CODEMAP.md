@@ -443,6 +443,8 @@ yarn run services-comun test
 | Fichero | Qué fija |
 |---------|----------|
 | `spec/utiles/array.spec.ts` | `arrayChop`, `unique` y `arrayEquals` |
+| `spec/database/mysql/cache.spec.ts` | `Cache.get()` de `database/mysql/cache`: que una consulta fallida no deje la clave rota, y que las peticiones simultáneas compartan consulta |
+| `spec/net/cache/disk.spec.ts` | `RequestCacheDisk` de `net/cache/disk`: que `check()` caduque lo cacheado con `expires` numérico o en string ISO (ficheros legacy), rechace uno ilegible, y que `save()` escriba `expires` como número |
 | `spec/estructura.spec.ts` | que no haya ningún `.spec.ts` dentro de `modules/` |
 
 ### Por qué el arnés es así

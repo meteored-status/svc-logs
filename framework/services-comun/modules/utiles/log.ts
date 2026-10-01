@@ -1,14 +1,16 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 10:42:05 GMT
- * Hash: 25218fbf1372d6be8ba7c31b3dd66caf
- * Versión: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: f6122242ee0260f2884bcbcd4a32ad07
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.18+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import {formats} from "dd-trace/ext";
 import os from "node:os";
 import cluster from "node:cluster";
 import tracer from "dd-trace";
-import {formats} from "dd-trace/ext";
 
 const DATADOG = process.env["DATADOG"]=="true";
 const KUBERNETES = process.env["KUBERNETES"]=="true";
@@ -83,7 +85,7 @@ function buildPayload(level: string, txt: any[]): string {
         severity: SEVERITY_GCP[level] ?? "INFO",
     };
 
-    let head: unknown = txt[0];
+    const head: unknown = txt[0];
     if (head !== null && typeof head === "object" && !(head instanceof Error) && !Array.isArray(head)) {
         for (const [k, v] of Object.entries(head as Record<string, unknown>)) {
             if (k === "timestamp" || k === "severity") {

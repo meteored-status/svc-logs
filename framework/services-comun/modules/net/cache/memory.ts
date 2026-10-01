@@ -1,7 +1,16 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 9d99f6af8614140ae6b7664a6da9e712
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import type {Conexion} from "@mr/core-network/server/http/conexion";
 import {TDevice} from "@mr/core-network/server/http/config/device";
 
-import {type INetCache, INetCacheV1, type IRouteGroupCache, NetCache} from ".";
+import type {INetCacheV1} from ".";
+import {type INetCache, type IRouteGroupCache, NetCache} from ".";
 import {md5} from "../../utiles/hash";
 
 export class NetCacheMemory extends NetCache {

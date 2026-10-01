@@ -705,6 +705,10 @@ import type {Idioma, IdiomaCorto, IdiomaLargo} from "@mr/core-i18n/langs";
 
 Consulta la documentación completa en [`@mr/core/i18n/README.md`](../../../i18n/README.md).
 
+Los códigos cortos de esta clase salen de `corto()`, no de un recorte propio: `corto()` corta por el
+primer separador, y el `slice(0, 2)` que había aquí convertía `"fil"` en `"fi"` —finés— sin que nada
+pudiera notarlo, porque `"fi"` también está soportado.
+
 ### `Idioma` (detección por path)
 
 **Entrada:** `@mr/core-network/server/http/i18n`
@@ -735,8 +739,8 @@ Idioma.inicializar({
 |-----------|-------------|
 | `idioma` | Idioma detectado (p. ej. `"es"`). |
 | `path` | Path sin prefijo de idioma (p. ej. `/inicio`). |
-| `idioma_corto` | Código corto del idioma detectado. |
-| `defecto_corto` | Código corto del idioma por defecto. |
+| `idioma_corto` | Código corto del idioma detectado, vía `corto()` de `@mr/core-i18n`. |
+| `defecto_corto` | Código corto del idioma por defecto, igual. |
 | `defecto` | Idioma por defecto del servicio. |
 | `idiomas` | Lista de idiomas soportados. |
 

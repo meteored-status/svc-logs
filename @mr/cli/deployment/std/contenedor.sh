@@ -33,7 +33,7 @@ if [[ -f "GENERAR.txt" ]]; then
 
       BASE_IMAGE=$(configw "${RUTA}" ".deploy.imagen.${_ENTORNO}? // empty | .base // empty")
       if [[ -z "${BASE_IMAGE}" || "${BASE_IMAGE}" == "null" ]]; then
-        BASE_IMAGE="node:24.14-alpine"
+        BASE_IMAGE="node:lts-alpine"
       else
         BASE_IMAGE=$(echo "${BASE_IMAGE}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g")
       fi
@@ -76,9 +76,20 @@ if [[ -f "GENERAR.txt" ]]; then
         DEPLOYED="retained"
       fi
 
+      # Caché de capas entre despliegues, guardada en el propio registro porque el builder se crea
+      # vacío en cada build y no sobrevive de uno a otro. `mode=max` no es opcional: la capa que
+      # interesa reutilizar —el `yarn workspaces focus`— vive en una etapa intermedia que no llega a
+      # la imagen final, y el modo por defecto solo guarda las capas publicadas. Va por entorno
+      # porque la imagen base puede diferir entre test y producción. `image-manifest` y
+      # `oci-mediatypes` son requisito de Artifact Registry, que rechaza el formato por defecto de
+      # buildkit. Con `ignore-error` un fallo al escribir la caché no tumba el despliegue.
+      CACHE="${REGISTRO}/${PROJECT_ID}/${PAQUETE}/${NOMBRE}:buildcache_${_ENTORNO}"
+
       docker buildx build \
         --platform "${ARCH}" \
         --file "${DOCKERFILE}" \
+        --cache-from "type=registry,ref=${CACHE}" \
+        --cache-to "type=registry,ref=${CACHE},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true" \
         --build-arg PROYECTO="${PROJECT_ID}" \
         --build-arg RUTA="${DIRECTORIO}" \
         --build-arg WS="${WORKSPACE}" \

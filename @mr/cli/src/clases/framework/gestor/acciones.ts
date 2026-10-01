@@ -1,15 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 7456db31f67e8cb14748ea1ac6149dac
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0b55c1225dea5055fc94dd49e702469a
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {mkdir, readFileString, safeWrite, unlink} from "@mr/core-cli/fs";
-
 import {Colors} from "@mr/core-cli/colors";
+
 import {Log} from "../../log";
 import {Paquete, PaqueteTipo} from "../../paquete";
 import {aplicarPatches} from "../../patches";

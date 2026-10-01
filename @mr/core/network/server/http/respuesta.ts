@@ -1,13 +1,14 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 18 May 2026 11:19:03 GMT
- * Hash: 0c589b5877d12d365904b562578e8386
- * Versión: 2026.5.18+3-josantoniojimnez
- * Anterior: 2026.5.18+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: cbd4a7f05c3cf6d85c2240b09ae0f4ff
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.5.18+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import zlib from "node:zlib";
 import type {IncomingHttpHeaders, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "node:http";
+import zlib from "node:zlib";
 
 import type {INetCache} from "services-comun/modules/net/cache";
 import {buffer2stream, pipeline} from "services-comun/modules/utiles/stream";
@@ -75,6 +76,8 @@ export enum TReferrerPolicy {
  * @property VERSION  - Versión del despliegue; se incluye en `X-Meteored-Version`.
  */
 export abstract class Respuesta {
+    /* STATIC */
+
     private static CONTEXTO_DEFECTO: Readonly<IRespuestaContext> = Object.freeze({
         service: "localhost",
         pod: "localhost",
@@ -97,6 +100,8 @@ export abstract class Respuesta {
         "transfer-encoding",
         "upgrade",
     ]);
+
+    /* INSTANCE */
 
     public time: number;
     private readonly contexto: Readonly<IRespuestaContext>;

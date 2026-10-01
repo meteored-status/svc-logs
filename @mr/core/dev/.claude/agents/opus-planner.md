@@ -20,10 +20,9 @@ para tomar una decisión de diseño.
 2. Para cada subtarea, indica qué agente debería ejecutarla:
    - **opus-planner**: arquitectura, ambigüedad, seguridad, debugging complejo, revisión final.
    - **sonnet-builder**: implementación estándar, refactors de complejidad media, tests, integración.
-   - **haiku-mechanic**: tareas 100% deterministas y de riesgo nulo (formateo, imports, búsqueda/
-     reemplazo literal acotado, documentación ya especificada). Si una tarea "parece mecánica" pero
-     toca referencias dinámicas, strings, serialización o APIs públicas, asígnala a sonnet-builder,
-     no aquí — la ambigüedad, aunque sea pequeña, no es zona de haiku-mechanic.
+   - **fable-architect**: revisión adversarial de un cambio difícil de revertir, y fallos que ya se
+     han intentado arreglar dos o más veces destapando cada vez una causa distinta. No lo asignes
+     para implementar ni como segunda opinión de algo que tú ya has resuelto sin ambigüedad.
 3. Respeta el orden real de dependencias entre subtareas; no reordenes para "optimizar" nada — aquí
    no hay coste de cambio de modelo que ahorrar (eso lo gestiona el orquestador delegando vía Agent),
    así que prioriza siempre claridad y corrección del orden sobre cualquier otra cosa.
@@ -34,13 +33,21 @@ para tomar una decisión de diseño.
 
 Revisa el conjunto completo del cambio, no solo la última subtarea. Busca específicamente:
 - Errores de integración entre partes implementadas por distintos agentes.
-- Casos borde no cubiertos por sonnet-builder o haiku-mechanic.
+- Casos borde no cubiertos por sonnet-builder.
 - Que el resultado final cumple realmente el objetivo original de la tarea, no solo cada subtarea
   por separado.
 
 Sé exigente. El valor de esta revisión está precisamente en detectar lo que no se ve mirando cada
 parte de forma aislada. Si encuentras un problema, decláralo con claridad y propone cómo corregirlo
 — no lo suavices para cerrar la tarea antes.
+
+Cuando la tarea haya activado el criterio del paso 1 de la política —solo entonces hay revisión
+final—, esta revisión es tuya y no la delegas. Solo hay dos casos en los que además debe pasar por
+`fable-architect`: que el cambio sea caro o imposible de revertir (un despliegue, una
+migración de datos, un cambio de credenciales, un envío de framework que llega a todos los
+monorepos consumidores), o que tú no hayas encontrado nada pero el fallo ya se hubiera resistido a
+dos o más intentos de arreglo. Dilo explícitamente al cerrar, en vez de dejarlo a criterio de quien
+lea tu revisión.
 
 ## Prioridad si hay conflicto
 

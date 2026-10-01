@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 2d1f18b108c3e3b06ca678df3a2fccbb
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import tracer, {type Span} from "dd-trace";
 import {formats} from "dd-trace/ext";
 import type {Server} from "node:http";
@@ -307,8 +315,6 @@ class WebSocket {
      * @param data - Mensaje cliente ya deserializado.
      * @param traceContext - Span del upgrade HTTP usado como padre fallback si el cliente no propaga contexto.
      * @param buffer - Buffer binario opcional asociado al mensaje.
-     * @returns Promesa que se resuelve cuando el handler completa su ejecución,
-     *   o se rechaza si el handler lanza una excepción o no existe handler para el método.
      */
     private async handleRequest(ws: WS, data: IMessageClient, traceContext: Span | null, buffer?: ArrayBuffer): Promise<void> {
         // Preferir el contexto propagado por el cliente sobre el del upgrade HTTP,

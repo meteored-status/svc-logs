@@ -2,6 +2,387 @@
 
 ---
 
+## 2026.9.29 12:59 — [Juan Carlos]
+
+### Fixed
+
+- **`langChain()` vuelve a compilar para navegador.** Usaba `Array.prototype.at()`, que es ES2022, y el
+  `tsconfig/browser.json` de `@mr/core-dev` se queda en ES2015: los bundles de navegador que importan
+  `modules/util/lang.ts` fallaban con `TS2550`. Además del error de tipos, `.at()` no existe en navegadores
+  anteriores a ES2022 (Safari/iOS < 15.4), y `getLang()` corre en el navegador para elegir idioma. Se accede
+  al último subtag con `subtags[subtags.length - 1]`, sin cambiar el comportamiento.
+
+## 2026.9.28 14:27 — [Jose]
+
+### Changed
+
+- **`bin/.mr-ignore` excluye también `bin/versiones`**, el sello local con el que `mrpack` decide ahora si
+  hay que recompilar `mrlang` tras actualizar el framework (ver `@mr/cli`, `checkMrlang()`). Ya no hace
+  falta el `yarn workspace @mr/core-i18n run compile` a mano después de recibir un cambio del generador.
+  README, «El bundle se rehace solo cuando toca», actualizado.
+
+## 2026.9.28 14:15 — [Jose]
+
+### Fixed
+
+- **El aviso de idiomas que faltan ya no salta por lo que se hereda de la misma lengua.** Un `es-MX` sin valor
+  propio en una entrada que sí tiene `es` avisaba de que «cae al defecto y la pantalla sale medio traducida»,
+  cuando el generador (`resolverValor()`) le da el valor de `es`. `avisosDeIdioma()` miraba solo las claves
+  escritas en la entrada. Ahora recorre la misma cadena del catálogo que el generador, **pero solo mientras
+  siga en la misma lengua**: `es-MX` → `es` y `en-CA` → `en` no avisan, y `es-MX` → `es` → `en` o `ca` →
+  `es-ES` siguen avisando, porque lo que sale en pantalla es otra lengua. Pruebas en `spec/idiomas.spec.ts`.
+
+## 2026.9.25 11:45 — [Juan Carlos]
+
+### Changed
+
+- **`mrlang generate -v2` escribe un `index.ts` por idioma×módulo con todas las entradas dentro**, en vez de
+  un `.ts` por clave más un `index.ts` que los importaba. Los emisores (`literal.ts`, `map.ts`, `set.ts`)
+  devuelven ahora una `IEntradaEmitida` (`imports`, `lineas`, `expresion`) en vez del fichero, y
+  `ModuloJSON.generateLangIndex(entradas)` las mete cada una en su propia IIFE.
+
+  El motivo es el build: la división por clave no le daba nada al cliente —el `index.ts` las importaba
+  estáticamente y acababan en el mismo chunk—, pero multiplicaba ~20× los módulos que ve webpack. En
+  `meteored-svc-panel-frontend` eran ~49.800 ficheros y el `next build --webpack` de `panel-frontend-business`
+  tardaba **14 min**, 9 de ellos en `optimize-chunk-modules`. Ahora son 2.277 ficheros y tarda **65 s**.
+
+  **La carga asíncrona por idioma no cambia**: el `import()` dinámico de `definitions/` sigue apuntando al
+  mismo directorio, siguen saliendo los mismos chunks por idioma×módulo (2.090 en business) y el mismo peso
+  de `.next/static`.
+
+  **Después de actualizar, recompilar `mrlang` a mano: `yarn workspace @mr/core-i18n run compile`.** Este
+  envío no toca `bin/`, y `mrpack` solo recompila cuando el `bin/hash.md5` local no cuadra con el
+  `bin/min/` local (ver README, «El bundle se rehace solo cuando toca»): un repo que ya lo tenía compilado
+  seguiría generando con el `mrlang` anterior. Cloud Build no lo sufre, compila de cero.
+
+  **La primera regeneración con esta versión borra los ~47.500 ficheros por clave del esquema anterior**,
+  vía `limpiarHuerfanos()` — no hace falta código aparte, ya que esos ficheros dejan de estar entre lo que
+  `generateModule()` devuelve como escrito. Es lo esperado: se ve como un `git status` enorme en `.src`
+  (gitignored) la primera vez que alguien regenera tras actualizar el framework.
+
+- **Una entrada sin valor para un idioma rechaza la generación**, con módulo, entrada e idioma. Antes se
+  saltaba su fichero pero el `index.ts` lo importaba igual, y el fallo aparecía después en el build como un
+  «Cannot find module». En este proyecto no hay ningún caso.
+
+  La comprobación se hace ahora **antes de escribir nada**, junto a `validar()` (`Generate.problemasDeValor()`,
+  nuevo): antes vivía a mitad de `generateModule()`, y un módulo con una sola entrada así dejaba escritos
+  varios `index.ts` de idiomas anteriores a esa entrada antes de rechazar —alguno importando un `XParams`
+  que `definitions/` de ese módulo todavía no exportaba—. El chequeo de dentro de `generateModule()` se
+  queda, como defensa.
+
+- **`ModuloJSON.validar()` rechaza `id`s que romperían el `index.ts` generado**: una palabra reservada de
+  JavaScript (`public`, `static`, `let`…), un `id` —o el nombre del módulo en PascalCase— que coincide con
+  un nombre que la cabecera o los emisores ya declaran en la raíz del fichero (`Module`, `Literal`,
+  `SingularValue`, `PluralValue`, `TPluralKey`, `pluralBuilder`, `TranslationMap`, `TranslationSet`), y dos
+  entradas que generan el mismo nombre de tipo (`XParams` o `XKeys`). Este último caso antes daba `TS2300`
+  al compilar dos imports iguales en la misma cabecera; con la cabecera reducida a solo `Module` (ver el
+  primer punto), el `Set` de imports de `generateLangIndex()` los dedupica en silencio, así que sin esta
+  regla el choque no se ve nunca — una entrada acaba usando los `params` de la otra sin que nada avise.
+  Se agrupa por el nombre del tipo y no por `pascalCase(id)`: un `map` sin params (`FooBarKeys`) y un
+  literal con params (`FooBarParams`) comparten PascalCase, no chocan y se siguen aceptando.
+
+  De todo esto, lo único que **antes compilaba y ahora se rechaza** es un módulo cuyo nombre en PascalCase
+  coincide con un símbolo del runtime (`literal.json`, `translation-map.json`…): con el esquema de un
+  fichero por clave el `index.ts` no importaba esos símbolos. El resto —palabras reservadas, `id`s que no
+  son identificadores, `id` igual al nombre del módulo— ya rompía el `import <id> from "./<id>"` antiguo.
+
+  También rechaza un `id` que **no sea un identificador de JavaScript** (empieza por dígito, lleva guion,
+  punto…), con la gramática de ECMAScript (clases Unicode `ID_Start`/`ID_Continue`) y no con un regex
+  ASCII: tres entradas reales del proyecto —`cerrar_sesión`, `un_día_prueba`, `un_envío`— llevan tilde, son
+  identificadores válidos, y `[A-Za-z_$][\w$]*` habría roto la generación de dos módulos sin nada mal escrito.
+
+### Fixed
+
+- **El watch (`--watch`) mataba el proceso entero con un `.json` que se quedara sin valor para algún
+  idioma**: desde que `generateModule()` rechaza por eso, el handler de `chokidar.on("change", ...)`
+  propagaba ese rechazo como un `unhandledRejection` sin nadie que lo esperase, y Node termina el proceso.
+  Ahora todo el cuerpo del handler va en `try/catch` y lo que antes mataba el watch se registra con
+  `error()` y sigue vivo. También valida (`validar()` + `problemasDeValor()`) **antes** de tocar el disco,
+  igual que `run()`: si el `.json` que se acaba de guardar tiene un problema, no escribe nada encima de lo
+  que ya había.
+
+- **El watch se llevaba por delante los módulos hermanos de todos los idiomas** (preexistente, no de esta
+  tarea, pero se corrige de paso porque el mismo bloque lo toca): el `unlink()` de después de cada cambio
+  apuntaba a `${langsDir}/${idioma}${modulo.path()}`, que es el directorio del **grupo** (p. ej. `/pages`),
+  no el del módulo, y `unlink()` borra directorios en recursivo. Cualquier `.json` que cambiara se llevaba
+  **todos** los módulos hermanos de **todos** los idiomas, y `generateModule()` solo regeneraba el que
+  había cambiado. Se quita esa línea: `generateModule()` ya sobrescribe todo lo suyo (un `index.ts` por
+  idioma×módulo, no hace falta borrar antes), y lo único que puede quedar huérfano —un idioma que el
+  módulo ha dejado de declarar— se poda aparte, después de generar, y solo sobre el directorio propio de
+  ese módulo (`${langsDir}/${idioma}${modulo.path()}/${modulo.name()}`).
+
+### Comprobado
+
+- Equivalencia en runtime: compilados con esbuild el `.src` anterior y el nuevo, las 47.450 entradas de los
+  2.277 índices dan el mismo valor con los contadores 0, 1, 2, 3, 5, 11, 21 y 1.000.000. Cero diferencias.
+- `tsc --noEmit` sobre todo `i18n/.src/{langs,definitions}` con el tsconfig de `panel-frontend-business`:
+  sin errores. `yarn workspace @mr/core-i18n typecheck`, `compile` y `test` (68/68, las 9 nuevas en
+  `spec/generate-lang-index.spec.ts`) en verde. `yarn workspace i18n run generate` sigue en 2.277 ficheros.
+- `set` no lo usa hoy ningún `.json` del proyecto; se probó con un módulo temporal (dos singulares y un
+  plural) y se borró después.
+- Las nuevas validaciones de `id`, comprobadas contra los `.json` reales del proyecto antes de añadirlas:
+  cero colisiones con los nombres fijos, cero `pascalCase(id)` compartidos dentro de un módulo y cero `id`s
+  que no sean identificadores (las tres con tilde pasan, como deben).
+- Revisión adversarial (2026-09-28): corregida la agrupación de choques de tipo, que rechazaba datos
+  válidos (`XKeys` frente a `XParams`), y los ZWNJ/ZWJ de `IDENTIFICADOR`, que estaban como caracteres
+  invisibles literales y ahora van como `\u200C\u200D`. `test` 68/68.
+- Watch probado en vivo (`mrlang generate -v2 --watch`), sin dejar procesos colgados: dos módulos hermanos
+  en el mismo directorio, cambio en uno con el otro intacto; una entrada sin valor deja el proceso vivo,
+  solo registra el error y no escribe nada; corregido el `.json`, el módulo se regenera normal. Los
+  ficheros de prueba eran temporales, fuera de `i18n/.json`: `git diff -- i18n/.json` sin cambios al
+  terminar.
+- **Se rompió a propósito el código que cubren tres de las pruebas nuevas, y cada vez falló solo la suya**:
+  reintroducir `import x from "./x";` en un emisor tumba «sin imports a ficheros hermanos»; desactivar en
+  `validar()` el chequeo de palabra reservada tumba «id que es palabra reservada», y el de identificador
+  tumba «id que no es identificador de JavaScript». Las demás siguieron en verde en los tres casos.
+
+## 2026.9.23 09:25 — [Jose]
+
+### Changed
+
+- **Código adaptado a `yarn lint`** (`@mr/core-lint`), sin cambios de comportamiento: `import type` en los
+  imports que solo traen tipos, llaves en todos los `if`/`else`/`for`/`while`, bloques de imports en su orden
+  y separados por una línea en blanco, fuera las dobles líneas en blanco, `Tipo[]` en vez de `Array<Tipo>` y
+  sin `/* STATIC */` en las clases que no tienen estáticos. Casi todo con el autofix; el orden de imports,
+  con un codemod que solo movía líneas enteras.
+
+## 2026.9.17 16:40 — [Jose]
+
+### Changed
+
+- **El fallback de `plural-function-builder` es la cadena del idioma, no un prefijo de tres caracteres.**
+  Si `Intl.PluralRules` rechaza el tag, ahora se prueba el siguiente de `langChain()` —`es_ES` → `es-ES`,
+  `ca-ES-inventado` → `ca-ES` → `ca`— y solo al agotarla se cae al inglés.
+
+  Lo que había era `lang.substring(0, 3).replaceAll("-", "")`, y **no era código muerto como dije antes**:
+  con un tag normal acierta de casualidad, porque de `es-ES` salen los tres primeros caracteres menos el
+  guion, o sea `es`. Lo que no es, es una subetiqueta:
+
+  - De `es_ES` sale `es_`, que `Intl` también rechaza: acababa en reglas **inglesas**.
+  - De un código aplanado como `esES` sale `esE`, que **está bien formado**. No lanza: `Intl` lo resuelve
+    al **locale por defecto del entorno** y devuelve sus reglas. Comprobado — aquí sale `en-US`. No da
+    error en ninguna parte y depende de la máquina que lo ejecute.
+
+  Hoy el generador solo emite tags con guion, así que en la práctica no había nadie cayendo en esto; era
+  una trampa esperando al primero que pasara un código ya aplanado.
+
+### Added
+
+- `spec/plural-function-builder.spec.ts`, que tampoco existía.
+
+### Comprobado
+
+- La prueba del guion bajo, vista fallar contra el código anterior (reglas inglesas donde tocaba `pt-PT`,
+  o sea sin categoría `many`). Las otras cuatro pasan en los dos, y una lo explica: con
+  `ca-ES-inventadisimo` el prefijo de tres caracteres da `ca-` → `ca`, que es la respuesta correcta por
+  el camino equivocado.
+
+---
+
+## 2026.9.17 15:30 — [Jose]
+
+### Fixed
+
+- **`corto()` corta por el separador, no por los dos primeros caracteres.** `slice(0, 2)` convertía
+  `"fil"` —filipino— en `"fi"`, que es finés. Lo peor no era el fallo sino que fuera indetectable:
+  `"fi"` **también** está soportado, así que no lanzaba, no devolvía `undefined` y el tipo seguía
+  siendo `IdiomaCorto`. Aguas abajo no había forma de notar el cambiazo.
+
+  Ahora devuelve la subetiqueta primaria BCP 47, que es lo que la función quiso decir siempre: vale
+  igual para códigos de tres letras, de escritura (`sr-Cyrl`) y de región numérica (`es-419`).
+
+- **`@mr/core-network/server/http/i18n` tenía su propia copia del `slice(0, 2)`** y se habría quedado
+  con la versión rota. Ahora llama a `corto()`, que es de donde no debió salir.
+
+### Changed
+
+- **`soportado()` es una guarda de tipo y acepta `string`.** `(lang: string): lang is Idioma` en vez de
+  `(lang: Idioma): boolean`. Es lo que hace usable una lista blanca cerrada: se valida en el borde y a
+  partir de ahí se trabaja con `Idioma` sin volver a comprobar. Recibir `Idioma` obligaba a castear antes
+  de preguntar, que es justo lo que la pregunta pretendía evitar. El cambio es compatible: quien le pasara
+  un `Idioma` sigue compilando.
+
+- Documentado que la lista de idiomas es **lista blanca cerrada por decisión**, no por limitación: la
+  forma que se admite es BCP 47 entero —`ca-ES-valencia` cabe—, pero solo entra lo que alguien da de alta
+  en `IdiomaLargo` y en `soportados`.
+
+### Added
+
+- `spec/langs.spec.ts`, que no existía. Cubre `corto()` —incluida la propiedad de la que se fía todo lo
+  de aguas abajo: lo que devuelve sigue siendo un idioma soportado— y `soportado()` como guarda.
+
+### Comprobado
+
+- La prueba del `"fil"`, vista fallar contra el código anterior. Las demás pasan en los dos, y una de
+  ellas lo explica: la propiedad «lo que devuelve sigue soportado» **se cumplía también con el fallo**,
+  porque `"fi"` está en la lista. Por eso hacía falta nombrar el caso concreto.
+- `@mr/core-network` typechequeado entero, y comprobado antes que el `tsc` de verdad mira ese fichero
+  —metiéndole un error a propósito y viéndolo saltar—.
+
+---
+
+## 2026.9.17 14:10 — [Jose]
+
+### Fixed
+
+- **El portugués de Portugal usaba las reglas de plural del inglés.** `LANG_REGEXPS` mapeaba `pt-PT` y
+  `pt` al juego de reglas `pt_PT`, y eso se emite tal cual como `pluralBuilder('pt_PT')`, o sea que acaba
+  en un `new Intl.PluralRules("pt_PT")`. Con guion bajo no es un tag válido: reventaba, el `catch` de
+  `plural-function-builder` intentaba un `substring(0, 3)` que da `"pt_"` y tampoco vale, y el segundo
+  `catch` lo dejaba en `en-US`.
+
+  El nombre CLDR del juego de reglas **sí** lleva guion bajo, y de ahí venía la confusión; el locale que
+  hay que pedirle a `Intl` lleva guion.
+
+  Se veía **a partir del millón**: `pt-PT` tiene categoría `many` y el inglés no, así que un traductor que
+  escribiera la forma `many` no la veía usada nunca. Comprobado con un módulo de prueba: un millón de
+  avisos daba «1.000.000 avisos» y ahora da «1.000.000 **de** avisos», que es como se dice. Por debajo del
+  millón las dos normas coinciden, que es por lo que esto ha durado tanto sin que nadie lo notara.
+
+  `pt-BR` no cambia: ya mapeaba a `pt`, que en CLDR es el juego brasileño.
+
+---
+
+## 2026.9.17 13:05 — [Jose]
+
+### Added
+
+- **`langChain()`** en `@mr/core-i18n/util/lang`: la cadena de búsqueda de un idioma de más específico a
+  menos, quitando subtags por la derecha — `ca-ES-valencia` → `ca-ES` → `ca`. Es el *Lookup* de
+  RFC 4647 §3.4, y es lo que permite resolver un tag BCP 47 que nadie ha dado de alta en ninguna lista.
+
+  El subtag de una sola letra se va junto con el que lo sigue (`de-DE-u-co` → `de-DE`): abre una extensión
+  y por sí solo no nombra ningún idioma. Lo dice la RFC y sale gratis.
+
+### Changed
+
+- **`getLang()` prueba la cadena entera, no solo el código exacto.** Un módulo traducido al catalán ahora
+  sirve al valenciano; antes, sin acierto exacto, se caía al defecto del módulo o al `enUS` de respaldo.
+  Si el módulo tiene la variante, la variante gana: la cadena va de más específico a menos. El idioma por
+  defecto se busca igual, y **después** de agotar la del pedido, que es el orden que manda la RFC.
+
+- **`Lang.getByCode()` ya no sustituye por `en-US` lo que el catálogo no conoce.** Sintetiza un idioma con
+  ese código y con el padre que dice el truncado de subtags, así que la jerarquía entra en el catálogo en
+  cuanto alcanza un código declarado y sigue por la herencia de siempre (`ca` → `en` → `en-US`). La cadena
+  termina siempre: cada salto acorta el código.
+
+- **La búsqueda en el catálogo ignora la caja.** `ca-es` y `ca-ES` son el mismo idioma; antes, uno escrito
+  con otra caja se comportaba como un código desconocido.
+
+- `services-comun-status`: el comentario de `IDIOMAS` daba dos motivos para no admitir `ca-ES-valencia` y
+  uno de ellos era este. Queda solo el de la columna `user.lang VARCHAR(10)`.
+
+### Comprobado
+
+- Módulo de prueba con tres entradas y una petición en `ca-ES-valencia`: la que declara el valenciano da su
+  texto, la que solo está en catalán **hereda el catalán**, y la que no está ni en catalán cae al inglés por
+  la cadena del catálogo. Con el código de ayer, las dos últimas daban el `defecto` de la entrada.
+- Las cuatro pruebas nuevas de `getLang`, vistas fallar contra el código de la fase anterior, con las otras
+  39 en verde. Una quinta —la del subtag de una letra— falló por estar mal escrita **yo**: `de-DE-u-co` sí
+  es un paso válido de la RFC. Corregida la expectativa, no el código.
+- Regenerado el `i18n/` real: salida **idéntica byte a byte**. Los cuatro idiomas del panel están todos en
+  el catálogo, así que nada de esto les cambia el camino.
+- El panel pasa el idioma ya validado contra `["es", "en", "fr", "ca"]`, así que allí `getLang()` siempre
+  acierta por código exacto y la cadena no llega a usarse. El cambio se nota en quien pase un código con
+  variante — otros monorepos que resuelvan desde `Accept-Language`.
+
+---
+
+## 2026.9.17 11:20 — [Jose]
+
+### Fixed
+
+- **Un idioma con tres subtags se generaba en un directorio y se buscaba en otro.** El generador
+  aplanaba el código con `lang.replace("-", "")`, que en JS sustituye solo la **primera** ocurrencia,
+  y el runtime con un `replace(/[-_]/g, "")` global. Con dos subtags coincidían por casualidad
+  —`es-ES` → `esES` por los dos caminos— y con tres dejaban de coincidir: `ca-ES-valencia` se
+  escribía en `caES-valencia` y `getLang()` lo buscaba en `caESvalencia`.
+
+  En el loader dinámico eso no daba ningún error: no encontraba el idioma y caía al inglés, con la
+  pantalla traducida menos ese módulo. En `bundle.ts` era peor y más visible — emitía
+  `import caES-valencia from ...`, que ni siquiera es sintaxis válida.
+
+- **Un valor declarado a mano para un idioma que el catálogo no conoce se perdía.**
+  `resolverValor()` entra por `Lang.getByCode()`, que a un código que no está en `langs.json`
+  le devuelve `en-US` sin decirlo, así que el bucle no llegaba a mirar la clave pedida. Un
+  `ca-ES-valencia` escrito en el `.json`, con su texto al lado, se generaba en inglés. Ahora la
+  clave literal se comprueba antes de subir por la jerarquía.
+
+### Changed
+
+- **El aplanado del código de idioma es una sola función**, `flattenLang()`, en
+  `@mr/core-i18n/util/lang` — donde ya estaba `getLang()`, que es el otro extremo de la misma
+  convención. La usan los cinco puntos del generador v2 que la tenían escrita a mano
+  (`generate.ts` y los cuatro de `modulo/definition.ts`).
+
+- **`getLang()` compara ignorando mayúsculas**, que es lo que dice BCP 47: `ca-es-VALENCIA` y
+  `ca-ES-valencia` son el mismo idioma, y de un `Accept-Language` o de un `navigator.language`
+  llega lo que llega. Devuelve la entrada de `availableLangs`, no lo buscado, porque lo que sale
+  de ahí es un nombre de directorio y tiene que conservar su caja.
+
+### Comprobado
+
+- Generando un módulo de prueba con `ca-ES-valencia` y `zh-Hant-TW`: directorios `caESvalencia` y
+  `zhHantTW`, `IDIOMAS` y los `import` del bundle coherentes con ellos, y cada idioma con **su**
+  texto. Con el código anterior, los mismos JSON daban `caES-valencia` y un `bundle.ts` que no
+  compila.
+- Regenerando el `i18n/` real de este repo: salida **idéntica byte a byte**. Los códigos de dos
+  subtags no cambian de nombre.
+- Las pruebas nuevas, vistas fallar contra el código viejo (3 de 5 rojas, el resto de la suite en
+  verde). Las dos que pasaban en ambos son las que cubren el runtime, que en esto ya era correcto.
+
+---
+
+## 2026.9.12 16:55 — [Jose]
+
+### Added
+
+- **`typecheck`** (`tsc --noEmit` sobre el `tsconfig` del paquete). Era la única de las
+  comprobaciones del monorepo que aquí había que escribir a mano; `test` solo compila el proyecto de
+  specs y `compile` arrastra el `tsc` de la compilación.
+
+- Dos atajos en la raíz del monorepo: `yarn mrlang <comando>` y `yarn run mrlang:build`.
+  Comprobado que los argumentos llegan por los dos saltos —`yarn mrlang generate --help` enseña la
+  ayuda de `generate`, no la de primer nivel—.
+
+### Fixed
+
+- La ayuda de `generate` anunciaba `yarn mrlang pull`, que es un comando retirado. Copia y pega de
+  cuando `pull` existía.
+
+- **El test de las categorías de plural fijaba el orden de la lista, y empezó a fallar solo.**
+  Comparaba `pluralCategories` contra `["one", "many", "other"]`, y en el V8 de Node 22 / ICU 76
+  sale en orden alfabético: `["many", "one", "other"]`.
+
+  ECMA-402 no fija ese orden, así que la comparación no probaba nada de CLDR y convertía una
+  subida de Node en un test rojo. Ahora comprueba **qué** categorías hay —que está `many`, que son
+  tres, y que en inglés son dos y no está—, que es lo que la prueba quería decir desde el
+  principio.
+
+- **El catálogo de idiomas ya no se lee de disco: se importa.** `Lang.loadCatalog()` hacía
+  `readJSON("@mr/core/i18n/src/clases-v2/lang/assets/langs.json")`, una ruta escrita desde la raíz
+  del monorepo que solo es cierta en la disposición en la que se escribió. Fuera de ella el
+  `generate -v2` no llegaba ni a empezar.
+
+  El comentario que había descartaba `__dirname` con razón —el bundle vive en `bin/min/` y el asset
+  en `src/`—, pero esa era la pregunta equivocada: **un asset del propio paquete no hay que
+  encontrarlo, hay que llevárselo dentro**. Con `import catalogo from "./assets/langs.json"` el
+  empaquetador lo incrusta (son 10 kB) y no queda ninguna ruta que resolver en ejecución.
+  Comprobado sobre el bundle recién construido: las 91 entradas dentro, cero referencias a la ruta
+  vieja.
+
+### Changed
+
+- **`Lang` deja de ser asíncrono, que era solo por esa lectura.** `loadCatalog()` desaparece y el
+  catálogo se construye una vez al cargar el módulo; `getByCode()` devuelve `Lang` en vez de
+  `Promise<Lang>` y `parent` devuelve `Lang|null`. Con ellos, `Generate.resolverValor()`, que era
+  su único llamante — `Lang` no está en el mapa `exports`, así que no sale del paquete.
+
+  Se van de paso el `if (!this.CATALOG) await this.loadCatalog()` de cada llamada y los `!` de
+  después: el catálogo o está o no compila.
+
+- **`bin/mrlang.js` son dos líneas.** El cálculo de `MRPACK_ROOT` se va a `@mr/core-cli/arranque`
+  (ver su CHANGELOG), que lo resuelve para las dos CLI sin contar niveles.
 ## 2026.9.4 19:40 — [Jose]
 
 ### Removed

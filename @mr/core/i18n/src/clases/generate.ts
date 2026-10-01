@@ -1,15 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: c410854c3953a8565be6b199f7ba86ef
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 714a38b3702de56ac1c412f3150be86e
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Colors} from "@mr/core-cli/colors";
-
 import {isDir, isFile, mkdir, readDir, readJSON, rmdir, safeWrite} from "@mr/core-cli/fs";
+
 import {IdiomasLoader} from "./idioma/loader";
 import type {IPackageConfig} from "./modulo";
 import type {TIdiomas} from "./idioma";

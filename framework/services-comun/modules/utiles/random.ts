@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 0660682b102aa97891eb857bfb591e7c
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 const letras = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 export function random(chars: number=8): string {
@@ -23,12 +31,12 @@ export function valoresValidos(listado: number[]): number[] {
     const menores: number[] = [];
     const mayores: number[] = [];
     let medianos: boolean = false;
-    for (let actual of listado) {
-        const diferencia_menor = Math.abs(actual-minimo);
-        const diferencia_mayor = Math.abs(actual-maximo);
-        if (diferencia_menor<diferencia_mayor) {
+    for (const actual of listado) {
+        const diferenciaMenor = Math.abs(actual-minimo);
+        const diferenciaMayor = Math.abs(actual-maximo);
+        if (diferenciaMenor<diferenciaMayor) {
             menores.push(actual);
-        } else if (diferencia_menor>diferencia_mayor) {
+        } else if (diferenciaMenor>diferenciaMayor) {
             mayores.push(actual);
         } else {
             medianos = true;

@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: e4bd730b2e0f3e8cc91199b7f7362a44
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.24+1-josantoniojimnez
+ * Fecha: Thu, 01 Oct 2026 06:34:06 GMT
+ * Hash: 43fa6aaf6af19045610102ede4aaa1cc
+ * Versión: 2026.10.1+2-bixus
+ * Anterior: 2026.9.23+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -93,7 +93,7 @@ class ManifestWorkspaceDeploymentLoader {
                 data.credenciales = ManifestWorkspaceDeploymentCredencialesLoader.check(deploy.credenciales);
                 if (deploy.imagen===undefined) {
                     data.imagen = ManifestWorkspaceDeploymentImagenLoader.check(deploy.imagen, names.at(0));
-                } else if (typeof deploy.imagen == "string") {
+                } else if (typeof deploy.imagen === "string") {
                     data.imagen = ManifestWorkspaceDeploymentImagenLoader.check({
                         produccion: deploy.imagen,
                         test: deploy.imagen,
@@ -101,7 +101,7 @@ class ManifestWorkspaceDeploymentLoader {
                 } else {
                     data.imagen = ManifestWorkspaceDeploymentImagenLoader.check(deploy.imagen, names.at(0));
                 }
-                if (typeof deploy.kustomize == "string") {
+                if (typeof deploy.kustomize === "string") {
                     data.kustomize = names.map(name=>ManifestWorkspaceDeploymentKustomizeLoader.check({name, dir: deploy.kustomize as string}));
                 } else if (Array.isArray(deploy.kustomize)) {
                     data.kustomize = deploy.kustomize.map(k=>ManifestWorkspaceDeploymentKustomizeLoader.check(k));

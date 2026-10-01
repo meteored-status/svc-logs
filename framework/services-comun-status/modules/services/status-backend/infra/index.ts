@@ -1,21 +1,22 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 01 Sep 2026 11:32:26 GMT
- * Hash: 08164edc189a7640d746eb00a46105a9
- * Versión: 2026.9.1+2-bixus
- * Anterior: 2026.9.1+1-bixus
+ * Fecha: Mon, 28 Sep 2026 15:07:30 GMT
+ * Hash: 5e3c3c83b62231dfdc141b6100cb3ac0
+ * Versión: 2026.9.28+2-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {BackendRequest, RequestResponse} from "services-comun/modules/net/request-backend";
+import type {RequestResponse} from "services-comun/modules/net/request-backend";
+import {BackendRequest} from "services-comun/modules/net/request-backend";
 import {logRejection} from "services-comun/modules/decorators/metodo";
 
 import {auditRequest} from "../audit/request";
 import {EService, SERVICES} from "../../config";
-import {IAnalisisOUT} from "./analisis/interface";
-import {ICloudflareOUT} from "./cloudflare/interface";
-import {ILimitDateIN, ILimitsOUT, ILimitsSaveIN} from "./limits/interface";
-import {ISerieOUT} from "./serie/interface";
+import type {IAceptarDeleteIN, IAceptarIN, IAnalisisOUT} from "./analisis/interface";
+import type {ICloudflareOUT} from "./cloudflare/interface";
+import type {ILimitDateIN, ILimitsOUT, ILimitsSaveIN} from "./limits/interface";
+import type {ISerieOUT} from "./serie/interface";
 
 /**
  * Qué serie se pide para el detalle.
@@ -128,5 +129,22 @@ export default class Index extends BackendRequest {
     @logRejection(true)
     public static async limitsSave(token: string, data: ILimitsSaveIN, auditPath: string): Promise<RequestResponse<{}>> {
         return this.post<{}, ILimitsSaveIN>(`${this.SERVICIO}/backend/infra/limits/save`, data, auditRequest(token, auditPath));
+    }
+
+    /**
+     * Marca un hallazgo del análisis como esperado, con una nota de por qué.
+     *
+     * Con `auditRequest`, como toda escritura: dejar de ver un escalón en la portada y en el correo es una
+     * decisión de alguien, y hay que poder decir quién la tomó.
+     */
+    @logRejection(true)
+    public static async aceptar(token: string, data: IAceptarIN, auditPath: string): Promise<RequestResponse<{}>> {
+        return this.post<{}, IAceptarIN>(`${this.SERVICIO}/backend/infra/analisis/accept`, data, auditRequest(token, auditPath));
+    }
+
+    /** Deshace una aceptación: el hallazgo vuelve a salir en `findings` si el análisis lo sigue viendo. */
+    @logRejection(true)
+    public static async aceptarDelete(token: string, data: IAceptarDeleteIN, auditPath: string): Promise<RequestResponse<{}>> {
+        return this.post<{}, IAceptarDeleteIN>(`${this.SERVICIO}/backend/infra/analisis/accept/delete`, data, auditRequest(token, auditPath));
     }
 }

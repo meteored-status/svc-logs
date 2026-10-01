@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 26 Aug 2026 09:06:22 GMT
- * Hash: c983b5e805f08a566a8516a0ed045ffc
- * Versión: 2026.8.26+2-bixus
+ * Fecha: Mon, 21 Sep 2026 15:04:57 GMT
+ * Hash: fee94378c594050c45fa63ce8d94da7f
+ * Versión: 2026.9.21+3-bixus
+ * Anterior: 2026.9.21+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -40,7 +41,46 @@ import type {IOnCallRequest} from "../request/interface";
  *                          ellos, «sin guardias anteriores» se lee como «no has hecho ninguna» cuando lo que
  *                          pasa es que no se reconstruye nada anterior al reseteo. Son dos filas y no dicen
  *                          nada de nadie: una fecha y una posición de la rueda.
+ * @property calendar     - Id del calendario de Google donde `cronjobs/status-control` publica la guardia, para
+ *                          que la ficha pueda ofrecer el enlace de suscripción. **Ausente si el entorno no lo
+ *                          tiene configurado**, y entonces no se ofrece — que es lo que tiene que pasar en un
+ *                          despliegue sin calendario, en vez de un enlace roto.
+ *
+ *                          Viaja aquí y no en un endpoint propio porque se lee en la misma pantalla y en el
+ *                          mismo momento, y porque una llamada de red para devolver una constante del entorno
+ *                          es una llamada que puede fallar sola. No es un dato de nadie: el id no da acceso
+ *                          —el calendario no es público y hace falta estar en su lista de permisos— así que no
+ *                          cambia con quién pregunte, y por eso sale también para quien no está en la rueda.
+ * @property shifts       - Sus tramos continuos de guardia que todavía no han terminado, en orden. Es lo que
+ *                          hace falta para ofrecerle añadir **un turno suyo** a su propio calendario, que es
+ *                          la única forma de que Google le avise a él y no a los doce: el calendario del
+ *                          equipo lo ve como lector, y de un evento que no es suyo no recibe recordatorios.
+ *                          Vacío si no le toca nada por delante. Ver `IOnCallShift` para por qué no vale
+ *                          construirlos desde `weeks`.
  */
+/**
+ * Un tramo continuo de guardia de quien pregunta: desde cuándo hasta cuándo cubre sin interrupción, con los
+ * dos extremos **inclusivos**.
+ *
+ * **No es lo mismo que una semana de `IOnCallUser.weeks`**, y esa es justo la razón de que exista. Ahí va el
+ * lunes de cada semana que le toca, que es lo que se lee en la ficha; pero los días que cubre de verdad no
+ * tienen por qué ser los siete: un festivo dentro de esa semana se reparte por su propia rueda y puede
+ * caerle a otra persona. Quien construya un evento de calendario a partir del lunes y le sume seis días
+ * acaba afirmando que alguien está de guardia un día que no lo está, y eso no se ve — el evento existe y
+ * parece correcto.
+ *
+ * Sale de `tramos()` (`status-backend-base`), la **misma** función con la que `cronjobs/status-control`
+ * publica el calendario del equipo, así que lo que alguien se añada a su calendario y lo que hay en el del
+ * equipo coinciden por construcción y no por casualidad.
+ *
+ * @property from - Primer día del tramo, `YYYY-MM-DD`.
+ * @property to   - Último día, igual que `from` en un tramo de un solo día.
+ */
+export interface IOnCallShift {
+    from: string;
+    to: string;
+}
+
 export interface IMineOUT {
     today: string;
     user?: IOnCallUser;
@@ -48,4 +88,6 @@ export interface IMineOUT {
     onCallHoliday?: number;
     requests: IOnCallRequest[];
     cycles: IOnCallCycleInfo[];
+    calendar?: string;
+    shifts: IOnCallShift[];
 }

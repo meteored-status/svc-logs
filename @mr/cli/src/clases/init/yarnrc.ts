@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 121c08cabb9dd84fad6adb40c678322b
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 079acca8b253e5eef10308295c0eb895
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -11,6 +11,7 @@ import {dump as yamlDump, load as yamlLoad} from "js-yaml";
 
 import {readFileString, safeWrite} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
+
 import {Log} from "../log";
 
 /**
@@ -116,7 +117,7 @@ export async function initYarnRC(basedir: string): Promise<boolean> {
     if (Object.keys(extensions).length > 0) {
         config.packageExtensions = extensions;
     } else {
-        if (config.packageExtensions !== undefined) cambio = true;
+        if (config.packageExtensions !== undefined) {cambio = true;}
         delete config.packageExtensions;
     }
 

@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 5320e1b15d963554be3234c772fa05a5
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: d1ec5724f2d12688cc4aad1705c7f8ab
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -20,8 +20,8 @@ import type {
 } from "services-comun/modules/openapi/interface";
 import type {Manifest} from "@mr/core-dev/manifest";
 import {MySQL} from "services-comun/modules/database/mysql";
-
 import {isDir, readDir} from "@mr/core-cli/fs";
+
 import {Log} from "./log";
 import {ManifestWorkspaceLoader} from "./manifest/workspace";
 
@@ -303,7 +303,7 @@ function buildOpenAPI(components: Component[], service: Service): IOpenAPI {
 
         component.endpoints.forEach(endpoint => {
             const path: IPath = {};
-            let pathMethod: IHTTPMethod = {};
+            const pathMethod: IHTTPMethod = {};
 
             if (endpoint.querySchema) {
                 (pathMethod.parameters ??= []).push(...buildParameters(endpoint.querySchema, "query"));

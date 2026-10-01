@@ -1,9 +1,19 @@
-import {TEnvironment} from "./environment";
-import {error} from "services-comun/modules/utiles/log";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: ffe3b243ec7a4637c9e6a6391ba05d0e
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import http from "node:http";
 import https from "node:https";
-import {Kubectl} from "services-comun/modules/utiles/kubectl";
+
+import {error} from "services-comun/modules/utiles/log";
+import type {Kubectl} from "services-comun/modules/utiles/kubectl";
 import {random} from "services-comun/modules/utiles/random";
+
+import type {TEnvironment} from "./environment";
 
 type Config = {
     gke?: {

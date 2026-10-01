@@ -2,6 +2,108 @@
 
 ---
 
+## 2026.9.29 08:24 — [Jose]
+
+### Changed
+
+- **Un cuerpo `application/json` mal formado responde 400 y no 500** (`server/http/server.ts`). Desde que el JSON
+  se acumula a mano y se parsea con `JSON.parse` —para que `postRAW` sean los bytes tal como llegaron—, el fallo de
+  parseo es un error del cliente. Con 500 contaba como fallo del servicio en las métricas y en los reintentos de
+  quien llama. El log baja de `error` a `warning` por lo mismo.
+
+## 2026.9.28 08:05 — [Jose]
+
+### Added
+
+- `client/websocket/result.ts` — sobrecarga de `Result.pipe()` con cuatro `Deferred` (`pipe<A, B, C, D>`).
+  La implementación ya aceptaba N; solo faltaba el tipado. La usa `getKeyFull()` de
+  `services-comun-meteored` para localidad, alternates, país y divisiones.
+
+---
+
+## 2026.9.24 15:40 — [Juan Carlos]
+
+### Fixed
+
+- **`WSPool` abría un WebSocket nuevo por cada `get()` y no lo cerraba nunca.** La conexión volvía a
+  `available` en el `finally` del generator de `stream()`, pero todos los consumidores hacen
+  `await (await pool.get(...)).next()`: leen un frame y abandonan el `Result`. El generator se quedaba
+  suspendido en el `yield` de ese frame, el `finally` no se ejecutaba, y la conexión quedaba asignada a
+  una petición muerta —con su listener, y viva por el heartbeat—. La siguiente petición no encontraba
+  ninguna libre y abría otra. Con 50 peticiones seguidas se abrían 50 sockets; ahora se reutilizan las
+  10 calientes.
+
+  En producción lo notó primero `service-localizacion`, con 422Mi de límite: desde el despliegue del
+  2026-09-16 (migración a WebSocket) crecía unos 41Mi/min y lo mataba el OOM cada 4-5 minutos, y el HPA
+  lo llevaba a más de 30 réplicas. Servicios con más memoria o sin límite (`service-hub`,
+  `service-air-quality`) tienen el mismo patrón y probablemente la misma fuga, solo que no les llega a
+  matar.
+
+  Ahora `stream()` libera la conexión —y cancela el timer de la petición y resetea el contador del
+  circuit breaker— en cuanto llega el último frame, **antes** de cederlo. El `finally` sigue llamando a
+  la misma función (idempotente) para los caminos de error, reconexión y `.return()`. Los consumidores
+  no cambian.
+
+---
+
+## 2026.9.23 09:25 — [Jose]
+
+### Changed
+
+- **Código adaptado a `yarn lint`** (`@mr/core-lint`), sin cambios de comportamiento: `import type` en los
+  imports que solo traen tipos, llaves en todos los `if`/`else`/`for`/`while`, bloques de imports en su orden
+  y separados por una línea en blanco, fuera las dobles líneas en blanco, `Tipo[]` en vez de `Array<Tipo>` y
+  sin `/* STATIC */` en las clases que no tienen estáticos. Casi todo con el autofix; el orden de imports,
+  con un codemod que solo movía líneas enteras.
+- **La documentación de los miembros de `server/http/config/net.ts` y `server/http/router.ts` pasa al bloque JSDoc de cada tipo** (`@property`).
+
+---
+
+## 2026.9.17 15:30 — [Jose]
+
+### Fixed
+
+- **`Idioma` calculaba el código corto con su propia copia de `slice(0, 2)`**, en vez de con el `corto()`
+  de `@mr/core-i18n/langs`. Son la misma pregunta, y mientras fueron dos respuestas esta se quedó con la
+  rota: `"fil"` —filipino— salía como `"fi"`, que es finés y **también** está soportado, así que ni
+  lanzaba ni dejaba de cumplir el tipo `IdiomaCorto`. Ahora llama a `corto()`, que desde
+  `@mr/core-i18n` 2026.9.17 corta por el separador.
+
+---
+
+## 2026.9.8 16:55 — [Jose]
+
+### Changed
+
+- **`minConnections` puede bajar de 10.** El constructor subía cualquier valor hasta `MIN_CONNECTIONS`
+  con un `Math.max`, lo que convertía el «valor por defecto» en un mínimo obligatorio — justo lo
+  contrario de lo que decían tanto la documentación de la constante («por defecto cuando no se
+  especifica») como la de la propiedad. Ahora el suelo es 1 y el 10 sigue siendo el valor por defecto,
+  así que **para quien no pasa `minConnections` no cambia nada**.
+
+  Diez conexiones calientes son razonables para quien atiende peticiones y una barbaridad para quien
+  solo emite —un logger, por ejemplo—, multiplicadas por procesos y réplicas.
+
+  Ojo con lo que esto **no** hace: `minConnections` no es un techo. `getConnection()` es
+  `available.pop() ?? addConnection()`, así que el número real de conexiones lo marca la concurrencia de
+  peticiones en vuelo, no esta propiedad. Quien necesite de verdad una sola conexión tiene que encadenar
+  sus envíos; es lo que hace `@mr/core-log`, y sin eso una ráfaga de 53 envíos abre 53 sockets (medido).
+
+### Fixed
+
+- **`WSPool` admite endpoints con ruta.** La normalización de `WSPool.get()` decidía si añadir el puerto
+  mirando si la cadena **terminaba** en `:puerto` (`/:\d+$/`). Una URL con ruta nunca termina así, de modo
+  que el puerto se pegaba detrás de la ruta —`wss://host/status/external/:443`— y la conexión no llegaba a
+  ninguna parte; y una que ya traía puerto se llevaba encima un segundo. Ahora se parsea con `URL`.
+
+  Hace falta porque **la ruta es lo que enruta**: cuando varios servicios comparten dominio, es lo único
+  que mira el VirtualService de Istio, y lo que no la lleva se lo queda el servicio por defecto. Sin
+  poder mandarla, un cliente de fuera del clúster no puede abrir un socket contra el servicio que busca.
+
+  **Para un endpoint sin ruta devuelve exactamente la misma cadena que antes** —comprobado uno a uno con
+  las formas que se usan hoy (`ws://host:puerto`, `wss://host`, `http://host`)—, así que el cambio solo
+  se nota donde antes no funcionaba.
+
 ## 2026.9.3 — [Jose]
 
 ### Removed

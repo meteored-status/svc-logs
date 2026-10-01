@@ -1,4 +1,12 @@
-import {Transaction} from "../transaction/transaction";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: c2e40a590703545717b0a14a91042d23
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {Transaction} from "../transaction/transaction";
 
 export interface BulkConfig {
     chunk?: number;
@@ -6,8 +14,6 @@ export interface BulkConfig {
 }
 
 export abstract class Bulk<T=any> {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly _updates: T[];
     private readonly _inserts: T[];

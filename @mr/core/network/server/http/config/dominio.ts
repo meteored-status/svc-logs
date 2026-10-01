@@ -1,10 +1,10 @@
 /**
- * Editor: Diego Jesús Ramos Rodríguez
- * Fecha: Wed, 05 Aug 2026 08:27:07 GMT
- * Hash: 2c5da40be546d2b80d9d871e26134787
- * Versión: 2026.8.5+2-diegojesusramosrodriguez
- * Anterior: 2026.5.22+3-josantoniojimnez
- * Proyecto: https://github.com/estadiodeportivo/svc-www-v2.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: be3bdcd615451b21b4c104e521c74a56
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.8.5+2-diegojesusramosrodriguez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 /**
@@ -73,6 +73,8 @@ export interface IDominioConfig {
  * - **Producción / resto** — sin prefijo.
  */
 export class Dominio {
+    /* STATIC */
+
     public static readonly BASE: ISubdominioCompleto = {
         nombre: "",
         scheme: "https",
@@ -81,6 +83,8 @@ export class Dominio {
         nombre: "www",
         scheme: "https",
     };
+
+    /* INSTANCE */
 
     protected readonly SUBDOMINIO_BASE: ISubdominioCompleto;
     protected readonly SUBDOMINIO_WWW: ISubdominioCompleto;

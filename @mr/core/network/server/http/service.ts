@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 3a2e0f5fe0aad2de6d8a1a823290f1d8
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {ConfigService} from "services-comun/modules/services/config";
 import {md5} from "services-comun/modules/utiles/hash";
 
@@ -36,12 +44,15 @@ interface IServiceConfig {
  */
 export class Service {
 
+    /* STATIC */
+
     /** Puerto HTTP base desde el que se asignan los puertos dinámicos. */
     private static readonly PUERTO_HTTP = 8100;
 
     /** Puerto HTTPS base desde el que se asignan los puertos dinámicos. */
     private static readonly PUERTO_HTTPS = 4433;
 
+    /* INSTANCE */
 
     /** Caché de puertos ya calculados, indexada por ID de servicio. */
     private readonly ports: Map<number, number>;

@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: dbc292cffa2359a2259260bbd363f386
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {PublisherClient} from "@google-cloud/eventarc-publishing";
 import {v7 as uuid} from 'uuid';
 
@@ -42,9 +50,10 @@ export class EventarcPublisher<T = string> {
     }
 
     /* INSTANCE */
-    private _client: Promise<PublisherClient>|null = null;
+    private _client: Promise<PublisherClient>|null;
     private _defaultConfig: SystemConfig;
     private constructor(private readonly credenciales: string, config?: SystemConfig) {
+        this._client = null;
         this._defaultConfig = config || {};
     }
 

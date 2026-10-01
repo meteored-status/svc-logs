@@ -1,12 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 05 Aug 2026 06:32:07 GMT
- * Hash: 825a1c1d423e73fce6ef26e045a30506
- * Versión: 2026.8.5+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 033d6c881aae75843e8ee826ebfb9124
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.8.5+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import {BulkOperationContainer, BulkResponseItem, BulkUpdateAction, ESBulkResponse, Script} from "..";
+import type {BulkOperationContainer, BulkResponseItem, BulkUpdateAction, ESBulkResponse, Script} from "..";
 
 type TBulkAction = "index"|"update"|"delete"|"create";
 

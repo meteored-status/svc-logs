@@ -1,3 +1,12 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Thu, 01 Oct 2026 08:20:48 GMT
+ * Hash: fd0d4ca255cf9c3a3a76e6862d2a1649
+ * Versión: 2026.10.1+2-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-panel-frontend.git
+ */
+
 import {dirname} from "node:path";
 
 import type {Conexion} from "@mr/core-network/server/http/conexion";
@@ -16,8 +25,6 @@ import {md5} from "../../utiles/hash";
 import {isDir, mkdir, readFileBuffer, readJSON, safeWrite} from "../../utiles/fs";
 
 export class NetCacheDisk extends NetCache {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly path: string = "files/tmp/netcache") {
         super();
@@ -83,8 +90,6 @@ export class NetCacheDisk extends NetCache {
 }
 
 export class RequestCacheDisk extends RequestCache {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly path: string = "files/tmp/requestcache") {
         super();
@@ -98,7 +103,17 @@ export class RequestCacheDisk extends RequestCache {
 
     protected async loadMetadata(url: string): Promise<IRequestCache> {
         const key = `${this.path}/${this.cacheKey(url)}.json`;
-        return await readJSON<IRequestCache>(key);
+        // Versiones anteriores de save() escribían `expires` como fecha ISO (string) en vez de número
+        const metadata = await readJSON<Omit<IRequestCache, "expires"> & {expires: number|string}>(key);
+        const expires = new Date(metadata.expires).getTime();
+        if (Number.isNaN(expires)) {
+            return Promise.reject("Caché inválida");
+        }
+
+        return {
+            ...metadata,
+            expires,
+        };
     }
 
     protected async loadData(url: string): Promise<Buffer> {
@@ -120,7 +135,7 @@ export class RequestCacheDisk extends RequestCache {
         const metadatakey = `${key}.json`;
         await safeWrite(metadatakey, JSON.stringify({
             version: 1,
-            expires: data.expires,
+            expires: data.expires.getTime(),
             headers: data.headers,
         }), true);
 

@@ -2,6 +2,344 @@
 
 ---
 
+## 2026.9.30 15:02 — [Jose]
+
+### Added
+
+- **`labels.sh` deja en `namespaces_all_<zona>.json` un array JSON con todos los namespaces** de cada
+  cluster del entorno, sea o no de clientes y tengan o no la etiqueta `mrpress`. Para eso pide
+  credenciales de todos los clusters del entorno, no solo de los de `clientes=true`.
+  `namespaces_<zona>.txt` sigue igual: solo en los clusters de clientes, con los namespaces de
+  `mrpress=true` separados por comas. `kubectl get namespaces` se llama una sola vez por cluster para
+  sacar los dos ficheros.
+- **`kustomizar.sh` descarta los recursos de lo que genera `kustomizar/build.sh` cuyo namespace no
+  existe en el cluster** (`filtrarNamespaces`), contra `namespaces_all_<zona>.json`. No es un error:
+  avisa de qué namespaces se han descartado y despliega el resto. Los recursos sin namespace se quedan.
+  Solo falla si no hay listado de namespaces para esa zona.
+
+## 2026.9.29 13:50 — [Jose]
+
+### Changed
+
+- **`cache_get.sh` y `cache_set.sh` toman el bucket de la caché de dependencias de `_K8S_CACHE`** si el
+  trigger de Cloud Build define esa sustitución (llega como variable de entorno por
+  `automapSubstitutions`). Si no está o está vacía, se sigue leyendo la etiqueta `k8s-cache` de
+  `labels.json`, como hasta ahora.
+- **`clone.sh` toma la organización de GitHub del repo de kustomize de `_K8S_GITHUB`** con el mismo
+  criterio: si el trigger no la define o está vacía, sale de la etiqueta `k8s-github` de `labels.json`.
+- **`build.yaml` declara `_K8S_CACHE` y `_K8S_GITHUB`** en `options.env` y les da un valor vacío por
+  defecto en `substitutions:`, así que un trigger que no las define no falla por sustitución sin definir.
+- **`labels.sh` filtra los clusters por `_CLUSTER`** (`resourceLabels.entorno=…`) si el trigger la define;
+  si no, por `_ENTORNO`, como hasta ahora. Está declarada en `build.yaml` igual que las dos anteriores.
+
+## 2026.9.29 08:15 — [David]
+
+### Changed
+
+- **`deploy.buckets` se valida al cargar el manifest**: cada valor debe ser un nombre, una lista de nombres o
+  `{buckets, basePath?}` (las listas no pueden estar vacías); cualquier otra forma lanza un error. Además,
+  los errores de validación de un `mrpack.json` indican ahora la ruta del fichero (`ManifestLoader.checkFile`).
+
+## 2026.9.28 14:27 — [Jose]
+
+### Fixed
+
+- **`mrpack` recompila `mrlang` en cuanto se actualiza el framework**, sin tener que hacerlo a mano. Antes
+  `checkMrlang()` solo comparaba `bin/hash.md5` con el md5 del `bin/min/` local, y un repo que ya tenía
+  `mrlang` compilado los tenía iguales. Por eso un envío que cambiaba el generador sin tocar `bin/` dejaba
+  cada repo ejecutando el anterior. Ahora `herramientaDesactualizada()` mira además `bin/versiones`, un
+  sello local con el `version` de `@mr/core-i18n` y de los workspace `@mr/*` que van dentro del bundle
+  (`getHerramientaVersiones()`). Cada envío con cambios sube ese `version`, y el sello no se versiona ni se
+  envía, así que vale igual tras `mrpack framework` que tras un `git pull`. La primera vez recompila una
+  vez para sembrarlo.
+- **`recompilarHerramienta()` ya no anota los sellos si la compilación falla.** `Comando()` no rechaza
+  cuando el proceso sale con error, así que antes se anotaba el hash del bundle viejo como si fuera el
+  bueno. Ahora lo avisa y no escribe nada, y el siguiente arranque lo vuelve a intentar.
+
+## 2026.9.23 11:15 — [Jose]
+
+### Added
+
+- **`mrpack init` pone `workspace:*` en las `devDependencies` entre workspaces del mismo monorepo**
+  (`init/workspace-deps.ts → checkWorkspaceDeps()`). Con `"*"`, Yarn resuelve el paquete local solo
+  mientras el nombre y la versión casen; si dejan de hacerlo lo busca en npm, y un paquete público con el
+  nombre de uno nuestro entraría sin que nadie lo pidiera. Recorre todos los workspaces de la raíz, no
+  solo los servicios: había 1 caso aquí, 46 en `svc-ads` y 78 en `svc-localizacion`, casi todos en
+  `packages/` y `cronjobs/`. Si cambia algo, `init()` reinstala.
+
+## 2026.9.23 09:05 — [Jose]
+
+### Added
+
+- **`mrpack init` deja la raíz preparada para `yarn lint`** (`init/lint.ts → checkLint()`). Fija las
+  `devDependencies` de la raíz a `eslint` y `@mr/core-lint` —la versión de `eslint` la pone
+  `@mr/core/lint/package.json`, que es el único sitio donde se cambia—, añade los scripts `lint` y
+  `lint:fix` y escribe un `eslint.config.mjs` de una línea que reexporta `@mr/core-lint/config`.
+- **`@mr/core/lint` entra en la lista de frameworks que `checkCliente()` añade si faltan**, junto a
+  `dev`, `i18n` y `network`: así llega a todos los monorepos con el primer `update`.
+
+### Changed
+
+- **Código adaptado a `yarn lint`** (`@mr/core-lint`), sin cambios de comportamiento: `import type` en los
+  imports que solo traen tipos, llaves en todos los `if`/`else`/`for`/`while`, bloques de imports en su orden
+  y separados por una línea en blanco, fuera las dobles líneas en blanco, `Tipo[]` en vez de `Array<Tipo>` y
+  sin `/* STATIC */` en las clases que no tienen estáticos. Casi todo con el autofix; el orden de imports,
+  con un codemod que solo movía líneas enteras.
+- Variables en `snake_case` renombradas a `camelCase` en `deploy.ts`, `devel.ts` y `update.ts`.
+- **Las `devDependencies` de la raíz ya no se borran enteras: se fijan.** Era lo que hacía `initBase()`,
+  y habría borrado `eslint` en cada `init`. Sigue sin haber sitio para ninguna otra.
+- **`initBase()` reinstala cuando esas `devDependencies` cambian**; antes solo reinstalaba si faltaba el
+  campo `bin`. Sin eso el `yarn.lock` no tendría `eslint` y `yarn lint` no arrancaría.
+
+> **Un `init` con un `mrpack` compilado anterior a este cambio borra las `devDependencies` de la raíz**
+> —es lo que hacía— y con ellas `eslint`. Pasó al probarlo con el `bin/min/` sin recompilar. Se
+> arregla solo: el `update` recompila el cliente antes del `init`.
+
+## 2026.9.22 13:34 — [Jose]
+
+### Removed
+
+- **Fuera la caché de compilación de webpack: en Cloud Build valía cuatro segundos.** Se revierte lo
+  añadido hoy a las 10:18 y corregido a las 12:47 — `deployment/std/cache_next_get.sh`, el paso
+  `Descargar Cache Compilacion` de `build.yaml` y el bloque correspondiente de
+  `deployment/std/cache_set.sh`.
+
+  Medido en local sobre `status-frontend` daba un 43% (42 sg en frío contra 24 en caliente). En
+  Cloud Build, sobre un commit que no cambiaba nada —acierto total de caché, el mejor caso posible—,
+  el paso `Compilar` pasó de 1:45 a 1:41. La descarga funcionaba y era barata (9 sg, en un paso
+  paralelo al install), así que el problema no era el transporte: CI tarda más del doble que un
+  portátil teniendo cuatro veces más cores, de modo que lo que domina ahí no son las
+  transformaciones de módulos, que es lo único que la caché ahorra.
+
+  Se conserva en el README, como sección «Caché de compilación de webpack, y por qué no se quedó»,
+  todo lo que se midió: las dos columnas de tiempos, que la caché son ~890 MB en trece ficheros
+  `.pack`, y que webpack reescribe todos los `.pack` en cada build aunque no cambie una línea (siete
+  checksums distintos entre dos compilaciones idénticas, más packs nuevos), que es la razón por la
+  que un `rsync` no ahorraría nada si alguien lo reintenta.
+
+  **Se mantiene** el arreglo de las 12:20, independiente de todo esto: un fallo de GCS al subir la
+  caché de dependencias ya no tumba un despliegue que había salido bien.
+
+---
+
+## 2026.9.22 12:47 — [Jose]
+
+### Fixed
+
+- **La caché de compilación no llegaba a sembrarse nunca.** La entrada de las 10:18 solo subía
+  `.next/cache` cuando el workspace tenía `nuevo.txt`. El bucket empieza vacío, así que si el
+  frontend no cambiaba justo en el build siguiente al despliegue, no se subía nada; y como entonces
+  tampoco había nada que bajar, el build siguiente compilaba en frío y volvía a no subir. El estado
+  se perpetuaba solo, y en el log se veía como «Sin cambios en la caché de compilación» en un build
+  que acababa de compilar en frío.
+
+  Ahora se sube si hay `nuevo.txt` **o** si el bucket todavía no tiene nada. La comprobación va por
+  bucket y no por workspace, porque con varios destinos uno puede tener la caché y otro no; si el
+  `gcloud storage ls` falla por cualquier otro motivo se sube igualmente, que es el lado seguro por
+  el que equivocarse.
+
+  Queda medido y escrito por qué no basta con quitar la guarda y dejar que `rsync` decida: webpack
+  reescribe **todos** los `.pack` en cada build aunque no cambie una línea —los siete ficheros con
+  checksum distinto entre dos compilaciones de las mismas fuentes, y dos packs nuevos de propina—,
+  así que subir siempre cuesta los ~890 MB íntegros.
+
+---
+
+## 2026.9.22 12:20 — [Jose]
+
+### Fixed
+
+- **Un fallo al subir la caché de dependencias tumbaba el despliegue entero.** En
+  `deployment/std/cache_set.sh`, la línea que sube `.yarn/cache` no llevaba guarda, así que un error
+  transitorio de GCS devolvía 1 y, con `set -e`, se llevaba por delante el build. El paso corre en
+  paralelo a `Generar Contenedor` y no lo espera nadie: cuando llega, la imagen ya está construida y
+  subida, de modo que no poder escribir en el bucket convertía un despliegue bueno en uno fallido.
+
+  Había una segunda forma de morir en el mismo bloque: si `.yarn/cache` no existía, el propio
+  `[ -d ]` de la segunda línea devolvía 1 y pasaba exactamente lo mismo.
+
+  Ahora el directorio se comprueba una vez al entrar y cada llamada a `gcloud` degrada con un
+  mensaje. Los fallos se siguen viendo en el log, que es lo que hace falta; lo que no hacen es parar
+  nada. Es el mismo criterio que el `ignore-error=true` de la caché de capas en `contenedor.sh` y
+  que el que ya trae la caché de compilación.
+
+  De paso se separa el mensaje «No hay caché», que saltaba tanto si faltaba el directorio como si
+  fallaba el borrado, en dos distintos.
+
+---
+
+## 2026.9.22 10:18 — [Jose]
+
+### Added
+
+- **La caché de compilación de webpack sobrevive entre despliegues.** El paso `Compilar` es, al 87%,
+  un solo `next build`: en una medición real de `svc-status` los tres servicios de esbuild acabaron
+  en seis segundos entre los tres, y el frontend Next tardó 91. Hasta ahora el pipeline solo
+  persistía `.yarn/cache`, así que ese `next build` arrancaba en frío en todos los builds.
+
+  Medido sobre `status-frontend` con el comando exacto de mrpack (`next build --webpack`,
+  `ZONA=production`): **42 sg en frío contra 24 sg en caliente**, un 43% menos. Es una cota
+  superior — la prueba partía de una caché generada con las mismas fuentes, y en CI el código ha
+  cambiado.
+
+  Nuevo `deployment/std/cache_next_get.sh` y nuevo paso `Descargar Cache Compilacion` en
+  `build.yaml`. La subida va dentro de `cache_set.sh`, que ya existía.
+
+### Changed
+
+- **`deployment/std/build.yaml`: la bajada de la caché de compilación va en un paso aparte.** Son
+  ~890 MB y la caché de Yarn la necesita `Instalar Dependencias`, pero esta solo la necesita
+  `Compilar`. Separadas, la descarga grande se solapa con el install (7 sg + 17 sg de cobertura) en
+  lugar de sumarse a la ruta crítica. `Compilar` pasa a esperar también a `Descargar Cache
+  Compilacion`.
+
+- **`deployment/std/cache_set.sh`: la caché de compilación sube con `rsync`**, no con el `rm -r` +
+  `cp -r` de la caché de Yarn, y solo cuando el workspace tiene `nuevo.txt` —el mismo criterio con
+  el que `contenedor.sh` decide si toca generar imagen—. Antes de subir se borran los
+  `index.pack.old`, ~265 MB de copias que webpack regenera solo.
+
+- **`deployment/README.md`: nueva sección «Caché de compilación de webpack»** con las mediciones, el
+  esquema de rutas en GCS, por qué la clave lleva `TRIGGER_NAME` (las cachés de test y producción no
+  son intercambiables: `ZONA` y `.env.local` difieren) y por qué esto **no** contradice el
+  `**/.next/cache` de los `.dockerignore`, que son sitios distintos con propósitos opuestos.
+
+### Fixed
+
+- **`CODEMAP.md` describía un mecanismo que ya no existe.** Seguía diciendo que «`.yarn/cache` se
+  monta desde el contexto para no salir a npm», que es justo lo que se revirtió el 2026-09-22 por
+  generar contenedores que arrancaban rotos. Ahora dice lo contrario y explica por qué.
+
+---
+
+## 2026.9.22 09:02 — [Jose]
+
+### Added
+
+- **`deployment/README.md`: sección «Arquitecturas, y por qué `linux/arm64` sale carísimo».** El
+  pool de Cloud Build no tiene worker arm64 —lo dice la cabecera del builder en cada build—, así que
+  esa rama se construye emulada con QEMU. Medido en `status-frontend`: el `yarn workspaces focus`
+  tarda 18,4 s en amd64 y 232,9 s en arm64, y se come casi todo el paso `Generar Contenedor`.
+
+  Queda escrito también que `bufferutil` no compila bajo emulación y que, por ser
+  `optionalDependency`, la imagen arm64 salía degradada sin que nada fallara; y que `deploy.arch`
+  mueve dos cosas a la vez, porque `kustomizar.sh` se lo pasa a `kustomizar/build.sh` y con
+  `linux/arm64` en la lista aparecen una tolerancia y una `nodeAffinity` hacia arm64.
+
+---
+
+## 2026.9.22 08:36 — [Jose]
+
+### Fixed
+
+- **El contenedor volvía a arrancar roto: `.yarn/cache` no se puede montar dentro de la imagen.**
+  La entrada anterior montaba la caché de Yarn del monorepo con `--mount=type=bind` para ahorrarse
+  la descarga de npm. El contenedor se generaba mucho más rápido y luego moría al arrancar:
+
+  ```
+  Error: Required package missing from disk.
+  Missing package: source-map-support@npm:0.5.21
+  Expected package location: /usr/src/app/.yarn/cache/source-map-support-npm-0.5.21-…zip/…
+  ```
+
+  Con `enableGlobalCache: false`, que es lo que hay en el `.yarnrc.yml`, `.yarn/cache` **no es una
+  caché de descarga: es el almacén de paquetes en tiempo de ejecución.** PnP lee cada paquete de su
+  `.zip` de ahí dentro, y lo que lo mete en la imagen es el `COPY --from=build /usr/src/app/.yarn`
+  de la stage `app`. Un montaje deja los zips fuera del sistema de ficheros de la capa y se descarta
+  al acabar el `RUN`, así que la imagen salía con un `.pnp.cjs` apuntando a ficheros que no existen.
+
+  Vuelve el `RUN yarn workspaces focus --production ${WS}` de siempre, con un comentario largo en
+  los dos Dockerfiles para que no se vuelva a intentar. Lo que se pierde es solo la descarga de npm
+  en el caso frío: de saltársela ya se encarga la caché de capas del registro, que reutiliza la capa
+  entera —zips incluidos— mientras no cambien `yarn.lock` ni el `package.json` del workspace.
+
+### Changed
+
+- **`.yarn/cache` sale del contexto de build.** Ya no la necesita nadie: la stage `build` se
+  descarga su propio subconjunto de producción. Son ~300 MB menos que mandar al builder, que
+  compensan de sobra la descarga que vuelve.
+
+---
+
+## 2026.9.21 17:38 — [Jose]
+
+### Changed
+
+- **`Generar Contenedor`: deja de reinstalar en cada despliegue las dependencias que el pipeline
+  ya tiene descargadas.** Era el paso más lento del build y lo era por construcción: la stage
+  `build` de los dos Dockerfiles genéricos ejecutaba `yarn workspaces focus --production` sin
+  acceso a `.yarn/cache`, así que bajaba de npm el árbol de producción entero, desde cero, dentro
+  del contenedor y una vez por servicio. Cuatro cambios que se apoyan entre sí:
+
+  - **La stage `build` ya no copia el workspace, solo su `package.json`.** Puede, porque todas las
+    dependencias entre workspaces están en `devDependencies` y `focus --production` las ignora —de
+    hecho sus directorios nunca se copiaron—. Antes, cualquier cambio de código invalidaba la capa
+    del install, y en un servicio Next.js se arrastraba además el `.next` entero a una stage que lo
+    tira a la basura.
+
+    Por lo mismo, la stage `build` deja de declarar `DD_GIT_REPOSITORY_URL` y `DD_GIT_COMMIT_SHA`:
+    el SHA cambia en cada commit y un `ARG` declarado ahí entra en la clave de caché de lo que
+    venga detrás. Los sigue declarando la stage `app`, que es la única que los usa.
+
+  - **Caché de capas en el registro**, bajo el tag `buildcache_<ENTORNO>` de la propia imagen. El
+    builder se crea vacío en cada ejecución, así que sin esto no había nada que reutilizar entre
+    despliegues. Con `mode=max`, que no es opcional: la capa que interesa vive en una stage
+    intermedia y el modo por defecto solo guarda las publicadas. Y con
+    `image-manifest=true,oci-mediatypes=true`, que son requisito de Artifact Registry.
+
+  - **`.yarn/cache` se monta desde el contexto** en lugar de copiarse, así que el install resuelve
+    en local y no sale a la red. `cache_get.sh` ya la ha restaurado desde GCS al principio del
+    pipeline. Cubre el caso frío —lockfile cambiado, caché del registro fallida— que la pieza
+    anterior no cubre.
+
+  - **`Dockerfile.dockerignore` y `Dockerfile-next.dockerignore`**, nuevos. El contexto que se
+    mandaba al builder era el repositorio entero, con `.yarn/unplugged` (que la stage `build`
+    regenera) y `.git` dentro. Van al lado de cada Dockerfile y no en la raíz del monorepo porque
+    BuildKit los resuelve por Dockerfile: así llegan a todos los proyectos a la vez que el
+    Dockerfile, sin que nadie tenga que regenerar nada. Un workspace con `Dockerfile` propio
+    necesita el suyo.
+
+- **`YARN_ENABLE_HARDENED_MODE=0` en la stage `build`.** El modo endurecido es
+  `--check-resolutions --refresh-lockfile`, y revalida contra el registro que cada resolución del
+  lockfile corresponde a su rango: una ronda de red por cada rango, repetida una vez por servicio.
+  Esa comprobación ya la hace el paso `Instalar Dependencias`, sobre el mismo lockfile y con el
+  `.yarnrc.yml` del repositorio, antes de que se construya ningún contenedor. Se desactiva por
+  variable de entorno y no tocando el `.yarnrc.yml`, para que en el repositorio siga activa.
+
+### Fixed
+
+- **La caché de compilación de Next ya no viaja dentro de la imagen.** `**/.next/cache` la escribe
+  `next build` y no la lee `next start`, pero se estaba copiando a la imagen, subiendo al registro
+  y descargando en cada arranque de pod.
+
+---
+
+## 2026.9.9 09:50 — [Jose]
+
+### Fixed
+
+- **`kustomizar.sh`: los workspaces `alone` con target `lambda` ya no van forzados a
+  `europe-west1`/`belgica`.** Ahora se busca la región de Bélgica en `entornos.json` y, si el
+  entorno no tiene ningún cluster allí, se usa el primero del array — con su `.zone` y su
+  `.resourceLabels.zona` reales, no una pareja escrita a mano.
+
+  El caso que rompía era el entorno sin cluster en europe-west1: se generaba igualmente un
+  `lambda-belgica.sh` apuntando a una zona que no existe. Y fallaba callando, porque
+  `desplegar.sh` descubre los scripts con un `find lambda-*.sh` y ejecuta lo que encuentre.
+
+  De paso desaparece la rama especial de `test`, que ya no hace falta. Mientras el cluster de test
+  siga donde el código viejo daba por hecho —europe-west1—, la búsqueda devuelve exactamente el
+  mismo par que antes iba escrito a mano (`europe-west1 test`). Y si se mueve de región, el
+  fallback da la región buena en vez de la de siempre, que es justo lo que la rama fija no hacía.
+
+  El criterio no es nuevo, es el que ya seguía el despliegue GKE: en `desplegar.sh` un workspace
+  `alone` se manda solo al cluster de índice `0`. Lo único que se añade es la preferencia por
+  Bélgica cuando está disponible.
+
+  Si el entorno no tiene **ningún** cluster con label `zona`, el paso ahora aborta con un mensaje
+  en lugar de emitir un despliegue hacia la nada.
+
+---
+
 ## 2026.9.4 17:30 — [Jose]
 
 ### Removed

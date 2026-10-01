@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 4791d7af7c0fbc0bdc1e44acff32bbd3
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.5.27+1-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: e240dd050b424a1abc333e20ec7bc03e
+ * Versión: 2026.9.23+2-bixus
+ * Anterior: 2026.9.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -41,7 +41,7 @@ class ManifestWorkspaceDeploymentStorageLoader {
                     produccion: storage.buckets,
                     test: storage.buckets,
                 });
-            } else if (typeof storage.buckets == "object") {
+            } else if (typeof storage.buckets === "object") {
                 data.buckets = ManifestWorkspaceDeploymentStorageBucketsLoader.check(storage.buckets as Partial<IManifestDeploymentStorageBuckets>);
             } else {
                 data.buckets = ManifestWorkspaceDeploymentStorageBucketsLoader.check({

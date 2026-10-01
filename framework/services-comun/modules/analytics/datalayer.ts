@@ -1,14 +1,15 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 29 Jun 2026 15:47:11 GMT
- * Hash: 9e81b551413197e5ea551014ee8c074a
- * Versión: 2026.6.29+3-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-ads.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 7efbc249d1d4216b01c43e4e89759448
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.16+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 declare var window: any;
 
-interface IDataLayerEvent {
+export interface IDataLayerEvent {
     event?:string;
     event_type?:string;
     eventCategory?:string;
@@ -19,22 +20,34 @@ interface IDataLayerEvent {
     content_group?:string;
     name_view?:string;
     content_id?:string;
+    promotions?:string;
 }
 
 export class DataLayer {
+    /* STATIC */
+
     public static initial_url: string = window.location.href;
     public static push(data:IDataLayerEvent):void {
         window['dataLayer'].push(data);
     }
 
-    public static getGA4Event(event_name:string):IDataLayerEvent {
+    public static getGA4Event(eventName:string, promotionName:string = ''):IDataLayerEvent {
         return {
-            event: event_name,
+            event: eventName,
             event_type: 'ga4_event',
             eventCategory:'',
             eventAction:'',
             eventLabel:'',
             page_location:this.initial_url,
+            promotions: promotionName,
+            content_group: window.content_group,
+            name_view: window.name_view,
         };
+    }
+    public static resetPromotions(): IDataLayerEvent{
+        return {
+            promotions : 'none',
+            page_location:this.initial_url,
+        }
     }
 }

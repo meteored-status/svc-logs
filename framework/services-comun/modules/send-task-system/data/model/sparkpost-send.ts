@@ -1,5 +1,14 @@
-import {IMetadata, ISend, Send, TSend} from "./send";
-import {IMail} from "../../../email/manager";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: ecab17d7f5f6760d40b618e1d7f4ada2
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {IMetadata, ISend} from "./send";
+import {Send, TSend} from "./send";
+import type {IMail} from "../../../email/manager";
 
 export interface ISparkpostSend extends ISend {
     email?: IMail;

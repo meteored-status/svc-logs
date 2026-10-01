@@ -1,12 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 11 Jun 2026 10:10:08 GMT
- * Hash: 5a62b3f174500b6f7d343abb9d4f37d0
- * Versión: 2026.6.11+2-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: a70922e14d8aab007ac657ea11a80d08
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.6.11+2-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Route} from "../..";
-
 import type {ICrearExactOptions} from ".";
 
 /**

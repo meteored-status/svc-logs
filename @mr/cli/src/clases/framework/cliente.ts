@@ -1,18 +1,18 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 0bbe591613b63a0297f10b4cf84e132e
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
+ * Fecha: Mon, 28 Sep 2026 12:30:01 GMT
+ * Hash: c27482f9b79be52ba6d538e5bb74c5b1
+ * Versión: 2026.9.28+3-bixus
+ * Anterior: 2026.9.23+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {spawn} from "node:child_process";
 
 import {Deferred} from "services-comun/modules/utiles/promise";
-
-import {isDir, isFile, md5Dir, mkdir, readDir, readFileString, safeWrite} from "@mr/core-cli/fs";
+import {isDir, isFile, md5Dir, mkdir, readDir, readFileString, readJSON, safeWrite} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
+
 import {Comando} from "../comando";
 import {Log} from "../log";
 import {Paquete, PaqueteTipo} from "../paquete";
@@ -309,33 +309,75 @@ async function getHerramientaMD5(basedir: string, {dir}: IHerramienta): Promise<
 }
 
 /**
- * Si el bundle instalado no se corresponde con el hash anotado.
+ * Las versiones de lo que entra en el bundle de la herramienta: la suya y la de cada workspace
+ * `@mr/*` de sus `devDependencies`, recursivamente, que son los que esbuild mete dentro (las
+ * `dependencies` van como externals). Una línea `<dir>@<version>` por workspace, ordenadas.
  *
- * Que difieran significa que el `bin/min/` de ahora no es el que dejó la última compilación
- * oficial: o el paquete se ha actualizado y el bundle es de la versión anterior, o alguien dejó
- * ahí la salida de un `compile:watch`, que no va minificada.
+ * Es lo que delata que las **fuentes** han cambiado, que el md5 de `bin/min/` no puede: cada envío
+ * de framework con cambios sube el `version` del paquete, y un paquete que no ha cambiado no lo toca.
  *
- * **Sin fichero de hash devuelve `true`**, al contrario que la comprobación del cliente, que en
- * ese caso no hace nada. Aquí el fichero puede no existir todavía —la herramienta acaba de llegar
- * a un monorepo que no la tenía— y sin recompilar una vez no habría forma de crearlo: el
- * mecanismo se quedaría dormido para siempre. Compilar de más una vez es barato; no enterarse de
- * que el bundle está viejo, no.
+ * @param basedir - Raíz absoluta del monorepo.
+ * @param dir     - Workspace desde el que empezar, relativo a la raíz.
  */
-async function herramientaDesactualizada(basedir: string, herramienta: IHerramienta): Promise<boolean> {
-    if (!await isFile(`${basedir}/${herramienta.dir}/bin/hash.md5`)) {
-        return true;
+async function getHerramientaVersiones(basedir: string, dir: string): Promise<string> {
+    const lineas: string[] = [];
+    const pendientes: string[] = [dir];
+    const vistos = new Set<string>();
+
+    for (let i = 0; i < pendientes.length; i++) {
+        const actual = pendientes[i];
+        if (vistos.has(actual)) {
+            continue;
+        }
+        vistos.add(actual);
+
+        const pkg = await readJSON<{version?: string}>(`${basedir}/${actual}/package.json`).catch(() => ({version: undefined}));
+        lineas.push(`${actual}@${pkg.version ?? "?"}`);
+        pendientes.push(...await leerDepsMrFramework(`${basedir}/${actual}`));
     }
 
-    const [hash, md5] = await Promise.all([
-        getHerramientaHash(basedir, herramienta),
-        getHerramientaMD5(basedir, herramienta),
-    ]);
-
-    return hash!==md5;
+    return lineas.sort().join("\n");
 }
 
 /**
- * Recompila la herramienta en modo producción y vuelve a anotar su hash.
+ * Si el bundle instalado está viejo o no es el de la última compilación oficial.
+ *
+ * Mira dos cosas, porque cada una caza un fallo distinto:
+ *
+ * - **Las versiones de las fuentes** (`bin/versiones`, ver {@link getHerramientaVersiones}) contra
+ *   las de ahora. Es lo que detecta que se ha actualizado el framework: antes solo se miraba el
+ *   md5, y un envío que no tocaba `bin/` dejaba en cada repo el `mrlang` anterior ejecutándose
+ *   sin que nada lo delatara. `bin/versiones` es **local**: no se versiona (`bin/*` en el
+ *   `.gitignore`) ni se envía (`.mr-ignore`), así que no depende de lo que hiciera quien envió, y
+ *   vale igual para un framework que llega por `mrpack framework` que por un `git pull`.
+ * - **El md5 de `bin/min/`** contra `bin/hash.md5`, que detecta que alguien dejó ahí la salida de
+ *   un `compile:watch`, que no va minificada.
+ *
+ * **Sin alguno de los dos ficheros devuelve `true`**, al contrario que la comprobación del cliente,
+ * que en ese caso no hace nada. Aquí pueden no existir todavía —la herramienta acaba de llegar a un
+ * monorepo que no la tenía, o viene de antes de `bin/versiones`— y sin recompilar una vez no habría
+ * forma de crearlos: el mecanismo se quedaría dormido para siempre. Compilar de más una vez es
+ * barato; no enterarse de que el bundle está viejo, no.
+ */
+async function herramientaDesactualizada(basedir: string, herramienta: IHerramienta): Promise<boolean> {
+    const bin = `${basedir}/${herramienta.dir}/bin`;
+    if (!await isFile(`${bin}/hash.md5`) || !await isFile(`${bin}/versiones`)) {
+        return true;
+    }
+
+    const [hash, md5, versiones, actuales] = await Promise.all([
+        getHerramientaHash(basedir, herramienta),
+        getHerramientaMD5(basedir, herramienta),
+        readFileString(`${bin}/versiones`).catch(() => ""),
+        getHerramientaVersiones(basedir, herramienta.dir),
+    ]);
+
+    return hash!==md5 || versiones!==actuales;
+}
+
+/**
+ * Recompila la herramienta en modo producción y vuelve a anotar su hash y las versiones de las
+ * fuentes con las que se ha compilado.
  *
  * A diferencia de `recompilarCliente()`, no reinicia nada: `mrpack` no está ejecutando este
  * código, así que basta con dejar el bundle bueno en su sitio para la próxima invocación.
@@ -344,8 +386,15 @@ async function recompilarHerramienta(basedir: string, herramienta: IHerramienta)
     const {dir, workspace, nombre} = herramienta;
 
     Log.info({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgGreen, Colors.Bright], `Compilando nueva versión de ${nombre}`));
-    await Comando("yarn", ["workspace", workspace, "run", "compile"], {cwd: basedir});
+    const {status, stderr} = await Comando("yarn", ["workspace", workspace, "run", "compile"], {cwd: basedir});
+    if (status !== 0) {
+        // Sin anotar nada: con los sellos de antes, el siguiente arranque vuelve a intentarlo. Anotarlos
+        // aquí dejaría el bundle viejo pasando por bueno.
+        Log.error({type: Log.label_base, label: "framework"}, Colors.colorize([Colors.FgRed], `No se ha podido compilar ${nombre}:\n${stderr}`));
+        return;
+    }
     await safeWrite(`${basedir}/${dir}/bin/hash.md5`, await getHerramientaMD5(basedir, herramienta), true);
+    await safeWrite(`${basedir}/${dir}/bin/versiones`, await getHerramientaVersiones(basedir, dir), true);
 }
 
 /**

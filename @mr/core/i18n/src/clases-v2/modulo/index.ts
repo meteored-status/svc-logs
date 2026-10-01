@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 76b7a6428a3f362c0b3207852fe2d909
- * Versión: 2026.9.7+1-bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: bfe1159442ae3ec95dd77a5bb79f9185
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -20,8 +21,6 @@ export interface IPackageConfig {
 }
 
 export abstract class Modulo<T extends IModuloConfig=IModuloConfig> {
-    /* STATIC */
-
     /* INSTANCE */
     protected constructor(private readonly _original: IModulo, protected config: T) {
     }

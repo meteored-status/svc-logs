@@ -1,6 +1,16 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 623f5eea012e626bf88ee67e9d16a59b
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {createClient, createCluster, type RedisClientType, type RedisClusterType} from "redis";
+
 import {error, info, warning} from "services-comun/modules/utiles/log";
 import {exists, readJSON} from "services-comun/modules/utiles/fs";
+
 import {DefaultValkey} from "./defaultValkey";
 
 type RedisAnyClient = RedisClientType | RedisClusterType;
@@ -157,7 +167,7 @@ export class Valkey {
             } else {
                 await this.client.set(key, value);
             }
-            console.log(`Valkey: Cache guardada ${key} (TTL: ${ttl ?? 'indefinido'})`);
+            info(`Valkey: Cache guardada ${key} (TTL: ${ttl ?? 'indefinido'})`);
         } catch (e) {
             warning(`Valkey: Error guardando cache ${key}`, e);
         }
@@ -171,9 +181,9 @@ export class Valkey {
             await this.client.del(key);
             const deleted = await this.client.del(key);
             if (deleted > 0) {
-                console.log(`Valkey: Cache eliminada ${key}`);
+                info(`Valkey: Cache eliminada ${key}`);
             } else {
-                console.log(`Valkey: Cache [a eliminar] no encontrada ${key}`);
+                info(`Valkey: Cache [a eliminar] no encontrada ${key}`);
             }
 
         } catch (e) {
@@ -190,7 +200,7 @@ export class Valkey {
                 keys.push(key); // También eliminamos la clave exacta
                 if (keys.length > 0) {
                     await Promise.all(keys.map(async (k: string) => {
-                        await this.client.del(k).then(() => console.log(`Valkey: Cache eliminada ${k}`));
+                        await this.client.del(k).then(() => info(`Valkey: Cache eliminada ${k}`));
                     }));
                 }
             } else {
@@ -199,7 +209,7 @@ export class Valkey {
                 if (keys.length > 0) {
                     await Promise.all(keys.map((k: string) => this.client.del(k)));
                 }
-                console.log(`Valkey: Cache vaciada completamente`);
+                info(`Valkey: Cache vaciada completamente`);
             }
         } catch (e) {
             warning(`Valkey: Error eliminando cache`, e);

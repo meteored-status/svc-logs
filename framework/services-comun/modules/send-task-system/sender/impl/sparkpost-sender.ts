@@ -1,12 +1,14 @@
 /**
- * Editor: David Martínez Moya
- * Fecha: Wed, 27 May 2026 06:28:30 GMT
- * Hash: 90fa1a6d3cdcfe73ab5bbc2cb2efe8c8
- * Versión: 2026.5.27+1-davidmartinezmoya
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 01c0b29f6b621fb99eba5125fc83c178
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.27+1-davidmartinezmoya
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Sender} from "../sender";
-import {SparkpostSend} from "../../data/model/sparkpost-send";
+import type {SparkpostSend} from "../../data/model/sparkpost-send";
 import {SparkPostManager} from "../../../email/managers/spark_post";
 import {error, info} from "../../../utiles/log";
 import {PromiseDelayed} from "../../../utiles/promise";
@@ -14,8 +16,6 @@ import {PromiseDelayed} from "../../../utiles/promise";
 export type TransmissionID = string;
 
 export class SparkpostSender extends Sender<TransmissionID | null> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(send: SparkpostSend) {
         super(send);

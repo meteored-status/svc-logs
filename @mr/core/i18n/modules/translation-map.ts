@@ -1,22 +1,20 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 3d47c0a43b67732c5537ac0ee7d9835c
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.6.17+7-josantoniojimnez
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 24781999c51355683c445e3aacff3f04
+ * Versión: 2026.9.23+1-bixus
+ * Anterior: 2026.9.18+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {Translation} from ".";
-import {TParams, Value} from "./value/value";
+import type {TParams, Value} from "./value/value";
 
 type MapKey = string | number;
 
 export type ITranslationMapValues<K extends MapKey> = Record<K, Value>;
 
 export class TranslationMap<K extends MapKey, T extends TParams={}> extends Translation<T> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(protected readonly _values: ITranslationMapValues<K>) {
         super();

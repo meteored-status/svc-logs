@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 21 Aug 2026 06:11:54 GMT
- * Hash: 459bf0540801bd296201216097beb1f3
- * Versión: 2026.8.21+1-bixus
+ * Fecha: Mon, 14 Sep 2026 06:38:18 GMT
+ * Hash: 45ebf901624abab63cfe7aee61943be2
+ * Versión: 2026.9.14+2-bixus
+ * Anterior: 2026.9.9+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -38,16 +39,34 @@ export const LOG_ERRORES_ALIAS = "mr-log-errores";
 /**
  * Documento de un log de servicio, tal y como está indexado.
  *
- * @property extra - Líneas extra del log. Puede llegar como cadena y no como lista: Elasticsearch no
- *                   distingue un valor de una lista de uno, así que un documento con un solo extra se
- *                   devuelve sin array. Quien lo lea tiene que normalizarlo.
+ * @property entorno   - Desde dónde se escribió: `0` desarrollo, `1` test, `2` producción (el `EEntorno`
+ *                     de `@mr/core-log`). **Opcional, y hay que tratarlo como tal**: es un campo añadido
+ *                     el 2026-09-08, así que no lo mandan los emisores que no usan `@mr/core-log`. Un log
+ *                     sin entorno no es un log de desarrollo, es un log del que no se sabe.
+ * @property severidad - `ESeverity`, numérico. **Se guardaba como cadena hasta el 2026-09-08**, herencia
+ *                     de `logs-web`, y quien la leía hacía `parseInt`. Se cambió aprovechando que el data
+ *                     stream estaba vacío; a los emisores que la siguen mandando como texto no les afecta,
+ *                     porque Elasticsearch convierte las cadenas numéricas —y la ingesta la normaliza
+ *                     antes, así que lo indexado es siempre un número.
+ * @property region  - Dónde corría quien lo escribió: la zona del despliegue. **Opcional**, como `entorno`
+ *                     y por lo mismo — es un campo añadido el 2026-09-14 y quien loguea desde un navegador
+ *                     no tiene ninguna—. Un log sin región no es un log de ningún sitio, es uno del que no
+ *                     se sabe.
+ * @property host    - La máquina o el pod que lo escribió. Es lo que separa dos réplicas del mismo
+ *                     servicio cuando solo una falla. Opcional por lo mismo que `region`.
+ * @property extra   - Líneas extra del log. Puede llegar como cadena y no como lista: Elasticsearch no
+ *                     distingue un valor de una lista de uno, así que un documento con un solo extra se
+ *                     devuelve sin array. Quien lo lea tiene que normalizarlo.
  */
 export interface ILogServicioES {
     "@timestamp": string;
+    entorno?: number;
     proyecto: string;
     servicio: string;
+    region?: string;
+    host?: string;
     tipo: string;
-    severidad: string;
+    severidad: number;
     mensaje: string;
     extra?: string|string[];
 }

@@ -1,6 +1,16 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
+ * Hash: 919ae3f938feb54c7492f9ffdababea2
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {Bulk} from "services-comun/modules/elasticsearch/bulk";
-import {Bulk as BulkBase, BulkConfig} from "./";
-import {Elasticsearch} from "../../elasticsearch";
+
+import type {BulkConfig} from "./";
+import {Bulk as BulkBase} from "./";
+import type {Elasticsearch} from "../../elasticsearch";
 
 export interface ElasticSearchBulkConfig extends BulkConfig {
     getIndex: (obj: any) => string;
@@ -8,10 +18,7 @@ export interface ElasticSearchBulkConfig extends BulkConfig {
     getData: (obj: any) => any;
 }
 
-
 export class ElasticSearchBulk extends BulkBase {
-    /* STATIC */
-
     /* INSTANCE */
     private readonly _bulk: Bulk;
 

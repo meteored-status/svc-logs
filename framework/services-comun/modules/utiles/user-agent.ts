@@ -1,12 +1,15 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 25 May 2026 14:46:33 GMT
- * Hash: a9ab3eadc4509851efbb89f938c3370e
- * Versión: 2026.5.25+3-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 7fffdad7353c4283d6bb4d571917592e
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.5.25+3-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {isbot as isBotBase} from "isbot";
-import {Conexion} from "@mr/core-network/server/http/conexion";
+
+import type {Conexion} from "@mr/core-network/server/http/conexion";
 
 export const isBot = (conexion: Conexion): boolean => {
     return isBotBase(conexion.userAgent??'');

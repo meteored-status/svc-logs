@@ -1,20 +1,19 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Thu, 03 Sep 2026 13:36:43 GMT
- * Hash: 907aad7d3d96986682af624ac8c90cba
- * Versión: 2026.9.3+3-juancmartinez
- * Proyecto: git@github.com:alpred/meteored-svc-newsletter.git
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 608f9e91013b3daa58fc28a70ba6123e
+ * Versión: 2026.9.23+3-bixus
+ * Anterior: 2026.9.3+3-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {BOUNCE_CLASS_AUTO_REPLY, BOUNCE_CLASS_SUPPRESSED, categoriaRebote, claseRebote} from "../../../email/webhook/sparkpost/bounce-class";
 import {esRebote} from "../../../email/webhook/sparkpost/sparkpost";
 import {Calculator} from "../calculator";
-import {SparkpostEvent} from "../../data/model/sparkpost-event";
-import {Receiver} from "../../data/model/receiver";
+import type {SparkpostEvent} from "../../data/model/sparkpost-event";
+import type {Receiver} from "../../data/model/receiver";
 
 export class SparkpostCalculator extends Calculator {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(event: SparkpostEvent) {
         super(event);

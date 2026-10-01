@@ -1,36 +1,55 @@
 /**
- * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: f9fde48462e200b6a31895fd35f28cc2
- * Versión: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: miguel
+ * Fecha: Thu, 24 Sep 2026 12:33:20 GMT
+ * Hash: c70357f8b79c06a95e4a5da159618869
+ * Versión: 2026.9.24+2-miguel
+ * Anterior: 2026.9.24+1-miguel
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 /**
- * Código ISO 639-1 para los idiomas soportados.
- * Representa el subconjunto corto usado internamente para agrupar variantes regionales.
+ * La **subetiqueta primaria** BCP 47 de los idiomas soportados: lo que hay hasta el primer separador.
  *
- * Casi todos son de dos letras, pero no todos: `"fil"` tiene tres, y por eso `corto()` —que
- * recorta por los dos primeros caracteres— lo convierte en `"fi"`, que es finés. Ver el aviso
- * del README antes de apoyarse en que la longitud sea fija.
+ * Casi todos son los dos caracteres de ISO 639-1, pero no todos —`"fil"` tiene tres—, así que la longitud
+ * no es fija y no hay que apoyarse en ella. `corto()` corta por el separador justamente por eso.
  */
-export type IdiomaCorto = "ar" | "bn" | "ca" | "cs" | "da" | "de" | "el" | "en" | "es" | "eu" | "fa" | "fi" | "fil" | "fr" | "gl" | "he" | "hi" | "hr" | "hu" | "id" | "it" | "ja" | "ko" | "ms" | "my" | "nb" | "nl" | "no" | "pl" | "pt" | "ro" | "ru" | "sk" | "sv" | "sw" | "th" | "tl" | "tr" | "ur" | "vi";
+export type IdiomaCorto =
+    | "ar" | "az" | "bg" | "bn"
+    | "bs" | "ca" | "cs" | "da"
+    | "de" | "el" | "en" | "es"
+    | "eu" | "fa" | "fi" | "fil"
+    | "fr" | "gl" | "he" | "hi"
+    | "hr" | "hu" | "id" | "it"
+    | "ja" | "ka" | "km" | "ko"
+    | "ky" | "lo" | "mk" | "mn"
+    | "ms" | "my" | "nb" | "ne"
+    | "nl" | "no" | "pl" | "pt"
+    | "ro" | "ru" | "sk" | "sq"
+    | "sr" | "sv" | "sw" | "tg"
+    | "th" | "tl" | "tr" | "uk"
+    | "ur" | "uz" | "vi";
 
 /**
- * Código de idioma largo con variante regional (formato BCP 47: `idioma-REGIÓN`).
- * Se usa cuando el servicio necesita distinguir entre variantes del mismo idioma
- * (p. ej. português de Portugal vs. Brasil).
+ * Código de idioma con variante (BCP 47: `idioma-REGIÓN`, y en general subetiqueta primaria más lo que
+ * venga detrás). Se usa cuando el servicio necesita distinguir entre variantes del mismo idioma
+ * —português de Portugal vs. Brasil—, o entre normas de una misma lengua: `ca-ES-valencia`.
+ *
+ * **No es «el código completo»**, que es `Idioma`: aquí solo están los que llevan variante. La lista es
+ * cerrada a propósito —lista blanca de lo que se mantiene, no de lo que BCP 47 permite escribir—, así que
+ * un idioma nuevo se da de alta aquí y en `soportados`, y nada más.
  */
 export type IdiomaLargo =
     | "de-DE" | "de-AT"
     | "da-DK"
-    | "en-US" | "en-GB" | "en-CA"
-    | "es-ES" | "es-AR" | "es-MX" | "es-CL" | "es-BO" | "es-CR" | "es-DO" | "es-EC" | "es-HN" | "es-PA" | "es-PE" | "es-PY" | "es-UY" | "es-VE"
+    | "en-US" | "en-GB" | "en-CA" | "en-AU"
+    | "es-ES" | "es-AR" | "es-MX" | "es-CL" | "es-BO" | "es-CR" | "es-DO" | "es-EC" | "es-HN" | "es-PA" | "es-PE"
+    | "es-PY" | "es-UY" | "es-VE" | "es-419"
     | "fr-FR"
     | "it-IT"
     | "nl-NL"
     | "pt-PT" | "pt-BR"
-    | "ru-RU";
+    | "ru-RU"
+    | "sr-Cyrl";
 
 /**
  * Código de idioma soportado por el sistema: corto (`"es"`) o largo (`"es-ES"`).
@@ -42,29 +61,50 @@ export type Idioma = IdiomaCorto | IdiomaLargo;
  * Se usa para validar el segmento de idioma en el path de las URLs.
  */
 export const soportados: Idioma[] = [
-    "ar", "bn", "ca", "cs", "da", "de", "el", "en", "es", "eu", "fa", "fi", "fil", "fr", "gl", "he", "hi", "hr", "hu", "id", "it", "ja", "ko", "ms", "my", "nb", "nl", "no", "pl", "pt", "ro", "ru", "sk", "sv", "sw", "th", "tl", "tr", "ur", "vi",
-    "da-DK",
-    "de-AT", "de-DE",
-    "en-CA", "en-GB", "en-US",
-    "es-AR", "es-BO", "es-CL", "es-CR", "es-DO", "es-EC", "es-ES", "es-HN", "es-MX", "es-PA", "es-PE", "es-PY", "es-UY", "es-VE",
+    // Idiomas cortos
+    "ar", "az", "bg", "bn", "bs", "ca", "cs", "da", "de", "el", "en", "es", "eu",
+    "fa", "fi", "fil", "fr", "gl", "he", "hi", "hr", "hu", "id", "it", "ja", "ka",
+    "km", "ko", "ky", "lo", "mk", "mn", "ms", "my", "nb", "ne", "nl", "no", "pl",
+    "pt", "ro", "ru", "sk", "sq", "sr", "sv", "sw", "tg", "th", "tl", "tr", "uk",
+    "ur", "uz", "vi",
+
+    // Idiomas largos (variantes)
+    "de-DE", "de-AT", "da-DK",
+    "en-US", "en-GB", "en-CA", "en-AU",
+    "es-ES", "es-AR", "es-MX", "es-CL", "es-BO", "es-CR", "es-DO", "es-EC", "es-HN",
+    "es-PA", "es-PE", "es-PY", "es-UY", "es-VE", "es-419",
     "fr-FR",
     "it-IT",
     "nl-NL",
     "pt-PT", "pt-BR",
     "ru-RU",
+    "sr-Cyrl"
 ];
 
 /**
- * Comprueba si un código de idioma pertenece a la lista de idiomas soportados.
- * @param lang - Código de idioma a validar.
- * @returns `true` si el idioma está soportado.
+ * Comprueba si una cadena cualquiera es uno de los idiomas soportados.
+ *
+ * Es una **guarda de tipo**, que es lo que hace usable una lista blanca cerrada: se valida en el borde
+ * —el handler, el segmento de la URL, lo que venga de un `Accept-Language`— y a partir de ahí se trabaja
+ * con `Idioma` sin volver a comprobarlo. Antes recibía `Idioma`, así que para preguntarle por una cadena
+ * cualquiera —el único caso interesante— había que hacerle un cast delante, y el cast es exactamente lo
+ * que la pregunta pretendía evitar.
+ *
+ * @param lang - Lo que haya llegado.
  */
-export const soportado = (lang: Idioma): boolean => soportados.includes(lang);
+export const soportado = (lang: string): lang is Idioma => (soportados as readonly string[]).includes(lang);
 
 /**
- * Extrae el código corto ISO 639-1 de un idioma (los dos primeros caracteres).
- * @param idioma - Código de idioma largo o corto (p. ej. `"es-ES"` → `"es"`).
- * @returns Código corto de dos letras.
+ * La subetiqueta primaria de un idioma: lo que hay hasta el primer separador.
+ *
+ * **Corta por el separador y no por los dos primeros caracteres**, que es lo que hacía antes. Con
+ * `slice(0, 2)`, `"fil"` se convertía en `"fi"` —finés—, y lo peor era que `"fi"` también está soportado:
+ * no lanzaba, no devolvía `undefined` y el tipo seguía siendo `IdiomaCorto`, así que nada aguas abajo
+ * podía detectar el cambiazo. Con códigos de tres letras, de escritura (`sr-Cyrl`) o de región numérica
+ * (`es-419`) el recorte fijo es sencillamente otra cosa.
+ *
+ * @param idioma - Código de idioma, con o sin variante (`"es-ES"` → `"es"`, `"fil"` → `"fil"`).
+ * @returns La subetiqueta primaria.
  */
-export const corto = (idioma: Idioma): IdiomaCorto => idioma.slice(0, 2) as IdiomaCorto;
+export const corto = (idioma: Idioma): IdiomaCorto => idioma.split(/[-_]/)[0] as IdiomaCorto;
 

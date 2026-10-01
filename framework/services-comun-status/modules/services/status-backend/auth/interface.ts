@@ -1,17 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 01 Sep 2026 09:55:30 GMT
- * Hash: 2aaf1f0ee780af770a183b95cb696208
- * Versión: 2026.9.1+1-bixus
- * Anterior: 2026.8.31+3-bixus
+ * Fecha: Fri, 18 Sep 2026 09:12:41 GMT
+ * Hash: b0831acbc58d9f6beb8a57d17d0bb3c2
+ * Versión: 2026.9.18+1-bixus
+ * Anterior: 2026.9.16+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 export type EPermission =
     "status.admin"                      |
     "status.panel.access"               |
-    "status.resources.list"             |
-    "status.resources.save"             |
     "status.service.list"               |
     "status.service.save"               |
     "status.disable.component.toggle"   |
@@ -23,9 +21,14 @@ export type EPermission =
     "status.component.delete"           |
     "status.log.list"                   |
     "status.log.check"                  |
+    "status.service.catalog.list"       |
+    "status.service.catalog.edit"       |
     "status.audit.read"                 |
     "status.infra.view"                 |
     "status.infra.edit"                 |
+    "status.seo.url.view"               |
+    "status.seo.crawler.view"           |
+    "status.seo.project.edit"           |
     "status.impersonate.view"           |
     "status.impersonate.full"           |
     "status.oncall.view"                |
@@ -39,5 +42,10 @@ export type EPermission =
     "status.rol.delete"                 |
     "status.dpto.list"                  |
     "status.dpto.edit"                  |
-    "status.dpto.delete"
+    "status.dpto.delete"                |
+    "status.group.list"                 |
+    "status.group.edit"                 |
+    "status.group.delete"               |
+    "status.group.member.edit"          |
+    "status.group.role.edit"      
 ;

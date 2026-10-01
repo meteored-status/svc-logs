@@ -1,3 +1,11 @@
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 8bc703009c31065ee74b95780ebac9be
+ * Versión: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
 import {WebSocket} from "ws";
 
 import type {IMessageServerKO, IMessageServerOK, IMetadata} from "../../metadata/websocket/message";
@@ -56,11 +64,15 @@ interface IOutQueueItem {
  * necesita ser consciente de este mecanismo.
  */
 export class WSHandler {
+    /* STATIC */
+
     /**
      * Umbral de bytes en el buffer de envío a partir del cual el {@link drainLoop}
      * espera al evento `drain` del socket antes de enviar el siguiente frame.
      */
     private static readonly BACKPRESSURE_THRESHOLD = 64 * 1024; // 64 KB
+
+    /* INSTANCE */
 
     /** Cola FIFO de frames pendientes de envío al cliente. */
     private readonly outQueue: IOutQueueItem[];

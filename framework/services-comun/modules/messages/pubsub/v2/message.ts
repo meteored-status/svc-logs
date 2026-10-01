@@ -1,8 +1,14 @@
-import {Message as PubSubMessage} from "@google-cloud/pubsub";
+/**
+ * Editor: Bixus
+ * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
+ * Hash: 6e0f3aaa2a3659684afbfc80f67b694f
+ * Versión: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import type {Message as PubSubMessage} from "@google-cloud/pubsub";
 
 export class Message<T> {
-    /* STATIC */
-
     /* INSTANCE */
     public constructor(private readonly msg: PubSubMessage) {
     }
