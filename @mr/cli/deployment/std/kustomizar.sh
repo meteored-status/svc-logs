@@ -229,6 +229,12 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         INGRESS=$(configw "${RUTA}" '.deploy.lambda.ingress // "internal-and-cloud-load-balancing"')
         CLOUD_RUN_INGRESS=$(printf '%s' "${INGRESS}" | jq -Rr @json)
         yq eval ".metadata.annotations.\"run.googleapis.com/ingress\" = ${CLOUD_RUN_INGRESS}" "${CLOUD_RUN_YAML}" -i
+
+        # `authentication: false` es el «Allow public access» de la consola. Se compara con `== false` y
+        # no con `//`, porque para jq `false // true` es `true`.
+        if [[ "$(configw "${RUTA}" '.deploy.lambda.authentication == false')" == "true" ]]; then
+          yq eval ".metadata.annotations.\"run.googleapis.com/invoker-iam-disabled\" = \"true\"" "${CLOUD_RUN_YAML}" -i
+        fi
       fi
     fi
 

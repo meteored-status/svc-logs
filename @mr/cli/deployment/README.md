@@ -406,6 +406,17 @@ Tras aplicar la plantilla, `parseWorkspaceLambdaZona()` añade las variables de
 ya fijas de la plantilla (`DATADOG`, `ENTORNO`, `ZONA`, `CLOUD_RUN_REGION`,
 `SIDECAR`) sin pisarlas.
 
+### Autenticación
+
+Con `deploy.lambda.authentication: false`, `parseWorkspaceLambdaZona()` añade
+`run.googleapis.com/invoker-iam-disabled: "true"` al servicio: es el «Allow public
+access» de la consola, y no exige autenticación para invocarlo. Sin el campo, o con
+`true`, el servicio la exige. Solo aplica a servicios, no a jobs. Es independiente del
+ingress: detrás de un load balancer basta el de por defecto
+(`internal-and-cloud-load-balancing`), y `"all"` solo hace falta para llamar
+directamente a la URL `*.run.app`. La cuenta que despliega necesita
+`run.services.setIamPolicy`.
+
 ### Nombre del servicio o job
 
 Cada elemento de `deploy.kustomize` es un despliegue, con nombre `<dir>-<name>`: el del

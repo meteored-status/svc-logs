@@ -84,7 +84,7 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
 | `target` | `Target` | ✅ | todos | Infraestructura de destino. |
 | `alone` | `boolean` | — | SERVICE/CRONJOB/JOB | Solo despliega en una zona. |
 | `arch` | `string[]` | — | SERVICE/CRONJOB/JOB | Arquitecturas Docker. Omitido, `contenedor.sh` y `kustomizar.sh` usan `["linux/amd64"]`. |
-| `buckets` | `{ produccion, test }` | — | SERVICE/CRONJOB/JOB | Buckets GCS por entorno. |
+| `buckets` | `{ produccion, test }` | — | SERVICE/CRONJOB/JOB | Buckets GCS por entorno: clave → `string`, `string[]` o `{ buckets: string \| string[], basePath?: string }` (`IManifestDeploymentBucket`; `basePath` se concatena tal cual, con la barra final). En runtime: `Configuracion.pod.buckets`. |
 | `credenciales` | `IManifestDeploymentCredenciales[]` | — | SERVICE/CRONJOB/JOB | Credenciales a montar. |
 | `imagen` | `IManifestDeploymentImagen` | — | SERVICE/CRONJOB/JOB | Imagen Docker por entorno. |
 | `kustomize` | `IManifestDeploymentKustomize[]` | — | SERVICE/CRONJOB/JOB | Overlays de kustomize. |
@@ -92,7 +92,7 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
 | `schedule` | `string` | — | CRONJOB | Expresión cron. |
 | `storage` | `IManifestDeploymentStorage` | — | BROWSER | Subida de assets a GCS. |
 | `annotations` | `IManifestDeploymentAnnotations` | — | SERVICE/CRONJOB/JOB | Anotaciones adicionales para recursos generados (K8s/Cloud Run). |
-| `lambda` | `IManifestDeploymentLambda` | — | SERVICE/CRONJOB/JOB + lambda | Configuración de red de Cloud Run (egress/ingress). |
+| `lambda` | `IManifestDeploymentLambda` | — | SERVICE/CRONJOB/JOB + lambda | Configuración de red de Cloud Run (egress/ingress/authentication). |
 | `env` | `Record<string, string>` | — | SERVICE/CRONJOB/JOB + lambda | Variables de entorno adicionales a inyectar en el contenedor `{ NOMBRE: valor }`. |
 
 #### `ManifestDeploymentKind`
@@ -193,6 +193,7 @@ Configuración de red de Cloud Run para despliegues con `target: "lambda"`.
 
 | Campo | Tipo | Obligatorio | Descripción |
 |-------|------|:-----------:|-------------|
+| `authentication` | `boolean` | — | Si `false`, el servicio se puede invocar sin autenticación («Allow public access» en la consola): se añade `run.googleapis.com/invoker-iam-disabled: "true"`. Por defecto `true`. Solo servicios, no jobs. |
 | `ingress` | `Ingress` | ✅ | Tráfico entrante permitido. Por defecto `"internal-and-cloud-load-balancing"`. |
 | `egress` | `Egress` | — | Tráfico saliente. Solo aplica cuando `vpc` es `true`. |
 | `vpc` | `boolean` | ✅ | Si `true`, el servicio se conecta a la VPC del proyecto. Por defecto `false`. |

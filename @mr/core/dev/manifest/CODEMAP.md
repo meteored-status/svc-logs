@@ -225,7 +225,9 @@ export const ManifestDeploymentKind: { readonly SERVICE; readonly CRONJOB; reado
 export type Target = "k8s" | "lambda" | "none"
 export const Target: { readonly k8s; readonly lambda; readonly none }
 
-export type TManifestDeploymentBucketData = Record<string, string | string[]>
+export interface IManifestDeploymentBucket { buckets: string | string[]; basePath?: string }   // basePath se concatena tal cual: con carpeta, barra final
+export type TManifestDeploymentBucketValue = string | string[] | IManifestDeploymentBucket
+export type TManifestDeploymentBucketData = Record<string, TManifestDeploymentBucketValue>
 
 export interface IManifestDeployment {
     enabled:      boolean;
@@ -358,14 +360,15 @@ export type Ingress = "all" | "internal-and-cloud-load-balancing"
 export const Ingress: { readonly all: Ingress; readonly internal: Ingress }
 
 export interface IManifestDeploymentLambda {
-    ingress: Ingress;
-    vpc:     boolean;
-    egress?: Egress;
+    ingress:         Ingress;
+    vpc:             boolean;
+    egress?:         Egress;
+    authentication?: boolean;   // false → invoker-iam-disabled (solo servicios); por defecto true
 }
 
 export class ManifestDeploymentLambda {
     public static build(deploy: IManifestDeploymentLambda): ManifestDeploymentLambda
-    public ingress: Ingress; public vpc: boolean; public egress?: Egress
+    public ingress: Ingress; public vpc: boolean; public egress?: Egress; public authentication?: boolean
     public toJSON(): IManifestDeploymentLambda
 }
 ```

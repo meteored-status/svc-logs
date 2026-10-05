@@ -2,6 +2,29 @@
 
 ---
 
+<<<<<<< LOCAL
+## 2026.9.29 08:15 — [David]
+
+### Added
+
+- **`deploy.buckets` admite `{buckets, basePath?}`**: nuevos `IManifestDeploymentBucket` y
+  `TManifestDeploymentBucketValue`; `TManifestDeploymentBucketData` pasa a ser `Record<string, TManifestDeploymentBucketValue>`.
+  Nombre suelto y lista siguen siendo válidos. El runtime (`@mr/core-workload`) lo aplana en `pod.buckets` y
+  `pod.bucketsBasePath`. **Actualizar a la vez `@mr/core-workload` y `services-comun`**: las copias antiguas de
+  `services-comun/modules/utiles/pod.ts` (aún presentes en algún monorepo) asignan `deploy.buckets` a un
+  `Record<string, string | string[]>` y dejan de compilar con este tipo.
+
+
+||||||| BASE
+=======
+## 2026.10.1 14:16 — [Jose]
+
+### Added
+
+- **`deploy.lambda.authentication`** (`IManifestDeploymentLambda`), opcional y por defecto `true`. Con
+  `false`, el servicio de Cloud Run se puede invocar sin autenticación («Allow public access» en la
+  consola); lo aplica `kustomizar.sh` de `@mr/cli`. Solo servicios, no jobs.
+
 ## 2026.10.1 13:29 — [Jose]
 
 ### Changed
@@ -10,6 +33,7 @@
   `lambda`**: las dos partes del nombre del servicio o job de Cloud Run, y que admiten `${ENTORNO}` y
   `${ZONA}` (lo resuelve `kustomizar.sh` de `@mr/cli`).
 
+>>>>>>> REMOTE
 ## 2026.9.23 11:39 — [Jose]
 
 ### Changed

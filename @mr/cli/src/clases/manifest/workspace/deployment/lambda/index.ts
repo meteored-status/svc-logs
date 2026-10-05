@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 242fc0261988608453574ab767662423
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Fecha: Fri, 02 Oct 2026 06:53:09 GMT
+ * Hash: 069d58f68f67e78d05aff4542e40f297
+ * Versión: 2026.10.2+2-bixus
+ * Anterior: 2026.9.7+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
 import {Egress, Ingress, type IManifestDeploymentLambda} from "@mr/core-dev/manifest/deployment/lambda";
@@ -35,7 +35,9 @@ class ManifestWorkspaceDeploymentLambdaLoader {
      *
      * Los valores de `egress` e `ingress` que no pertenezcan al enum permitido
      * son ignorados y se conserva el valor por defecto. La propiedad `vpc`
-     * se copia tal cual, usando `false` si no está definida.
+     * se copia tal cual, usando `false` si no está definida. `authentication`
+     * se copia solo si es booleano; si no, se omite y vale lo de por defecto
+     * (`true`), sin escribirlo en el `mrpack.json`.
      *
      * @param lambda - Bloque `deploy.lambda` parcial del manifest.
      * @returns Configuración `lambda` completa y validada.
@@ -52,6 +54,9 @@ class ManifestWorkspaceDeploymentLambdaLoader {
             }
         }
         data.vpc = lambda.vpc ?? false;
+        if (typeof lambda.authentication === "boolean") {
+            data.authentication = lambda.authentication;
+        }
 
         if (data.vpc) {
             if (lambda.egress && (lambda.egress===Egress.all || lambda.egress===Egress.private)) {

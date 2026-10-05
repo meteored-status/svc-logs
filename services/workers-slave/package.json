@@ -17,7 +17,7 @@
     "@elastic/elasticsearch": "^9.5.1",
     "@google-cloud/storage": "^8.2.0",
     "chokidar": "^5.0.0",
-    "dd-trace": "^6.18.0",
+    "dd-trace": "^6.19.0",
     "formidable": "^3.5.4",
     "mysql2": "^3.24.5",
     "qs": "^6.16.0",
@@ -30,7 +30,7 @@
     "@mr/core-i18n": "workspace:*",
     "@mr/core-network": "workspace:*",
     "@mr/core-workload": "workspace:*",
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.1",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
     "zod": "^4.6.5"

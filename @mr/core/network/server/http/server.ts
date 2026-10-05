@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Tue, 29 Sep 2026 06:26:43 GMT
- * Hash: 70d0e20fe6790ab664f724499fbd6722
- * Versión: 2026.9.29+1-bixus
- * Anterior: 2026.9.28+3-juancmartinez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Pedro
+ * Fecha: Mon, 05 Oct 2026 10:56:47 GMT
+ * Hash: 4d860806cbdb2dffe02a16697ff5368a
+ * Versión: 2026.10.5+1-pedro
+ * Anterior: 2026.9.29+1-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-panel-usuarios.git
  */
 
 import formidable, {type Fields, type Files} from "formidable";
@@ -635,6 +635,17 @@ export class Server {
                     conexion.postRAW = Buffer.concat(chunks).toString("utf-8");
                     if (type.includes("urlencoded")) {
                         conexion.post = parse(conexion.postRAW, QS_PARSE_OPTIONS);
+                    } else if (type.includes("json") && conexion.postRAW.length > 0) {
+                        try {
+                            conexion.post = JSON.parse(conexion.postRAW);
+                        } catch (err) {
+                            // 400 y no 500: el cuerpo que no se deja parsear lo ha mandado mal el cliente, y el
+                            // servicio no ha fallado en nada. Con un 500 contaría como error del servidor en las
+                            // métricas y en los reintentos de quien llama, que volvería a mandar el mismo cuerpo roto.
+                            warning("Petición con JSON mal formado", conexion.get, err);
+                            conexion.error(400, (err as Error).message, err).finally(() => undefined);
+                            return;
+                        }
                     } else if (type.includes("json") && conexion.postRAW.length > 0) {
                         try {
                             conexion.post = JSON.parse(conexion.postRAW);

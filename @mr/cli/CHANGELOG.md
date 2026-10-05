@@ -2,6 +2,25 @@
 
 ---
 
+## 2026.10.2 08:45 — [Jose]
+
+### Fixed
+
+- **`deploy.lambda.authentication` se borraba del `mrpack.json`** al cargar el manifest:
+  `ManifestWorkspaceDeploymentLambdaLoader.check()` reconstruía `deploy.lambda` solo con `ingress`, `vpc` y
+  `egress`, y `load()` reescribe el fichero cuando la normalización lo cambia. Cualquier comando de `mrpack`
+  —también el paso Compilar de Cloud Build— lo quitaba antes de que `kustomizar.sh` lo leyera, y el
+  servicio seguía exigiendo autenticación. Ahora se conserva si es booleano.
+
+## 2026.10.1 14:16 — [Jose]
+
+### Added
+
+- **`kustomizar.sh` añade `run.googleapis.com/invoker-iam-disabled: "true"` a los servicios `lambda` con
+  `deploy.lambda.authentication: false`**, que es el «Allow public access» de la consola de Cloud Run.
+  Sin el campo, o con `true`, la anotación no se pone y el servicio sigue exigiendo autenticación. No
+  aplica a jobs.
+
 ## 2026.10.1 13:29 — [Jose]
 
 ### Added

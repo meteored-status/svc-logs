@@ -106,7 +106,9 @@ import type {IConfiguracion} from "@mr/core-workload/config";
 ```
 
 Extiende `Configuracion` de `@mr/core-utils` añadiendo `pod: IPodInfo` (metadatos de pod
-resueltos en tiempo de arranque: host, servicio, zona, versión, replica, wire, deploy...).
+resueltos en tiempo de arranque: host, servicio, zona, versión, replica, wire, deploy...). `pod.buckets` son los buckets del entorno (`deploy.buckets`); si una clave
+lleva `basePath` en el manifiesto (`{buckets, basePath}`), `pod.buckets` solo trae sus nombres y el prefijo va en
+`pod.bucketsBasePath` (`aplanarBuckets()`).
 
 ```ts
 class MiConfig extends Configuracion<IMiConfig> {

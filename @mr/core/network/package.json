@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-network",
-  "version": "2026.10.1+1-bixus",
+  "version": "2026.10.5+2-bixus",
   "description": "Utilidades de red de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {
@@ -8,7 +8,7 @@
     "tipo": "core"
   },
   "dependencies": {
-    "dd-trace": "^6.18.0",
+    "dd-trace": "^6.19.0",
     "formidable": "^3.5.4",
     "qs": "^6.16.0",
     "tslib": "^2.8.1",
@@ -23,7 +23,7 @@
     "@mr/core-utils": "workspace:*",
     "@mr/core-workload": "workspace:*",
     "@types/formidable": "^3.5.1",
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.1",
     "@types/qs": "^6.15.1",
     "@types/ws": "^8.18.2",
     "services-comun": "workspace:*"

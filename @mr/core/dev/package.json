@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-dev",
-  "version": "2026.10.1+1-bixus",
+  "version": "2026.10.5+2-bixus",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "typings": "./types.d.ts",
@@ -47,7 +47,7 @@
     "@rspack/core": "^2.2.8",
     "@tsconfig/node24": "^24.0.5",
     "@tsconfig/recommended": "^1.0.13",
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.1",
     "@types/source-map-support": "^0.5.10",
     "css-loader": "^7.1.5",
     "esbuild": "^0.28.2",
