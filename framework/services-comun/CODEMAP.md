@@ -230,7 +230,7 @@ PubSub (cola de pendientes).
 | `messages/pubsub/mensaje.ts` | `Mensaje<T>` |
 | `messages/pubsub/task.ts` | `Task<T>` (abstract), `ITask`, `TaskBuilder<T>`, `ETaskCancel` |
 | `messages/pubsub/v2/index.ts` | `PubSub` (v2), `PubSubBuild`, `TMessageData`, `ConfigDataQueue` |
-| `messages/pubsub/v2/message.ts` | `Message<T>` |
+| `messages/pubsub/v2/message.ts` | `Message<T>` (`data`, `attributes`, `accept`, `dismiss`) |
 | `messages/pubsub/v2/utiles/message-manager.ts` | `MessageManager`, `LockDAO`, `MessageErrorCode`, `MessageError`/`ProcessingMessageError`/`ProcessedMessageError` |
 | `messages/eventarc/publisher/index.ts` | `EventarcPublisher<T>`, `SystemConfig`, `EventarcPublisherBuild` |
 

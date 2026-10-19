@@ -51,6 +51,8 @@ configuracion.ts         Ensambla cada Configuration; activa watch en desarrollo
 `rspack.config.ts` devuelve **un array** con:
 
 1. **Bundle principal** — compilado con el `runtime` del `mrpack.json` (normalmente `node`).
+   Se omite si ese runtime es `browser` y `build.bundle` no declara `entries`: no emitiría nada
+   y, como comparte `output/bundle` con `clean: true` con los bundles web, vaciaría su salida.
 2. **Bundles web** — uno por cada elemento de `manifest.build.bundle.web`, siempre con
    `Runtime.browser`.
 

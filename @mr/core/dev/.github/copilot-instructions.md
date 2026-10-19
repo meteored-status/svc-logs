@@ -1,4 +1,4 @@
-# GitHub Copilot — Instrucciones del workspace `web-www`
+# GitHub Copilot — Instrucciones del monorepo
 
 Este workspace es un **monorepo** Node.js/TypeScript organizado en paquetes bajo `@mr/cli`, `@mr/core/`, `@mr/user/`, `framework`, `packages`, `cronjobs`, `jobs` y `services`.
 Usa **Yarn workspaces** y **TypeScript** con paths absolutos entre paquetes.
@@ -22,9 +22,6 @@ Usa **Yarn workspaces** y **TypeScript** con paths absolutos entre paquetes.
 CLI de ciclo de vida del monorepo. Proporciona el ejecutable `mrpack` (compilación, despliegue,
 frameworks, init, update, upload, autodoc).
 Consulta la documentación completa en [`@mr/cli/README.md`](../@mr/cli/README.md).
-
-> `mrlang` **ya no está aquí**: vive en `@mr/core-i18n` desde el 2026-09-04, y lo que las dos CLI
-> compartían está en `@mr/core-cli`.
 
 ### Sub-módulos documentados
 
@@ -81,13 +78,6 @@ Consulta la documentación completa en [`@mr/core/dev/README.md`](../@mr/core/de
 resetear frameworks mediante `yarn mrpack framework` o `yarn mrpack update`. Solo es
 necesario invocarlo a mano si se quiere relanzar de forma explícita.
 
-La función que lo invoca es `aplicarPatches(basedir)`, definida en
-`@mr/cli/src/clases/patches.ts`. Usa `Deferred<void>` de
-`services-comun/modules/utiles/promise` y `stdio: "inherit"` para mostrar la salida
-en tiempo real. Se llama siempre **antes** de recompilar `@mr/cli`, de modo que
-cualquier cambio que los patches introduzcan en el código queda incorporado en la
-compilación.
-
 ---
 
 ## Paquete `@mr/core-utils`
@@ -117,8 +107,7 @@ Internacionalización del monorepo, de punta a punta. Tres piezas: los **idiomas
 (`modules/langs.ts`, importable como `@mr/core-i18n/langs`) con los tipos `Idioma`, `IdiomaCorto` e
 `IdiomaLargo`, la lista `soportados` y los helpers `soportado()` y `corto()`; el **runtime de
 traducciones v2** (el resto de `modules/`: `Literal`, `TranslationMap`, `TranslationSet`, los `Value`
-y los plurales), que vivía en `services-comun/modules/traduccion/v2/` hasta el 2026-09-04; y el
-**generador** `mrlang` (`src/` + `bin/`), que vivía en `@mr/cli` hasta esa misma fecha.
+y los plurales); y el **generador** `mrlang` (`src/` + `bin/`).
 
 > El `exports` publica solo lo que se importa de fuera. Al añadir un módulo a `modules/` no se ve
 > hasta declarar su clave, y si lo va a emitir `mrlang`, hay que tocar también `src/clases-v2/modulo/`.
@@ -222,7 +211,6 @@ Consulta la documentación completa en [`@mr/core/workload/README.md`](../@mr/co
 **Nombre npm:** `@mr/core-templates`
 
 Proporciona la clase base `Plantilla` y su subclase `Componente` para construir componentes de plantilla web, y el tipo de dispositivo `TDevice`.
-El módulo de routing (`Seccion`) se trasladó a `@mr/core-network/route` como `Route`.
 Consulta la documentación completa en [`@mr/core/templates/README.md`](../@mr/core/templates/README.md).
 
 ### Sub-módulos documentados
@@ -305,6 +293,7 @@ Estos paquetes **no se editan directamente** en el monorepo como código de nego
 
       public readonly id: string;
       private activo: boolean;
+      private _nombre: string;
 
       public get nombre(): string { return this._nombre; }
       public set nombre(v: string) { this._nombre = v; }
@@ -312,6 +301,7 @@ Estos paquetes **no se editan directamente** en el monorepo como código de nego
       public constructor() {
           this.id = "x";
           this.activo = false;
+          this._nombre = "";
       }
 
       public activar(): void {

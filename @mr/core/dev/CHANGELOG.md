@@ -2,21 +2,42 @@
 
 ---
 
-<<<<<<< LOCAL
-## 2026.9.29 08:15 — [David]
+## 2026.10.8 09:20 — [Jose]
 
-### Added
+### Fixed
 
-- **`deploy.buckets` admite `{buckets, basePath?}`**: nuevos `IManifestDeploymentBucket` y
-  `TManifestDeploymentBucketValue`; `TManifestDeploymentBucketData` pasa a ser `Record<string, TManifestDeploymentBucketValue>`.
-  Nombre suelto y lista siguen siendo válidos. El runtime (`@mr/core-workload`) lo aplana en `pod.buckets` y
-  `pod.bucketsBasePath`. **Actualizar a la vez `@mr/core-workload` y `services-comun`**: las copias antiguas de
-  `services-comun/modules/utiles/pod.ts` (aún presentes en algún monorepo) asignan `deploy.buckets` a un
-  `Record<string, string | string[]>` y dejan de compilar con este tipo.
+- **`AGENTS.md` describía otro monorepo y un `config.workspaces.json` antiguo**: nombraba `web-www`,
+  `yarn@4.16.0` y rutas `services/www-*`, y las claves `packd.available`/`packd.disabled`, sustituidas por
+  `workspaces.<grupo>.<nombre>.compilar`. Ahora remite al `package.json` raíz y a `yarn mrpack config`.
+- **`AGENTS.md` y `copilot-instructions.md` se contradecían con `patch:apply`**: el primero mandaba lanzarlo
+  siempre tras `update`, y `mrpack update` ya lo aplica cuando cambia un framework. Queda la versión del código.
+- **`AGENTS.md` decía que solo `services-comun` tiene pruebas**; hay más workspaces con script `test`.
+- **El ejemplo «correcto» de estructura de clases** usaba `this._nombre` sin declararlo ni inicializarlo.
 
+### Changed
 
-||||||| BASE
-=======
+- **Instrucciones de agente más cortas** (~900 tokens menos por sesión y subagente): fuera las narraciones
+  históricas (`haiku-mechanic`, contadores del `CHANGELOG`, traslados de `mrlang` y `Seccion`), el precio de
+  Fable como cifra y el detalle de implementación ya documentado en los README y CODEMAP.
+- **La configuración de confirmación de los subagentes caros** pasa de `delegacion-multimodelo.md` al
+  `README.md`; en la política queda una referencia de dos líneas.
+
+## 2026.10.7 16:47 — [Juan]
+
+### Fixed
+
+- **`.github/copilot-instructions.md` llevaba marcas de conflicto** (`||||||| BASE` … `>>>>>>> REMOTE`) y el
+  apartado de «Nomenclatura» y «Líneas en blanco» repetido, publicados por error en la 2026.10.7+2. Los dos lados
+  eran idénticos: se quitan las marcas y la copia.
+
+## 2026.10.6 08:41 — [Jose]
+
+### Fixed
+
+- **rspack: los workspaces solo navegador quedaban sin salida**: con `deploy.runtime: browser` y sin
+  `build.bundle.entries`, el bundle principal compilaba vacío y, al compartir `output/bundle` con `clean: true`,
+  borraba lo que escribían los bundles web. `rspack.config.ts` ya no genera esa configuración en ese caso.
+
 ## 2026.10.1 14:16 — [Jose]
 
 ### Added
@@ -33,7 +54,17 @@
   `lambda`**: las dos partes del nombre del servicio o job de Cloud Run, y que admiten `${ENTORNO}` y
   `${ZONA}` (lo resuelve `kustomizar.sh` de `@mr/cli`).
 
->>>>>>> REMOTE
+## 2026.9.29 08:15 — [David]
+
+### Added
+
+- **`deploy.buckets` admite `{buckets, basePath?}`**: nuevos `IManifestDeploymentBucket` y
+  `TManifestDeploymentBucketValue`; `TManifestDeploymentBucketData` pasa a ser `Record<string, TManifestDeploymentBucketValue>`.
+  Nombre suelto y lista siguen siendo válidos. El runtime (`@mr/core-workload`) lo aplana en `pod.buckets` y
+  `pod.bucketsBasePath`. **Actualizar a la vez `@mr/core-workload` y `services-comun`**: las copias antiguas de
+  `services-comun/modules/utiles/pod.ts` (aún presentes en algún monorepo) asignan `deploy.buckets` a un
+  `Record<string, string | string[]>` y dejan de compilar con este tipo.
+
 ## 2026.9.23 11:39 — [Jose]
 
 ### Changed
