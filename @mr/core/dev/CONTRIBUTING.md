@@ -147,12 +147,22 @@ encadena, por cada build:
    workspaces con cambios.
 9. **Subir Storage** — sube assets a Google Cloud Storage.
 10. **Generar Contenedor** — build, etiqueta y sube la imagen Docker.
-11. **Kustomizar** — actualiza la versión de imagen a desplegar.
-12. **Desplegar** — `gke-deploy` contra el cluster GKE.
+11. **Kustomizar** — actualiza la versión de imagen a desplegar. Para los workspaces
+    `lambda` genera además, desde las plantillas Cloud Run, un script `lambda-<zona>.sh`
+    por zona de destino.
+12. **Desplegar** — primero ejecuta los `lambda-*.sh` (`gcloud run services/jobs replace`
+    contra Cloud Run) y después `gke-deploy` contra cada cluster GKE del entorno.
 13. **Generar Documentación** — auto-doc.
 14. **Desautorizar** — revoca las credenciales temporales.
 
 Worker pool y timeout (`1800s`) están definidos en el propio `build.yaml`.
+
+El despliegue Cloud Run es **declarativo**: `replace` deja el servicio o job tal como
+lo describe el YAML generado, así que lo que se toque a mano en la consola (labels,
+acceso público, etc.) lo borra el siguiente despliegue. Esos ajustes van en el
+`mrpack.json` del workspace (`deploy.lambda`). Plantillas, nombres, región y zona,
+autenticación y labels: ver
+[`@mr/cli/deployment/README.md`](../../@mr/cli/deployment/README.md#plantillas-cloud-run).
 
 > `yarn mrpack deploy --env=<entorno>` (ver
 > [`@mr/cli/README.md`](../../@mr/cli/README.md#deploy)) es el comando de compilación
