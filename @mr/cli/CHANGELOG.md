@@ -2,6 +2,16 @@
 
 ---
 
+## 2026.10.19 10:49 — [Jose]
+
+### Fixed
+
+- **Las lambdas sin `alone` se despliegan una vez por región, no una vez por cluster.** Con dos
+  clusters del entorno en la misma región, `kustomizar.sh` desplegaba esa región dos veces y `ZONA`
+  recibía las dos zonas a la vez, lo que rompía el nombre, el trigger de Scheduler y la variable `ZONA`.
+  Ahora, si una región tiene varios clusters, vale la zona del primero, como en `alone`. Un cluster sin
+  la label `zona` hace fallar el despliegue con un mensaje, en vez de desplegar con zona `null`.
+
 ## 2026.10.19 09:40 — [Jose]
 
 ### Added

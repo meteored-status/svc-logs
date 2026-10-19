@@ -443,9 +443,12 @@ borrar.
 
 ### Región y zona de destino
 
-Por defecto un workspace `lambda` se despliega **una vez por cluster** del entorno:
-`kustomizar.sh` recorre `entornos.json` y llama a `parseWorkspaceLambdaZona()` con
-la `.zone` y la `.resourceLabels.zona` de cada uno.
+Por defecto un workspace `lambda` se despliega **una vez por región** con cluster en
+el entorno: `kustomizar.sh` recorre `entornos.json` y llama a
+`parseWorkspaceLambdaZona()` con la `.zone` del cluster como región y su
+`.resourceLabels.zona` como zona. Si una región tiene varios clusters, se despliega
+una sola vez, con la zona del primero del array. Un cluster sin la label `zona` hace
+fallar el despliegue.
 
 Con `deploy.alone = true` en el `mrpack.json` del workspace se despliega **una sola
 vez**: en la región de Bélgica (`europe-west1`) si el entorno tiene un cluster allí,

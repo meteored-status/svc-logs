@@ -458,11 +458,18 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           fi
           parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
         else
-          REGIONES=$(confige '.[] | .zone')
-          for REGION in ${REGIONES}; do
-            ZONA=$(confige ".[] | select(.zone == \"${REGION}\") | .resourceLabels.zona")
+          # Un despliegue por region, no por cluster: Cloud Run es regional, y con dos clusters en la misma
+          # region se desplegaba dos veces y `ZONA` recibia las dos zonas a la vez. Si una region tiene
+          # varios clusters, vale la zona del primero del array (`unique_by` conserva el primero de cada
+          # grupo), el mismo criterio que `alone`. El bucle lee del descriptor 3 y no de la entrada estándar,
+          # para que nada de lo que se ejecuta dentro (gcloud, jq…) pueda consumir sus líneas.
+          while IFS=$'\t' read -r REGION ZONA <&3; do
+            if [[ -z "${ZONA}" ]]; then
+              echo "El cluster de \"${_ENTORNO}\" en ${REGION} no tiene la label \"zona\": no se puede desplegar ${WORKSPACE} (${SERVICIO})"
+              exit 1
+            fi
             parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
-          done
+          done 3< <(confige '[.[] | {zone, zona: .resourceLabels.zona}] | unique_by(.zone) | .[] | [.zone, .zona // ""] | @tsv')
         fi
       fi
     done
