@@ -2,6 +2,14 @@
 
 ---
 
+## 2026.10.19 13:42 — [Jose]
+
+### Fixed
+
+- **`CONTRIBUTING.md` solo contaba el despliegue GKE**: los pasos Kustomizar y Desplegar describen ahora también
+  las lambdas de Cloud Run (`lambda-<zona>.sh` con `gcloud run … replace`), avisa de que ese despliegue es
+  declarativo y enlaza al README de `@mr/cli/deployment`.
+
 ## 2026.10.19 09:40 — [Jose]
 
 ### Added
