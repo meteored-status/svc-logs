@@ -37,7 +37,11 @@
         ],
         "lambda": {
             "ingress": "internal-and-cloud-load-balancing",
-            "vpc": false
+            "vpc": false,
+            "labels": {
+                "dpto": "backoffice",
+                "producto": "log"
+            }
         }
     },
     "devel": {
