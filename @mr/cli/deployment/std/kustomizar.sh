@@ -450,26 +450,24 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           # workspaces `alone` van solo al cluster de indice 0 (ver `desplegar.sh`). Antes iban forzadas
           # region y zona, asi que un entorno sin cluster en europe-west1 generaba un `lambda-belgica.sh`
           # apuntando a una zona inexistente.
-          # Antes que eso manda la label `cloud-run` del proyecto de GCP, que nombra una zona: se despliega en
-          # la region del cluster del entorno con esa label `zona`. Si el entorno no tiene ninguno (p. ej. en
-          # test, cuando test y produccion comparten proyecto), se avisa y se sigue el criterio de siempre.
-          CLUSTER_ALONE=""
-          ZONA_CLOUD_RUN=$(configl '.labels["cloud-run"] // empty')
-          if [[ -n "${ZONA_CLOUD_RUN}" ]]; then
-            # `confige` solo admite el filtro, sin `--arg`; el valor va dentro, y no puede romperlo porque los
-            # valores de las labels de GCP solo admiten minúsculas, números, `_` y `-`.
-            CLUSTER_ALONE=$(confige "[.[] | select(.resourceLabels.zona == \"${ZONA_CLOUD_RUN}\")][0] // empty | [.zone // \"\", .resourceLabels.zona] | @tsv")
-            if [[ -z "${CLUSTER_ALONE}" ]]; then
-              echo "La label \"cloud-run\" del proyecto indica la zona \"${ZONA_CLOUD_RUN}\", pero \"${_ENTORNO}\" no tiene ningún cluster en ella: ${WORKSPACE} (${SERVICIO}) se despliega con el criterio habitual"
-            fi
-          fi
-          if [[ -z "${CLUSTER_ALONE}" ]]; then
-            CLUSTER_ALONE=$(confige '([.[] | select(.zone == "europe-west1")][0] // .[0] // {}) | [.zone // "", .resourceLabels.zona // ""] | @tsv')
-          fi
+          CLUSTER_ALONE=$(confige '([.[] | select(.zone == "europe-west1")][0] // .[0] // {}) | [.zone // "", .resourceLabels.zona // ""] | @tsv')
           IFS=$'\t' read -r REGION ZONA <<< "${CLUSTER_ALONE}"
           if [[ -z "${REGION}" || -z "${ZONA}" ]]; then
             echo "No hay ningún cluster con zona en \"${_ENTORNO}\" para desplegar ${WORKSPACE} (${SERVICIO}) en solitario"
             exit 1
+          fi
+          # La label `cloud-run` del proyecto de GCP, si está, fija la region (p. ej. `europe-west1`) aunque el
+          # entorno no tenga cluster en ella. La zona es la del cluster del entorno en esa region, y si no hay
+          # ninguno, la del criterio de arriba: solo cambia la region.
+          REGION_CLOUD_RUN=$(configl '.labels["cloud-run"] // empty')
+          if [[ -n "${REGION_CLOUD_RUN}" ]]; then
+            REGION="${REGION_CLOUD_RUN}"
+            # `confige` solo admite el filtro, sin `--arg`; el valor va dentro, y no puede romperlo porque los
+            # valores de las labels de GCP solo admiten minúsculas, números, `_` y `-`.
+            ZONA_REGION=$(confige "[.[] | select(.zone == \"${REGION_CLOUD_RUN}\")][0].resourceLabels.zona // empty")
+            if [[ -n "${ZONA_REGION}" ]]; then
+              ZONA="${ZONA_REGION}"
+            fi
           fi
           parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
         else

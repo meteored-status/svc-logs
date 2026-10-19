@@ -2,6 +2,16 @@
 
 ---
 
+## 2026.10.19 11:05 — [Jose]
+
+### Fixed
+
+- **La label `cloud-run` del proyecto es una región, no una zona.** Se buscaba su valor en la label
+  `zona` de los clusters, y con `cloud-run=europe-west1` no casaba ninguno, así que la lambda acababa en
+  la región del criterio de siempre (`europe-southwest1` en un entorno sin cluster en `europe-west1`).
+  Ahora fija la región aunque el entorno no tenga cluster en ella; la zona es la del cluster de esa
+  región, o si no hay, la del criterio de siempre.
+
 ## 2026.10.19 10:56 — [Jose]
 
 ### Added
