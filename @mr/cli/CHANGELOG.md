@@ -2,6 +2,17 @@
 
 ---
 
+## 2026.10.19 09:40 — [Jose]
+
+### Added
+
+- **Labels `dpto` y `producto` en los despliegues `lambda`.** `kustomizar.sh` las pone en el servicio o
+  job y en su plantilla: la de `deploy.lambda.labels` y, si falta, la homónima del proyecto de GCP; si no
+  está en ninguno de los dos, no se pone. Un valor con un formato que Cloud Run no admite hace fallar el
+  despliegue con un mensaje.
+- **`ManifestWorkspaceDeploymentLambdaLoader.check()` conserva `deploy.lambda.labels`** (`dpto` y
+  `producto`, si son cadenas no vacías). Sin esto, `mrpack` lo borraría del `mrpack.json` al normalizarlo.
+
 ## 2026.10.2 08:45 — [Jose]
 
 ### Fixed

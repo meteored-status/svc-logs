@@ -364,11 +364,18 @@ export interface IManifestDeploymentLambda {
     vpc:             boolean;
     egress?:         Egress;
     authentication?: boolean;   // false → invoker-iam-disabled (solo servicios); por defecto true
+    labels?:         IManifestDeploymentLambdaLabels;
+}
+
+// Labels de Cloud Run; la que falte sale de la label homónima del proyecto de GCP
+export interface IManifestDeploymentLambdaLabels {
+    dpto?:     string;
+    producto?: string;
 }
 
 export class ManifestDeploymentLambda {
     public static build(deploy: IManifestDeploymentLambda): ManifestDeploymentLambda
-    public ingress: Ingress; public vpc: boolean; public egress?: Egress; public authentication?: boolean
+    public ingress: Ingress; public vpc: boolean; public egress?: Egress; public authentication?: boolean; public labels?: IManifestDeploymentLambdaLabels
     public toJSON(): IManifestDeploymentLambda
 }
 ```

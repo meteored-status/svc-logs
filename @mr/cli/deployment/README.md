@@ -417,6 +417,18 @@ ingress: detrás de un load balancer basta el de por defecto
 directamente a la URL `*.run.app`. La cuenta que despliega necesita
 `run.services.setIamPolicy`.
 
+### Labels
+
+Las labels `dpto` y `producto` se ponen en el servicio o job y en su plantilla, para
+que las tengan también las revisiones o ejecuciones. Cada una sale de
+`deploy.lambda.labels` y, si no está ahí, de la label homónima del proyecto de GCP
+(`labels.json`). Si no está en ninguno de los dos, no se pone. Un valor que no cumpla
+el formato de Cloud Run (minúsculas, números, `_` y `-`, hasta 63 caracteres) hace
+fallar `kustomizar.sh`.
+
+Tienen que ir en el YAML: las que se pongan a mano en la consola o con
+`gcloud … --update-labels` las borra el siguiente `replace`.
+
 ### Nombre del servicio o job
 
 Cada elemento de `deploy.kustomize` es un despliegue, con nombre `<dir>-<name>`: el del

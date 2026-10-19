@@ -92,7 +92,7 @@ Todos los nodos heredan de `ManifestRoot<T>` (`root.ts`), que garantiza el contr
 | `schedule` | `string` | — | CRONJOB | Expresión cron. |
 | `storage` | `IManifestDeploymentStorage` | — | BROWSER | Subida de assets a GCS. |
 | `annotations` | `IManifestDeploymentAnnotations` | — | SERVICE/CRONJOB/JOB | Anotaciones adicionales para recursos generados (K8s/Cloud Run). |
-| `lambda` | `IManifestDeploymentLambda` | — | SERVICE/CRONJOB/JOB + lambda | Configuración de red de Cloud Run (egress/ingress/authentication). |
+| `lambda` | `IManifestDeploymentLambda` | — | SERVICE/CRONJOB/JOB + lambda | Configuración de Cloud Run (egress/ingress/authentication/labels). |
 | `env` | `Record<string, string>` | — | SERVICE/CRONJOB/JOB + lambda | Variables de entorno adicionales a inyectar en el contenedor `{ NOMBRE: valor }`. |
 
 #### `ManifestDeploymentKind`
@@ -194,6 +194,7 @@ Configuración de red de Cloud Run para despliegues con `target: "lambda"`.
 | Campo | Tipo | Obligatorio | Descripción |
 |-------|------|:-----------:|-------------|
 | `authentication` | `boolean` | — | Si `false`, el servicio se puede invocar sin autenticación («Allow public access» en la consola): se añade `run.googleapis.com/invoker-iam-disabled: "true"`. Por defecto `true`. Solo servicios, no jobs. |
+| `labels` | `{ dpto?, producto? }` | — | Labels `dpto` y `producto` del servicio o job (y de sus revisiones o ejecuciones). La que falte se toma de la label homónima del proyecto de GCP; si tampoco está, no se pone. Minúsculas, números, `_` y `-`, hasta 63 caracteres. |
 | `ingress` | `Ingress` | ✅ | Tráfico entrante permitido. Por defecto `"internal-and-cloud-load-balancing"`. |
 | `egress` | `Egress` | — | Tráfico saliente. Solo aplica cuando `vpc` es `true`. |
 | `vpc` | `boolean` | ✅ | Si `true`, el servicio se conecta a la VPC del proyecto. Por defecto `false`. |

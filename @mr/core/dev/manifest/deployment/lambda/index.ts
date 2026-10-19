@@ -40,6 +40,19 @@ export const Ingress: {
 };
 
 /**
+ * Labels de un despliegue Cloud Run (`deploy.lambda.labels` en `mrpack.json`). Se ponen en el servicio o job y en
+ * su plantilla de revisión o ejecución. La que falte se toma de la label homónima del proyecto de GCP, y si
+ * tampoco está ahí, no se pone. Solo se admiten minúsculas, números, `_` y `-`, hasta 63 caracteres.
+ *
+ * @property dpto     - Departamento.
+ * @property producto - Producto.
+ */
+export interface IManifestDeploymentLambdaLabels {
+    dpto?: string;
+    producto?: string;
+}
+
+/**
  * Configuración de red de un despliegue Cloud Run (`deploy.lambda` en `mrpack.json`).
  *
  * @property authentication - Si `false`, el servicio no exige autenticación para invocarlo («Allow public
@@ -47,12 +60,14 @@ export const Ingress: {
  *                            Solo aplica a servicios, no a jobs.
  * @property ingress        - Política de tráfico entrante. Por defecto `"internal-and-cloud-load-balancing"`.
  * @property egress         - Política de tráfico saliente. Solo aplica cuando `vpc` es `true`.
+ * @property labels         - Labels `dpto` y `producto`. Ver {@link IManifestDeploymentLambdaLabels}.
  * @property vpc            - Si `true`, el servicio se conecta a la VPC del proyecto. Por defecto `false`.
  */
 export interface IManifestDeploymentLambda {
     authentication?: boolean;
     egress?: Egress;
     ingress: Ingress;
+    labels?: IManifestDeploymentLambdaLabels;
     vpc: boolean;
 }
 
@@ -69,12 +84,14 @@ export class ManifestDeploymentLambda implements IManifestDeploymentLambda {
     public authentication?: boolean;
     public egress?: Egress;
     public ingress: Ingress;
+    public labels?: IManifestDeploymentLambdaLabels;
     public vpc: boolean;
 
     protected constructor(lambda: IManifestDeploymentLambda) {
         this.authentication = lambda.authentication;
         this.egress = lambda.egress;
         this.ingress = lambda.ingress;
+        this.labels = lambda.labels;
         this.vpc = lambda.vpc;
     }
 
@@ -83,6 +100,7 @@ export class ManifestDeploymentLambda implements IManifestDeploymentLambda {
             authentication: this.authentication,
             egress: this.egress,
             ingress: this.ingress,
+            labels: this.labels,
             vpc: this.vpc,
         };
     }

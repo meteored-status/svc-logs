@@ -251,6 +251,23 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       fi
     fi
 
+    # Labels `dpto` y `producto`: la de `deploy.lambda.labels` y, si falta, la homónima del proyecto de GCP. Si
+    # no está en ninguno de los dos, no se pone. Van en el servicio o job y en su plantilla, para que las
+    # tengan también las revisiones o ejecuciones.
+    for LABEL in dpto producto; do
+      VALOR=$(configw "${RUTA}" ".deploy.lambda.labels.${LABEL} // empty")
+      if [[ -z "${VALOR}" ]]; then
+        VALOR=$(configl ".labels[\"${LABEL}\"] // empty")
+      fi
+      if [[ -n "${VALOR}" ]]; then
+        if [[ ! "${VALOR}" =~ ^[a-z0-9_-]{1,63}$ ]]; then
+          echo "Valor no válido para la label \"${LABEL}\" de ${KUSTOMIZER}-${SERVICIO}: \"${VALOR}\" (minúsculas, números, _ y -, hasta 63 caracteres)"
+          exit 1
+        fi
+        yq eval ".metadata.labels.\"${LABEL}\" = \"${VALOR}\" | .spec.template.metadata.labels.\"${LABEL}\" = \"${VALOR}\"" "${CLOUD_RUN_YAML}" -i
+      fi
+    done
+
     # Comprobar que exista la entrada deploy.env
     ENV_VARS=$(configw "${RUTA}" '.deploy.env // empty')
     if [[ -n "${ENV_VARS}" ]]; then

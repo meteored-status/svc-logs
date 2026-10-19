@@ -2,6 +2,14 @@
 
 ---
 
+## 2026.10.19 09:40 — [Jose]
+
+### Added
+
+- **`deploy.lambda.labels`** (`IManifestDeploymentLambdaLabels`): labels `dpto` y `producto`, opcionales, de
+  los despliegues `lambda`. La que falte se toma de la label homónima del proyecto de GCP; lo aplica
+  `kustomizar.sh` de `@mr/cli`.
+
 ## 2026.10.8 09:20 — [Jose]
 
 ### Fixed
