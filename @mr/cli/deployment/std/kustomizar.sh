@@ -450,7 +450,22 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           # workspaces `alone` van solo al cluster de indice 0 (ver `desplegar.sh`). Antes iban forzadas
           # region y zona, asi que un entorno sin cluster en europe-west1 generaba un `lambda-belgica.sh`
           # apuntando a una zona inexistente.
-          CLUSTER_ALONE=$(confige '([.[] | select(.zone == "europe-west1")][0] // .[0] // {}) | [.zone // "", .resourceLabels.zona // ""] | @tsv')
+          # Antes que eso manda la label `cloud-run` del proyecto de GCP, que nombra una zona: se despliega en
+          # la region del cluster del entorno con esa label `zona`. Si el entorno no tiene ninguno (p. ej. en
+          # test, cuando test y produccion comparten proyecto), se avisa y se sigue el criterio de siempre.
+          CLUSTER_ALONE=""
+          ZONA_CLOUD_RUN=$(configl '.labels["cloud-run"] // empty')
+          if [[ -n "${ZONA_CLOUD_RUN}" ]]; then
+            # `confige` solo admite el filtro, sin `--arg`; el valor va dentro, y no puede romperlo porque los
+            # valores de las labels de GCP solo admiten minúsculas, números, `_` y `-`.
+            CLUSTER_ALONE=$(confige "[.[] | select(.resourceLabels.zona == \"${ZONA_CLOUD_RUN}\")][0] // empty | [.zone // \"\", .resourceLabels.zona] | @tsv")
+            if [[ -z "${CLUSTER_ALONE}" ]]; then
+              echo "La label \"cloud-run\" del proyecto indica la zona \"${ZONA_CLOUD_RUN}\", pero \"${_ENTORNO}\" no tiene ningún cluster en ella: ${WORKSPACE} (${SERVICIO}) se despliega con el criterio habitual"
+            fi
+          fi
+          if [[ -z "${CLUSTER_ALONE}" ]]; then
+            CLUSTER_ALONE=$(confige '([.[] | select(.zone == "europe-west1")][0] // .[0] // {}) | [.zone // "", .resourceLabels.zona // ""] | @tsv')
+          fi
           IFS=$'\t' read -r REGION ZONA <<< "${CLUSTER_ALONE}"
           if [[ -z "${REGION}" || -z "${ZONA}" ]]; then
             echo "No hay ningún cluster con zona en \"${_ENTORNO}\" para desplegar ${WORKSPACE} (${SERVICIO}) en solitario"
@@ -458,11 +473,18 @@ if [[ -f "DESPLEGAR.txt" ]]; then
           fi
           parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
         else
-          REGIONES=$(confige '.[] | .zone')
-          for REGION in ${REGIONES}; do
-            ZONA=$(confige ".[] | select(.zone == \"${REGION}\") | .resourceLabels.zona")
+          # Un despliegue por region, no por cluster: Cloud Run es regional, y con dos clusters en la misma
+          # region se desplegaba dos veces y `ZONA` recibia las dos zonas a la vez. Si una region tiene
+          # varios clusters, vale la zona del primero del array (`unique_by` conserva el primero de cada
+          # grupo), el mismo criterio que `alone`. El bucle lee del descriptor 3 y no de la entrada estándar,
+          # para que nada de lo que se ejecuta dentro (gcloud, jq…) pueda consumir sus líneas.
+          while IFS=$'\t' read -r REGION ZONA <&3; do
+            if [[ -z "${ZONA}" ]]; then
+              echo "El cluster de \"${_ENTORNO}\" en ${REGION} no tiene la label \"zona\": no se puede desplegar ${WORKSPACE} (${SERVICIO})"
+              exit 1
+            fi
             parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
-          done
+          done 3< <(confige '[.[] | {zone, zona: .resourceLabels.zona}] | unique_by(.zone) | .[] | [.zone, .zona // ""] | @tsv')
         fi
       fi
     done
