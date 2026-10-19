@@ -3,12 +3,12 @@
 > **Nota sobre este archivo:** la copia canónica vive en `@mr/core/dev/AGENTS.md` y en la raíz del proyecto se expone mediante el enlace simbólico `AGENTS.md`.
 
 ## Contexto rapido del monorepo
-- `web-www` es un monorepo Yarn 4 (`packageManager: yarn@4.16.0`) con workspaces en `@mr/*`, `framework/*`, `packages/*`, `services/*`, `jobs/*`, `cronjobs/*`.
+- Monorepo Yarn 4: la versión exacta está en `packageManager` y la lista de workspaces en `workspaces`, los dos en el `package.json` raíz.
 - La orquestacion de desarrollo/build no se hace con scripts ad-hoc por servicio: se centraliza en `mrpack` (`@mr/cli/bin/mrpack.js`).
 - Capas principales: `@mr/core/*` (infra compartida), `framework/services-comun` (runtime legacy comun), `services/*` (apps desplegables), `packages/*` (librerias funcionales).
 
 ## Arquitectura y limites entre componentes
-- Los servicios Node arrancan con el patron `Main.ejecutar(Engine, Configuracion)` (ejemplo: `services/www-frontend/main.ts`, `services/www-estaticos/main.ts`).
+- Los servicios Node arrancan con el patron `Main.ejecutar(Engine, Configuracion)` (ver el `main.ts` de cualquier workspace de `services/`).
 - El ciclo de vida real (carga config, sidecar Istio, master/worker, shutdown cronjob) vive en `framework/services-comun/main.ts`.
 - HTTP/WebSocket compartido vive en `@mr/core/network`:
   - HTTP: router declarativo por `Routes` + `RouteGroup` (`@mr/core/network/server/http/README.md`).
@@ -18,8 +18,8 @@
 ## Flujos de trabajo criticos
 - Desarrollo (ejecutar habilitados en `config.workspaces.json`): `yarn run devel`
 - Compilar TODOS los workspaces habilitados (una sola vez, sin watch; termina al acabar): `yarn run packd`
-  (equivale a `yarn mrpack devel -c`). Solo compila los marcados como habilitados en
-  `config.workspaces.json` (propiedad `packd.available`/`packd.disabled`).
+  (equivale a `yarn mrpack devel -c`). Solo compila los marcados con `compilar` en
+  `config.workspaces.json`, que se gestiona con `yarn mrpack config`.
 - **Un agente de IA que necesite compilar todo el proyecto debe usar SIEMPRE `-f`/`--forzar`
   además de `-c`**: `yarn mrpack devel -c -f` (equivale a `yarn run packd-f`). Así se compilan
   también los workspaces deshabilitados en `config.workspaces.json`, sin que el resultado
@@ -35,11 +35,12 @@
   arreglan errores de framework ajeno a la tarea. Los `warn` son deuda conocida. Configuracion y reglas en
   `@mr/core/lint/` (ver su `README.md`).
 - Actualizacion de stack del monorepo: `yarn run update`
-- Tras update, aplicar migraciones automatizadas SIEMPRE: `yarn run patch:apply`.
-- Ejecutar scripts de un workspace desde raiz: `yarn run www-frontend <script>` (atajo de `yarn workspace www-frontend <script>`).
-- No hay script raiz `test`: las pruebas se lanzan por workspace, `yarn run <workspace> test`. De momento
-  solo las tiene `services-comun` (`yarn run services-comun test`); para el resto, valida con
-  compilacion/watch del workspace afectado y comandos `mrpack`.
+- `yarn run update` aplica por su cuenta los parches de migración cuando trae cambios de framework;
+  `yarn run patch:apply` solo hace falta para relanzarlos a mano.
+- Ejecutar scripts de un workspace desde raiz: `yarn run <workspace> <script>` (atajo de `yarn workspace <workspace> <script>`, en los workspaces que lo tienen declarado en el `package.json` raíz).
+- No hay script raiz `test`: las pruebas se lanzan por workspace (`yarn workspace <nombre> test`) en los que
+  tienen script `test`; el arnés de referencia es el de `services-comun` (`yarn run services-comun test`).
+  Para el resto, valida con compilacion/watch del workspace afectado y comandos `mrpack`.
 - Se pueden y conviene escribir pruebas cuando la tarea lo permita — ver la seccion «Preferencias de flujo
   de trabajo» de `.github/copilot-instructions.md` para el criterio y las reglas del arnes (`node:test`, sin
   runners nuevos, `*.spec.ts` en `spec/` y nunca dentro de `modules/`).
@@ -49,20 +50,12 @@
 - Claude Code no lee `AGENTS.md` ni `.github/copilot-instructions.md` automaticamente: `CLAUDE.md` en raíz (symlink a `@mr/core/dev/CLAUDE.md`) importa explícitamente ambos (`@AGENTS.md` y `@.github/copilot-instructions.md`) para que reciba las mismas instrucciones sin duplicar contenido. Ojo: una mención a un fichero entre backticks (como la de la línea de arriba) es solo texto — no es un import; el import real requiere la sintaxis `@ruta` sin backticks.
 - Mantener `CODEMAP.md` en la misma tarea cuando haya cambios significativos (modulos, API publica, rutas, flujos o reorganizacion). Si no existe, crearlo y enlazarlo desde el `README.md` mas cercano.
 - Esta regla se hace cumplir tambien mediante un hook `Stop` de Claude Code
-  (`.claude/hooks/check-codemap.mjs`, declarado en `.claude/settings.json`). Todo `.claude/` es
-  symlink a `@mr/core/dev/.claude/` (igual que `.github/`), expuesto por `initClaudeDir()` en
-  `@mr/cli/src/clases/init/symlinks.ts`; `.claude/settings.local.json` (local) queda
-  excluido tanto del envio del framework (`@mr/core/dev/.claude/.mr-ignore`) como del `.gitignore`
-  raiz de cada monorepo consumidor (`**/.claude/settings.local.json` en la plantilla `IGNORE` de
-  `@mr/cli/src/clases/init/ignore.ts`), asi que nunca se versiona ni se propaga. Al
-  terminar un turno con cambios sin comitear,
-  agrupa los ficheros de codigo modificados por workspace (directorio con `package.json` mas
-  cercano, excluyendo la raiz del monorepo) y bloquea una vez si algun workspace con cambios
-  significativos (fichero nuevo, o >=15 lineas modificadas) no toco su `CODEMAP.md`, o su
-  `CHANGELOG.md` si ya existia. Solo analiza working tree (no commits), y por el guardrail
-  `stop_hook_active` de Claude Code el bloqueo ocurre como maximo una vez por intento de parada
-  (evita bucles infinitos). Ver `@mr/core/dev/README.md` y `@mr/core/dev/.claude/CODEMAP.md`
-  para el detalle de la heuristica.
+  (`.claude/hooks/check-codemap.mjs`). Al terminar un turno con cambios sin comitear, bloquea como
+  maximo una vez si algun workspace (directorio con `package.json` mas cercano, sin contar la raiz)
+  tiene cambios significativos —fichero nuevo, o >=15 lineas modificadas— y no toco su `CODEMAP.md`,
+  o su `CHANGELOG.md` si ya existia. Solo mira el working tree, no los commits. El detalle de la
+  heuristica y de como se expone `.claude/` esta en `@mr/core/dev/README.md` y
+  `@mr/core/dev/.claude/CODEMAP.md`.
 - TypeScript estricto; evitar `any` explicito salvo necesidad real.
 - Imports en 3 bloques con una linea en blanco: (1) node/publico, (2) otros workspaces, (3) local relativo; usar `type` en imports solo-tipo.
 - Entre workspaces usa imports por nombre de paquete (`@mr/core-network/...`, `services-comun/...`), no rutas relativas cruzadas.

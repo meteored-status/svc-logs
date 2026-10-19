@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Tue, 22 Sep 2026 13:56:38 GMT
- * Hash: f3e08ec44ea16e6eb7774d7e78cbdb40
- * Versión: 2026.9.22+1-bixus
- * Anterior: 2026.7.24+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Pedro
+ * Fecha: Mon, 05 Oct 2026 10:56:47 GMT
+ * Hash: 13d6792ce48426f0cdafc6b8c014134e
+ * Versión: 2026.10.5+1-pedro
+ * Anterior: 2026.9.22+1-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-panel-usuarios.git
  */
 
 import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations.ts";
@@ -80,8 +80,23 @@ export const Target: {
     none: "none",
 };
 
-/** Datos de un bucket de Google Storage: clave → nombre de bucket o lista de buckets. */
-export type TManifestDeploymentBucketData = Record<string, string|string[]>;
+/**
+ * Forma de objeto de un bucket de Google Storage, para cuando además de los nombres hace falta un prefijo.
+ *
+ * @property buckets - Nombre del bucket o lista de buckets.
+ * @property basePath - Prefijo de almacenamiento dentro del bucket. Se concatena tal cual delante de la ruta
+ *                      del objeto, así que si es una carpeta debe llevar la barra final (`"prefijo/"`).
+ */
+export interface IManifestDeploymentBucket {
+    buckets: string | string[];
+    basePath?: string;
+}
+
+/** Valor de un bucket de Google Storage: nombre, lista de nombres o {@link IManifestDeploymentBucket}. */
+export type TManifestDeploymentBucketValue = string | string[] | IManifestDeploymentBucket;
+
+/** Datos de buckets de Google Storage: clave → {@link TManifestDeploymentBucketValue}. */
+export type TManifestDeploymentBucketData = Record<string, TManifestDeploymentBucketValue>;
 
 interface IManifestDeploymentBuckets {
     produccion: TManifestDeploymentBucketData;

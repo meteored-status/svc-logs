@@ -1,20 +1,29 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 6e0f3aaa2a3659684afbfc80f67b694f
- * Versión: 2026.9.23+3-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Fri, 09 Oct 2026 06:20:32 GMT
+ * Hash: 6ad0b6725387ad3d7f45e98df6b7547b
+ * Versión: 2026.10.9+1-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
  */
 
 import type {Message as PubSubMessage} from "@google-cloud/pubsub";
 
 export class Message<T> {
     /* INSTANCE */
-    public constructor(private readonly msg: PubSubMessage) {
-    }
-
     public get data(): T {
         return JSON.parse(this.msg.data.toString());
+    }
+
+    /**
+     * Los atributos del mensaje de Pub/Sub (los que se envian con `sendMessage({json, attributes})`); vacio si no trae ninguno. Son los mismos por
+     * los que puede filtrar una suscripcion (`attributes.clave = "valor"`).
+     */
+    public get attributes(): Readonly<Record<string, string>> {
+        return this.msg.attributes ?? {};
+    }
+
+    public constructor(private readonly msg: PubSubMessage) {
     }
 
     public accept(): void {

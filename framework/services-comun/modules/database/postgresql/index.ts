@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: bbb58bc168cc59f3976ad3e5d822725b
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.6.17+1-juancmartinez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 06 Oct 2026 13:34:18 GMT
+ * Hash: 1325b842689266ea7e0e2f3d484cd282
+ * Versión: 2026.10.6+1-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
  */
 
 import type {PoolConfig, QueryResult} from "pg";
@@ -12,6 +12,7 @@ import {Pool} from "pg";
 import type {FSWatcher} from "node:fs";
 import {watch} from "node:fs";
 
+import {startupOptions} from "./startup-options";
 import {Transaction} from "./transaction";
 import {arrayChop} from "../../utiles/array";
 import {PromiseDelayed} from "../../utiles/promise";
@@ -21,10 +22,23 @@ import {Notify} from "./notify/notify";
 import {Lock} from "./lock/lock";
 import {md5} from "../../utiles/hash";
 
+/**
+ * Opciones de las conexiones de un `PostgreSQL`/`AlloyDB`, encima de las credenciales.
+ *
+ * @property max                     - Conexiones como mucho en cada pool.
+ * @property idleTimeoutMillis       - Cuanto aguanta abierta una conexion sin usar.
+ * @property connectionTimeoutMillis - Cuanto se espera a conseguir una conexion.
+ * @property settings                - Parametros de sesion de PostgreSQL que se fijan en CADA conexion al abrirla (`work_mem`,
+ *   `statement_timeout`, el umbral de una extension como `pg_trgm.similarity_threshold`...). Viajan como opciones de arranque
+ *   (`-c nombre=valor`), asi que valen tambien fuera de una transaccion y no se quedan pegados en una conexion que use otro: el
+ *   pool es de quien los pidio. Para consultas que necesiten ajustes distintos, se construye otro `PostgreSQL`/`AlloyDB` con los
+ *   suyos (cada uno tiene sus pools).
+ */
 export interface IPostgreSQLConnectionOptions {
     max?: number;
     idleTimeoutMillis?: number;
     connectionTimeoutMillis?: number;
+    settings?: Record<string, string|number>;
 }
 
 interface IPostgreSQLCommon extends IPostgreSQLConnectionOptions {
@@ -133,12 +147,15 @@ class PostgreSQLCluster {
         return new Pool(await this.loadHost(data));
     }
 
-    private async loadHost(host: IPostgreSQLHost): Promise<PoolConfig> {
+    private async loadHost({settings, ...host}: IPostgreSQLHost): Promise<PoolConfig> {
         const certs = host.ssl;
 
         const config: PoolConfig = {
             ...host,
             database: this.database,
+        }
+        if (settings !== undefined && Object.keys(settings).length > 0) {
+            config.options = startupOptions(settings);
         }
 
         if (certs) {

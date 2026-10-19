@@ -2,6 +2,15 @@
 
 ---
 
+## 2026.10.9 08:17 — [Juan C. Martínez]
+
+### Added
+- `modules/messages/pubsub/v2/message.ts` — `Message#attributes`: los atributos del mensaje de Pub/Sub
+  (`Readonly<Record<string, string>>`, vacío si no trae ninguno). Publicar con atributos ya se podía
+  (`sendMessage({json, attributes})`), pero al recibir no había forma de leerlos sin tocar el campo
+  privado `msg`. Son los mismos por los que filtra una suscripción (`attributes.clave = "valor"`), y
+  sirven para que varios consumidores compartan un topic y cada uno descarte lo que no es suyo.
+
 ## 2026.10.1 08:17 — [Juan C. Martínez]
 
 ### Fixed

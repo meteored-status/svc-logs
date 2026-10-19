@@ -39,7 +39,9 @@ export default (env: IEnv) => Configuration[]
 2. Lee `package.json` y `mrpack.json` del workspace; construye `Manifest`.
 3. Detecta `rules.js` opcional en la raíz del workspace.
 4. Devuelve un array de configuraciones:
-   - **[0]** bundle principal: `configuracion({ runtime: manifest.deploy.runtime, ... })`
+   - **[0]** bundle principal: `configuracion({ runtime: manifest.deploy.runtime, ... })`. Se omite
+     si el runtime es `browser` y `build.bundle.entries` está vacío (evita que su `clean` borre
+     `output/bundle` tras escribirlo los bundles web)
    - **[1..N]** bundles web: uno por cada `manifest.build.bundle.web[]`, forzando `runtime: Runtime.browser`
 
 **Variables de entorno recibidas:**

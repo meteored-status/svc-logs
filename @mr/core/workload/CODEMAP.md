@@ -8,7 +8,7 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 @mr/core/workload/
 ├─ config/
 │  ├─ index.ts        — Configuracion base + IConfiguracion (pod/env); cargar() sobreescribe defecto con files/config.json
-│  ├─ pod.ts          — creacion de IPodInfo
+│  ├─ pod.ts          — creacion de IPodInfo; `aplanarBuckets()` aplana `deploy.buckets` (string / string[] / {buckets, basePath?}) en `buckets: Record<string, string|string[]>` + `bucketsBasePath?: Record<string, string>`
 │  └─ net.ts          — ConfiguracionNet + IConfiguracionNet (config de red)
 ├─ engine/
 │  ├─ index.ts       — Engine base (build, ciclo de vida, abort, métricas)

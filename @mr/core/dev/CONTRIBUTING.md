@@ -112,11 +112,9 @@ apliquen; no es obligatorio incluir todas en cada entrada.
 distingue una de otra. Basta la hora local en `HH:MM`; no hay que acertar al minuto ni
 mirar el reloj dos veces.
 
-Lo que **no** se debe usar es un contador (`(1)`, `(2)`, …). Se llegó a usar sin estar
-escrito aquí, y falla exactamente donde más duele: para saber qué número toca hay que leer
-lo que han escrito los demás, y dos sesiones que escriben a la vez eligen el mismo. Pasó
-cinco veces en un solo día, y cada colisión se arregla a mano renumerando la propia —nunca
-la del otro, que ya está comiteada—. Una hora se sabe sin preguntarle a nadie.
+Lo que **no** se debe usar es un contador (`(1)`, `(2)`, …): para saber qué número toca hay
+que leer lo que han escrito los demás, y dos sesiones que escriben a la vez eligen el mismo.
+Una hora se sabe sin preguntarle a nadie.
 
 Las entradas antiguas que llevan contador **se dejan como están**: son historial ya
 publicado, y renumerarlas no arregla nada.

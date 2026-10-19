@@ -1,13 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 242fc0261988608453574ab767662423
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.14+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Fecha: Fri, 02 Oct 2026 06:53:09 GMT
+ * Hash: 069d58f68f67e78d05aff4542e40f297
+ * Versión: 2026.10.2+2-bixus
+ * Anterior: 2026.9.7+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-logs.git
  */
 
-import {Egress, Ingress, type IManifestDeploymentLambda} from "@mr/core-dev/manifest/deployment/lambda";
+import {Egress, Ingress, type IManifestDeploymentLambda, type IManifestDeploymentLambdaLabels} from "@mr/core-dev/manifest/deployment/lambda";
 
 /**
  * Normaliza la sección `deploy.lambda` del `mrpack.json` de un workspace.
@@ -35,7 +35,11 @@ class ManifestWorkspaceDeploymentLambdaLoader {
      *
      * Los valores de `egress` e `ingress` que no pertenezcan al enum permitido
      * son ignorados y se conserva el valor por defecto. La propiedad `vpc`
-     * se copia tal cual, usando `false` si no está definida.
+     * se copia tal cual, usando `false` si no está definida. `authentication`
+     * se copia solo si es booleano; si no, se omite y vale lo de por defecto
+     * (`true`), sin escribirlo en el `mrpack.json`. De `labels` se conservan
+     * `dpto` y `producto` si son cadenas no vacías; si no queda ninguna, se omite
+     * `labels` entero.
      *
      * @param lambda - Bloque `deploy.lambda` parcial del manifest.
      * @returns Configuración `lambda` completa y validada.
@@ -52,6 +56,13 @@ class ManifestWorkspaceDeploymentLambdaLoader {
             }
         }
         data.vpc = lambda.vpc ?? false;
+        if (typeof lambda.authentication === "boolean") {
+            data.authentication = lambda.authentication;
+        }
+        const labels = this.checkLabels(lambda.labels);
+        if (labels) {
+            data.labels = labels;
+        }
 
         if (data.vpc) {
             if (lambda.egress && (lambda.egress===Egress.all || lambda.egress===Egress.private)) {
@@ -62,6 +73,30 @@ class ManifestWorkspaceDeploymentLambdaLoader {
         }
 
         return data;
+    }
+
+    /**
+     * Conserva de `deploy.lambda.labels` solo `dpto` y `producto`, y solo si son cadenas no vacías. El formato
+     * de los valores no se valida aquí, sino al desplegar (`kustomizar.sh`), que también completa las que faltan
+     * con las del proyecto de GCP.
+     *
+     * @param labels - Bloque `deploy.lambda.labels` del manifest.
+     * @returns Labels válidas, o `undefined` si no queda ninguna.
+     */
+    private checkLabels(labels?: Partial<IManifestDeploymentLambdaLabels>): IManifestDeploymentLambdaLabels | undefined {
+        if (!labels) {
+            return undefined;
+        }
+
+        const data: IManifestDeploymentLambdaLabels = {};
+        if (typeof labels.dpto === "string" && labels.dpto.length>0) {
+            data.dpto = labels.dpto;
+        }
+        if (typeof labels.producto === "string" && labels.producto.length>0) {
+            data.producto = labels.producto;
+        }
+
+        return Object.keys(data).length>0 ? data : undefined;
     }
 }
 

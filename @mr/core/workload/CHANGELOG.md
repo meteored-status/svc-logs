@@ -2,6 +2,16 @@
 
 ---
 
+## 2026.9.29 08:15 — [David]
+
+### Changed
+
+- **`IPodInfo.buckets` conserva su tipo (`Record<string, string | string[]>`)** aunque el manifiesto admita
+  `{buckets, basePath?}`: `crearPodInfo()` aplana esa forma con la nueva `aplanarBuckets()` (exportada) y deja
+  solo los nombres. El prefijo va en el nuevo campo opcional `IPodInfo.bucketsBasePath` (clave → `basePath`,
+  solo para las claves que lo definen), de modo que los consumidores existentes de `pod.buckets` no se rompen.
+
+
 ## 2026.9.23 09:25 — [Jose]
 
 ### Changed
