@@ -2,6 +2,15 @@
 
 ---
 
+## 2026.10.19 10:56 — [Jose]
+
+### Added
+
+- **La label `cloud-run` del proyecto de GCP elige dónde se despliegan las lambdas con `alone`.** Nombra
+  una zona, y `kustomizar.sh` despliega en la región del cluster del entorno con esa label `zona`, antes
+  que el criterio de siempre (`europe-west1` o el primer cluster). Si el entorno no tiene ningún cluster
+  en esa zona, lo avisa y sigue el criterio de siempre. Sin `alone` no se usa.
+
 ## 2026.10.19 10:49 — [Jose]
 
 ### Fixed

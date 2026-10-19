@@ -457,6 +457,13 @@ y si no, en el primero del array. Es el mismo criterio que sigue el despliegue G
 entorno no tiene ningún cluster con label `zona`, el paso falla en lugar de generar un
 despliegue hacia una zona inexistente.
 
+Antes que ese criterio manda la label **`cloud-run`** del proyecto de GCP, que nombra
+una **zona** (p. ej. `cloud-run=holanda`): los workspaces `alone` se despliegan en la
+región del cluster del entorno cuya label `zona` coincide. Si el entorno no tiene
+ningún cluster en esa zona —en test, cuando test y producción comparten proyecto—,
+`kustomizar.sh` lo avisa en el log y sigue el criterio de siempre. Sin `alone`, la
+label no se usa.
+
 ---
 
 ## Flujo de versiones
