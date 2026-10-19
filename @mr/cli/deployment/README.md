@@ -463,8 +463,9 @@ cluster en ella. La zona es la del cluster del entorno en esa región, y si no h
 ninguno, la que habría dado el criterio de arriba: solo cambia la región. Sin `alone`,
 la label no se usa.
 
-Con `deploy.lambda.vpc = true`, la subred sale de la label `subnetwork` del proyecto, y
-tiene que estar en la región donde se despliega: la label `cloud-run` no la cambia.
+Con `deploy.lambda.vpc = true`, la subred sale de la label `subnetwork` del proyecto.
+Se busca por nombre en la región donde se despliega, así que en esa región tiene que
+existir una subred con ese nombre.
 
 ---
 
