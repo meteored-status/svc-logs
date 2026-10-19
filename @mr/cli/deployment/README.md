@@ -443,9 +443,12 @@ borrar.
 
 ### Región y zona de destino
 
-Por defecto un workspace `lambda` se despliega **una vez por cluster** del entorno:
-`kustomizar.sh` recorre `entornos.json` y llama a `parseWorkspaceLambdaZona()` con
-la `.zone` y la `.resourceLabels.zona` de cada uno.
+Por defecto un workspace `lambda` se despliega **una vez por región** con cluster en
+el entorno: `kustomizar.sh` recorre `entornos.json` y llama a
+`parseWorkspaceLambdaZona()` con la `.zone` del cluster como región y su
+`.resourceLabels.zona` como zona. Si una región tiene varios clusters, se despliega
+una sola vez, con la zona del primero del array. Un cluster sin la label `zona` hace
+fallar el despliegue.
 
 Con `deploy.alone = true` en el `mrpack.json` del workspace se despliega **una sola
 vez**: en la región de Bélgica (`europe-west1`) si el entorno tiene un cluster allí,
@@ -453,6 +456,13 @@ y si no, en el primero del array. Es el mismo criterio que sigue el despliegue G
 `desplegar.sh`, donde los workspaces `alone` van solo al cluster de índice `0`. Si el
 entorno no tiene ningún cluster con label `zona`, el paso falla en lugar de generar un
 despliegue hacia una zona inexistente.
+
+Antes que ese criterio manda la label **`cloud-run`** del proyecto de GCP, que nombra
+una **zona** (p. ej. `cloud-run=holanda`): los workspaces `alone` se despliegan en la
+región del cluster del entorno cuya label `zona` coincide. Si el entorno no tiene
+ningún cluster en esa zona —en test, cuando test y producción comparten proyecto—,
+`kustomizar.sh` lo avisa en el log y sigue el criterio de siempre. Sin `alone`, la
+label no se usa.
 
 ---
 
