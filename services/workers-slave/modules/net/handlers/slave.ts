@@ -91,7 +91,7 @@ class Slave extends RouteGroup<Configuracion>{
 
                     const salida = await this.sendRespuesta(conexion);
 
-                    if (post.message?.attributes!=undefined) {
+                    if (post.message?.attributes!==undefined) {
                         this.parseWorker(post.message.attributes);
                     }
 

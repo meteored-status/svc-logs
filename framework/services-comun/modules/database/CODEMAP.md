@@ -80,6 +80,7 @@ implementaciones intercambiables: `MemoryCache` (proceso), `DiskCache` (fichero)
 | Fichero | Símbolos exportados |
 |---------|---------------------|
 | `postgresql/index.ts` | `PostgreSQL implements AsyncDisposable`, `IPostgreSQL`, `IPostgreSQLConnectionOptions`, `IPostgreSQLBuild`, `TipoRegistro`, `IInsert`, `TListener` |
+| `postgresql/startup-options.ts` | `startupOptions` (los `settings` de la conexion como opcion de arranque `-c nombre=valor` de libpq) |
 | `postgresql/transaction.ts` | `Transaction extends TransactionBase`, `TIsolationLevel` |
 | `postgresql/postgre-s-q-l-transaction-manager.ts` | `PostgreSQLTransactionManager extends TransactionManager` |
 | `postgresql/notify/notify.ts` | `Notify`, `NotifyCallback` |
@@ -91,6 +92,12 @@ implementaciones intercambiables: `MemoryCache` (proceso), `DiskCache` (fichero)
 (`IPostgreSQLHost`/`IPostgreSQLSocket`), es `AsyncDisposable` (`using`/`await using`). `Notify` implementa
 el patrón `LISTEN`/`NOTIFY` de PostgreSQL con callback tipado (`TListener`); `Lock` implementa locks
 consultivos (`pg_advisory_lock` o equivalente) sobre la misma conexión.
+
+`IPostgreSQLConnectionOptions.settings` fija parámetros de sesión (`work_mem`, `statement_timeout`,
+`pg_trgm.similarity_threshold`...) en CADA conexión de los pools de esa instancia, como opciones de arranque: valen
+fuera de una transacción —a diferencia de `SET LOCAL`— y no se quedan pegados en una conexión que use otro. Para
+consultas con ajustes distintos se construye otro `PostgreSQL`/`AlloyDB` con los suyos (cada uno tiene sus pools).
+Prueba en `spec/database/postgresql/startup-options.spec.ts`.
 
 **Reutilizado por:** `AlloyDB` (hereda `PostgreSQL` íntegro) y `AlloyDBTransactionManager` (hereda
 `PostgreSQLTransactionManager`).

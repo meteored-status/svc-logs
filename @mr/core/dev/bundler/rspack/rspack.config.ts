@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: 7d101a4c93064278ba047d8e204bc166
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.7.17+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Fecha: Tue, 06 Oct 2026 09:03:25 GMT
+ * Hash: 2fb3fb8d31bfe5f76893aa927956b03b
+ * Versión: 2026.10.6+1-bixus
+ * Anterior: 2026.9.23+2-bixus
+ * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
 import {existsSync, type PathLike, type PathOrFileDescriptor, readFileSync, statSync} from "node:fs";
@@ -55,6 +55,8 @@ interface IPackageJson {
  * un array de configuraciones:
  *
  * 1. **Bundle principal** — usa el `runtime` declarado en `mrpack.json` (normalmente `node`).
+ *    Se omite si el runtime es `browser` y `build.bundle` no declara `entries`: no emitiría
+ *    nada y, al compartir `output/bundle` con `clean: true`, vaciaría la salida de los bundles web.
  * 2. **Bundles web** — uno por cada entrada en `manifest.build.bundle.web`, compilados
  *    siempre con `Runtime.browser`.
  *
@@ -84,8 +86,11 @@ export default (env: IEnv) => {
     const database = entorno === "produccion"
         ? manifest.build.database?.produccion
         : manifest.build.database?.test;
-
-    return [
+    // Un bundle principal browser sin entradas no emite nada, pero comparte `output/bundle` con
+    // `clean: true` con los bundles web y borraría lo que estos acaban de escribir.
+    const principalVacio = manifest.deploy.runtime === Runtime.browser
+        && Object.keys(manifest.build.bundle.entries ?? {}).length === 0;
+    const principal = principalVacio ? [] : [
         configuracion({
             basedir,
             bundle: manifest.build.bundle,
@@ -97,6 +102,10 @@ export default (env: IEnv) => {
             database,
             rules,
         }),
+    ];
+
+    return [
+        ...principal,
         ...manifest.build.bundle.web.map((bundle) => configuracion({
             basedir,
             bundle,

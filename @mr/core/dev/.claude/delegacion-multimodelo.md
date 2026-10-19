@@ -84,7 +84,7 @@ problema, las evidencias que ya haya, dónde está el código y qué se ha inten
 cómo es cosa suya. Tampoco le pidas que enseñe su razonamiento paso a paso: piensa siempre, pero no
 devuelve ese razonamiento, así que pedirlo solo empeora lo que sí devuelve.
 
-Cuesta del orden del doble que Opus por token y sus turnos duran minutos. Con la prioridad de este
+Es bastante más caro que Opus por token y sus turnos duran minutos. Con la prioridad de este
 proyecto (calidad > ausencia de errores > coste) eso no lo descarta, pero sí lo saca de cualquier
 bucle de iteración rápida: es una llamada que se hace una vez, con la pregunta bien puesta.
 
@@ -118,41 +118,9 @@ hecho de qué modelo viene un informe.
 
 ## Control de gasto en los modelos caros
 
-Los dos modelos caros (Opus y Fable) piden confirmación antes de invocarse. Ya está puesto en
-`.claude/settings.json`, no hay que añadirlo:
-
-```json
-{
-  "permissions": {
-    "ask": [
-      "Agent(opus-planner)",
-      "Agent(fable-architect)",
-      "Agent(model:opus)",
-      "Agent(model:fable)"
-    ]
-  }
-}
-```
-
-`permissions.ask` es la clave correcta en `.claude/settings.json` para reglas que piden
-confirmación antes de ejecutar (a diferencia de `permissions.allow`/`permissions.deny`, que
-permiten o bloquean sin preguntar). Las reglas que hacen el trabajo son
-[`Agent(<nombre-del-subagente>)`](https://code.claude.com/docs/en/permissions#agent-subagents), que
-es la forma documentada de nombrar un subagente.
-
-Las de `model` no bastan por sí solas: `Tool(param:valor)` casa contra **un parámetro de la
-llamada**, no contra la configuración del subagente, y
-[un parámetro que la llamada omite no casa nunca](https://code.claude.com/docs/en/permissions#match-by-input-parameter).
-Como el modelo de un subagente lo fija el `model:` de su frontmatter, al despachar por nombre el
-parámetro `model` no viaja y esa regla no se dispara. Se mantienen las dos para cubrir un override
-explícito de modelo en la llamada. Las llamadas a `sonnet-builder` siguen sin interrupciones.
-
-La documentación solo ilustra `Agent(<nombre>)` en `deny`; si alguna vez deja de pedir confirmación,
-míralo con `/permissions` desde una sesión interactiva de `claude` en terminal, que lista las reglas
-en efecto y de qué `settings.json` sale cada una. No esperes que te avise nada por tu cuenta: el
-aviso de arranque solo comprueba **el nombre de la herramienta**, y `Agent` es conocida, así que una
-regla que apunte a un subagente inexistente o mal escrito no salta — que es justo el fallo que
-querrías cazar. Y `claude --verbose` enseña los parámetros de cada llamada.
+Las llamadas a `opus-planner` y `fable-architect` piden confirmación antes de ejecutarse (reglas
+`permissions.ask` en `.claude/settings.json`); las de `sonnet-builder` no se interrumpen. Por qué las
+reglas tienen esa forma y cómo comprobar que siguen activas: `@mr/core/dev/README.md`.
 
 Esto es visibilidad, no un freno: la prioridad del proyecto sigue siendo calidad > ausencia de
 errores > coste, y una confirmación no es motivo para bajar a un modelo más barato una tarea que
@@ -163,10 +131,10 @@ pedía el caro.
 - No repitas preguntas de confirmación para subtareas que ya se resolvieron sin ambigüedad.
 - Si `sonnet-builder` reporta que una subtarea resultó ser más ambigua o arriesgada de lo previsto,
   reasígnala a `opus-planner` en vez de forzar que la termine él.
-- **No hay un agente para lo mecánico.** Lo hubo (`haiku-mechanic`, en Haiku) y se quitó el
-  2026-09-23: en mes y medio se usó dos veces, ahorraba céntimos, y cada vez que una tarea «mecánica»
-  resultaba no serlo había que rehacerla en `sonnet-builder` y se pagaba dos veces. Un formateo o un
-  renombrado literal los hace `sonnet-builder` dentro de su propio cambio, sin trocear la tarea.
+- **No hay un agente para lo mecánico.** Un formateo o un renombrado literal los hace `sonnet-builder`
+  dentro de su propio cambio, sin trocear la tarea: una tarea «mecánica» que resulta no serlo acaba
+  rehaciéndose en `sonnet-builder` y se paga dos veces, y el ahorro de un modelo más barato no lo
+  compensa.
 - Si un mismo fallo ya se ha intentado arreglar dos o más veces y cada intento destapó una causa
   distinta, deja de reasignar a `opus-planner`: eso es exactamente la señal de `fable-architect`.
 - Este protocolo aplica solo a tareas no triviales; para cambios simples de una línea o preguntas

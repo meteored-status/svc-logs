@@ -1,14 +1,16 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: d46b8bd54c765af466ea7dff96675d0e
- * Versión: 2026.6.17+1-josantoniojimnez
+ * Editor: Pedro
+ * Fecha: Mon, 05 Oct 2026 10:56:47 GMT
+ * Hash: 7a15f543086a3c0df980250d6708cb6c
+ * Versión: 2026.10.5+1-pedro
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-panel-usuarios.git
  */
 
 import os from "node:os";
 
 import {type IManifest, Manifest} from "@mr/core-dev/manifest";
-import {ManifestDeploymentKind, Target} from "@mr/core-dev/manifest/deployment";
+import {ManifestDeploymentKind, Target, type TManifestDeploymentBucketData} from "@mr/core-dev/manifest/deployment";
 import {md5} from "services-comun/modules/utiles/hash";
 import {random} from "services-comun/modules/utiles/random";
 import {readJSON} from "services-comun/modules/utiles/fs";
@@ -29,7 +31,11 @@ import {readJSON} from "services-comun/modules/utiles/fs";
  * @property replica   - Identificador de réplica del pod (producción) o cadena aleatoria de 5 chars (desarrollo).
  * @property wire      - Número de wire del pod en producción; `0` en desarrollo o cuando no aplica.
  * @property deploy    - Identificador del deployment (producción) o cadena aleatoria de 10 chars (desarrollo).
- * @property buckets   - Mapa opcional de nombres de buckets GCS para el entorno activo, leído del manifiesto.
+ * @property buckets  - Mapa opcional de buckets GCS para el entorno activo, leído del manifiesto (`deploy.buckets`).
+ *                        Cada clave es un nombre de bucket o una lista de nombres; si en el manifiesto es
+ *                        `{buckets, basePath?}` aquí solo queda `buckets` (ver {@link aplanarBuckets}).
+ * @property bucketsBasePath - Prefijo de almacenamiento (`basePath`) de las claves de `buckets` que lo definen en el
+ *                        manifiesto. Solo contiene las claves con prefijo; no existe si ninguna lo tiene.
  */
 export type IPodInfo = Readonly<{
     filesdir: string;
@@ -45,7 +51,44 @@ export type IPodInfo = Readonly<{
     wire: number;
     deploy: string;
     buckets?: Record<string, string | string[]>;
+    bucketsBasePath?: Record<string, string>;
 }>;
+
+/**
+ * Resultado de {@link aplanarBuckets}.
+ *
+ * @property buckets - Clave → nombre o lista de nombres de buckets.
+ * @property basePath - Clave → prefijo, solo para las claves que lo definen.
+ */
+export interface IBucketsAplanados {
+    buckets: Record<string, string | string[]>;
+    basePath: Record<string, string>;
+}
+
+/**
+ * Aplana los buckets de un entorno del manifiesto (`deploy.buckets.<entorno>`) a la forma de {@link IPodInfo}:
+ * los valores en forma de objeto `{buckets, basePath?}` pasan a su `buckets`, y su `basePath` (si lo hay) va aparte.
+ *
+ * @param data - Buckets del entorno; puede no estar definido.
+ */
+export function aplanarBuckets(data: TManifestDeploymentBucketData | undefined): IBucketsAplanados | undefined {
+    if (data === undefined) {
+        return undefined;
+    }
+    const buckets: Record<string, string | string[]> = {};
+    const basePath: Record<string, string> = {};
+    for (const [clave, valor] of Object.entries(data)) {
+        if (typeof valor === "string" || Array.isArray(valor)) {
+            buckets[clave] = valor;
+        } else {
+            buckets[clave] = valor.buckets;
+            if (valor.basePath !== undefined) {
+                basePath[clave] = valor.basePath;
+            }
+        }
+    }
+    return {buckets, basePath};
+}
 
 /**
  * Resuelve los metadatos del pod leyendo `package.json` y `mrpack.json` en paralelo.
@@ -113,6 +156,7 @@ export async function crearPodInfo(): Promise<IPodInfo> {
         deploy = random(10).toLowerCase();
     }
 
+    const aplanados = aplanarBuckets(manifest.deploy.buckets?.[PRODUCCION&&!TEST?"produccion":"test"]);
     const servicio = servicios.find(svc=>host.includes(svc))??servicios[0];
 
     return Object.freeze(Object.seal({
@@ -128,6 +172,7 @@ export async function crearPodInfo(): Promise<IPodInfo> {
         replica,
         wire,
         deploy,
-        buckets: manifest.deploy.buckets?.[PRODUCCION&&!TEST?"produccion":"test"],
+        buckets: aplanados?.buckets,
+        ...(aplanados && Object.keys(aplanados.basePath).length>0 ? {bucketsBasePath: aplanados.basePath} : {}),
     }));
 }

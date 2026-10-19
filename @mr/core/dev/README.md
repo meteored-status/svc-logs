@@ -322,6 +322,44 @@ tocó su `CODEMAP.md` — o su `CHANGELOG.md`, si ya existía.
 Solo analiza cambios sin comitear, y por el guardrail `stop_hook_active` de Claude Code el
 bloqueo ocurre como máximo una vez por intento de parada (evita bucles infinitos).
 
+## Confirmación de los subagentes caros
+
+Los dos modelos caros (Opus y Fable) piden confirmación antes de invocarse. Ya está puesto en
+`.claude/settings.json`, no hay que añadirlo:
+
+```json
+{
+  "permissions": {
+    "ask": [
+      "Agent(opus-planner)",
+      "Agent(fable-architect)",
+      "Agent(model:opus)",
+      "Agent(model:fable)"
+    ]
+  }
+}
+```
+
+`permissions.ask` es la clave correcta en `.claude/settings.json` para reglas que piden
+confirmación antes de ejecutar (a diferencia de `permissions.allow`/`permissions.deny`, que
+permiten o bloquean sin preguntar). Las reglas que hacen el trabajo son
+[`Agent(<nombre-del-subagente>)`](https://code.claude.com/docs/en/permissions#agent-subagents), que
+es la forma documentada de nombrar un subagente.
+
+Las de `model` no bastan por sí solas: `Tool(param:valor)` casa contra **un parámetro de la
+llamada**, no contra la configuración del subagente, y
+[un parámetro que la llamada omite no casa nunca](https://code.claude.com/docs/en/permissions#match-by-input-parameter).
+Como el modelo de un subagente lo fija el `model:` de su frontmatter, al despachar por nombre el
+parámetro `model` no viaja y esa regla no se dispara. Se mantienen las dos para cubrir un override
+explícito de modelo en la llamada. Las llamadas a `sonnet-builder` siguen sin interrupciones.
+
+La documentación solo ilustra `Agent(<nombre>)` en `deny`; si alguna vez deja de pedir confirmación,
+míralo con `/permissions` desde una sesión interactiva de `claude` en terminal, que lista las reglas
+en efecto y de qué `settings.json` sale cada una. No esperes que te avise nada por tu cuenta: el
+aviso de arranque solo comprueba **el nombre de la herramienta**, y `Agent` es conocida, así que una
+regla que apunte a un subagente inexistente o mal escrito no salta — que es justo el fallo que
+querrías cazar. Y `claude --verbose` enseña los parámetros de cada llamada.
+
 ---
 
 ## Changelog

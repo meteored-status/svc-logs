@@ -150,6 +150,17 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     REGION="${2}"
     ZONA="${3}"
 
+    # `dir` y `name` de `deploy.kustomize` (argumentos 4 y 5) pueden llevar `${ENTORNO}` y `${ZONA}`, para
+    # desplegar varias lambdas con distinto nombre. Se resuelven en variables `local` porque esta función se
+    # llama una vez por zona: sobre las globales, la segunda zona heredaría el nombre ya resuelto de la primera.
+    local KUSTOMIZER SERVICIO
+    KUSTOMIZER=$(echo "${4}" | sed "s/\${ENTORNO}/${_ENTORNO}/g" | sed "s/\${ZONA}/${ZONA}/g")
+    SERVICIO=$(echo "${5}" | sed "s/\${ENTORNO}/${_ENTORNO}/g" | sed "s/\${ZONA}/${ZONA}/g")
+    if [[ "${KUSTOMIZER}-${SERVICIO}" == *'${'* ]]; then
+      echo "Variable sin resolver en el nombre de ${WORKSPACE}: \"${KUSTOMIZER}-${SERVICIO}\" (solo se admiten \${ENTORNO} y \${ZONA})"
+      exit 1
+    fi
+
     if [[ "$(configw "${RUTA}" '.deploy.type')" == "service" ]]; then
       COMANDO="services"
       TYPE="service"
@@ -218,6 +229,12 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         INGRESS=$(configw "${RUTA}" '.deploy.lambda.ingress // "internal-and-cloud-load-balancing"')
         CLOUD_RUN_INGRESS=$(printf '%s' "${INGRESS}" | jq -Rr @json)
         yq eval ".metadata.annotations.\"run.googleapis.com/ingress\" = ${CLOUD_RUN_INGRESS}" "${CLOUD_RUN_YAML}" -i
+
+        # `authentication: false` es el «Allow public access» de la consola. Se compara con `== false` y
+        # no con `//`, porque para jq `false // true` es `true`.
+        if [[ "$(configw "${RUTA}" '.deploy.lambda.authentication == false')" == "true" ]]; then
+          yq eval ".metadata.annotations.\"run.googleapis.com/invoker-iam-disabled\" = \"true\"" "${CLOUD_RUN_YAML}" -i
+        fi
       fi
     fi
 
@@ -233,6 +250,23 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         done
       fi
     fi
+
+    # Labels `dpto` y `producto`: la de `deploy.lambda.labels` y, si falta, la homónima del proyecto de GCP. Si
+    # no está en ninguno de los dos, no se pone. Van en el servicio o job y en su plantilla, para que las
+    # tengan también las revisiones o ejecuciones.
+    for LABEL in dpto producto; do
+      VALOR=$(configw "${RUTA}" ".deploy.lambda.labels.${LABEL} // empty")
+      if [[ -z "${VALOR}" ]]; then
+        VALOR=$(configl ".labels[\"${LABEL}\"] // empty")
+      fi
+      if [[ -n "${VALOR}" ]]; then
+        if [[ ! "${VALOR}" =~ ^[a-z0-9_-]{1,63}$ ]]; then
+          echo "Valor no válido para la label \"${LABEL}\" de ${KUSTOMIZER}-${SERVICIO}: \"${VALOR}\" (minúsculas, números, _ y -, hasta 63 caracteres)"
+          exit 1
+        fi
+        yq eval ".metadata.labels.\"${LABEL}\" = \"${VALOR}\" | .spec.template.metadata.labels.\"${LABEL}\" = \"${VALOR}\"" "${CLOUD_RUN_YAML}" -i
+      fi
+    done
 
     # Comprobar que exista la entrada deploy.env
     ENV_VARS=$(configw "${RUTA}" '.deploy.env // empty')
@@ -422,12 +456,12 @@ if [[ -f "DESPLEGAR.txt" ]]; then
             echo "No hay ningún cluster con zona en \"${_ENTORNO}\" para desplegar ${WORKSPACE} (${SERVICIO}) en solitario"
             exit 1
           fi
-          parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}"
+          parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
         else
           REGIONES=$(confige '.[] | .zone')
           for REGION in ${REGIONES}; do
             ZONA=$(confige ".[] | select(.zone == \"${REGION}\") | .resourceLabels.zona")
-            parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}"
+            parseWorkspaceLambdaZona "${RUTA}" "${REGION}" "${ZONA}" "${KUSTOMIZER}" "${SERVICIO}"
           done
         fi
       fi

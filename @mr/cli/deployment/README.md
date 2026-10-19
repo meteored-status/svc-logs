@@ -406,6 +406,41 @@ Tras aplicar la plantilla, `parseWorkspaceLambdaZona()` añade las variables de
 ya fijas de la plantilla (`DATADOG`, `ENTORNO`, `ZONA`, `CLOUD_RUN_REGION`,
 `SIDECAR`) sin pisarlas.
 
+### Autenticación
+
+Con `deploy.lambda.authentication: false`, `parseWorkspaceLambdaZona()` añade
+`run.googleapis.com/invoker-iam-disabled: "true"` al servicio: es el «Allow public
+access» de la consola, y no exige autenticación para invocarlo. Sin el campo, o con
+`true`, el servicio la exige. Solo aplica a servicios, no a jobs. Es independiente del
+ingress: detrás de un load balancer basta el de por defecto
+(`internal-and-cloud-load-balancing`), y `"all"` solo hace falta para llamar
+directamente a la URL `*.run.app`. La cuenta que despliega necesita
+`run.services.setIamPolicy`.
+
+### Labels
+
+Las labels `dpto` y `producto` se ponen en el servicio o job y en su plantilla, para
+que las tengan también las revisiones o ejecuciones. Cada una sale de
+`deploy.lambda.labels` y, si no está ahí, de la label homónima del proyecto de GCP
+(`labels.json`). Si no está en ninguno de los dos, no se pone. Un valor que no cumpla
+el formato de Cloud Run (minúsculas, números, `_` y `-`, hasta 63 caracteres) hace
+fallar `kustomizar.sh`.
+
+Tienen que ir en el YAML: las que se pongan a mano en la consola o con
+`gcloud … --update-labels` las borra el siguiente `replace`.
+
+### Nombre del servicio o job
+
+Cada elemento de `deploy.kustomize` es un despliegue, con nombre `<dir>-<name>`: el del
+servicio o job de Cloud Run y, con zona, el del trigger de Cloud Scheduler. Así un mismo
+workspace puede desplegar varias lambdas con distinto nombre y la misma imagen.
+
+`dir` y `name` admiten `${ENTORNO}` y `${ZONA}`, que `parseWorkspaceLambdaZona()` resuelve
+en cada zona de destino (por ejemplo `"name": "logs-${ZONA}"`). Cualquier otro `${...}`
+hace fallar `kustomizar.sh` en vez de desplegar un nombre a medias. Cambiar el nombre de
+una lambda ya desplegada crea un servicio nuevo y deja el anterior —y su trigger— sin
+borrar.
+
 ### Región y zona de destino
 
 Por defecto un workspace `lambda` se despliega **una vez por cluster** del entorno:
