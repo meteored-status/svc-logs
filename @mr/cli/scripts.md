@@ -47,6 +47,28 @@ yarn mrpack devel -e
 yarn mrpack devel -e -f
 ```
 
+### Ejecutar contra el emulador de Pub/Sub local
+Da de alta la topología de los `mrpack.pubsub.ts` en el emulador (docker `pubsub` de mrenv) y lanza los servicios contra él.
+Solo existe el script raíz si el monorepo tiene algún `mrpack.pubsub.ts`.
+```bash
+yarn run devel-pubsub
+# equivale a
+yarn mrpack devel -e -p
+```
+
+### Ejecutar solo un servicio contra el emulador de Pub/Sub local
+```bash
+yarn mrpack devel -e -p --solo=amateur
+```
+
+### Dar de alta, comprobar, purgar o limpiar la topología de Pub/Sub
+```bash
+yarn mrpack pubsub -u   # alta (crea lo que falta, corrige lo que difiere)
+yarn mrpack pubsub -s   # estado (recursos, extras y servicios push)
+yarn mrpack pubsub -r   # purga las suscripciones declaradas (descarta sus mensajes pendientes)
+yarn mrpack pubsub -l   # borra lo que este repo dio de alta y ya no declara
+```
+
 ### Compilar TODOS los servicios para PRODUCCIÓN
 ```bash
 yarn mrpack deploy --env=produccion

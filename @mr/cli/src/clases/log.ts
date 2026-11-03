@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: 18612026d4cbec37b936ec8c81004ec4
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: alexCG
+ * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
+ * Hash: 86a65bd5cb805ab5f94a1d0085cc7424
+ * Versión: 2026.10.20+1-alexcg
+ * Anterior: 2026.9.23+2-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
  */
 
 import util from "node:util";
@@ -50,6 +50,7 @@ export const Log = {
     label_base:     `${Colors.colorize([Colors.FgYellow, Colors.Underscore], "ENTORNO")} ` as string,
     label_compilar: `${Colors.colorize([Colors.FgGreen, Colors.Underscore],  "GENERAR")} ` as string,
     label_ejecutar: `${Colors.colorize([Colors.FgCyan, Colors.Underscore],   "EJECUTAR")}` as string,
+    label_pubsub:   `${Colors.colorize([Colors.FgBlue, Colors.Underscore],   "PUBSUB")}  ` as string,
 
     // Escribimos directamente a stdout/stderr (en vez de console.info/console.error) para
     // evitar que console.group()/groupEnd() indente nuestras líneas: el prefijo [hora][tipo][label]

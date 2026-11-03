@@ -1,21 +1,26 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 769dc5d5fdf471c046143cc4642aa2d4
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.9.23+2-juancmartinez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Mon, 02 Nov 2026 11:05:48 GMT
+ * Hash: 0a491a96f53308ffbc3b3f2504562c11
+ * Versión: 2026.11.2+2-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-cmp.git
  */
 
-import {createClient, type RedisClientType} from "redis";
+import {ClientOfflineError, type RedisClientType} from "redis";
 import process from "node:process";
 
 import type {IPodInfo} from "@mr/core-workload/config/pod";
 
 import {error, info, warning} from "../../utiles/log";
+import {errorType, LogThrottle} from "../../utiles/log-throttle";
 import {readJSON} from "../../utiles/fs";
 import {md5} from "../../utiles/hash";
 import {random} from "../../utiles/random";
+import {RedisCluster} from "./cluster";
+import {RedisBatch, type IHIncrBy, type TBatchResult} from "./batch";
+
+export type {IHIncrBy, TBatchResult} from "./batch";
 
 interface IRedisBuild {
     pod: IPodInfo;
@@ -28,9 +33,32 @@ type IRedisHost = {
     port: string;
 }
 
+/**
+ * Opciones del cliente Redis. Todas son opcionales. Sin ellas, el cliente reconecta solo, con espera exponencial hasta 5 s y sin rendirse nunca (antes se
+ * rendía a los 3 reintentos y recreaba el cliente ante un error); sin conexión no hay cola offline y las operaciones fallan al instante, y los avisos y
+ * errores de cliente salen como mucho una vez por tipo y minuto. Lo demás —`timeout` de 10 ms, `clientTimeout` de 50 ms, carga y conexión perezosas,
+ * credenciales en `files/credenciales/redis.json`— es como antes.
+ *
+ * @property timeout             - Timeout (ms) de los comandos. Por defecto 10. Ojo: en node-redis 6.3.0 solo acota la espera previa al envío, no la
+ *                                 respuesta (un comando ya enviado a un Redis lento espera igualmente).
+ * @property clientTimeout       - Timeout (ms) de cada intento de conexión. Por defecto 50. Las operaciones sobre un nodo que aún no ha conectado
+ *                                 nunca (arranque) esperan a que conecte durante `4 × clientTimeout + 700 ms` desde que se creó el cliente; después, sin conexión, fallan al instante.
+ * @property maxReconnectDelayMs - Tope (ms) de la espera entre reconexiones (exponencial desde 100 ms, sin rendirse nunca). Por defecto 5 000.
+ * @property logThrottleMs       - Un solo log por tipo de error y por este intervalo (ms), tanto los errores de cliente como los avisos de los métodos
+ *                                 con Redis caído; 0 lo desactiva. Por defecto 60 000.
+ * @property singleNode          - Índice, en la lista de primarios de las credenciales, del nodo que usan las operaciones de un solo nodo
+ *                                 (`bulkHIncrBy`, `bulkHGetAll` y `expire` con `target: "single"`). Por defecto 0. Un índice fuera de rango
+ *                                 es un error al crear el cliente (las operaciones fallan), no se usa el nodo 0 en silencio.
+ * @property connectOnBuild      - Con `true`, las credenciales se cargan y se abren las conexiones al construir el cliente, en vez de en la
+ *                                 primera operación. Por defecto `false`.
+ */
 export type IRedisOptions = {
     timeout?: number;
     clientTimeout?: number;
+    maxReconnectDelayMs?: number;
+    logThrottleMs?: number;
+    singleNode?: number;
+    connectOnBuild?: boolean;
 }
 
 type IRedis = IRedisHost;
@@ -46,6 +74,39 @@ type QueryOptions = {
 
 type SaveOptions = QueryOptions & {
     ttl?: number; // seconds
+}
+
+/**
+ * Opciones de `bulkHIncrBy`.
+ *
+ * @property shared    - Si es `true`, no se aplica el prefijo de namespace a las claves.
+ * @property timeoutMs - Tiempo máximo (ms) que se espera al `EXEC`. Por defecto `options.timeout || 10`.
+ */
+export interface IBulkHIncrByOptions {
+    shared?: boolean;
+    timeoutMs?: number;
+}
+
+/**
+ * Opciones de `bulkHGetAll`.
+ *
+ * @property shared - Si es `true`, no se aplica el prefijo de namespace a las claves.
+ * @property node   - Nodo del que se lee: el nodo único (`"single"`, por defecto) o el de lectura (`"read"`).
+ */
+export interface IBulkHGetAllOptions {
+    shared?: boolean;
+    node?: "single" | "read";
+}
+
+/**
+ * Opciones de `expire`.
+ *
+ * @property shared - Si es `true`, no se aplica el prefijo de namespace a la clave.
+ * @property target - Nodos en los que se aplica: todos los primarios (`"all"`, por defecto) o solo el nodo único (`"single"`).
+ */
+export interface IExpireOptions {
+    shared?: boolean;
+    target?: "all" | "single";
 }
 
 type IInsert = {
@@ -68,6 +129,18 @@ type IHInsert = {
  *
  * Gestiona internamente una conexión al clúster (lectura/escritura) y ofrece
  * operaciones de lectura, escritura, serialización JSON y locks distribuidos.
+ *
+ * Conexión: un cliente por primario y otro para `read` si es un nodo distinto. Se abren en la primera operación o, con `connectOnBuild`, al construir. Cada
+ * cliente reconecta solo y sin rendirse; sin conexión no hay cola offline y las operaciones fallan al instante (ver `IRedisOptions`).
+ *
+ * Límites de tiempo: **con Redis conectado pero sin responder, `get`, `set`, `aquireLock`, los `MULTI` y el resto de métodos no tienen límite de tiempo**.
+ * En node-redis 6.3.0 `timeout` solo acota la espera de un comando antes de enviarse y no hay timeout de socket; es un hueco que ya tenía el cliente anterior. Quien
+ * lo necesite lo pone al llamar (p. ej. con `PromiseTimeout`). `bulkHIncrBy` sí lo tiene (`timeoutMs`).
+ *
+ * Terminar el proceso: el cliente no suelta el proceso por sí solo (sus temporizadores de PING y reconexión no se pueden soltar). Los jobs y cronjobs (`pod.cronjob`,
+ * que incluye el tipo `job`, `@mr/core/dev/manifest/deployment/index.ts`) acaban con `process.exit()`; un job declarado como `service` no, y un cliente que reconecta lo
+ * mantendría vivo. Un script sin `Main` debe hacer `await redis[Symbol.asyncDispose]()`; tras liberar con Redis caído, el proceso puede tardar hasta
+ * `maxReconnectDelayMs` + 250 ms (~5,25 s por defecto) en salir.
  */
 export class Redis implements AsyncDisposable {
     /* STATIC */
@@ -77,11 +150,11 @@ export class Redis implements AsyncDisposable {
      *
      * @param message Mensaje contextual de la operación que ha fallado.
      * @param err Error capturado durante la operación asíncrona.
-     * @returns Instancia de `Error` con detalle contextual y de causa.
+     * @returns Instancia de `Error` con detalle contextual y la causa original en `cause`.
      */
     private static buildPromiseError(message: string, err: unknown): Error {
         const errorMessage = err instanceof Error ? err.message : String(err);
-        return new Error(`${message}. Causa: ${errorMessage}`);
+        return new Error(`${message}. Causa: ${errorMessage}`, {cause: err});
     }
 
     /**
@@ -90,16 +163,46 @@ export class Redis implements AsyncDisposable {
      * @param config Parámetros de creación del cliente.
      */
     public static build({pod, credenciales = 'files/credenciales/redis.json', options}: IRedisBuild): Redis {
+        if (options) {
+            this.validateOptions(options);
+        }
         return new this(pod, credenciales, options);
+    }
+
+    /**
+     * Comprueba las opciones de `IRedisOptions` que admiten un valor absurdo, al crear el cliente y no en medio de una avería.
+     *
+     * @param options Opciones recibidas.
+     * @throws {RangeError} Si `singleNode`, `logThrottleMs` o `maxReconnectDelayMs` no son números válidos.
+     */
+    private static validateOptions({singleNode, logThrottleMs, maxReconnectDelayMs}: IRedisOptions): void {
+        if (singleNode !== undefined && (!Number.isInteger(singleNode) || singleNode < 0)) {
+            throw new RangeError(`singleNode (${singleNode}) debe ser un entero mayor o igual que 0`);
+        }
+        if (logThrottleMs !== undefined && (!Number.isFinite(logThrottleMs) || logThrottleMs < 0)) {
+            throw new RangeError(`logThrottleMs (${logThrottleMs}) debe ser un número mayor o igual que 0`);
+        }
+        if (maxReconnectDelayMs !== undefined && (!Number.isFinite(maxReconnectDelayMs) || maxReconnectDelayMs <= 0)) {
+            throw new RangeError(`maxReconnectDelayMs (${maxReconnectDelayMs}) debe ser un número mayor que 0`);
+        }
     }
 
     /* INSTANCE */
     private _cluster?: Promise<RedisCluster>;
+    private readonly throttle: LogThrottle | null;
     private constructor(
         protected readonly config: IPodInfo,
         private readonly credenciales: string,
         private readonly options: IRedisOptions = {}
     ) {
+        const throttleMs = options.logThrottleMs ?? 60_000;
+        this.throttle = throttleMs > 0 ? new LogThrottle(throttleMs) : null;
+
+        if (options.connectOnBuild) {
+            this.cluster.catch(err => {
+                this.warn(`Error al crear el cliente de REDIS`, err);
+            });
+        }
     }
 
     /**
@@ -111,6 +214,27 @@ export class Redis implements AsyncDisposable {
             await cluster[Symbol.asyncDispose]();
             info(`Desconectado de REDIS (cluster)`);
         }
+    }
+
+    /**
+     * Escribe un aviso de un método con Redis en problemas, con un solo aviso por tipo de error y por `logThrottleMs`: con Redis caído cada operación fallaría y
+     * el log se llenaría. El tipo es el de la causa original (`ECONNREFUSED`, `ClientOfflineError`...), no el de la operación ni el de la clave.
+     *
+     * @param message Mensaje del aviso.
+     * @param err Error capturado.
+     */
+    private warn(message: string, err: unknown): void {
+        if (this.throttle !== null) {
+            const cause = err instanceof Error && err.cause !== undefined ? err.cause : err;
+            const muted = this.throttle.allow(errorType(cause), Date.now());
+            if (muted === null) {
+                return;
+            }
+            if (muted > 0) {
+                message = `${message} (${muted} avisos iguales callados)`;
+            }
+        }
+        warning(message, err);
     }
 
     private get cluster(): Promise<RedisCluster> {
@@ -135,7 +259,12 @@ export class Redis implements AsyncDisposable {
                     primaries = [data];
                 }
 
-                return new RedisCluster(primaries, read, this.options);
+                try {
+                    return new RedisCluster(primaries, read, this.options);
+                } catch (e) {
+                    error(`Configuración de REDIS inválida`, e);
+                    throw e;
+                }
             });
         }
         return this._cluster;
@@ -175,7 +304,7 @@ export class Redis implements AsyncDisposable {
                 }
             }
         } catch (e) {
-            warning(`Error obteniendo ${key} de REDIS`, e);
+            this.warn(`Error obteniendo ${key} de REDIS`, e);
         }
         return null;
     }
@@ -205,7 +334,7 @@ export class Redis implements AsyncDisposable {
                 return {[field]: response.data} as unknown as { [field: string]: string };
             }
         } catch (e) {
-            warning(`Error obteniendo ${key} de REDIS`, e);
+            this.warn(`Error obteniendo ${key} de REDIS`, e);
         }
         return null;
     }
@@ -245,7 +374,7 @@ export class Redis implements AsyncDisposable {
                 }, {} as {[field: string]: string})
             } as {[field: string]: string}|null;
         } catch (e) {
-            warning(`Error obteniendo ${key} de REDIS`, e);
+            this.warn(`Error obteniendo ${key} de REDIS`, e);
         }
         return null;
     }
@@ -283,7 +412,7 @@ export class Redis implements AsyncDisposable {
                 await multi.exec();
             }));
         } catch (e) {
-            warning(`Error guardando ${key} en REDIS`, e);
+            this.warn(`Error guardando ${key} en REDIS`, e);
         }
     }
 
@@ -319,7 +448,7 @@ export class Redis implements AsyncDisposable {
                 await multi.exec();
             }));
         } catch (e) {
-            warning(`Error guardando ${key} en REDIS`, e);
+            this.warn(`Error guardando ${key} en REDIS`, e);
         }
     }
 
@@ -351,7 +480,7 @@ export class Redis implements AsyncDisposable {
                 });
             }));
         } catch (e) {
-            warning(`Error guardando ${key} en REDIS`, e);
+            this.warn(`Error guardando ${key} en REDIS`, e);
         }
     }
 
@@ -534,7 +663,7 @@ export class Redis implements AsyncDisposable {
 
             return keys;
         } catch (e) {
-            warning(`Error buscando keys con patrón ${pattern} en REDIS`, e);
+            this.warn(`Error buscando keys con patrón ${pattern} en REDIS`, e);
         }
         return [];
     }
@@ -570,7 +699,7 @@ export class Redis implements AsyncDisposable {
                 return null;
             });
         } catch (e) {
-            warning(`Error buscando max score con patrón ${pattern} en REDIS`, e);
+            this.warn(`Error buscando max score con patrón ${pattern} en REDIS`, e);
         }
 
         return null;
@@ -628,7 +757,7 @@ export class Redis implements AsyncDisposable {
 
             return results.every(result => result === 1) ? lockID : '';
         } catch (e) {
-            warning(`Error adquiriendo lock para keys ${keys.join(', ')} en REDIS`, e);
+            this.warn(`Error adquiriendo lock para keys ${keys.join(', ')} en REDIS`, e);
         }
         return null;
     }
@@ -674,9 +803,110 @@ export class Redis implements AsyncDisposable {
                 });
             }));
         } catch (e) {
-            warning(`Error liberando lock para keys ${keys.join(', ')} en REDIS`, e);
+            this.warn(`Error liberando lock para keys ${keys.join(', ')} en REDIS`, e);
         }
 
+    }
+
+    /**
+     * Suma incrementos a campos de hash en **un solo nodo** (el nodo único, `options.singleNode`, por defecto el primer primario), todo el lote en
+     * una transacción `MULTI/EXEC`: un `HINCRBY` por elemento y un `EXPIRE` por clave, con el mayor `ttl` que pida el lote para ella. A
+     * diferencia de `set`/`bulkSet`, **no se replica en todos los primarios y no hay failover**: un incremento repetido se contaría dos veces.
+     * Las claves llevan el prefijo de namespace salvo con `shared`. Los hashes que escribe son contadores crudos: no llevan el envoltorio
+     * `{expires, data}` de `hSet`, así que se leen con `bulkHGetAll`, no con `hGetAll`.
+     *
+     * Nunca rechaza por un fallo de Redis (conexión, timeout, error del servidor): el resultado dice qué pasó. `notSent` incluye no poder
+     * obtener las credenciales o el cliente.
+     *
+     * - `ok`: el `EXEC` se confirmó.
+     * - `notSent`: no salió nada; reintentar con los mismos datos es seguro.
+     * - `ambiguous`: pudo aplicarse o no; reintentar puede contar dos veces y no reintentar puede perder el lote.
+     *
+     * En node-redis 6.3.0 `MULTI` ignora `commandOptions.timeout` y la cola offline, así que el timeout (`timeoutMs`, por defecto
+     * `options.timeout || 10` ms) se aplica aquí con un temporizador propio y sin conexión lista no se envía nada.
+     *
+     * @param items Incrementos del lote.
+     * @param options `shared` para omitir el namespace y `timeoutMs` para el tiempo máximo del `EXEC`.
+     * @returns Resultado del lote. Un lote vacío es `ok`.
+     * @throws {RangeError} Si algún `increment` no es un entero seguro distinto de 0 o algún `ttl` no es un entero mayor que 0.
+     */
+    public async bulkHIncrBy(items: IHIncrBy[], {shared = false, timeoutMs}: IBulkHIncrByOptions = {}): Promise<TBatchResult> {
+        const batch = new RedisBatch(items.map(item => ({...item, key: this.buildKey(item.key, shared)})));
+        if (items.length === 0) {
+            return "ok";
+        }
+
+        let client: RedisClientType;
+        try {
+            const cluster = await this.cluster;
+            client = await cluster.single;
+        } catch (e) {
+            // Sin conexión lista no se avisa: el resultado ya lo dice y el clúster ya registra el error de conexión, con su límite.
+            if (!(e instanceof ClientOfflineError)) {
+                this.warn(`Error obteniendo cliente para bulkHIncrBy`, e);
+            }
+            return "notSent";
+        }
+
+        return await batch.execute(client, timeoutMs ?? (this.options.timeout || 10));
+    }
+
+    /**
+     * Lee varios hashes enteros, en crudo, con un `HGETALL` por clave lanzados en paralelo (no un `MULTI`: así conservan el timeout del comando y
+     * se rechazan al instante si no hay conexión). Es la contrapartida de `bulkHIncrBy`: devuelve los campos tal cual están en Redis, **sin**
+     * interpretar el envoltorio `{expires, data}` de `hSet`. Lee por defecto del nodo único. A diferencia de `hGetAll`, **propaga los errores**
+     * (como `bulkSet`/`bulkHSet`), así que la llamada debe capturarlos.
+     *
+     * @param keys Claves de los hashes.
+     * @param options `shared` para omitir el namespace y `node` para elegir de qué nodo se lee.
+     * @returns Un elemento por clave, en el mismo orden: el hash, o `null` si no existe o está vacío.
+     */
+    public async bulkHGetAll(keys: string[], {shared = false, node = "single"}: IBulkHGetAllOptions = {}): Promise<(Record<string, string>|null)[]> {
+        if (keys.length === 0) {
+            return [];
+        }
+
+        const cluster = await this.cluster;
+        const client = await (node === "read" ? cluster.read : cluster.single);
+
+        const replies = await Promise.all(keys.map(key => client.hGetAll(this.buildKey(key, shared))));
+        return replies.map(reply => {
+            const fields: Record<string, string> = {...reply};
+            if (Object.keys(fields).length === 0) {
+                return null;
+            }
+            return fields;
+        });
+    }
+
+    /**
+     * Fija la caducidad de una clave. Es idempotente: repetirla solo renueva el plazo. Por defecto se aplica en **todos** los primarios, como
+     * `set`; con `target: "single"`, solo en el nodo único (la pareja de `bulkHIncrBy`). **Propaga los errores**, así que la llamada debe
+     * capturarlos. Si la clave no existe no hace nada. Un `ttl` que no sea un entero mayor que 0 se rechaza: Redis borraría la clave.
+     *
+     * @param key Clave lógica (sin prefijo).
+     * @param ttl Segundos hasta la caducidad.
+     * @param options `shared` para omitir el namespace y `target` para elegir los nodos.
+     * @throws {RangeError} Si `ttl` no es un entero seguro mayor que 0.
+     */
+    public async expire(key: string, ttl: number, {shared = false, target = "all"}: IExpireOptions = {}): Promise<void> {
+        if (!Number.isSafeInteger(ttl) || ttl <= 0) {
+            throw new RangeError(`ttl (${ttl}) debe ser un entero mayor que 0`);
+        }
+
+        const cluster = await this.cluster;
+        const theKey = this.buildKey(key, shared);
+
+        if (target === "single") {
+            const client = await cluster.single;
+            await client.expire(theKey, ttl);
+            return;
+        }
+
+        const primaryClients = await Promise.all(cluster.primaries);
+        await Promise.all(primaryClients.map(async client => {
+            await client.expire(theKey, ttl);
+        }));
     }
 
     /**
@@ -695,150 +925,5 @@ export class Redis implements AsyncDisposable {
         }
         const namespace = (process.env['K8S_NAMESPACE']??'default').replace('meteored','mr');
         return `${namespace}:${this.config.servicio}:${key}`;
-    }
-}
-
-class RedisCluster implements AsyncDisposable {
-    /* STATIC */
-    private static readonly MAX_REDIS_GET_CLIENT_MS: number = 50;
-    private static readonly MAX_REDIS_GET_MS: number = 10;
-    private static readonly MAX_RECONNECT_TRIES: number = 3;
-
-    /* INSTANCE */
-    private _primaryClients?: (Promise<RedisClientType>[])|null;
-    private _readClient?: Promise<RedisClientType>|null;
-    public constructor(private readonly _primaries: IRedis[], private readonly _read?: IRedis, private readonly options: IRedisOptions = {}) {
-    }
-
-    public async [Symbol.asyncDispose](): Promise<void> {
-        // Si el cliente de lectura es distinto del primero de los primarios, lo desconectamos también
-        const distinctReadInstance = this._readClient && this._readClient !== this._primaryClients?.[0];
-
-        if (this._primaryClients) {
-            while (this._primaryClients.length > 0) {
-                const clientPromise = this._primaryClients.pop();
-                if (clientPromise) {
-                    const client = await clientPromise;
-                    await client.quit();
-                }
-            }
-            info(`Desconectado de REDIS (primary)`);
-        }
-        if (distinctReadInstance) {
-            const client = await this._readClient;
-            await client?.quit();
-            info(`Desconectado de REDIS (read)`);
-        } else {
-            await this.disconnectRead();
-        }
-    }
-
-    private async disconnectPrimaries(): Promise<void> {
-        if (this._primaryClients) {
-            // Si el cliente de lectura es el mismo que el primero de los primarios, no lo desconectamos aquí
-            const includeRead = this._readClient && this._readClient === this._primaryClients[0];
-
-            while (this._primaryClients.length > 0) {
-                const clientPromise = this._primaryClients.pop();
-                if (clientPromise) {
-                    const client = await clientPromise;
-                    await client.quit();
-                }
-            }
-            info(`Desconectado de REDIS (primary)`);
-            this._primaryClients = undefined;
-
-            // Si el cliente de lectura es el mismo que el primero de escritura, lo marcamos como desconectado también
-            if (includeRead) {
-                info(`Desconectado de REDIS (read)`);
-                this._readClient = undefined;
-            }
-        }
-    }
-
-    private async disconnectRead(): Promise<void> {
-        if (this._readClient) {
-            const client = await this._readClient;
-            await client.quit();
-            info(`Desconectado de REDIS (read)`);
-            this._readClient = undefined;
-        }
-    }
-
-    public get primaries(): Promise<RedisClientType>[] {
-        if (!this._primaryClients) {
-            this._primaryClients = this._primaries.map(primary => {
-                return this.buildClient(primary, 'primary', () => this.disconnectPrimaries()).then(client => {
-                    if (client) {
-                        return client;
-                    }
-                    return Promise.reject(new Error(`Imposible conectar con REDIS (primary)`));
-                }).catch(err => {
-                    warning(`Error al conectar a REDIS. Reseteando cliente`, err);
-                    this._primaryClients = undefined;
-                    throw err;
-                });
-            });
-        }
-        return this._primaryClients;
-    }
-
-    public get read(): Promise<RedisClientType> {
-        if (!this._readClient) {
-            if (this._read) {
-                this._readClient = this.buildClient(this._read, 'read', () => this.disconnectRead()).then(client => {
-                    if (client) {
-                        return client;
-                    }
-                    return Promise.reject(new Error(`Imposible conectar con REDIS (read)`));
-                }).catch(err => {
-                    warning(`Error al conectar a REDIS. Reseteando cliente`, err);
-                    this._readClient = undefined;
-                    throw err;
-                });
-            } else {
-                this._readClient = this.primaries[0];
-            }
-        }
-        return this._readClient;
-    }
-
-    private async buildClient(config: IRedis, type: 'primary'|'read', onError: (err?: any) => void): Promise<RedisClientType|null> {
-        const client: RedisClientType = createClient({
-            url: `redis://${config.host}:${config.port}`,
-            pingInterval: 10000, // PING automático para mantener vivo el canal en GCP (10 segundos)
-            socket: {
-                keepAlive: true, // Mantener vivo el socket
-                connectTimeout: this.options.clientTimeout||RedisCluster.MAX_REDIS_GET_CLIENT_MS,
-                reconnectStrategy: (retries) => {
-                    if (retries > RedisCluster.MAX_RECONNECT_TRIES) {
-                        error(`Imposible conectar con REDIS (${type})`);
-                        return new Error(`Imposible conectar con REDIS (${type})`);
-                    }
-                    const delay = Math.min(retries * 100, 1000);
-                    warning(`Reintentando conectar con redis (${type})...${retries}/${RedisCluster.MAX_RECONNECT_TRIES}`);
-                    return delay;
-                },
-            },
-            commandOptions: {
-                timeout: this.options.timeout||RedisCluster.MAX_REDIS_GET_MS,
-            }
-        });
-
-        client.on('error', (err: any) => {
-            error(`Redis Client Error. Reset client. (${type})`, err);
-            onError(err);
-        });
-
-        try {
-            await client.connect().then(() => {
-                info(`Conectado a REDIS (${type})`);
-            });
-            return client;
-        } catch (e) {
-            error(`Error al conectar a REDIS (${type})`);
-            await client.quit();
-            return null;
-        }
     }
 }

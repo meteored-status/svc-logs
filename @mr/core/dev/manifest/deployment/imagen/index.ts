@@ -1,11 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 7624b652e3a15cefbba1770d7897610a
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Editor: miguel
+ * Fecha: Tue, 20 Oct 2026 11:07:24 GMT
+ * Hash: f0a60915f6b79039a301743352b6e7ba
+ * Versión: 2026.10.20+3-miguel
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import {type IManifestDeploymentImagenEntorno, ManifestDeploymentImagenEntorno} from "./entorno.ts";
+import {type IManifestDeploymentImagenEntorno, ManifestDeploymentImagenEntorno} from "./entorno";
 
 /**
  * Configuración de la imagen Docker del workspace, diferenciada por entorno.

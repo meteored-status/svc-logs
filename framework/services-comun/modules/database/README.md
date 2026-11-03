@@ -18,7 +18,7 @@ Elasticsearch, paginación simple y transacciones "fake"/sobre Google Cloud Stor
 | [MySQL](./CODEMAP.md#mysql-mysql) | `services-comun/modules/database/mysql` | `MySQL implements Disposable`, `MySQLTransactionManager`, caché de consultas (`Cache`/`CacheBuilder`, memoria/disco/mock) |
 | [PostgreSQL](./CODEMAP.md#postgresql-postgresql) | `services-comun/modules/database/postgresql` | `PostgreSQL implements AsyncDisposable`, `PostgreSQLTransactionManager`, `Notify` (LISTEN/NOTIFY), `Lock` |
 | [AlloyDB](./CODEMAP.md#alloydb-alloydb) | `services-comun/modules/database/alloydb` | `AlloyDB extends PostgreSQL` — mismo driver sobre credenciales/endpoint de AlloyDB |
-| [Redis](./CODEMAP.md#redis-redis) | `services-comun/modules/database/redis` | `Redis implements AsyncDisposable` — cliente con namespace por servicio, locks distribuidos |
+| [Redis](./CODEMAP.md#redis-redis) | `services-comun/modules/database/redis` | `Redis implements AsyncDisposable` — cliente con namespace por servicio, locks distribuidos, contadores en un solo nodo (`bulkHIncrBy`/`bulkHGetAll`), reconexión persistente y fallo rápido sin conexión (con Redis conectado pero mudo, los métodos existentes no tienen límite de tiempo: ver el CODEMAP) |
 | [ValKey](./CODEMAP.md#valkey-valkey) | `services-comun/modules/database/valkey` | `ValKey` — equivalente a `Redis` sobre el protocolo/cliente ValKey (`@valkey/valkey-glide`) |
 | [Bulk writers](./CODEMAP.md#bulk-writers-bulk) | `services-comun/modules/database/bulk` | `Bulk<T>` (abstract) + `MySQL`/`PostgreSQLBulk`/`RedisBulk`/`ElasticSearchBulk` |
 | [Scroll](./CODEMAP.md#scroll-scroll) | `services-comun/modules/database/scroll` | `Scroll<T>` (abstract), `ElasticSearchScroll` — cursor de paginación sobre Elasticsearch |

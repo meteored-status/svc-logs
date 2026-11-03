@@ -30,6 +30,7 @@ yarn mrpack <modulo> [opciones]
 | [`config`](#config) | Gestión interactiva de `config.workspaces.json` |
 | [`framework`](#framework) | Operaciones sobre los frameworks compartidos (añadir, actualizar, resetear, enviar…) |
 | [`init`](#init) | Inicializa la configuración del proyecto |
+| [`pubsub`](#pubsub) | Emulador de Pub/Sub local: alta, estado, purga y limpieza de la topología declarada en los `mrpack.pubsub.ts` |
 | [`update`](#update) | Actualiza las librerías del proyecto |
 | [`autodoc`](#autodoc) | Genera la documentación automática del proyecto |
 
@@ -76,6 +77,8 @@ yarn mrpack devel [opciones] [adicional]
 | `-e` / `--ejecutar` | Ejecuta los workspaces habilitados |
 | `-f` / `--forzar` | Fuerza la operación en **todos** los workspaces (incluso los deshabilitados) |
 | `-w` / `--watch` | Activa el modo watch: los compiladores quedan observando cambios y el proceso no termina por sí solo |
+| `-p` / `--pubsub` | Ejecuta contra el emulador de Pub/Sub local (requiere `-e`; ver [Ejecutar contra el emulador de Pub/Sub](#ejecutar-contra-el-emulador-de-pubsub--p)) |
+| `--solo=<ws>[,<ws>]` | Ejecuta **solo** esos workspaces, aunque `config.workspaces.json` diga otra cosa (requiere `-e`; ver [Ejecutar solo algunos workspaces](#ejecutar-solo-algunos-workspaces---solo)) |
 
 > **Patches automáticos:** al arrancar con `-c`, `mrpack devel` ejecuta siempre
 > `yarn run patch:apply` antes de iniciar los compiladores, independientemente de si
@@ -128,6 +131,18 @@ En los modos `daily` y `weekly`, si la versión local no aparece en el historial
 (publicada hace más de 7 días), se preselecciona `actualizar` igualmente. Un valor no reconocido
 se normaliza automáticamente a `"all"`.
 
+La propiedad `pubsub` es opcional: solo hace falta si el emulador de Pub/Sub local no es el de por
+defecto. `mrpack init` la conserva al regenerar el fichero.
+
+| Clave | Significado | Por defecto |
+|-------|-------------|-------------|
+| `host` | `host:puerto` del emulador (el `PUBSUB_EMULATOR_HOST` con el que se lanzan los servicios) | `localhost:8085` |
+| `proyecto` | Proyecto con el que se crean los recursos (`PUBSUB_PROJECT_ID`) | `meteored-local` |
+| `pushHost` | Host por el que el emulador, que corre en un docker, llega a los servicios de la máquina | `host.docker.internal` |
+
+Las variables de entorno `PUBSUB_EMULATOR_HOST`, `PUBSUB_PROJECT_ID` y `MRPACK_PUBSUB_PUSH_HOST` mandan sobre el
+fichero. Ver [`pubsub`](#pubsub).
+
 Ejemplo de `config.workspaces.json`:
 
 ```json
@@ -144,6 +159,9 @@ Ejemplo de `config.workspaces.json`:
   "framework": {
     "patch": "R034",
     "updates": "daily"
+  },
+  "pubsub": {
+    "host": "localhost:8085"
   }
 }
 ```
@@ -223,7 +241,42 @@ yarn mrpack devel -c -w
 yarn mrpack devel -c -e -f -w
 
 yarn mrpack devel -e
+
+# Ejecutar contra el emulador de Pub/Sub local (da de alta y vigila la topología de los mrpack.pubsub.ts)
+yarn mrpack devel -e -p
+
+# Ejecutar solo `amateur` contra el emulador (aunque config.workspaces.json tenga más workspaces encendidos)
+yarn mrpack devel -e -p --solo=amateur
 ```
+
+#### Ejecutar contra el emulador de Pub/Sub (`-p`)
+
+Con `-e -p` (el script raíz `yarn run devel-pubsub` es lo mismo), `devel` prepara el emulador **antes de lanzar ningún
+servicio**, cuando ya existen todos los `Service` pero no se ha arrancado nada:
+
+1. Si el repo no tiene ningún `mrpack.pubsub.ts`, termina con error (`Este repo no declara recursos de Pub/Sub …: usa "Ejecutar"`).
+2. Comprueba que el emulador responde. **Nunca arranca el docker**: si no está levantado, lo dice y no hace nada más.
+3. Evalúa los `mrpack.pubsub.ts`, fusiona la topología y la da de alta (modo `arranque`: crea lo que falta, corrige el
+   push y recrea lo que difiere), con una línea de log por recurso (`[PUBSUB  ]`).
+4. Lanza cada servicio con `PUBSUB_EMULATOR_HOST` y `PUBSUB_PROJECT_ID` en el entorno de su proceso de **ejecución**
+   (no en el de los compiladores). Esas variables no se escriben en ningún fichero.
+5. Deja una vigilancia (cada 15 s): si el emulador se reinicia (arranca vacío), repone la topología y lo registra
+   (`topología restaurada: …`); si cambia algún `mrpack.pubsub.ts`, lo vuelve a evaluar (si falla, lo registra y sigue con
+   la anterior). Con los servicios en marcha **solo crea lo que falta**: lo que difiere de la declaración se avisa una vez y no
+   se toca, porque recrear una suscripción les quitaría los mensajes en vuelo. Si el emulador no responde, avisa una sola
+   vez hasta que vuelva. Antes de cada reinicio automático de un servicio caído (a los 30 s) o de un cronjob (a los 10 min)
+   hace una pasada más.
+
+**Falla hacia el lado seguro:** si cualquiera de los pasos 1 a 3 falla (sin declaraciones, emulador caído, declaración
+inválida o en conflicto), **no se lanza ningún servicio** y el proceso termina con código distinto de cero: con `-p` nunca
+se ejecuta contra Google Cloud sin avisar. `-p` sin `-e` se ignora con un aviso.
+
+#### Ejecutar solo algunos workspaces (`--solo`)
+
+`--solo=<ws>[,<ws>]` ejecuta únicamente los workspaces indicados y **no mira** el flag `ejecutar` de
+`config.workspaces.json` (un workspace apagado ahí se ejecuta igualmente si está en la lista). Todo lo demás se respeta:
+`-e`, el runtime, `enabled` y `devel.enabled` del `mrpack.json`. Si algún nombre no es un workspace ejecutable, termina con
+error y la lista de los disponibles, sin lanzar nada. No afecta a la compilación (`-c`).
 
 ---
 
@@ -700,7 +753,9 @@ Entre otras acciones:
   desde el IDE (ver [Integración con IDEs](#integración-con-ides-jetbrains--vs-code)). Si el
   directorio no existe se crea; si ya existe, se eliminan las acciones de workspaces que ya no
   cumplan esas condiciones y se regeneran las vigentes, dejando intactos otros ficheros
-  `.run.xml` no gestionados por `mrpack`.
+  `.run.xml` no gestionados por `mrpack`. Si el monorepo tiene algún `mrpack.pubsub.ts`, genera además las
+  acciones de Pub/Sub (ver [`pubsub`](#acciones-del-ide-y-script-raíz)) y el script raíz `devel-pubsub`.
+- Conserva el bloque `pubsub` de `config.workspaces.json` (datos del emulador de Pub/Sub local) al regenerar el fichero.
 - Regenera el `.yarnrc.yml` con claves ordenadas alfabéticamente y una línea en blanco entre
   cada campo de nivel raíz. Garantiza la presencia de las siguientes opciones de seguridad:
 
@@ -715,6 +770,74 @@ Entre otras acciones:
 ```
 yarn mrpack init
 ```
+
+---
+
+### `pubsub`
+
+Gestiona en el emulador de Pub/Sub local (docker `pubsub` de mrenv, `localhost:8085`, proyecto `meteored-local`) la
+topología que los workspaces declaran en su `mrpack.pubsub.ts`. El formato de la declaración y el motor (evaluación,
+fusión, cliente REST del emulador) están en
+[`@mr/core/dev/README.md`](../core/dev/README.md#topología-pubsub-local-mrpackpubsubts); aquí, el comando.
+
+```
+yarn mrpack pubsub <opción>
+```
+
+| Opción | Qué hace |
+|--------|----------|
+| `-u` / `--up` | **Alta**: crea los topics y suscripciones que faltan, corrige el endpoint push (`modifyPushConfig`) y recrea las suscripciones cuyo topic, filtro o `ackDeadline` difieren. Idempotente. |
+| `-s` / `--status` | **Estado**: cada recurso declarado (`ok`, `falta`, `difiere` con el detalle), lo que hay en el emulador y no está declarado (con su repo dueño, si lo tiene) y, para cada suscripción push, a qué modo responde el servicio que la recibe. Solo lee. |
+| `-r` / `--reset` | **Purgar**: borra y recrea las suscripciones declaradas (con su configuración declarada), descartando sus mensajes pendientes. Los consumidores pull conectados pierden su stream y se reconectan. |
+| `-l` / `--limpiar` | **Limpiar**: borra del emulador lo que **este repo** dio de alta y ya no declara. Lo creado a mano, con otra herramienta o por otro repo no se toca nunca. |
+| `-h` / `--help` | Ayuda |
+
+Una sola opción por llamada; sin ninguna, muestra la ayuda. Reglas comunes:
+
+- `repo` es el nombre de la carpeta raíz del monorepo: es lo que `mrpack` escribe en la label `mrpack-repo` de lo que da de alta
+  y lo que decide qué es «suyo» para `-l`.
+- **Repo sin declaraciones** (ningún `mrpack.pubsub.ts`): `-u`, `-s`, `-r` y `-l` dicen
+  ``Este repo no declara recursos de Pub/Sub (`mrpack.pubsub.ts`)`` y terminan **sin error y sin comprobar el emulador**.
+- **Nunca arranca el docker.** Si el emulador no responde, muestra `mensajeEmuladorCaido(host)` y sale con código distinto de cero.
+- Una declaración inválida o en conflicto con otra también termina con error (con el `stderr` del evaluador, líneas
+  `<workspace>: <mensaje>`).
+- El emulador se busca en `PUBSUB_EMULATOR_HOST` / `PUBSUB_PROJECT_ID` / `MRPACK_PUBSUB_PUSH_HOST`, si no en el bloque
+  `pubsub` de `config.workspaces.json` ([ver](#configworkspacesjson)) y, si no, en `localhost:8085` / `meteored-local` /
+  `host.docker.internal`.
+- La evaluación de las declaraciones va fuera de proceso (`yarn workspace @mr/core-dev node pubsub/evaluar.mjs <raíz> <ws>…`):
+  son TypeScript que hay que empaquetar y ejecutar.
+- `-r` antes da de alta lo que falte (los topics tienen que existir para recrear las suscripciones).
+
+La comprobación de destino de `-s` hace `GET http://localhost:<puerto>/admin/pubsub/` (timeout de 2 s; el puerto es el de
+`push.base`) y lo cuenta, sin fallar por ello:
+
+| El servicio… | Significa |
+|--------------|-----------|
+| `responde en modo emulador <host> (<proyecto>)` | Correcto: habla con el emulador esperado. |
+| `responde contra Google Cloud` | Arrancado sin `-p`: sus mensajes irían a GCP. |
+| `responde con otro emulador` | Otro host o proyecto distinto del esperado. |
+| `no expone /admin/pubsub/ (framework antiguo)` | Framework sin la ruta (404): actualizar `@mr/core-workload`. |
+| `no responde (servicio parado)` | No hay nadie escuchando en ese puerto. |
+
+#### Acciones del IDE y script raíz
+
+Si el monorepo tiene algún `mrpack.pubsub.ts`, `mrpack init` genera además:
+
+| Fichero (`.run/`) | Acción en el IDE | Comando |
+|-------------------|------------------|---------|
+| `{type}-{service}.pubsub.run.xml` | `ejecutar + pubsub => {type} => {service}` | `devel -e -p --solo={service}` |
+| `mrpack-pubsub-ejecutar.run.xml` | `develop => Ejecutar + PubSub` | `devel -e -p` |
+| `mrpack-pubsub-compilar-ejecutar.run.xml` | `develop => Compilar + Ejecutar + PubSub` | `devel -c -e -w -p` |
+| `mrpack-pubsub-estado.run.xml` | `cli => PubSub estado` | `pubsub -s` |
+| `mrpack-pubsub-reset.run.xml` | `cli => PubSub reset` | `pubsub -r` |
+
+- La de cada servicio solo se genera si, entre las `dependencies`/`devDependencies` con protocolo `workspace:` del propio
+  workspace y las de todo lo que arrastra (recursivamente), hay algún workspace con `mrpack.pubsub.ts`: es lo que hace que
+  el servicio publique o consuma.
+- Las cuatro de la raíz se generan siempre que haya alguna declaración en el monorepo.
+- Un repo **sin declaraciones** no recibe nada de esto, y si antes lo tenía (porque se retiraron las declaraciones), `init`
+  borra estos ficheros (`service-*`/`cronjob-*`/`job-*` y `mrpack-pubsub-*`); los `.run.xml` ajenos no se tocan.
+- El script raíz `devel-pubsub` (`yarn mrpack devel -e -p`) tiene el mismo criterio: solo existe si hay declaraciones.
 
 ---
 
@@ -759,6 +882,12 @@ yarn mrpack autodoc --env=<entorno>
 | Compilar y ejecutar workspaces habilitados en modo watch | `yarn mrpack devel -c -e -w` |
 | Compilar y ejecutar **todos** los workspaces en modo watch | `yarn mrpack devel -c -e -f -w` |
 | Solo ejecutar (sin recompilar) | `yarn mrpack devel -e` |
+| Ejecutar contra el emulador de Pub/Sub local | `yarn mrpack devel -e -p` (o `yarn run devel-pubsub`) |
+| Ejecutar solo un workspace contra el emulador | `yarn mrpack devel -e -p --solo=<ws>` |
+| Dar de alta la topología de Pub/Sub en el emulador | `yarn mrpack pubsub -u` |
+| Estado de la topología de Pub/Sub y de los servicios push | `yarn mrpack pubsub -s` |
+| Purgar las suscripciones declaradas (descarta mensajes pendientes) | `yarn mrpack pubsub -r` |
+| Borrar del emulador lo que este repo ya no declara | `yarn mrpack pubsub -l` |
 | Build de producción | `yarn mrpack deploy --env=produccion` |
 | Build de test/staging | `yarn mrpack deploy --env=test` |
 | **Gestión de config.workspaces.json** | `yarn mrpack config` |
@@ -942,6 +1071,12 @@ Para facilitar la ejecución y depuración de las herramientas del monorepo, est
   `service`/`cronjob`/`job`, esté habilitado para desarrollo (`enabled` + `devel.enabled`) y use
   el framework `meteored`, permitiendo depurarlo individualmente (`yarn workspace {service} run devel`)
   desde el IDE sin configuración manual.
+* Si el monorepo declara su topología de Pub/Sub, `yarn mrpack init` genera también, para cada uno de esos
+  workspaces que dependa (por el protocolo `workspace:`) de alguno con `mrpack.pubsub.ts`, una acción
+  `ejecutar + pubsub => {type} => {service}` (`.run/{type}-{service}.pubsub.run.xml`, `devel -e -p --solo={service}`),
+  y cuatro acciones en la raíz: `develop => Ejecutar + PubSub`, `develop => Compilar + Ejecutar + PubSub`,
+  `cli => PubSub estado` y `cli => PubSub reset` (`.run/mrpack-pubsub-*.run.xml`). Detalle y criterio en
+  [`pubsub`](#acciones-del-ide-y-script-raíz). Un repo sin declaraciones no las recibe.
 
 ### VS Code
 * **Ubicación**: `.vscode/`

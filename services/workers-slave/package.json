@@ -16,21 +16,21 @@
   "dependencies": {
     "@elastic/elasticsearch": "^9.5.1",
     "@google-cloud/storage": "^8.4.0",
-    "chokidar": "^5.0.0",
-    "dd-trace": "^6.21.0",
+    "chokidar": "^6.0.0",
+    "dd-trace": "^6.23.0",
     "formidable": "^3.5.4",
     "mysql2": "^3.24.6",
-    "qs": "^6.16.1",
+    "qs": "^6.17.1",
     "source-map-support": "^0.5.21",
-    "tslib": "^2.8.1",
-    "ws": "^8.22.0"
+    "tslib": "^2.9.1",
+    "ws": "^8.22.1"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
     "@mr/core-i18n": "workspace:*",
     "@mr/core-network": "workspace:*",
     "@mr/core-workload": "workspace:*",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
     "zod": "^4.6.7"

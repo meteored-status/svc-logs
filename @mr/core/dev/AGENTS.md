@@ -30,6 +30,9 @@
   `yarn run <workspace> run devel` (`run dev` en vez de `run devel` si su framework es Next.js).
   Ojo: esto **ejecuta**, no compila — para compilar ese workspace usa `run packd` (ver arriba).
 - Forzar todos los workspaces también en modo ejecución (incluye deshabilitados): `yarn run devel-f`
+- Ejecutar contra el emulador local de Pub/Sub: `yarn run devel-pubsub` (equivale a `yarn mrpack devel -e -p`; con
+  `--solo=<ws>` solo ese workspace). Dar de alta y comprobar la topología declarada en los `mrpack.pubsub.ts`:
+  `yarn mrpack pubsub -u|-s|-r|-l` (alta, estado, purgar, limpiar). Necesitan el docker `pubsub` de mrenv levantado.
 - Lint de todo el monorepo: `yarn lint` (`yarn lint:fix` aplica los arreglos automaticos). Antes de dar un
   cambio por terminado, los ficheros tocados tienen que quedar sin errores (`yarn eslint <ficheros>`); no se
   arreglan errores de framework ajeno a la tarea. Los `warn` son deuda conocida. Configuracion y reglas en
@@ -56,6 +59,8 @@
   o su `CHANGELOG.md` si ya existia. Solo mira el working tree, no los commits. El detalle de la
   heuristica y de como se expone `.claude/` esta en `@mr/core/dev/README.md` y
   `@mr/core/dev/.claude/CODEMAP.md`.
+- Pub/Sub: el código que publica o consume lo declara en el `mrpack.pubsub.ts` de su workspace — ver la seccion «Pub/Sub:
+  topologia local» de `.github/copilot-instructions.md`. Los tests (unitarios y e2e) no levantan servicios ni crean topologia.
 - TypeScript estricto; evitar `any` explicito salvo necesidad real.
 - Imports en 3 bloques con una linea en blanco: (1) node/publico, (2) otros workspaces, (3) local relativo; usar `type` en imports solo-tipo.
 - Entre workspaces usa imports por nombre de paquete (`@mr/core-network/...`, `services-comun/...`), no rutas relativas cruzadas.

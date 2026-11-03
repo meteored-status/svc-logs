@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 4b8c40ac33787885bbe285d444fed235
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.5.26+1-davidmartinezmoya
+ * Fecha: Fri, 23 Oct 2026 10:50:35 GMT
+ * Hash: de6161924e03af2916d746f713af8a12
+ * Versión: 2026.10.23+1-bixus
+ * Anterior: 2026.9.23+3-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -108,7 +108,11 @@ export class BackendRequest {
             return await this.parseRespuestaBuffer(respuesta) as RequestResponse<T>;
         }
 
-        const extra = await respuesta.json().then(r => r.info?.extra).catch(() => undefined);
+        // `extra` solo llega fuera de producción (el manejador de errores lo quita); `info.message` llega siempre, y es
+        // donde viaja el motivo legible de un rechazo. Se guardan los dos y el llamador elige.
+        const info = await respuesta.json().then(r => r.info).catch(() => undefined);
+        const extra = info?.extra;
+        const detail = typeof info?.message === "string" ? info.message : undefined;
 
         // SI EL CÓDIGO NO ES 200 ENTONCES VA A SALTAR AQUÍ
         return Promise.reject(new RequestError({
@@ -117,7 +121,8 @@ export class BackendRequest {
             headers: respuesta.headers,
             code: ErrorCode.NETWORK,
             message: respuesta.statusText,
-            extra
+            extra,
+            detail,
         }));
     }
 

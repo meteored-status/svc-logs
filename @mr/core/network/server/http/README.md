@@ -168,6 +168,7 @@ import {Conexion} from "@mr/core-network/server/http/conexion";
 | `path` | `string` | Path literal tal como llega en la URL. |
 | `dominio` | `string` | Valor del header `Host`. |
 | `query` | `URLSearchParams` | Parámetros de query string. |
+| `slow` | `number \| undefined` | Umbral (ms) del aviso de petición lenta fijado por la ruta (`IRouteGroup.slow`); `undefined` = el de `Net.slow`. |
 | `queryRAW` | `string` | Query string literal (incluye `?`). |
 | `post` | `NodeJS.Dict<unknown> \| unknown[]` | Cuerpo parseado (formidable / qs). Puede ser un diccionario de clave-valor o un array si el JSON enviado es de tipo array. |
 | `postRAW` | `string` | Cuerpo en texto plano sin parsear. |
@@ -423,8 +424,35 @@ interface IRouteGroup {
     cache?: Partial<IRouteGroupCache>; // configuración de caché HTTP
     documentable?: boolean;            // visible en /admin/doc/ (defecto true)
     dominios?: string[];               // por defecto para las IExpresion de `expresiones` que no lo definan
+    slow?: number;                     // umbral (ms) del aviso de petición lenta para estas rutas; 0 = sin aviso
 }
 ```
+
+### Aviso de petición lenta (`slow`)
+
+El servidor avisa con un `warning` (`Tiempo de respuesta excesivo …`) de las peticiones que tardan más de
+`Net.slow` (1000 ms por defecto). Un handler que se espera que tarde más (una consulta pesada a BigQuery, por
+ejemplo) no tiene por qué inundar el log: el bloque puede fijar su propio umbral con `slow`.
+
+```ts
+{
+    expresiones: [{exact: "/backend/marketing/ads/panel", metodos: ["GET"], resumen: "…"}],
+    handler: (conexion) => this.panel(conexion),
+    slow: 15_000,   // avisa a los 15 s en vez de a 1 s; `slow: 0` lo desactiva para estas rutas
+}
+```
+
+- Sin `slow` el comportamiento es el de siempre: el umbral es `Net.slow`.
+- Cuando la ruta hace match, el router deja el valor en `Conexion.slow`. El aviso se arma al terminar de leer la
+  petición con `Net.slow`, antes de saber qué ruta la atenderá; al vencer mira el umbral efectivo y, si la ruta
+  fijó uno mayor, se reprograma por lo que falte (no hay temporizadores extra para el resto de rutas).
+- Hay dos avisos, como antes: uno mientras la petición sigue en curso (`>15sg`) y otro al terminar con el tiempo
+  total, ambos con el umbral efectivo (el segundo ya no usa un `1000` fijo).
+- Un `slow` menor que `Net.slow` baja el umbral del aviso final, pero el aviso «en curso» nunca salta antes de
+  `Net.slow`. `Net.slow = 0` apaga el aviso de todo el servidor y no lo reactiva ninguna ruta.
+- Solo rige en peticiones sin cuerpo (`GET`, `HEAD`, `OPTIONS`): la rama con cuerpo (`POST`/`PUT`/`PATCH`/`DELETE`)
+  no tiene aviso de petición lenta, ni antes ni ahora.
+- La decisión es pura y vive en `server/http/slow.ts` (`umbralLento`, `esperaLenta`, `esLenta`, `textoUmbral`).
 
 ### Updater dinámico
 

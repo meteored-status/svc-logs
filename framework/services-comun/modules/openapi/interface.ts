@@ -1,3 +1,11 @@
+/**
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 20 Oct 2026 09:48:50 GMT
+ * Hash: 4c4d789374448e1935aebc5a318146b8
+ * Versión: 2026.10.20+2-juancmartinez
+ * Proyecto: git@github.com:alpred/meteored-svc-api.git
+ */
+
 export interface IOpenAPI {
     openapi: "3.1.0";
     info: IInfo;
@@ -41,6 +49,7 @@ export interface ISchemas {
 
 export interface IHTTPMethod {
     tags?: string[];
+    deprecated?: boolean;
     parameters?: IParameter[];
     responses?: IResponses;
 }

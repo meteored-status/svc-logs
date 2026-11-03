@@ -126,11 +126,52 @@ de Google Cloud.
 
 | Fichero | Símbolos exportados |
 |---------|---------------------|
-| `redis/index.ts` | `Redis implements AsyncDisposable`, `IRedisOptions` |
+| `redis/index.ts` | `Redis implements AsyncDisposable`, `IRedisOptions`, `IBulkHIncrByOptions`, `IBulkHGetAllOptions`, `IExpireOptions`, re-exporta `IHIncrBy` y `TBatchResult` |
+| `redis/cluster.ts` | `RedisCluster implements AsyncDisposable` (interno; estáticos `MAX_RECONNECT_DELAY_MS` y `reconnectDelay()`), `IRedisNode`, `IClusterOptions`, `IReconnectDelayOptions`, `validateSingleNode()`, `isOlderRedis()`, `redisVersion()`, `warnIfOldRedis()` |
+| `../utiles/log-throttle.ts` | `LogThrottle` (un log por tipo e intervalo), `errorType()` — lo usan `RedisCluster`, `Redis` y el monitor en tiempo real de cmp-web |
+| `redis/batch.ts` | `RedisBatch` (`new RedisBatch(items)` valida y agrupa los TTL en `ttls`; `execute(client, timeoutMs)`; estático `classifyError()`), y los tipos `TBatchResult`, `IHIncrBy`, `IBatchMulti`, `IBatchClient` |
 
 Cliente sobre el paquete `redis` (`createClient`), con namespace por servicio (usa `IPodInfo` de
 `@mr/core-workload/config/pod`, solo tipo) y utilidades de lectura/escritura, serialización JSON y locks
-distribuidos. Soporta topología de clúster con nodo `primary` y réplica opcional `read`.
+distribuidos. Soporta topología de clúster con nodo `primary` (uno o varios) y réplica opcional `read`.
+
+**Conexión (`RedisCluster`).** Un cliente por primario y otro para `read` si es un nodo distinto, abiertos en la primera operación o, con `connectOnBuild`, al construir `Redis`.
+node-redis reconecta solo y sin rendirse: tras perder una conexión establecida el primer reintento es inmediato y, si falla, esperan 200 ms, 400 ms… (+0–249 ms) hasta
+`maxReconnectDelayMs` (5000 por defecto); `on('error')` solo registra (un log por tipo y minuto, `logThrottleMs`). Sin cola offline: `primaries`, `read` y `single` devuelven el cliente si
+está listo y, si no, rechazan al instante con `ClientOfflineError`; solo un nodo que **nunca** ha conectado (arranque) espera a conectar durante la ventana de gracia de
+`4 × clientTimeout + 700 ms` desde que se creó el clúster. Si `read` es el mismo host y puerto que un primario, comparte su cliente. Se cierra con `close()` acotado y `destroy()` de
+respaldo (que no lanza); una conexión que termine su handshake después de cerrar se destruye. Los avisos de los métodos con Redis caído salen una vez por tipo de error y por
+`logThrottleMs`, con la causa original en `cause`. Requisito: `redis` ≥ 6.3.0 (con una anterior se escribe un `warning` al crear el primer clúster).
+
+**Contrato de los métodos con Redis caído.** Escrituras sueltas (`set`, `hSet`, `zAdd`, `save*`, `releaseLock`): registran y resuelven sin escribir;
+lecturas (`get`, `hGet`, `hGetAll`, `load*`): `null`; `searchKeys`: `[]`; `searchMaxScore`: `null`; `aquireLock`: `null`; `bulkSet`, `bulkHSet`,
+`bulkHGetAll` y `expire`: rechazan; `bulkHIncrBy`: `notSent`. Las escrituras con varios primarios van a **todos**, salvo las de un solo nodo.
+
+**Escritura sin replicar, en un nodo.** Con varios primarios, `set`, `hSet`, `bulkSet`, `bulkHSet`, `zAdd` y los locks escriben en
+**todos** (best-effort, o propagando el error en `bulk*`). Para contadores eso no sirve (se contarían varias veces), así que hay un «nodo
+único» (`IRedisOptions.singleNode`, índice en `primary`, por defecto 0) con operaciones propias:
+
+- `bulkHIncrBy(items: IHIncrBy[], {shared, timeoutMs}) → Promise<TBatchResult>`: un `MULTI` con un `HINCRBY` por elemento y un
+  `EXPIRE` por clave (mayor TTL del lote), solo en el nodo único. Nunca rechaza por fallos de Redis (`ok` / `notSent` / `ambiguous`).
+- `bulkHGetAll(keys, {shared, node}) → Promise<(Record<string,string>|null)[]>`: hashes en crudo, sin el envoltorio `{expires, data}`;
+  rechaza si falla. `node: "single"` (por defecto) o `"read"`.
+- `expire(key, ttl, {shared, target})`: `"all"` (por defecto) o `"single"`; propaga errores.
+
+**Procesos que terminan.** Los jobs y cronjobs (`Main.ejecutar`) acaban con `process.exit()`, así que el cliente no los retiene: salen solos porque el getter `pod.cronjob`
+(`@mr/core/dev/manifest/deployment/index.ts:180`) incluye el tipo `job`; un job declarado como `service` no saldría por sí solo y un cliente que reconecta lo mantendría vivo. Un script sin
+`Main` debe liberar el cliente con `await redis[Symbol.asyncDispose]()` para terminar solo; `@redis/client` 6.3.0 no permite soltar el temporizador de PING ni el de reconexión con
+`unref()`. Tras liberar con Redis caído, el proceso puede tardar hasta `maxReconnectDelayMs` + 250 ms (~5,25 s por defecto) en salir (medido entre 0,1 y 4,9 s).
+
+**Limitación conocida: Redis conectado pero mudo.** Si Redis está conectado y no responde, `get`, `set`, `aquireLock`, los `MULTI` y el resto de métodos existentes **no tienen límite de
+tiempo**: en node-redis `timeout` solo limita la espera antes de enviar y no hay timeout de socket. No es una regresión (el cliente anterior tenía el mismo hueco). Quien lo necesite,
+que lo ponga al llamar (p. ej. con `PromiseTimeout`). `bulkHIncrBy` sí lo tiene (`timeoutMs`).
+
+**Limitaciones de node-redis 6.3.0:** `MULTI` ignora `commandOptions.timeout` y `disableOfflineQueue`. Por eso `set`, `hSet`, `bulkSet`, `bulkHSet` y `get` con varias
+claves —todos por `MULTI`— no tienen timeout; `bulkHIncrBy` comprueba `isReady` y acota el `EXEC` con su propio temporizador (`RedisBatch.execute`).
+Detalle del cambio de comportamiento respecto al cliente que recreaba los clientes ante un error (y de los dos fallos que arregla) en el
+[`CHANGELOG.md`](../../CHANGELOG.md) de `services-comun` (2026.10.30).
+
+**Pruebas:** `spec/database/redis/` (`batch.spec.ts`, `cluster.spec.ts`, `redis.spec.ts`), esta última contra el servidor RESP falso de `fake-resp.ts`.
 
 ---
 

@@ -1,12 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 25 Aug 2026 10:03:08 GMT
- * Hash: a87edb06e8c03c7894f9c99460a74a04
- * Versión: 2026.8.25+1-bixus
+ * Fecha: Mon, 26 Oct 2026 13:34:19 GMT
+ * Hash: d834d43f3c811a060f09787e207ec5d8
+ * Versión: 2026.10.26+1-bixus
+ * Anterior: 2026.8.25+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
-import type {IOnCallCycleInfo, IOnCallHoliday, IOnCallOverride, IOnCallSkip, IOnCallUser, IOnCallWeek} from "../interface";
+import type {IOnCallCycleInfo, IOnCallHoliday, IOnCallOverride, IOnCallSkip, IOnCallUser, IOnCallWaiver, IOnCallWeek} from "../interface";
 
 /**
  * Todo lo que pinta la pantalla de Guardia, en una sola petición: la rueda, a quién se puede añadir, la
@@ -26,6 +27,8 @@ import type {IOnCallCycleInfo, IOnCallHoliday, IOnCallOverride, IOnCallSkip, IOn
  *                        borrar los manuales.
  * @property overrides  - Cambios puntuales que solapan la ventana.
  * @property skips      - Saltos de turno que solapan la ventana.
+ * @property waivers    - Dispensas (turnos que se dan por hechos) de **hoy en adelante**, para pintar «turno dado por
+ *                        hecho» en la planificación. Las pasadas ya no pintan nada.
  * @property cycles     - Desde dónde se cuenta cada ciclo, para los que se hayan reseteado. Los que no
  *                        aparezcan se cuentan desde el origen fijo del código, que es el comportamiento por
  *                        defecto: la lista vacía significa «nunca se ha reseteado nada».
@@ -60,6 +63,7 @@ export interface IListOUT {
     holidays: IOnCallHoliday[];
     overrides: IOnCallOverride[];
     skips: IOnCallSkip[];
+    waivers: IOnCallWaiver[];
     cycles: IOnCallCycleInfo[];
     today: string;
     nextHoliday?: string;

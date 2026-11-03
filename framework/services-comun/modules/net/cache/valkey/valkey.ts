@@ -1,9 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 623f5eea012e626bf88ee67e9d16a59b
- * Versión: 2026.9.23+3-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Chema
+ * Fecha: Tue, 20 Oct 2026 06:31:15 GMT
+ * Hash: 9337c705854928f163015a3786939b78
+ * Versión: 2026.10.20+1-chema
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/alpred-cms/svc-redaccion.git
  */
 
 import {createClient, createCluster, type RedisClientType, type RedisClusterType} from "redis";
@@ -167,7 +168,9 @@ export class Valkey {
             } else {
                 await this.client.set(key, value);
             }
-            info(`Valkey: Cache guardada ${key} (TTL: ${ttl ?? 'indefinido'})`);
+            if (!PRODUCCION && !TEST) {
+                info(`Valkey: Cache guardada ${key} (TTL: ${ttl ?? 'indefinido'})`);
+            }
         } catch (e) {
             warning(`Valkey: Error guardando cache ${key}`, e);
         }

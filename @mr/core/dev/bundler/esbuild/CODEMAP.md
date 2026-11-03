@@ -8,8 +8,15 @@
 
 ```txt
 bundler/esbuild/
+├── define.mjs           getDefine(): los `define` (DESARROLLO, TEST, PRODUCCION, ENTORNO, NEXTJS, DATABASE)
 └── esbuild.config.mjs   Entry point de esbuild para workspaces
 ```
+
+## `define.mjs`
+
+- `getDefine({entorno, database})` — mapa para la opción `define` de esbuild (`DESARROLLO`, `TEST`, `PRODUCCION`, `ENTORNO`,
+  `NEXTJS`, `DATABASE` y sus versiones `global.*`). Vive aparte porque `esbuild.config.mjs` lanza su build al importarse: lo
+  importan él y `pubsub/evaluar.mjs`, que empaqueta los `mrpack.pubsub.ts` con los mismos `define` que el build de desarrollo.
 
 ---
 
@@ -28,7 +35,7 @@ bundler/esbuild/
 - `getNodeEntries(basedir)` — entrada node (`app -> main.ts`).
 - `getOutputConfig(basedir)` — salida fija `output/`.
 - `getSourcemap()` — source maps siempre activos en Node.
-- `getDefine({...})` — define variables globales (`DESARROLLO`, `TEST`, etc.).
+- `getDefine({...})` — define variables globales (`DESARROLLO`, `TEST`, etc.). Se importa de `define.mjs`.
 - `getOptions(config)` — traduce config de bundle a opciones de `esbuild`. Aquí sale `external: Object.keys(dependencies ?? {})`: **la lista de `dependencies` del workspace es su lista de externals**, así que declarar o no declarar un paquete decide si queda como `require()` o si se empaqueta dentro del `app.js`. Ver el README para las consecuencias y las dos trampas al auditar (el lanzador y `tslib`).
 - `getDatabase(build, entorno)` — selecciona BD de `build.database`.
 - `getConfigList({...})` — genera una única config Node; para `runtime!=node` o `framework=nextjs` devuelve `[]` con warning.

@@ -1,11 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 26 Aug 2026 10:32:05 GMT
- * Hash: 981d63f444ec0b056ee6846f85b980bb
- * Versión: 2026.8.26+3-bixus
- * Anterior: 2026.8.25+1-bixus
+ * Fecha: Mon, 26 Oct 2026 13:34:19 GMT
+ * Hash: 67743d3e4f455e3ebf3a4430ddb6ff16
+ * Versión: 2026.10.26+1-bixus
+ * Anterior: 2026.8.26+3-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
+
+import type {IConfirmable} from "../efectos/interface";
 
 /**
  * Alta de un salto de turno: un tramo en el que a alguien no se le adjudican guardias.
@@ -40,7 +42,7 @@
  *                      Si el tramo empieza en lunes y acaba en domingo no hay días sueltos y este campo no hace
  *                      nada: ahí no hay nada que decidir.
  */
-export interface ISkipIN {
+export interface ISkipIN extends IConfirmable {
     dateFrom: string;
     dateTo: string;
     user: number;
@@ -54,6 +56,6 @@ export interface ISkipIN {
  *
  * @property id - Identificador del salto.
  */
-export interface ISkipDeleteIN {
+export interface ISkipDeleteIN extends IConfirmable {
     id: number;
 }

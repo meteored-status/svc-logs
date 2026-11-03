@@ -1,16 +1,17 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 09:57:26 GMT
- * Hash: ecf27697a730755ef084f39dc1e0cf41
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.9.23+2-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Fecha: Thu, 29 Oct 2026 07:47:56 GMT
+ * Hash: 074bfd4f0df9d9ea99a32b04ec7e7cdc
+ * Versión: 2026.10.29+1-bixus
+ * Anterior: 2026.10.20+1-alexcg
+ * Proyecto: https://github.com/alpred/tiempo-web-estaticos.git
  */
 
 import {md5} from "services-comun/modules/utiles/hash";
 import {BuildFW} from "@mr/core-dev/manifest/build";
 import type {Manifest} from "@mr/core-dev/manifest";
 import {Runtime} from "@mr/core-dev/manifest/deployment";
+import {buscarDeclaraciones} from "@mr/core-dev/pubsub/descubrir";
 import {isDir, isFile, readDir, readFileString, readJSON, safeWrite, unlink} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
 
@@ -34,6 +35,7 @@ import {initConfig, type IWorkspaces} from "./init/config-workspaces";
 import {initRun} from "./init/run";
 import {checkLint} from "./init/lint";
 import {checkWorkspaceDeps} from "./init/workspace-deps";
+import {parchearCorepack} from "./init/dockerfile";
 import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
@@ -150,6 +152,13 @@ async function checkFiles(config: Manifest, basedir: string): Promise<void> {
             contenido = contenido.replaceAll("WORKDIR /usr/src/app\n", "WORKDIR /usr/src/app\nRUN apk add --no-cache tzdata\n");
             cambio = true;
         }
+        if (config.deploy.runtime===Runtime.node) {
+            const parcheado = parchearCorepack(contenido);
+            if (parcheado!==contenido) {
+                contenido = parcheado;
+                cambio = true;
+            }
+        }
         if (cambio) {
             Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgYellow], `Corrigiendo ${basedir}/Dockerfile`));
             await safeWrite(`${basedir}/Dockerfile`, contenido, true);
@@ -206,12 +215,16 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
 
     const paquete = await readJSON<IPackageJsonBase>(`${basedir}/package.json`);
     const devDependencies = JSON.stringify(paquete.devDependencies ?? {});
+    // `devel-pubsub` solo existe si algún workspace declara su topología de Pub/Sub (`mrpack.pubsub.ts`): este método
+    // reescribe `scripts` entero, así que en un monorepo sin declaraciones simplemente no aparece.
+    const pubsub = (await buscarDeclaraciones(basedir)).length>0;
     paquete.scripts = {
         // "mrlang": "yarn workspace @mr/core-i18n mrlang",
         // "mrpack": "yarn workspace @mr/cli mrpack",
         "doctor": "yarn dlx @yarnpkg/doctor",
         "devel": "yarn mrpack devel -e",
         "devel-f": "yarn mrpack devel -e -f",
+        ...(pubsub ? {"devel-pubsub": "yarn mrpack devel -e -p"} : {}),
         "g:devel": "cd \"$INIT_CWD\" && yarn node --watch --no-warnings devel.js",
         "packd": "yarn mrpack devel -c",
         "packd-f": "yarn mrpack devel -c -f",

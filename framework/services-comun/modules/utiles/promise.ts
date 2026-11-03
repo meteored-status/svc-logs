@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 1caf1e1d34f11ba48d7698b33833195a
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.7.23+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 20 Oct 2026 13:12:58 GMT
+ * Hash: bfb5a553a22d750cfbaa62dc3f0e5b79
+ * Versión: 2026.10.20+4-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-api.git
  */
 
 export async function PromiseDelayed(delay: number = 0): Promise<void> {
@@ -56,11 +56,26 @@ export class PromiseTimeoutError extends Error {
     }
 }
 
+/**
+ * Resuelve con `promesa`, o rechaza con {@link PromiseTimeoutError} si tarda más de `ms`.
+ *
+ * El temporizador se cancela siempre, termine como termine `promesa`, para no dejar timers vivos (un timer pendiente mantiene vivo el proceso
+ * hasta que vence). Si gana el temporizador, el posterior rechazo de `promesa` queda atendido por la propia carrera, así que tampoco genera un
+ * rechazo sin atender.
+ *
+ * No cancela la operación: solo deja de esperarla. Quien la lanza debe acotarla por su lado.
+ */
 export async function PromiseTimeout<T>(promesa: Promise<T>, ms: number): Promise<T> {
-    return await Promise.race([
-        promesa,
-        PromiseDelayed(ms).then(()=>Promise.reject(new PromiseTimeoutError(ms))),
-    ]);
+    const vencido = new Deferred<never>();
+    const temporizador = setTimeout(()=>{
+        vencido.reject(new PromiseTimeoutError(ms));
+    }, ms);
+
+    try {
+        return await Promise.race([promesa, vencido.promise]);
+    } finally {
+        clearTimeout(temporizador);
+    }
 }
 
 type PromiseStatus = "OK"|"KO";
@@ -126,5 +141,49 @@ export class Deferred<T=void> {
                 reject(reason);
             };
         });
+    }
+}
+
+/**
+ * Limita cuántas tareas asíncronas corren a la vez; las demás esperan su turno, por orden de llegada.
+ *
+ * Funciona con «carriles»: cada carril es la promesa de la tarea que lleva en curso. Un turno (encadenado, para que los que llegan se
+ * coloquen de uno en uno y por orden) espera a que algún carril quede libre y arranca ahí la tarea. No hace falta capturar `resolve`/`reject`
+ * de ninguna promesa: todo son encadenamientos de las que ya hay.
+ */
+export class Semaforo {
+    /* INSTANCE */
+
+    private readonly carriles: Promise<void>[];
+    private turno: Promise<void>;
+
+    /**
+     * @param maximo - Tareas que pueden correr a la vez. Entero mayor o igual que 1; si no, lanza `RangeError`.
+     */
+    public constructor(maximo: number) {
+        if (!Number.isInteger(maximo) || maximo < 1) {
+            throw new RangeError(`Semaforo: el máximo debe ser un entero mayor o igual que 1 (recibido: ${maximo})`);
+        }
+
+        this.carriles = Array.from({length: maximo}, ()=>Promise.resolve());
+        this.turno = Promise.resolve();
+    }
+
+    /**
+     * Ejecuta `tarea` cuando haya un carril libre y devuelve su resultado. Si la tarea falla —incluso si lanza de forma síncrona—, el carril
+     * queda libre igualmente y solo rechaza a su llamador.
+     */
+    public async run<T>(tarea: ()=>Promise<T>): Promise<T> {
+        const colocada = this.turno.then(async ()=>{
+            const libre = await Promise.race(this.carriles.map((carril, i)=>carril.then(()=>i)));
+            const ejecucion = tarea();
+            this.carriles[libre] = ejecucion.then(()=>undefined, ()=>undefined);
+
+            // En un objeto, para que el turno no espere a que termine la tarea: solo a que ocupe su carril
+            return {ejecucion};
+        });
+        this.turno = colocada.then(()=>undefined, ()=>undefined);
+
+        return (await colocada).ejecucion;
     }
 }

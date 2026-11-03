@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: a3a09475fc3c5d1eedb422c2709451f6
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: alexCG
+ * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
+ * Hash: 29a41b760c817f532f1fb58b0f303f5a
+ * Versión: 2026.10.20+1-alexcg
+ * Anterior: 2026.9.23+2-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
  */
 
 import {readJSON} from "@mr/core-cli/fs";
@@ -16,6 +16,7 @@ import {ModuloConfig} from "./modulos/config";
 import {ModuloDevel} from "./modulos/devel";
 import {ModuloDeploy} from "./modulos/deploy";
 import {ModuloInit} from "./modulos/init";
+import {ModuloPubSub} from "./modulos/pubsub";
 import {ModuloUpdate} from "./modulos/update";
 import {ModuloFramework} from "./modulos/framework";
 import {ModuloAutoDoc} from "./modulos/auto-doc";
@@ -56,6 +57,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
         {nombre: "deploy", descripcion: "Compila el proyecto en modo producción", run: ()=>ModuloDeploy.run()},
         {nombre: "framework", descripcion: "Operaciones sobre los frameworks", run: ()=>ModuloFramework.run()},
         {nombre: "init", descripcion: "Inicializa la configuración del proyecto", run: ()=>ModuloInit.run()},
+        {nombre: "pubsub", descripcion: "Emulador de Pub/Sub local (topología de mrpack.pubsub.ts)", run: ()=>ModuloPubSub.run()},
         {nombre: "update", descripcion: "Actualiza las librerías", run: ()=>ModuloUpdate.run()},
     ];
 

@@ -16,6 +16,7 @@ junto con los handlers predefinidos (`admin`, `error`, `favicon`) que dependen d
 | [Main / IEngine / IConfiguracionLoader](#main--iengine) | `@mr/core-workload` | Orquestador de arranque, contrato de engine y contrato de loader |
 | [Configuracion base](#configuracion-base) | `@mr/core-workload/config` | Configuración con metadatos de pod y sobreescritura opcional desde `files/config.json` |
 | [ConfiguracionNet](#configuracionnet) | `@mr/core-workload/config/net` | Configuración base de servicio con red (`net`) |
+| [Guarda de Pub/Sub](#guarda-de-pubsub) | `@mr/core-workload/config/pubsub` | `comprobarEmuladorPubSub` y `modoPubSub`: aborta el arranque si un bundle de test/producción apunta al emulador |
 | [Engine base](#engine-base) | `@mr/core-workload/engine` | Clase base del engine: `build`, ciclo de vida, abort, métricas |
 | [Engine HTTP](#engine-http) | `@mr/core-workload/engine/server` | Engine HTTP/HTTPS abstracto con watcher de shutdown |
 | [Handler admin](#handler-admin) | `@mr/core-workload/handlers/admin` | Rutas de administración interna (`/admin/*`) |
@@ -47,6 +48,30 @@ Main.ejecutar(MiEngine, MiConfiguracion, {minimo_hilos: 2});
 | Opción | Por defecto | Descripción |
 |--------|:-----------:|-------------|
 | `minimo_hilos` | `1` | `1` = modo simple; cualquier otro valor activa cluster. `< 1` = `os.availableParallelism()`. |
+
+Lo primero que hace el arranque (`Main.start()`), antes incluso de cargar la configuración, es
+[comprobar que no se esté apuntando al emulador de Pub/Sub](#guarda-de-pubsub) desde un bundle de test o producción;
+si el proceso corre contra el emulador, lo deja en el log (`Pub/Sub: emulador <host> (<proyecto>)`).
+
+---
+
+## Guarda de Pub/Sub
+
+**Entrada:** `@mr/core-workload/config/pubsub`
+
+`@google-cloud/pubsub` cambia por sí sola a un canal inseguro contra `PUBSUB_EMULATOR_HOST` y descarta las credenciales de la cuenta de
+servicio: en un servicio desplegado, perder los mensajes sin ninguna alarma. Por eso la variable solo se admite en desarrollo.
+
+| Función | Descripción |
+|---------|-------------|
+| `comprobarEmuladorPubSub({produccion, env})` | Lanza si `produccion` (el `PRODUCCION` del bundle: `true` en test y producción) y `PUBSUB_EMULATOR_HOST` está definida. Una variable vacía cuenta como no definida. |
+| `modoPubSub(env)` | `{emulador, proyecto}`: `PUBSUB_EMULATOR_HOST` y `PUBSUB_PROJECT_ID`, o `null` en la que esté ausente o vacía. Es lo que devuelve `GET /admin/pubsub/`. |
+
+`Main.start()` llama a `comprobarEmuladorPubSub({produccion: PRODUCCION, env: process.env})` lo primero; su rechazo lo recoge el `catch` de
+`Main.ejecutar` (log de error y `process.exit(1)`; en un cronjob, parada del sidecar y `process.exit(0)`, como con cualquier otro error de arranque). Después, si `modoPubSub(process.env).emulador` no es `null`, escribe
+`Pub/Sub: emulador <host> (<proyecto>)` con `info` (solo el proceso primario en modo cluster). Sin la variable, no hace ni registra nada.
+
+Las variables solo las inyecta `mrpack devel -p` en los procesos que lanza; no se escriben en código ni en ficheros versionados.
 
 ---
 
@@ -240,6 +265,7 @@ Factory: `(config: Configuracion, engine: Engine) => Admin`
 | `GET /admin/doc/` | Devuelve la lista de rutas documentables en JSON. |
 | `GET /admin/metrics/` | Métricas en formato Prometheus (`text/plain; version=0.0.4`). |
 | `POST /admin/debug-handoff/` | Solo fuera de producción: cede el puerto HTTP a una sesión de depuración (`server.cederPuertoParaDebug()`). En producción responde 404. |
+| `GET /admin/pubsub/` | Solo fuera de producción: `data: {emulador, proyecto}` con `PUBSUB_EMULATOR_HOST` y `PUBSUB_PROJECT_ID` del proceso (`null` si no están definidas o están vacías). Los tests e2e lo usan para comprobar que un servicio está levantado en modo emulador. En producción responde 404. |
 
 Ninguna ruta aparece en `/admin/doc/` (todas tienen `documentable: false`).
 

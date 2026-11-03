@@ -5,6 +5,8 @@ import {rm} from "node:fs/promises";
 import {createRequire} from "node:module";
 import path from "node:path";
 
+import {getDefine} from "./define.mjs";
+
 const require = createRequire(import.meta.url);
 // TypeScript 7 ya no expone "./bin/tsc" en el campo "exports" de su package.json,
 // así que resolvemos el paquete y componemos la ruta al binario manualmente.
@@ -41,24 +43,6 @@ function parseEnv(argv) {
         }
     }
     return env;
-}
-
-function getDefine({entorno, database}) {
-    const desarrollo = entorno === "desarrollo";
-    return {
-        DESARROLLO: JSON.stringify(desarrollo),
-        TEST: JSON.stringify(entorno === "test"),
-        PRODUCCION: JSON.stringify(!desarrollo),
-        ENTORNO: JSON.stringify(entorno),
-        NEXTJS: JSON.stringify(false),
-        DATABASE: JSON.stringify(database??""),
-        "global.DESARROLLO": JSON.stringify(desarrollo),
-        "global.TEST": JSON.stringify(entorno === "test"),
-        "global.PRODUCCION": JSON.stringify(!desarrollo),
-        "global.ENTORNO": JSON.stringify(entorno),
-        "global.NEXTJS": JSON.stringify(false),
-        "global.DATABASE": JSON.stringify(database??""),
-    };
 }
 
 function getOptions(basedir, dependencies, entorno, database) {

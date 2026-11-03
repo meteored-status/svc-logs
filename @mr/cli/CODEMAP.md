@@ -70,11 +70,11 @@ del paquete que llama y ejecuta:
 **CODEMAP:** [`src/CODEMAP.md`](./src/CODEMAP.md) (mapa completo: árbol de
 directorios, clases, funciones exportadas y grafo de dependencias interno).
 
-Implementa los 7 módulos de `yarn mrpack <modulo>` documentados en el README
-(`devel`, `deploy`, `config`, `framework`, `init`, `update`, `autodoc`): compilación/ejecución
+Implementa los 8 módulos de `yarn mrpack <modulo>` documentados en el README
+(`devel`, `deploy`, `config`, `framework`, `init`, `pubsub`, `update`, `autodoc`): compilación/ejecución
 de workspaces, gestión de `config.workspaces.json`, instalación/actualización/envío de
-frameworks compartidos (GCS), inicialización/normalización del monorepo y generación de
-documentación OpenAPI.
+frameworks compartidos (GCS), inicialización/normalización del monorepo, topología de Pub/Sub
+local (`mrpack.pubsub.ts` → emulador) y generación de documentación OpenAPI.
 
 **Punto de entrada:** `src/main.ts` → `src.ts::MRPack`.
 
@@ -222,7 +222,7 @@ bin/mrpack.js ──→ @mr/core-cli/arranque ──→ bin/min/mrpack-run.js (c
                                           ▼
                                 src.ts::MRPack
                                           │
-                          (7 módulos: devel/deploy/config/framework/init/update/autodoc)
+                          (8 módulos: devel/deploy/config/framework/init/pubsub/update/autodoc)
                                           │
                                           ├──→ @mr/core-cli/{fs,log,colors,colors/base,modulo}
                                           │      (bundleado: es workspace devDep, no dependency)
