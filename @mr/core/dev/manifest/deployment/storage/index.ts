@@ -1,11 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 11f4b318f4ddc166785f15a2e846ff2f
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Editor: miguel
+ * Fecha: Tue, 20 Oct 2026 11:07:24 GMT
+ * Hash: bccf8eb0589caddc3edfda386b1f035a
+ * Versión: 2026.10.20+3-miguel
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import {type IManifestDeploymentStorageBuckets, ManifestDeploymentStorageBuckets} from "./buckets.ts";
+import {type IManifestDeploymentStorageBuckets, ManifestDeploymentStorageBuckets} from "./buckets";
 
 /**
  * Configuración de almacenamiento en Google Cloud Storage para workspaces de tipo `BROWSER`.

@@ -2,6 +2,141 @@
 
 ---
 
+## 2026.10.30 08:58 — [Juan Carlos]
+
+### Changed
+Cliente Redis (`modules/database/redis`): **una sola clase `RedisCluster`, con reconexión persistente y fallo rápido.** Sustituye a la que
+recreaba los clientes ante cualquier error. Lo que ven los consumidores (`NetCacheRedis`, `RedisBulk`/`RedisHBulk`, `basic-uid`, los servicios y jobs
+que llaman a `Redis.build`):
+- **Reconexión que no se rinde.** Cada cliente se crea una vez y node-redis lo reconecta solo; antes se rendía a los 3 reintentos. Tras perder una conexión ya
+  establecida, el primer reintento es **inmediato** (lo decide node-redis; medido ~2 ms) y, si falla, esperan 200 ms, 400 ms… (exponencial, más 0–249 ms de azar) hasta
+  `maxReconnectDelayMs` (por defecto **5000**). Si lo que falla es la conexión inicial, las esperas empiezan en 100 ms. Ante un error ya no se cierra ni se
+  recrea nada: `on('error')` solo registra.
+- **Sin cola offline** (`disableOfflineQueue`, fijo). Sin conexión, `primaries`/`read`/`single` rechazan al instante con `ClientOfflineError` en vez
+  de acumular comandos en memoria y dejar al llamante esperando. Contrato de los métodos públicos con Redis caído, **sin cambios**: `set`, `hSet`,
+  `zAdd`, `saveJSON`, `saveHJSON`, `saveZJSON` y `releaseLock` registran un aviso y resuelven; `get`, `hGet`, `hGetAll`, `loadJSON`, `loadHJSON`
+  devuelven `null`, `searchKeys` `[]` y `searchMaxScore` `null`; `bulkSet`/`bulkHSet` rechazan; `aquireLock` devuelve `null` (su valor de «error»).
+  Los `set`/`hSet`/`bulkSet`/`bulkHSet`/`get` con varias claves siguen yendo por `MULTI`, que en node-redis 6.3.0 no tiene timeout: no se ha tocado.
+- **Arranque.** Las operaciones sobre un nodo que aún no ha conectado nunca esperan a la conexión durante una ventana de gracia de `4 × clientTimeout + 700 ms`
+  (900 ms por defecto) desde que se creó el cliente: los cuatro primeros intentos con sus esperas nominales de 100, 200 y 400 ms, sin contar el azar; es lo que tardaba antes en
+  rendirse la primera operación. Pasada la ventana con Redis caído desde el principio, cada operación falla al instante. Se abre una conexión por cada primario y otra
+  para `read` si es un nodo distinto, en la primera operación o, con `connectOnBuild`, al construir `Redis`.
+- **Avisos limitados.** Con Redis caído, cada método existente escribía un aviso por llamada. Ahora salen como mucho uno por tipo de error (el de la causa original:
+  `ClientOfflineError`, `ECONNREFUSED`…) y por `logThrottleMs`, y el error que se registra conserva la causa original (`cause`).
+- **Defaults nuevos:** `maxReconnectDelayMs` 5000 y `logThrottleMs` 60000 (un solo log de error de cliente por tipo y por minuto; antes, un log por
+  cada evento de error, sin límite). `timeout` (10 ms) y `clientTimeout` (50 ms, ahora por intento de conexión) no cambian.
+- **Efecto colateral.** Un `PING` de keepalive que falla (p. ej. detrás de un lote largo) ya no provoca la recreación del cliente en mitad de la
+  escritura, que era lo que obligaba a poner timeouts amplios (ver el comentario en `alertas-base/modules/utiles/redis.ts` de data-alertas).
+- **Jobs y cronjobs.** No cambia cómo terminan: todos los jobs y cronjobs de los monorepos (50 de 50) arrancan con `Main.ejecutar`, que llama a
+  `process.exit()` al acabar `ejecutar()` y también si falla el arranque, así que un cliente que reconecta para siempre no los retiene (y una escritura con
+  `await` se completa antes de salir). Salen solos porque el getter `pod.cronjob` (`@mr/core/dev/manifest/deployment/index.ts:180`) incluye el tipo `job` además de `cronjob`; si
+  un job se declarara como `service`, `Main` no llamaría a `process.exit()` y un cliente que reconecta lo mantendría vivo. Un script que no use `Main` y quiera terminar solo
+  debe hacer `await redis[Symbol.asyncDispose]()`: sale aunque Redis esté caído. Sin eso, el proceso no termina por sí solo, como antes: `@redis/client` 6.3.0 ofrece
+  `unref()`, pero solo suelta el socket, no el temporizador de PING ni el de reconexión (medido: con `unref()` el proceso siguió vivo en los 6 escenarios probados), y con
+  `unref()` un comando en vuelo podría quedarse sin respuesta. Una escritura **sin `await`** justo antes de `process.exit()` puede cortarse, igual que antes.
+- **Salida tras `asyncDispose()`.** Con Redis caído, el proceso puede tardar en salir hasta `maxReconnectDelayMs` + 250 ms (~5,25 s por defecto) después de liberar el cliente, porque node-redis 6.3.0
+  espera el reintento pendiente con un temporizador que no se puede cancelar ni soltar. Medido con los valores por defecto: entre 0,1 s y 4,9 s según en qué punto de la
+  espera caiga la liberación (1,4 s con Redis caído desde hace 2 s, 3,2 s desde hace 4 s, 4,9 s desde hace 7 s). No se ha podido acortar de forma segura.
+- **Requisito: `redis` ≥ 6.3.0.** Todo lo medido es con node-redis 6.3.0. Con versiones anteriores un socket muerto durante el handshake puede dejar el cliente sin conexión para
+  siempre (6.0 y 6.1) y `destroy()` puede lanzar (por debajo de 6.3). Al crear el primer clúster, el cliente escribe un único `warning` por proceso si la versión resuelta de `redis` es anterior
+  (se lee con `require("redis/package.json")`, que funciona con Yarn PnP y con el bundle de rspack, donde `redis` y su subruta son externos; sin `require` —módulos ESM como el arnés
+  de pruebas de cmp-web— no hay forma limpia de leerla y no se avisa). Además, el `destroy()` del cierre no puede lanzar.
+
+### Fixed
+- Un cliente cuyo handshake termina **después** de liberar el clúster ya no queda vivo: se destruye al saltar `ready`. `destroy()` de respaldo ya no puede lanzar. Se quita el log duplicado
+  «Desconectado de REDIS».
+- Redis caído de verdad dejaba el cliente **inservible** para siempre. `on('error')` llamaba a `disconnectPrimaries()`, cuyo `quit()` sobre un cliente
+  sin conexión no termina nunca; `_primaryClients` quedaba en `[]` (cuenta como «hay cliente»), de modo que `set`/`bulkSet` resolvían **sin escribir**,
+  `aquireLock` **concedía el lock sin Redis** y el cliente no se recuperaba aunque Redis volviera. Ahora el cliente se reconecta solo y mientras tanto
+  las escrituras no se hacen, `bulkSet` rechaza y `aquireLock` devuelve `null`.
+- Liberar el cliente (`asyncDispose`) justo después de crearlo, a mitad del handshake inicial, dejaba el proceso colgado: node-redis 6.3.0 no aborta bien un `destroy()`
+  en ese momento (termina de conectar y su temporizador de PING se rearma para siempre). Ahora el cierre espera hasta 200 ms a que el cliente que aún no ha
+  conectado termine su handshake; con Redis caído no hay handshake y no espera. Encontrado al migrar el monitor en tiempo real del CMP a este cliente.
+- Si la primera conexión fallaba hasta agotar los reintentos, `disconnectPrimaries()` (lanzada desde `on('error')`, sin atender su promesa) rechazaba con
+  `ClientClosedError`: un rechazo sin atender que en Node 26 **tiraba el proceso**. Ya no se rinde ni hay nada que rechazar.
+
+### Added
+- `modules/database/redis/index.ts` — `Redis`: tres métodos nuevos (los existentes no cambian de firma ni de semántica).
+  - `bulkHIncrBy(items, {shared, timeoutMs})`: suma incrementos a campos de hash **solo en el nodo único**, todo el lote en un `MULTI/EXEC` (un
+    `HINCRBY` por elemento y un `EXPIRE` por clave con el mayor TTL del lote). Nunca replica en los demás primarios ni hace failover (un incremento repetido
+    se contaría dos veces). Devuelve `TBatchResult` (`ok`, `notSent`, `ambiguous`) y **no rechaza** por fallos de Redis; solo `RangeError` si el lote es inválido
+    (`increment` entero seguro distinto de 0, `ttl` entero mayor que 0). `timeoutMs` por defecto `options.timeout || 10`.
+  - `bulkHGetAll(keys, {shared, node})`: `HGETALL` en paralelo, en crudo (sin el envoltorio `{expires, data}` de `hSet`); `null` si el hash no existe o está
+    vacío; **rechaza** si falla. Lee del nodo único por defecto, o de `read` con `node: "read"`.
+  - `expire(key, ttl, {shared, target})`: idempotente; por defecto en todos los primarios, o solo en el nodo único con `target: "single"`. Propaga los
+    errores y rechaza un `ttl` que no sea entero mayor que 0 (Redis borraría la clave).
+- `IRedisOptions`, opciones nuevas, todas opcionales: `singleNode` (índice en `primary`, por defecto 0; fuera de rango es un error al crear el cliente, no
+  se cae al 0), `connectOnBuild` (carga las credenciales y abre las conexiones al construir `Redis`, no en la primera operación), `logThrottleMs` y
+  `maxReconnectDelayMs`. `Redis.build` valida con `RangeError` los valores absurdos.
+- `modules/database/redis/cluster.ts` (nuevo, interno) — `RedisCluster` (con los estáticos `MAX_RECONNECT_DELAY_MS` y `reconnectDelay`, la espera de reconexión), `IRedisNode`, `IClusterOptions`, `IReconnectDelayOptions` y `validateSingleNode`.
+- `modules/database/redis/batch.ts` (nuevo) — `RedisBatch`, el lote de `bulkHIncrBy`, sin importar `redis`: el constructor valida los incrementos (`RangeError`) y agrupa los TTL (`ttls`), `execute(client, timeoutMs)`
+  envía el `MULTI/EXEC` y dice `ok`, `notSent` o `ambiguous`, y `RedisBatch.classifyError` clasifica los errores; más los tipos `TBatchResult`, `IHIncrBy`, `IBatchClient` e `IBatchMulti`. `classifyError` depende del `constructor.name` de los errores de node-redis (si un bundler minificara
+  los nombres de clase, todo sería `ambiguous`, el lado seguro). «The queue is full» es `notSent`: en node-redis 6.3.0 `addCommand` lo rechaza antes de encolar y la propia librería
+  lo cuenta como error previo al encolado (comprobado con un cliente real contra el servidor falso: el comando rechazado no llega al servidor); este cliente no fija `commandsQueueMaxLength`, así que no se da.
+- `modules/utiles/log-throttle.ts` (nuevo) — `LogThrottle` (un log por tipo e intervalo) y `errorType` (tipo de un error para agrupar logs), con su prueba en `spec/utiles/`.
+- `spec/database/redis/` — `batch.spec.ts`, `cluster.spec.ts` y `redis.spec.ts`, esta contra un servidor RESP falso de bucle local (`fake-resp.ts`: sin Redis y sin
+  servicios), con los escenarios de caída real, primera conexión fallida y parpadeo, cada método público con Redis caído, y procesos hijo que escriben y
+  terminan. `spec/stubs/pod.ts` y `paths` en `tsconfig.spec.json`: sustituyen, solo al compilar las pruebas, el tipo `IPodInfo` de
+  `@mr/core-workload/config/pod`, cuyo fichero real no compila con la resolución `node16` de las pruebas; sin esto ninguna prueba podía importar un módulo que
+  use `Redis` o cualquier otro que importe ese tipo.
+
+### Notes
+- **Redis conectado pero sin responder.** Con Redis conectado que no contesta, `get`, `set`, `aquireLock`, los `MULTI` y el resto de métodos existentes **no tienen límite de tiempo**:
+  en node-redis `timeout` solo limita la espera antes de enviar y no hay timeout de socket. No es una regresión (el cliente anterior tenía el mismo hueco). Quien necesite un límite lo
+  pone al llamar (p. ej. con `PromiseTimeout`). `bulkHIncrBy` sí lo tiene (`timeoutMs`).
+- node-redis 6.3.0: `commandOptions.timeout` (la opción `timeout`, 10 ms por defecto) solo acota la espera de un comando **antes de enviarse**; una vez enviado, un
+  Redis lento hace esperar igualmente (medido con un servidor con 100 ms de retraso y `timeout` de 10 ms). Sin cola offline apenas actúa. No es nuevo ni se ha tocado.
+- node-redis 6.3.0: las operaciones por `MULTI` (`set`, `hSet`, `bulkSet`, `bulkHSet`, `get` con varias claves) no tienen timeout ni respetan `disableOfflineQueue`: un `MULTI` entregado
+  a un cliente que ya está sin conexión se encola y se rechaza como mucho al fallar el siguiente intento de reconexión (medido ~0,4 s con el tope en 100 ms), no se queda esperando para
+  siempre. Por eso `primaries`/`read`/`single` rechazan antes de llegar ahí. Si la conexión se cae justo entre pedir el cliente y enviar, el `MULTI` se rechaza en milisegundos
+  (medido 0–2 ms, `SocketClosedUnexpectedlyError`). `bulkHIncrBy` además acota el `EXEC` con su propio temporizador y comprueba `isReady` antes de enviar.
+
+## 2026.10.20 12:46 — [Juan C. Martínez]
+
+### Added
+- `modules/utiles/promise.ts` — `Semaforo`: limita cuántas tareas asíncronas corren a la vez; las demás esperan su turno por orden de
+  llegada. Si una tarea falla (también si lanza de forma síncrona), su carril queda libre y solo rechaza a su llamador. Valida `maximo`
+  en el constructor: entero mayor o igual que 1, o `RangeError` (no lo redondea en silencio).
+- `modules/utiles/cache-ttl.ts` (nuevo) — `CacheTtl<K, V>`: caché en memoria, por proceso, con caducidad y *single-flight* (varias
+  peticiones a la vez de una clave sin cargar lanzan una sola carga). Los fallos no se guardan y las entradas caducadas se barren al
+  terminar cada carga. `new CacheTtl(ttlMs, cargar, {ahora})`, `get(clave)`, `delete(clave)` y `clear()`; con una carga en curso,
+  `delete`/`clear` la dejan terminar pero no guardan su resultado. No es la caché de `modules/cache/` ni la de `net/cache/` (esas son de
+  respuestas HTTP o adaptadores de disco). Cubre además un caso que se podía colgar: una `cargar` que lanza de forma síncrona ya no deja
+  la clave enganchada con el rechazo.
+- `spec/utiles/promise.spec.ts` y `spec/utiles/cache-ttl.spec.ts`.
+
+### Fixed
+- `modules/utiles/promise.ts` — `PromiseTimeout`: no cancelaba su temporizador. Aunque la promesa ya hubiera terminado, el `setTimeout`
+  seguía vivo hasta vencer (con timeouts largos, mantenía vivo el proceso y retrasaba su cierre). Ahora usa `setTimeout` + `clearTimeout`
+  en un `finally`. Sin cambios de firma ni de error (`PromiseTimeoutError`).
+
+## 2026.10.20 11:52 — [Juan C. Martínez]
+
+### Fixed
+- `modules/elasticsearch/index.ts` — `Elasticsearch.bulk()` creaba un cliente nuevo en cada llamada
+  (`this.load()`: leer credenciales, construir `Client`) y lo cerraba al terminar, así que **cada bulk
+  abría una conexión TLS nueva** con Elastic. Ahora usa el cliente cacheado (`await this.cliente`), como
+  el resto de operaciones, y no lo cierra. Afecta a todo lo que escribe con `bulk/`, `bulk-old/` y
+  `bloque/`. En producción (24 h, 2026-10-20) había servicios con tantas conexiones nuevas como bulks:
+  `service-header-bidding` (~4,5 M al día), `service-weather` (~400.000), `service-img-weather`,
+  `service-api`, `cronjob-tags-update` y `service-widget` (BAK-1736). Cada uno lo recibe al actualizar
+  su framework. `service-soporte` también lo tiene, pero su monorepo usa un `services-comun` de 2023
+  con otra estructura (`modules/elasticsearch/base.ts`) y sin `@mr/cli`, así que este cambio no le llega.
+- Mismo método: el JSDoc decía que el cliente propio servía para que los bulks «no compitan por la misma
+  conexión» que las búsquedas. No es así: `@elastic/transport` crea un `Pool` de undici con hasta 256
+  conexiones por nodo (`pipelining: 1`) y las reutiliza. Solo por encima de 256 peticiones simultáneas
+  esperan turno en el pool, búsquedas incluidas. Cerrar el cliente tampoco hacía falta para que
+  terminen los cronjobs, porque undici hace `unref()` de los sockets inactivos.
+- Efecto secundario: `bulk()` era la única operación que releía el fichero de credenciales en cada
+  llamada. Ahora, como el resto, las lee una vez por proceso (y un fallo en esa primera carga se queda
+  cacheado hasta reiniciar). Si una API key de Elastic se rotara sin redesplegar, los bulks fallarían
+  igual que ya fallaban las búsquedas.
+
+### Added
+- `spec/elasticsearch/bulk.spec.ts` — `Elasticsearch.bulk()` contra un servidor HTTP local que cuenta
+  conexiones: 10 bulks seguidos usan una sola, y el cliente sigue abierto después. Con el código anterior
+  falla (10 conexiones para 10 bulks).
+
 ## 2026.10.9 08:17 — [Juan C. Martínez]
 
 ### Added

@@ -1,11 +1,13 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Thu, 21 May 2026 06:51:30 GMT
- * Hash: 4a01112a235ee335e0e882f000cacfa3
- * Versión: 2026.5.21+1-josantoniojimnez
+ * Editor: miguel
+ * Fecha: Tue, 20 Oct 2026 11:07:24 GMT
+ * Hash: 97c426acb307cf338276a72bfacb5033
+ * Versión: 2026.10.20+3-miguel
+ * Anterior: 2026.5.21+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import {type IManifestBuildBundleBase, ManifestBuildBundleBase} from "./base.ts";
+import {type IManifestBuildBundleBase, ManifestBuildBundleBase} from "./base";
 
 /**
  * Configuración completa del bundle de assets de un workspace.

@@ -288,6 +288,7 @@ No contiene ficheros `.ts` propios; agrupa los dos sub-bloques siguientes.
 |---------|---------------------|
 | `server/http/server.ts` | `Server` (clase), `default` (singleton) |
 | `server/http/router.ts` | `route()`, `IErrorHandler`, `IShutdownHandler` |
+| `server/http/slow.ts` | `umbralLento()`, `esperaLenta()`, `esLenta()`, `textoUmbral()` (decisión pura del aviso de petición lenta; `IRouteGroup.slow` → `Conexion.slow`) |
 | `server/http/conexion.ts` | `Conexion`, `TMetodo`, `TStatus` (enum) |
 | `server/http/respuesta.ts` | `Respuesta` (builder de cabeceras/envío) |
 | `server/http/request-context.ts` | `RequestContext` |

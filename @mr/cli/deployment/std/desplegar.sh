@@ -49,9 +49,13 @@ if [[ -f "DESPLEGAR.txt" ]]; then
     lw services | xargs -I '{}' -P 1 bash -c "parseWorkspace ${BASETOP} ${INDICE} ${NOMBRE} ${CLUSTER} ${PRIMERO} {}" &
     wait
 
-    if [[ -f "${BASETOP}/despliegue_${INDICE}.yaml" ]]; then
+    # Un proyecto solo con lambdas deja el fichero vacío o solo con los separadores `---` de cada
+    # workspace, y `gke-deploy` falla si no hay ningún recurso que desplegar.
+    if [[ -f "${BASETOP}/despliegue_${INDICE}.yaml" ]] && grep -qvE '^[[:space:]]*(---[[:space:]]*)?(#.*)?$' "${BASETOP}/despliegue_${INDICE}.yaml"; then
       echo "${CLUSTER}: Desplegando"
       gke-deploy run --filename="${BASETOP}/despliegue_${INDICE}.yaml" --cluster="${CLUSTER}" --location="${REGION}" --output="${BASETOP}/output/suggested/${INDICE}"
+    else
+      echo "${CLUSTER}: Nada que desplegar"
     fi
   }
 

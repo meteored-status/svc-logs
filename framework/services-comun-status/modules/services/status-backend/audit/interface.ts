@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 26 Aug 2026 09:06:22 GMT
- * Hash: 0be5d78f69decbb5aa5470c4d95525de
- * Versión: 2026.8.26+2-bixus
- * Anterior: 2026.8.21+1-bixus
+ * Fecha: Wed, 21 Oct 2026 09:04:51 GMT
+ * Hash: 531308fdad79c02bfe49f2bccff60a5f
+ * Versión: 2026.10.21+1-bixus
+ * Anterior: 2026.8.26+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -45,6 +45,10 @@ export enum EAuditAction {
     // lo único del registro que **no lo hace quien parece**: a partir de ese apunte, lo que esa sesión vea sale
     // con los permisos de otra cuenta. Buscarlo tiene que ser un filtro, no leerse los detalles de otra acción.
     IMPERSONATE = "impersonate",
+    // Una consulta hecha desde un agente externo (Claude, por el conector MCP) en nombre de alguien. Va aparte de
+    // `navigate` porque no la hace el panel ni la ve nadie en pantalla: los datos salen hacia un tercero, y saber
+    // qué ha salido, cuándo y por quién tiene que ser un filtro. La ruta es la de la herramienta (`/mcp/<nombre>`).
+    AGENT = "agent",
 }
 
 const ACCIONES: Set<string> = new Set<string>(Object.values(EAuditAction));

@@ -1,14 +1,14 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 01 Jul 2026 07:11:52 GMT
- * Hash: 6823ca9d18e24de28637f97c9e2ca150
- * Versión: 2026.7.1+1-josantoniojimnez
- * Anterior: 2026.5.21+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/tiempo-web-estaticos.git
+ * Editor: miguel
+ * Fecha: Tue, 20 Oct 2026 11:07:24 GMT
+ * Hash: 0154ff6b154ebf6d40fb2140b7cde042
+ * Versión: 2026.10.20+3-miguel
+ * Anterior: 2026.7.1+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import {type IManifestBuildBundle, ManifestBuildBundle} from "./bundle/index.ts";
-import {type IManifestBuildDatabase, ManifestBuildDatabase} from "./database.ts";
+import {type IManifestBuildBundle, ManifestBuildBundle} from "./bundle/index";
+import {type IManifestBuildDatabase, ManifestBuildDatabase} from "./database";
 
 /**
  * Framework de compilación del workspace.

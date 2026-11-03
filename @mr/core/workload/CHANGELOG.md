@@ -2,6 +2,26 @@
 
 ---
 
+## 2026.10.19 12:40 — [Alex]
+
+### Added
+
+- **`config/pubsub.ts`**: `comprobarEmuladorPubSub({produccion, env})` (la guarda que hasta ahora vivía en `amateur-base`,
+  movida tal cual) y `modoPubSub(env)`, que devuelve `{emulador, proyecto}` a partir de `PUBSUB_EMULATOR_HOST` y
+  `PUBSUB_PROJECT_ID` (`null` si faltan o están vacías).
+- **`GET /admin/pubsub/`** (`handlers/admin.ts`): fuera de producción responde `data: {emulador, proyecto}`, para que los tests e2e
+  comprueben que un servicio está levantado contra el emulador. En producción responde 404, como `debug-handoff`.
+
+### Changed
+
+- **Documentación de la guarda corregida** (sin cambios de código): el JSDoc de `comprobarEmuladorPubSub` decía que la variable la fijaban «los
+  helpers de los tests de integración»; ahora la pone `mrpack devel -p` (los tests ya no levantan servicios).
+- **`Main.start()` aborta el arranque si un bundle de test o producción tiene `PUBSUB_EMULATOR_HOST`** y, si el proceso corre contra el
+  emulador, lo deja en el log (`Pub/Sub: emulador <host> (<proyecto>)`; solo el primario en modo cluster). Se hace en `start()` y no
+  en `ejecutar()` para que el rechazo pase por el `catch` que ya registra el error y sale: con código 1 en un servicio y con 0 en un
+  cronjob (tras parar el sidecar), como cualquier otro error de arranque; no se ha cambiado el código de salida de `ejecutar()`. Sin la
+  variable no hace ni registra nada.
+
 ## 2026.9.29 08:15 — [David]
 
 ### Changed

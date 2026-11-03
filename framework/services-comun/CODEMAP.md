@@ -96,7 +96,9 @@ Ambos ficheros también se usan como **inputs de fingerprint** de versión de de
 | Fichero | Símbolos clave |
 |---------|-----------------|
 | `log.ts` | `info`, `warning`, `error`, `debug`, `time`/`timeEnd`, `formatMemoria`, `formatTiempo` — logging estándar del monorepo (sustituye a `console.log`, ver convención de estilo) |
-| `promise.ts` | `Deferred<T>`, `PromiseDelayed`, `PromiseChain`, `PromiseChainWTB` (with throttle/batch), `PromiseTimeout`/`PromiseTimeoutError`, `PromiseAny`, `PromiseResult`, `PromiseMap` |
+| `promise.ts` | `Deferred<T>`, `PromiseDelayed`, `PromiseChain`, `PromiseChainWTB` (with throttle/batch), `PromiseTimeout`/`PromiseTimeoutError` (cancela su temporizador al terminar la promesa: no deja timers vivos), `PromiseAny`, `PromiseResult`, `PromiseMap`, `Semaforo` (limita cuántas tareas asíncronas corren a la vez, FIFO; `maximo` entero >= 1 o `RangeError`) |
+| `log-throttle.ts` | `LogThrottle` (deja pasar un log por tipo e intervalo y cuenta los que calla; recibe la hora) y `errorType(err)` (código o clase del error, para agrupar). Lo usan `database/redis` y el monitor en tiempo real de cmp-web |
+| `cache-ttl.ts` | `CacheTtl<K, V>` (+ `ICacheTtlConfig`) — caché **en memoria, por proceso**, con caducidad y *single-flight*: `new CacheTtl(ttlMs, cargar, {ahora})`, `get(clave)`, `delete(clave)`, `clear()`. Los fallos no se cachean. No es `modules/cache/` ni `net/cache/` (respuestas HTTP / adaptadores de disco) |
 | `fs.ts` | `exists`, `isDir`, `isFile`(`Sync`), `mkdir`, `rename`, `rmdir`/`rmDirManual`, `safeWrite`(`Stream`/`StreamBuffer`), `readFileBuffer`/`readFileString`, `readJSON`(`Sync`), `md5Dir`/`md5File`, `freeSpace`, `findSubdirs` |
 | `error.ts` | `CustomError` (abstract, base de todas las excepciones tipadas del monorepo) |
 | `hash.ts` | `md5`, `sha512`, `sha256`, `IHash<T>` |
@@ -282,7 +284,8 @@ workspace.
 Cliente con **failover multi-nodo** (`ClienteFailover` interno, rota entre nodos ante fallo) sobre el
 cliente oficial `@elastic/elasticsearch`. Expone métodos 1:1 con la API de Elasticsearch:
 `search`, `scroll`, `clearScroll`, `delete`, etc., todos `Promise`-based y tolerantes a que Elastic no esté
-habilitado (`"Elastic not enabled"`).
+habilitado (`"Elastic not enabled"`). Todas las operaciones, `bulk` incluida, comparten un único cliente
+cacheado por instancia, y con él su pool de conexiones: no se crea ni se cierra un cliente por llamada.
 
 #### Familias `Bulk*`
 
@@ -443,6 +446,8 @@ yarn run services-comun test
 | Fichero | Qué fija |
 |---------|----------|
 | `spec/utiles/array.spec.ts` | `arrayChop`, `unique` y `arrayEquals` |
+| `spec/utiles/promise.spec.ts` | `Semaforo` (límite, FIFO, carril libre si falla, `RangeError`) y `PromiseTimeout` (error con los ms, y que no deja timers vivos ni rechazos sin atender) |
+| `spec/utiles/cache-ttl.spec.ts` | `CacheTtl`: caducidad, *single-flight*, fallos sin cachear, barrido, `delete` y `clear` (también con cargas en curso) |
 | `spec/database/mysql/cache.spec.ts` | `Cache.get()` de `database/mysql/cache`: que una consulta fallida no deje la clave rota, y que las peticiones simultáneas compartan consulta |
 | `spec/net/cache/disk.spec.ts` | `RequestCacheDisk` de `net/cache/disk`: que `check()` caduque lo cacheado con `expires` numérico o en string ISO (ficheros legacy), rechace uno ilegible, y que `save()` escriba `expires` como número |
 | `spec/estructura.spec.ts` | que no haya ningún `.spec.ts` dentro de `modules/` |

@@ -82,16 +82,16 @@ Descargas ──┬──> Labels ───────────────�
 | `Labels` | `gcloud`         | `labels.sh` | Lista clusters GKE del entorno y obtiene sus namespaces `mrpress`. Genera `entornos.json`, `clientes.json`, `labels.json`. |
 | `Obtener Tags` | `gcloud`         | `tags.sh` | Descarga los tags Docker actuales de cada workspace (para decidir si hay que generar imagen). |
 | `Autorizar` | `gcloud`         | `autorizar.sh` | Añade la IP pública del worker a `masterAuthorizedNetworks` de cada cluster GKE. |
-| `Clonar Repositorios` | `git`            | `clone.sh` | Clona el repo de kustomize (rama `main` en producción, `develop` en otros entornos). Requiere el secreto `GITTOKEN`. La organización es `_K8S_GITHUB` si el trigger la define, y si no, la etiqueta `k8s-github` de `labels.json`. |
+| `Clonar Repositorios` | `gcloud`         | `clone.sh` | Clona el repo de kustomize (rama `main` en producción, `develop` en otros entornos). Requiere el secreto `GITTOKEN`, que va como contraseña (`x-access-token`) para admitir PAT fine-grained. La organización es `_K8S_GITHUB` si el trigger la define, y si no, la etiqueta `k8s-github` de `labels.json`. Si es de otra organización, el token se lee del proyecto de `_K8S_GITHUB_PROYECTO`. |
 | `Iniciar Kustomize` | `gcloud`         | `init_kustomize.sh` | Ejecuta `kustomizar/init.sh` para preparar la estructura de overlays. |
 | `Descargar Cache Dependencias` | `gcloud`         | `cache_get.sh` | Restaura `.yarn/cache` desde GCS (`gcloud storage cp`) para acelerar `yarn install`. El bucket es `_K8S_CACHE` si el trigger la define, y si no, la etiqueta `k8s-cache` de `labels.json` (lo mismo en `cache_set.sh`). |
-| `Instalar Dependencias` | `node:lts-alpine` | `yarn install --mode=skip-build` | Instala las dependencias del monorepo. |
+| `Instalar Dependencias` | `node:lts-alpine` | `npm install -g corepack` + `corepack enable` + `yarn install --mode=skip-build` (vía `sh -c`) | Instala las dependencias del monorepo. |
 | `Compilar` | `docker`         | `compilar.sh` | Ejecuta `yarn mrpack deploy --env=$_ENTORNO` dentro de un contenedor; arranca/para `cloud_sql_proxy` si `_MYSQL` está definido. |
 | `Subir Cache Dependencias` | `gcloud`         | `cache_set.sh` | Sube `.yarn/cache` a GCS (`gcloud storage cp`/`rm`) solo si el MD5 cambió respecto a la versión cacheada. Ningún fallo de este paso tumba el build: para cuando corre, la imagen ya está subida. |
 | `Subir Storage` | `gcloud`         | `storage.sh` | Sube bundles browser (assets) a GCS (`gcloud storage cat`/`cp`) con control de versión incremental (`YYYY.MM.DD-N`). |
 | `Generar Contenedor` | `docker`         | `contenedor.sh` | Construye imágenes multiarch con `docker buildx` y las sube a Artifact Registry con tags `latest`, `$VERSION`, `$HASH`, `$ENTORNO` y `deployed_$ENTORNO`. Reutiliza capas entre despliegues vía `buildcache_$ENTORNO` (ver [Caché del contenedor](#caché-del-contenedor)). |
 | `Kustomizar` | `gcloud`         | `kustomizar.sh` | Genera los manifiestos de despliegue para cada workspace × cluster/zona. Soporta targets `k8s` (GKE) y `lambda` (Cloud Run). |
-| `Desplegar` | `gke-deploy`     | `desplegar.sh` | Aplica manifiestos GKE con `gke-deploy run` y ejecuta los scripts `lambda-*.sh` de Cloud Run. |
+| `Desplegar` | `gke-deploy`     | `desplegar.sh` | Aplica manifiestos GKE con `gke-deploy run` y ejecuta los scripts `lambda-*.sh` de Cloud Run. Si a un cluster no le toca ningún recurso (p. ej. un proyecto solo con lambdas), se salta `gke-deploy` para ese cluster. |
 | `Generar Documentación` | `docker`         | `auto-doc.sh` | Ejecuta `yarn mrpack autodoc`. Solo actúa si `_MYSQL` está definido. |
 | `Desautorizar` | `gcloud`         | `desautorizar.sh` | Elimina la IP del worker de `masterAuthorizedNetworks` de todos los clusters. |
 
@@ -108,6 +108,7 @@ Descargas ──┬──> Labels ───────────────�
 | `_GENERAR_FORZAR` | Si `true`, fuerza la generación aunque el hash no haya cambiado |
 | `_K8S_CACHE` | Opcional (vacía por defecto). Bucket de la caché de dependencias; si está vacía, sale de la etiqueta `k8s-cache` de `labels.json`. |
 | `_K8S_GITHUB` | Opcional (vacía por defecto). Organización de GitHub del repo de kustomize; si está vacía, sale de la etiqueta `k8s-github` de `labels.json`. |
+| `_K8S_GITHUB_PROYECTO` | Opcional (vacía por defecto). Proyecto de GCP cuyo secreto `alpred-lectura` tiene el token de esa organización, para cuando el kustomize es de otra organización (un PAT fine-grained solo vale para una). Se define por trigger, junto a `_K8S_GITHUB`, y no tiene etiqueta de proyecto: en un mismo proyecto puede haber triggers que usan su propio kustomize y otros que usan el de otra organización. Si está vacía, se usa `GITTOKEN` del propio proyecto. La cuenta de Cloud Build necesita `roles/secretmanager.secretAccessor` sobre ese secreto. |
 | `_MYSQL` | Cadena de conexión Cloud SQL (`proyecto:region:instancia`). Si está vacía, no se arranca el proxy. |
 | `_BUILD` | Nombre del worker pool de Cloud Build |
 | `COMMIT_SHA` | SHA del commit (inyectado por Cloud Build) |

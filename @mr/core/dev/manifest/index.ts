@@ -1,16 +1,16 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: f9ee0e6652ccbe8bb51add4efba0beda
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.5.21+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: miguel
+ * Fecha: Tue, 20 Oct 2026 11:07:24 GMT
+ * Hash: f08b66dbcc87482039a2323d743d7e2c
+ * Versión: 2026.10.20+3-miguel
+ * Anterior: 2026.9.23+2-bixus
+ * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import {type IManifestDeployment, ManifestDeployment} from "./deployment/index.ts";
-import {type IManifestDevelopment, ManifestDevelopment} from "./development.ts"
-import {type IManifestBuild, ManifestBuild} from "./build/index.ts";
-import {ManifestRoot} from "./root.ts"
+import {type IManifestDeployment, ManifestDeployment} from "./deployment/index";
+import {type IManifestDevelopment, ManifestDevelopment} from "./development"
+import {type IManifestBuild, ManifestBuild} from "./build/index";
+import {ManifestRoot} from "./root"
 
 /**
  * Forma serializada completa de un `mrpack.json`.

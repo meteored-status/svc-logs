@@ -1,18 +1,18 @@
 /**
- * Editor: Pedro
- * Fecha: Mon, 05 Oct 2026 10:56:47 GMT
- * Hash: 13d6792ce48426f0cdafc6b8c014134e
- * Versión: 2026.10.5+1-pedro
- * Anterior: 2026.9.22+1-bixus
- * Proyecto: https://github.com/alpred/meteored-svc-panel-usuarios.git
+ * Editor: miguel
+ * Fecha: Tue, 20 Oct 2026 11:07:24 GMT
+ * Hash: 61c2ff3bb309b8acaada74a98c639aae
+ * Versión: 2026.10.20+3-miguel
+ * Anterior: 2026.10.5+1-pedro
+ * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations.ts";
-import {type IManifestDeploymentCredenciales, ManifestDeploymentCredenciales} from "./credenciales.ts";
-import {type IManifestDeploymentImagen, ManifestDeploymentImagen} from "./imagen/index.ts";
-import {type IManifestDeploymentKustomize, ManifestDeploymentKustomize} from "./kustomize/index.ts";
-import {type IManifestDeploymentLambda, ManifestDeploymentLambda} from "./lambda/index.ts";
-import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage/index.ts";
+import {type IManifestDeploymentAnnotations, ManifestDeploymentAnnotations} from "./annotations";
+import {type IManifestDeploymentCredenciales, ManifestDeploymentCredenciales} from "./credenciales";
+import {type IManifestDeploymentImagen, ManifestDeploymentImagen} from "./imagen/index";
+import {type IManifestDeploymentKustomize, ManifestDeploymentKustomize} from "./kustomize/index";
+import {type IManifestDeploymentLambda, ManifestDeploymentLambda} from "./lambda/index";
+import {type IManifestDeploymentStorage, ManifestDeploymentStorage} from "./storage/index";
 
 /**
  * Entorno de ejecución del artefacto desplegado.

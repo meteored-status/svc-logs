@@ -8,7 +8,13 @@ Configuración compartida de **[esbuild](https://esbuild.github.io/)** para work
 
 ```txt
 bundler/esbuild/esbuild.config.mjs
+bundler/esbuild/define.mjs
 ```
+
+`define.mjs` exporta `getDefine({entorno, database})`, los `define` que esbuild sustituye por su valor (`DESARROLLO`, `TEST`,
+`PRODUCCION`, `ENTORNO`, `NEXTJS`, `DATABASE`). Está aparte de `esbuild.config.mjs` porque ese fichero lanza su compilación al
+importarse y hay quien necesita solo los `define`: `pubsub/evaluar.mjs` empaqueta los `mrpack.pubsub.ts` con los mismos que el
+build de desarrollo. El comportamiento del bundler no cambia.
 
 ---
 

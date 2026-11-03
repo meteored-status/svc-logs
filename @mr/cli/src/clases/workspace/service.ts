@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 9dc6a7401eaa4a1ef98ece45c46738b7
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: alexCG
+ * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
+ * Hash: e633b157604b6defd5586d44554a5c2b
+ * Versión: 2026.10.20+1-alexcg
+ * Anterior: 2026.9.23+2-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
  */
 
 import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
@@ -14,6 +14,7 @@ import path from "node:path";
 
 import {BuildBundler, BuildFW} from "@mr/core-dev/manifest/build";
 import {ManifestDeploymentKind, Runtime} from "@mr/core-dev/manifest/deployment";
+import type {IConfigEmuladorParcial} from "@mr/core-dev/pubsub/config";
 import {Colors} from "@mr/core-cli/colors";
 
 import {getBundlerNormalizado} from "../bundler";
@@ -139,6 +140,8 @@ export function flagsWorkspace(workspaces: IConfigWorkspaces|undefined, nombre: 
  *   `ejecutar`/`compilar`; incluye también `workspaces.i18n` (ver {@link IConfigWorkspacesI18n}).
  * @property framework - Configuración de frameworks: último patch aplicado (`patch`, `RXXX`,
  *   por `yarn run patch:apply`) y política de actualización automática (`updates`).
+ * @property pubsub - Datos de conexión del emulador de Pub/Sub local (`host`, `proyecto`, `pushHost`) si no son los de
+ *   por defecto. Los lee `mrpack pubsub` y `devel -p`; `mrpack init` lo conserva al regenerar el fichero.
  */
 export interface IConfigServices {
     workspaces?: IConfigWorkspaces;
@@ -146,6 +149,7 @@ export interface IConfigServices {
         patch?: string;
         updates: FrameworkUpdates;
     };
+    pubsub?: IConfigEmuladorParcial;
 }
 
 /**
@@ -156,6 +160,8 @@ export interface IConfigServices {
  * @property ejecutar - Si `true`, ejecuta el servicio tras compilar.
  * @property forzar   - Si `true`, fuerza la compilación aunque no haya cambios.
  * @property global   - Configuración global de workspaces.
+ * @property solo     - Si se define, solo se ejecutan los workspaces con esos nombres, sin mirar el flag `ejecutar` de
+ *   `config.workspaces.json` (`--solo` de `mrpack devel`). Lo demás (`-e`, runtime, `enabled`, `devel.enabled`) se respeta.
  */
 export interface IService extends IWorkspace {
     pad: number;
@@ -163,6 +169,7 @@ export interface IService extends IWorkspace {
     ejecutar: boolean;
     forzar: boolean;
     global: IConfigServices;
+    solo?: string[];
 }
 
 /**
@@ -180,10 +187,12 @@ export class Service extends Workspace {
     private static TIMEOUT = 300000;
     private static COMPILABLES: (Runtime|undefined)[] = [Runtime.node, Runtime.browser, Runtime.cfworker];
     private static PAUSABLES: (BuildFW|undefined)[] = [BuildFW.meteored, BuildFW.nextjs];
+    private static NO_EJECUTABLES: (Runtime|undefined)[] = [Runtime.browser, Runtime.cfworker, Runtime.php];
 
     /* INSTANCE */
     private readonly compilar: boolean;
     private readonly ejecutar: boolean;
+    private readonly solo: string[]|undefined;
 
     private readonly label: string;
     private global_compilar: boolean;
@@ -193,6 +202,8 @@ export class Service extends Workspace {
     private compilador?: ChildProcessWithoutNullStreams;
     private ejecucion?: ChildProcessWithoutNullStreams;
     private timeout?: NodeJS.Timeout;
+    private entornoEjecucion: Record<string, string>;
+    private antesDeReiniciar?: () => Promise<void>;
 
     private readonly compilarListeners: (() => void)[];
     private primeraCompilacionEmitida: boolean;
@@ -207,6 +218,8 @@ export class Service extends Workspace {
 
         this.compilar = data.compilar || data.forzar;
         this.ejecutar = data.ejecutar;
+        this.solo = data.solo;
+        this.entornoEjecucion = {};
 
         this.label = Colors.colorize(color, nombre);
         const flags = flagsWorkspace(data.global.workspaces, this.nombre);
@@ -221,6 +234,40 @@ export class Service extends Workspace {
         this.primeraCompilacionEmitida = false;
         this.depsPendientes = new Set();
         this.logCompilarInicio = undefined;
+    }
+
+    /**
+     * Fija las variables de entorno que se añaden a las del proceso de ejecución (solo al de ejecución: los compiladores no
+     * las reciben). Tiene que llamarse antes de `init()`; un proceso ya lanzado no las ve.
+     *
+     * @param entorno - Variables a añadir (p. ej. `PUBSUB_EMULATOR_HOST` y `PUBSUB_PROJECT_ID` con `devel -p`).
+     */
+    public setEntorno(entorno: Record<string, string>): void {
+        this.entornoEjecucion = {...entorno};
+    }
+
+    /**
+     * Fija lo que se espera antes de cada reinicio automático del proceso de ejecución (tras una caída, o la siguiente
+     * ejecución de un cronjob). Si falla se registra y el reinicio sigue igualmente.
+     *
+     * @param hook - Función a esperar antes de reiniciar.
+     */
+    public setAntesDeReiniciar(hook: () => Promise<void>): void {
+        this.antesDeReiniciar = hook;
+    }
+
+    /**
+     * Indica si el workspace puede ejecutarse en modo devel, por su runtime. No mira si está habilitado.
+     *
+     * @returns `false` para los runtimes `browser`, `cfworker` y `php`, y si el `mrpack.json` no se puede cargar.
+     */
+    public async esEjecutable(): Promise<boolean> {
+        try {
+            const {manifest} = await this.config;
+            return !Service.NO_EJECUTABLES.includes(manifest.deploy.runtime);
+        } catch {
+            return false;
+        }
     }
 
     /**
@@ -627,11 +674,16 @@ export class Service extends Workspace {
     private async checkEjecucion(): Promise<boolean> {
         const {manifest: config} = await this.config;
 
-        if (!this.ejecutar || [Runtime.browser, Runtime.cfworker, Runtime.php].includes(config.deploy.runtime)) {
+        if (!this.ejecutar || Service.NO_EJECUTABLES.includes(config.deploy.runtime)) {
             return false;
         }
 
-        if (!this.global_ejecutar) {
+        if (this.solo !== undefined) {
+            // `--solo` manda sobre `config.workspaces.json`: el flag `ejecutar` del fichero no cuenta.
+            if (!this.solo.includes(this.nombre)) {
+                return false;
+            }
+        } else if (!this.global_ejecutar) {
             // if (this.ejecucion==undefined) {
             //     Log.info({
             //         type: Log.label_ejecutar,
@@ -680,7 +732,7 @@ export class Service extends Workspace {
         const argsEjecutar = config.build.framework === BuildFW.nextjs ? ["--webpack"] : [];
         this.ejecucion = spawn("yarn", ["run", this.nombre, "run", comandoEjecutar, ...argsEjecutar], {
             cwd: this.root,
-            env: { ...process.env, FORCE_COLOR: "1" },
+            env: { ...process.env, ...this.entornoEjecucion, FORCE_COLOR: "1" },
             stdio: "pipe",
             shell: process.platform === "win32",
         });
@@ -720,8 +772,8 @@ export class Service extends Workspace {
                 }, `Terminado (`, status, `) Programando nueva ejecución en 30 segundos`);
                 this.ejecucion = undefined;
                 setTimeout(()=>{
-                    this.runEjecutar()
-                        .then(() => undefined)
+                    this.prepararReinicio()
+                        .then(()=>this.runEjecutar())
                         .catch((err) => {
                             Log.error({
                                 type: Log.label_ejecutar,
@@ -737,8 +789,8 @@ export class Service extends Workspace {
                     }, `Terminado: Programando nueva ejecución en 10 minutos`);
                     this.ejecucion = undefined;
                     setTimeout(() => {
-                        this.runEjecutar()
-                            .then(() => undefined)
+                        this.prepararReinicio()
+                            .then(()=>this.runEjecutar())
                             .catch((err) => {
                                 Log.error({
                                     type: Log.label_ejecutar,
@@ -749,6 +801,20 @@ export class Service extends Workspace {
                 }
             }
         });
+    }
+
+    private async prepararReinicio(): Promise<void> {
+        if (this.antesDeReiniciar === undefined) {
+            return;
+        }
+        try {
+            await this.antesDeReiniciar();
+        } catch (err) {
+            Log.error({
+                type: Log.label_ejecutar,
+                label: this.label,
+            }, "Error preparando el reinicio (se reinicia igualmente)", err);
+        }
     }
 
     private async stopEjecutar(): Promise<void> {

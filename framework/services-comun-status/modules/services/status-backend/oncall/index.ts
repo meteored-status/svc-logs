@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: dde50148ca6cefe50045c258eb09b056
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.8.31+1-bixus
+ * Fecha: Mon, 26 Oct 2026 13:34:19 GMT
+ * Hash: 6e26126ee3392fbe55c76573e09ce28f
+ * Versión: 2026.10.26+1-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -22,7 +22,8 @@ import type {IOrderIN} from "./order/interface";
 import type {IRequestActionIN, IRequestIN, IRequestTokenIN, IRequestTokenOUT} from "./request/interface";
 import type {IOverrideDeleteIN, IOverrideIN} from "./override/interface";
 import type {IResetIN} from "./reset/interface";
-import type {IRosterIN} from "./roster/interface";
+import type {IRosterIN, IRosterOUT} from "./roster/interface";
+import type {IRepartoOUT} from "./efectos/interface";
 import type {ISkipDeleteIN, ISkipIN} from "./skip/interface";
 import type {ISwapDeleteIN, ISwapIN} from "./swap/interface";
 import type {ITodayOUT} from "./today/interface";
@@ -129,13 +130,18 @@ export class OnCall extends BackendRequest {
     }
 
     @logRejection(true)
-    public static async order(token: string, data: IOrderIN, auditPath: string): Promise<RequestResponse<{}>> {
-        return this.post<{}, IOrderIN>(`${this.SERVICIO}/backend/oncall/order`, data, auditRequest(token, auditPath));
+    public static async order(token: string, data: IOrderIN, auditPath: string): Promise<RequestResponse<IRepartoOUT>> {
+        return this.post<IRepartoOUT, IOrderIN>(`${this.SERVICIO}/backend/oncall/order`, data, auditRequest(token, auditPath));
     }
 
+    /**
+     * Alta y baja en la rueda, o su **vista previa** (`preview`). Devuelve lo que ha pasado —o pasaría— con los
+     * cambios de guardia ya acordados (`IRosterOUT.effects`) y la huella (`fingerprint`) que hay que mandar en
+     * `confirm` para confirmar una baja que anula o resuelve cambios.
+     */
     @logRejection(true)
-    public static async roster(token: string, data: IRosterIN, auditPath: string): Promise<RequestResponse<{}>> {
-        return this.post<{}, IRosterIN>(`${this.SERVICIO}/backend/oncall/roster`, data, auditRequest(token, auditPath));
+    public static async roster(token: string, data: IRosterIN, auditPath: string): Promise<RequestResponse<IRosterOUT>> {
+        return this.post<IRosterOUT, IRosterIN>(`${this.SERVICIO}/backend/oncall/roster`, data, auditRequest(token, auditPath));
     }
 
     @logRejection(true)
@@ -144,13 +150,13 @@ export class OnCall extends BackendRequest {
     }
 
     @logRejection(true)
-    public static async skip(token: string, data: ISkipIN, auditPath: string): Promise<RequestResponse<{}>> {
-        return this.post<{}, ISkipIN>(`${this.SERVICIO}/backend/oncall/skip`, data, auditRequest(token, auditPath));
+    public static async skip(token: string, data: ISkipIN, auditPath: string): Promise<RequestResponse<IRepartoOUT>> {
+        return this.post<IRepartoOUT, ISkipIN>(`${this.SERVICIO}/backend/oncall/skip`, data, auditRequest(token, auditPath));
     }
 
     @logRejection(true)
-    public static async skipRemove(token: string, data: ISkipDeleteIN, auditPath: string): Promise<RequestResponse<{}>> {
-        return this.post<{}, ISkipDeleteIN>(`${this.SERVICIO}/backend/oncall/skip/delete`, data, auditRequest(token, auditPath));
+    public static async skipRemove(token: string, data: ISkipDeleteIN, auditPath: string): Promise<RequestResponse<IRepartoOUT>> {
+        return this.post<IRepartoOUT, ISkipDeleteIN>(`${this.SERVICIO}/backend/oncall/skip/delete`, data, auditRequest(token, auditPath));
     }
 
     @logRejection(true)
@@ -168,8 +174,8 @@ export class OnCall extends BackendRequest {
     }
 
     @logRejection(true)
-    public static async reset(token: string, data: IResetIN, auditPath: string): Promise<RequestResponse<{}>> {
-        return this.post<{}, IResetIN>(`${this.SERVICIO}/backend/oncall/reset`, data, auditRequest(token, auditPath));
+    public static async reset(token: string, data: IResetIN, auditPath: string): Promise<RequestResponse<IRepartoOUT>> {
+        return this.post<IRepartoOUT, IResetIN>(`${this.SERVICIO}/backend/oncall/reset`, data, auditRequest(token, auditPath));
     }
 
     // `overrideRemove` y no `overrideDelete`: `BackendRequest` ya tiene un estático `delete` (el verbo

@@ -2,6 +2,28 @@
 
 ---
 
+## 2026.10.20 13:12 — [Alex]
+
+### Changed
+
+- **Pub/Sub, lista de comprobación al declarar** (`.github/copilot-instructions.md`): nuevo paso para **adaptar en la misma tarea los
+  tests que ya usen Pub/Sub** (mocks e imports a `utiles/pubsub`, aserciones contra las constantes de `nombres.ts`, e2e reescritos
+  para usar solo el emulador y comprobar `/admin/pubsub/`, y ejecutarlos). Y cómo probar un consumidor publicando directamente en el
+  emulador, con el aviso de que un push que falla se reintenta cada 1–2 s y de vaciar las colas con `pubsub -r` al acabar.
+
+## 2026.10.20 12:10 — [Alex]
+
+### Changed
+
+- **Pub/Sub: dónde van los nombres.** Convención fija en todos los repos: `modules/utiles/pubsub/nombres.ts` (solo constantes de
+  nombres de topics y suscripciones del workspace, sin imports salvo `import type`) y `modules/utiles/pubsub/index.ts` (los
+  clientes). Nada de ficheros sueltos en `utiles/`, y lo que da un framework (`TOPIC`, `SUBSCRIPTION(...)`) o no es de Pub/Sub se queda
+  donde está. En la sección «Pub/Sub: topología local» de `.github/copilot-instructions.md` y en el README.
+- **Lista de comprobación al declarar** en `.github/copilot-instructions.md`: un `mrpack.pubsub.ts` por cada workspace que publique o
+  consuma (también los que escuchan a la IA y los webhooks push), filtros por atributo cuando el código publica con atributos, nombres
+  y filtros que no estén en el código consultados en GCP (`gcloud … list`, solo lectura) en vez de inventados, y `pubsub -s` al
+  terminar.
+
 ## 2026.10.19 13:42 — [Jose]
 
 ### Fixed
@@ -9,6 +31,48 @@
 - **`CONTRIBUTING.md` solo contaba el despliegue GKE**: los pasos Kustomizar y Desplegar describen ahora también
   las lambdas de Cloud Run (`lambda-<zona>.sh` con `gcloud run … replace`), avisa de que ese despliegue es
   declarativo y enlaza al README de `@mr/cli/deployment`.
+
+## 2026.10.19 12:40 — [Alex]
+
+### Added
+
+- **Topología local de Pub/Sub (`pubsub/`)**: cada workspace declara en un `mrpack.pubsub.ts` en su raíz los topics que
+  publica y las suscripciones que consume, importando las mismas constantes que usa el código (nombres y
+  `SERVICES.servicio(EService.x).base` para los puertos push), y `mrpack` las fusiona y las da de alta en el emulador.
+  - `@mr/core-dev/pubsub/declaracion` (módulo **puro**, sin imports de Node): `definirPubSub`, `validarDeclaracion` (estricta:
+    claves desconocidas, nombres de recurso, filtro vacío, `push.base`, `push.ruta`, `ackDeadline` 10–600, repetidos),
+    `fusionar`, `endpointPush`, `compararSuscripcion` / `describirDiferencias` y los tipos de la declaración y la topología.
+  - `@mr/core-dev/pubsub/config`: `resolverConfigEmulador` (entorno > bloque `pubsub` de `config.workspaces.json` > defecto) y
+    `leerConfigEmulador`.
+  - `@mr/core-dev/pubsub/descubrir`: `buscarDeclaraciones(raiz)`.
+  - `@mr/core-dev/pubsub/emulador`: `EmuladorPubSub` (REST con `fetch`, sin librerías de Google): `aplicar` en modo
+    `arranque` o `vigilancia`, `estado`, `purgar`, `limpiar`, `publicar`, `listar`, `disponible`. Marca lo que crea con las
+    labels `mrpack-repo` y `mrpack-workspace` (el emulador las conserva) y nunca toca lo que no está en la topología.
+  - `pubsub/evaluar.mjs`: empaqueta y evalúa los `mrpack.pubsub.ts` con esbuild y los `define` de desarrollo, y escribe
+    `{"declaraciones": [...]}` en stdout (`yarn workspace @mr/core-dev node pubsub/evaluar.mjs <raiz> <workspace>...`).
+- **Pruebas del workspace**: `spec/pubsub.spec.ts` (`node:test`), `tsconfig.spec.json` y script `test`
+  (`yarn workspace @mr/core-dev test`). Compila a ESM, con `rewriteRelativeImportExtensions`, porque el paquete es `"type": "module"`.
+- **Instrucciones de agente**: sección «Pub/Sub: topología local (`mrpack.pubsub.ts`)» en `copilot-instructions.md` y las
+  líneas de `AGENTS.md` sobre `devel -p` y `mrpack pubsub`.
+
+### Changed
+
+- **`getDefine()` sale de `bundler/esbuild/esbuild.config.mjs` a `bundler/esbuild/define.mjs`**: el config compila al
+  importarse y `evaluar.mjs` necesita solo los `define`. El comportamiento del bundler no cambia.
+
+### Fixed
+
+- **`EmuladorPubSub.aplicar` / `purgar` aceptan el 409 al crear una suscripción** (dos `mrpack devel -p` del mismo repo a la vez, o
+  `pubsub -r` con una vigilancia en marcha, chocaban y el segundo abortaba el arranque). En `aplicar`, tras un 409 se vuelve a leer la
+  suscripción y se compara, sin recrearla: `existia` si es igual, `difiere` si no. En `purgar`, un 409 tras el `DELETE` se da por bueno.
+- **`aplicar` respeta al dueño**: una suscripción existente con la label `mrpack-repo` de **otro** repo y distinta de la declarada ya no
+  se recrea ni se modifica en ningún modo; se informa `difiere` con «declarada también por el repo X». Los topics **deducidos** se crean
+  sin labels, para que `limpiar` de un repo nunca borre un topic que es de otro.
+- `EmuladorPubSub` codifica los nombres con `encodeURIComponent` en las rutas REST y cancela el cuerpo de las respuestas que no lee.
+- `puertoPush(push)` (nueva, en `pubsub/declaracion`): el puerto de una suscripción push, resolviendo el del protocolo cuando `URL.port`
+  es `""`; `endpointPush` la usa y `mrpack pubsub -s` también.
+- **`pubsub/evaluar.mjs`**: pasa `build.database.test` del `mrpack.json` del workspace a `getDefine` (como el build de desarrollo), y los
+  errores de esbuild incluyen sus `notes`; si no resuelve `@mr/core-dev/...` añade la pista de `devDependencies` + `yarn install`.
 
 ## 2026.10.19 09:40 — [Jose]
 
