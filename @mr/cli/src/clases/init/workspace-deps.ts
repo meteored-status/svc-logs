@@ -1,9 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 09:57:26 GMT
- * Hash: 82f67a8031e0d8540cffd2a80fa39cec
- * Versión: 2026.9.23+3-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: alexCG
+ * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
+ * Hash: 09089f1d85aa746c3b51fc5498ed0204
+ * Versión: 2026.10.20+1-alexcg
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
  */
 
 import {isDir, isFile, readDir, readJSON, safeWrite} from "@mr/core-cli/fs";
@@ -16,7 +17,7 @@ import type {IPackageJson} from "../packagejson";
  * @property dir    - Ruta absoluta del directorio del workspace.
  * @property nombre - `name` de su `package.json`.
  */
-interface IWorkspaceLocal {
+export interface IWorkspaceLocal {
     dir: string;
     nombre: string;
 }
@@ -30,7 +31,7 @@ interface IWorkspaceLocal {
  * @param basedir - Raíz absoluta del monorepo.
  * @returns Los workspaces con `package.json` y `name`.
  */
-async function workspacesDelMonorepo(basedir: string): Promise<IWorkspaceLocal[]> {
+export async function workspacesDelMonorepo(basedir: string): Promise<IWorkspaceLocal[]> {
     const {workspaces = []} = await readJSON<IPackageJson>(`${basedir}/package.json`);
     const dirs: string[] = [];
     for (const patron of workspaces) {

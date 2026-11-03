@@ -9,6 +9,7 @@ FROM ${BASE_IMAGE} AS build
 ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
+RUN npm install -g corepack && corepack enable && corepack prepare yarn@latest --activate
 RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
 COPY ./.yarn/plugins ./.yarn/plugins
 COPY ./.yarn/releases ./.yarn/releases
@@ -46,6 +47,7 @@ ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
 RUN apk add --no-cache tzdata
+RUN npm install -g corepack && corepack enable && corepack prepare yarn@latest --activate
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
 ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
 ENV NODE_ENV=production

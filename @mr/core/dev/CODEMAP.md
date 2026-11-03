@@ -3,7 +3,7 @@
 > Segmentado por bloques. Los bloques que ya tienen `CODEMAP.md` propio (`manifest/`,
 > `bundler/rspack/`, `bundler/esbuild/`, `patches/`, `.claude/`) no se duplican aquí: se
 > resume su tabla de ficheros/símbolos y se enlaza al `README.md`/`CODEMAP.md` de detalle.
-> Los bloques sin sub-CODEMAP (tipos globales, tsconfigs) se documentan completos en este fichero.
+> Los bloques sin sub-CODEMAP (tipos globales, tsconfigs, `pubsub/`) se documentan completos en este fichero.
 
 ---
 
@@ -49,7 +49,7 @@ importar explícitamente `@mr/core-dev/types`.
 **Depende de:** nada — son declaraciones ambiente puras.
 **Usado por:** cualquier código de negocio que ramifique por entorno (`if (PRODUCCION) {...}`);
 inyectadas por `bundler/rspack/plugins.ts` (`rspack.DefinePlugin`) y
-`bundler/esbuild/esbuild.config.mjs` (`getDefine()`).
+`bundler/esbuild/define.mjs` (`getDefine()`, importado por `esbuild.config.mjs`).
 
 ---
 
@@ -219,13 +219,14 @@ rspack --env entorno=<e> --env dir=<dir> [--env watch=true] --config bundler/rsp
 | Fichero | Rol |
 |---------|-----|
 | `bundler/esbuild/esbuild.config.mjs` | Entry point único; alternativa Node-only a rspack |
+| `bundler/esbuild/define.mjs` | `getDefine({entorno, database})`: los `define` de esbuild. Aparte porque `esbuild.config.mjs` compila al importarse; lo importan él y `pubsub/evaluar.mjs` |
 
 ### Símbolos (resumen)
 
 Contrato equivalente a rspack pero restringido:
 - solo compila si `deploy.runtime === "node"` y `build.framework !== "nextjs"`,
 - build única `app -> main.ts`, sin bundles `web[]`,
-- inyecta el mismo set de globales (`DESARROLLO`/`TEST`/`PRODUCCION`/`ENTORNO`/`NEXTJS`/`DATABASE`),
+- inyecta el mismo set de globales (`DESARROLLO`/`TEST`/`PRODUCCION`/`ENTORNO`/`NEXTJS`/`DATABASE`) con `getDefine()` de `define.mjs`,
 - `--watch` es opt-in explícito (no se activa solo por `entorno=desarrollo`).
 
 **Depende de:** `manifest/` (misma lectura de `mrpack.json` que rspack, normalizada con
@@ -286,6 +287,81 @@ por el propio Claude Code.
 **Usado por:** todo monorepo consumidor, vía `initClaudeDir()`
 (`@mr/cli/src/clases/init/symlinks.ts`), que symlinkea `.claude/` entero en la raíz del
 proyecto (mismo mecanismo que `initGithub()` con `.github/`).
+
+---
+
+## 9. Topología Pub/Sub local — `pubsub/`
+
+**README:** [`README.md`](./README.md#topología-pubsub-local-mrpackpubsubts)
+**Pruebas:** `spec/pubsub.spec.ts` (`yarn workspace @mr/core-dev test`, `tsconfig.spec.json`)
+**Ficheros:**
+
+| Fichero | Subpath | Rol |
+|---------|---------|-----|
+| `pubsub/declaracion.ts` | `@mr/core-dev/pubsub/declaracion` | **Puro** (sin imports de Node: lo empaqueta esbuild dentro de cada `mrpack.pubsub.ts`). Tipos de la declaración y de la topología, validación, fusión, `endpointPush`/`puertoPush` y comparación con el emulador |
+| `pubsub/config.ts` | `@mr/core-dev/pubsub/config` | Datos de conexión del emulador: valores por defecto, precedencia entorno > `config.workspaces.json` > defecto |
+| `pubsub/descubrir.ts` | `@mr/core-dev/pubsub/descubrir` | Qué workspaces tienen `mrpack.pubsub.ts` |
+| `pubsub/emulador.ts` | `@mr/core-dev/pubsub/emulador` | `EmuladorPubSub`: cliente REST del emulador que materializa la topología |
+| `pubsub/evaluar.mjs` | — (se lanza con `yarn workspace @mr/core-dev node pubsub/evaluar.mjs`) | Script Node: empaqueta con esbuild (`define` de desarrollo con el `build.database.test` del `mrpack.json` del workspace) y ejecuta cada `mrpack.pubsub.ts`, y escribe sus declaraciones como JSON; los errores de esbuild llevan sus `notes` |
+
+### Símbolos
+
+**`declaracion.ts`**
+
+```
+FICHERO_DECLARACION = "mrpack.pubsub.ts"
+IPushDeclarado {base, ruta?} · ISuscripcionDeclarada {nombre, topic, filtro?, push?, ackDeadline?}
+IDeclaracionPubSub {topics?, suscripciones?} · IDeclaracionWorkspace {workspace, declaracion}
+ITopicTopologia {nombre, declaradoPor[], deducido} · ISuscripcionTopologia extends ISuscripcionDeclarada {consumidor}
+ITopologia {topics[], suscripciones[]} · ISuscripcionEmulador {nombre, topic, filtro?, pushEndpoint?, ackDeadline, labels}
+IConfigComparacion {proyecto, pushHost} · TComparacionSuscripcion = "igual" | "push" | "recrear"
+validarDeclaracion(valor: unknown, origen: string): IDeclaracionPubSub        — estricta; lanza con `origen` en el mensaje
+definirPubSub(declaracion): IDeclaracionPubSub                                — valida (origen "mrpack.pubsub.ts") y devuelve
+fusionar(declaraciones: IDeclaracionWorkspace[]): ITopologia                  — topics declarados + deducidos; una suscripción, un consumidor
+endpointPush(push: IPushDeclarado, pushHost: string): string                  — protocolo y puerto de base, host pushHost, ruta
+puertoPush(push: IPushDeclarado): string                                      — puerto de base; resuelve el del protocolo (80/443) si URL.port es ""
+compararSuscripcion(declarada, existente, {proyecto, pushHost}): TComparacionSuscripcion
+describirDiferencias(declarada, existente, {proyecto, pushHost}): string[]    — el detalle de lo anterior
+```
+
+**`config.ts`**
+
+```
+IConfigEmulador {host, proyecto, pushHost} · IConfigEmuladorParcial · IResolverConfigEmulador {env, fichero?}
+CONFIG_EMULADOR_DEFECTO = {host: "localhost:8085", proyecto: "meteored-local", pushHost: "host.docker.internal"}
+resolverConfigEmulador({env, fichero}): IConfigEmulador                       — PUBSUB_EMULATOR_HOST / PUBSUB_PROJECT_ID / MRPACK_PUBSUB_PUSH_HOST
+leerConfigEmulador(raiz: string): Promise<IConfigEmuladorParcial | undefined> — bloque `pubsub` de config.workspaces.json
+```
+
+**`descubrir.ts`**: `buscarDeclaraciones(raiz: string): Promise<string[]>`.
+
+**`emulador.ts`**
+
+```
+class EmuladorPubSub
+  static build(config: IConfigEmulador) · readonly config · get entorno(): Record<string, string>
+  disponible(): Promise<boolean> · listar(): Promise<{topics: string[]; suscripciones: ISuscripcionEmulador[]}>
+  aplicar(topologia, {modo: "arranque" | "vigilancia", repo}): Promise<IInformeAplicar>
+  estado(topologia, {repo}): Promise<IInformeEstado> · purgar(suscripciones, {repo}): Promise<void>
+  limpiar(topologia, {repo}): Promise<string[]> · publicar(topic, mensaje, attributes?): Promise<string>
+mensajeEmuladorCaido(host: string): string
+  (aplicar: 409 al crear → relee y compara; suscripción con label de otro repo → `difiere`, no se toca; topics deducidos sin labels)
+IInformeAplicar {recursos: IInformeRecurso[]} · IInformeEstado {recursos: IEstadoRecurso[]; extras: IExtraEmulador[]}
+```
+
+### Flujo
+
+```
+mrpack.pubsub.ts de cada workspace ──(evaluar.mjs: esbuild + define de desarrollo)──▶ JSON {declaraciones}
+        │ buscarDeclaraciones(raiz) dice cuáles
+        ▼
+fusionar() ──▶ ITopologia ──▶ EmuladorPubSub.aplicar / estado / purgar / limpiar ──▶ REST del emulador
+                                   ▲ resolverConfigEmulador (entorno > config.workspaces.json > defecto)
+```
+
+**Depende de:** `esbuild` (devDependency de este workspace) y Node 24 (`fetch`); `evaluar.mjs` usa además `bundler/esbuild/define.mjs`.
+**Usado por:** `@mr/cli` (`mrpack pubsub`, `mrpack devel -p`), los helpers de los tests e2e (`EmuladorPubSub.publicar`) y cada
+`mrpack.pubsub.ts` (`definirPubSub`). Las guardas de arranque y `GET /admin/pubsub/` viven en `@mr/core-workload`.
 
 ---
 

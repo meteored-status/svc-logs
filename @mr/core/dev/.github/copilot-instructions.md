@@ -59,6 +59,7 @@ Consulta la documentación completa en [`@mr/core/dev/README.md`](../@mr/core/de
 | Manifest (`mrpack.json`) | [`manifest/README.md`](../@mr/core/dev/manifest/README.md) |
 | Bundler rspack           | [`bundler/rspack/README.md`](../@mr/core/dev/bundler/rspack/README.md) |
 | Parches de migración     | [`patches/README.md`](../@mr/core/dev/patches/README.md) |
+| Topología Pub/Sub local (`pubsub/`) | [`README.md`](../@mr/core/dev/README.md#topología-pubsub-local-mrpackpubsubts) — ver la sección «Pub/Sub: topología local» de este fichero |
 
 ### Parches de migración
 
@@ -495,6 +496,88 @@ Estos paquetes **no se editan directamente** en el monorepo como código de nego
    */
   public async save(): Promise<void> { ... }
   ```
+
+---
+
+## Pub/Sub: topología local (`mrpack.pubsub.ts`)
+
+Todo recurso de Pub/Sub que use el código en desarrollo está declarado en un `mrpack.pubsub.ts` en la raíz del workspace dueño.
+Lo lee `mrpack` (`yarn mrpack pubsub -u`, o «Ejecutar + PubSub» en los desplegables) para darlo de alta en el emulador local
+(docker `pubsub` de mrenv, `localhost:8085`, proyecto `meteored-local`). Detalle del formato y del motor en
+[`@mr/core/dev/README.md`](../@mr/core/dev/README.md#topología-pubsub-local-mrpackpubsubts).
+
+- **Cuándo tocarlo:** en la misma tarea en la que el código empieza a publicar en un topic o a consumir una suscripción (pull o
+  push), o cambia su nombre, filtro, push o `ackDeadline`.
+- **Dónde:** topic → el workspace donde está el código que publica (puede ser un package); suscripción → el workspace que la
+  consume; push → el servicio que lo recibe, apuntando a sí mismo. No se declaran recursos de otro repo: si tu suscripción cuelga
+  de un topic ajeno, basta con declarar la suscripción, el topic se crea solo.
+- **Cómo:** `export default definirPubSub({topics: [...], suscripciones: [...]})` (`@mr/core-dev/pubsub/declaracion`).
+
+  ```ts
+  // services/amateur/mrpack.pubsub.ts
+  import {definirPubSub} from "@mr/core-dev/pubsub/declaracion";
+  import {ESubscription, SUBSCRIPTION, TOPIC} from "@mr/core-ai/pub-sub/pub-sub";
+
+  export default definirPubSub({
+      suscripciones: [{nombre: SUBSCRIPTION(ESubscription.AMATEUR), topic: TOPIC, filtro: `attributes.sender = "${ESubscription.AMATEUR}"`}],
+  });
+  ```
+
+  - **Nombres:** importar la constante que ya usa el código (p. ej. `TOPIC` y `SUBSCRIPTION(ESubscription.X)` de
+    `@mr/core-ai/pub-sub/pub-sub`), nunca un literal repetido. Si depende del entorno (`DESARROLLO ? … : …`) se importa tal cual: se
+    evalúa con `DESARROLLO=true`.
+  - **Push:** `push: {base: SERVICES.servicio(EService.<servicio>).base, ruta: "/"}`, nunca un puerto escrito a mano.
+  - **Solo módulos de constantes sin efectos secundarios:** la declaración se ejecuta para leerla, así que solo importa nombres de
+    `utiles/pubsub/nombres.ts` (ver «Dónde van los nombres») o de los frameworks, y el registro `SERVICES`.
+  - El workspace necesita `@mr/core-dev` en `devDependencies` (y `yarn install`).
+- **Dónde van los nombres (convención fija en todos los repos):**
+
+  ```text
+  modules/utiles/pubsub/
+  ├─ nombres.ts   — solo las constantes de nombres de topics y suscripciones de ESTE workspace
+  └─ index.ts     — los clientes (`PubSub.build(...)`), que importan sus nombres de `./nombres`
+  ```
+
+  - `nombres.ts` **no importa nada** salvo `import type`. Es lo que permite que `mrpack.pubsub.ts` lo importe: el cliente
+    (`index.ts`) arrastraría `@google-cloud/pubsub` a la evaluación.
+  - Nada de literales repetidos: `index.ts`, las declaraciones y los tests importan de `utiles/pubsub/nombres`.
+  - **No se copia lo que ya da un framework:** `TOPIC` y `SUBSCRIPTION(ESubscription.X)` de `@mr/core-ai/pub-sub/pub-sub` se importan
+    de allí directamente.
+  - **Lo que no es de Pub/Sub no va aquí**, aunque aparezca en un filtro. P. ej. el identificador de cliente ante la IA vive con la
+    conexión a la IA (`utiles/ia.ts`).
+  - No se crean ficheros sueltos en `utiles/` para esto (`topic-name.ts`, `pubsub-nombres.ts`…). Si el workspace ya tenía su cliente
+    en otro fichero de `utiles/` (`topic.ts`, `pubsub.ts`), se mueve a `utiles/pubsub/index.ts`.
+- **Lista de comprobación al declarar** (lo que el motor no puede detectar por ti: valida el formato, pero no sabe qué falta):
+  1. Un `mrpack.pubsub.ts` en **cada** workspace que publique o consuma, incluidos los que escuchan resultados de la IA
+     (`api.subscribe(ESubscription.X)`) y cada webhook que reciba por push.
+  2. Si el código publica con atributos (p. ej. `attributes: {discriminator: "send-email"}`), cada suscripción lleva el **filtro**
+     de lo que consume ese servicio (`attributes.discriminator = "send-email"`); sin filtro recibiría también lo de los demás.
+  3. Los nombres y filtros que no estén en el código (p. ej. la suscripción push de una Cloud Run) se **consultan en GCP**
+     (`gcloud pubsub subscriptions list --project <proyecto>`, solo lectura) o se preguntan a la persona. **No se inventan.**
+  4. **Los tests que ya usen Pub/Sub se adaptan en la misma tarea.** Busca en `test/`, `tests/` y `spec/` de cada workspace tocado
+     (`jest.mock(".../topic"`, `sendMessage`, `PubSub.build`, `@google-cloud/pubsub`, `PUBSUB_EMULATOR_HOST`, `gcloud pubsub`,
+     topologías o servicios levantados por el propio test):
+     - los `jest.mock` y los imports apuntan a las rutas nuevas (`utiles/pubsub`, `utiles/pubsub/nombres`);
+     - las aserciones comparan con las constantes de `nombres.ts` (`EDiscriminator.X`, `TOPIC`…), no con literales;
+     - los e2e siguen la regla de «Tests e2e» de abajo: si levantaban servicios, creaban topics/suscripciones, publicaban con
+       `gcloud` o usaban el Pub/Sub de GCP, se reescriben para usar solo el emulador y comprobar los servicios con `/admin/pubsub/`;
+     - se ejecutan y tienen que pasar (los e2e que necesiten servicios levantados, al menos tienen que compilar y fallar al momento
+       con el mensaje de qué arrancar si no lo están).
+  5. Al terminar: `yarn mrpack pubsub -s` (todo `ok`) y arrancar con «Ejecutar + PubSub» cada consumidor para ver que recibe.
+     Para probar un consumidor sin pasar por el código que publica, publica directamente en el emulador
+     (`POST http://localhost:8085/v1/projects/meteored-local/topics/<topic>:publish` con `data` en base64 y los `attributes` del
+     filtro). Ojo: si el consumidor responde con error, el emulador reintenta el push cada 1–2 s; al acabar, `yarn mrpack pubsub -r`
+     vacía las colas.
+- **Comprobar:** `yarn mrpack pubsub -u` (alta) y `yarn mrpack pubsub -s` (estado: todo `ok` y cada push respondiendo en modo
+  emulador). Requieren el docker `pubsub` de mrenv levantado; si no lo está, no se arranca: se le dice a la persona.
+- **Prohibido:**
+  - Crear o borrar topics/suscripciones desde código de servicio o desde tests.
+  - Poner `PUBSUB_EMULATOR_HOST`/`PUBSUB_PROJECT_ID` en código, `.run.xml` o ficheros versionados: solo las inyecta
+    `mrpack devel -p`, y la guarda de `Main` (`@mr/core-workload`) aborta el arranque en test y producción.
+  - Tocar recursos de GCP.
+- **Tests e2e:** no levantan servicios ni crean topología. Usan el emulador (`EmuladorPubSub.publicar`) y comprueban con
+  `GET /admin/pubsub/` que los servicios que necesitan están levantados en modo emulador; si no, fallan diciendo qué arrancar.
+- **Repo que adopta Pub/Sub:** actualizar framework, añadir las declaraciones y `mrpack init` (regenera los desplegables «+ pubsub»).
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-dev",
-  "version": "2026.10.19+3-bixus",
+  "version": "2026.11.2+1-bixus",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "typings": "./types.d.ts",
@@ -9,7 +9,8 @@
     "tipo": "core"
   },
   "scripts": {
-    "mrpack:patch:apply": "node patches/index.mjs"
+    "mrpack:patch:apply": "node patches/index.mjs",
+    "test": "yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
   },
   "type": "module",
   "exports": {
@@ -36,18 +37,22 @@
     "./manifest/deployment/lambda": "./manifest/deployment/lambda/index.ts",
     "./manifest/deployment/storage": "./manifest/deployment/storage/index.ts",
     "./manifest/deployment/storage/buckets": "./manifest/deployment/storage/buckets.ts",
-    "./manifest/development": "./manifest/development.ts"
+    "./manifest/development": "./manifest/development.ts",
+    "./pubsub/declaracion": "./pubsub/declaracion.ts",
+    "./pubsub/config": "./pubsub/config.ts",
+    "./pubsub/descubrir": "./pubsub/descubrir.ts",
+    "./pubsub/emulador": "./pubsub/emulador.ts"
   },
   "dependencies": {
     "source-map-support": "^0.5.21",
-    "tslib": "^2.8.1"
+    "tslib": "^2.9.1"
   },
   "devDependencies": {
-    "@rspack/cli": "^2.2.9",
-    "@rspack/core": "^2.2.9",
+    "@rspack/cli": "^2.3.0",
+    "@rspack/core": "^2.3.0",
     "@tsconfig/node24": "^24.0.5",
     "@tsconfig/recommended": "^1.0.13",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/source-map-support": "^0.5.10",
     "css-loader": "^7.1.5",
     "esbuild": "^0.28.2",
@@ -56,12 +61,12 @@
     "pug": "^3.0.4",
     "pug3-loader": "^2.4.3",
     "rspack-manifest-plugin": "^5.2.2",
-    "sass-embedded": "^1.105.2",
-    "sass-loader": "^17.0.1",
+    "sass-embedded": "^1.107.1",
+    "sass-loader": "^17.1.0",
     "source-map-loader": "^5.0.0",
     "style-loader": "^4.0.0",
     "to-string-loader": "^1.2.0",
-    "ts-checker-rspack-plugin": "^1.7.1",
+    "ts-checker-rspack-plugin": "^1.7.2",
     "typescript": "^6.0.3"
   }
 }

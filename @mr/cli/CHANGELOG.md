@@ -2,6 +2,94 @@
 
 ---
 
+## 2026.11.2 12:56 — [Jose]
+
+### Fixed
+
+- **Sin el aviso `warning: redirecting to …` al clonar el kustomize.** No había ninguna redirección: git avisa siempre
+  que la URL lleva credenciales. `clone.sh` pasa ahora el token en una cabecera `Authorization`
+  (`http.https://github.com/.extraheader`), y así tampoco queda guardado en `kustomizar/.git/config`. La rama
+  `develop` se clona directamente con `--branch` en vez de con un `fetch` y un `checkout` aparte.
+
+---
+
+## 2026.11.2 12:19 — [Jose]
+
+### Changed
+
+- **El clonado del kustomize admite PAT fine-grained.** `deployment/std/clone.sh` pasa el token como contraseña
+  (`x-access-token:<token>`), que vale para PAT clásicos y fine-grained, y le quita espacios y saltos de línea.
+
+### Added
+
+- **Token de GitHub de otra organización.** Un PAT fine-grained solo vale para una organización, así que cuando el
+  kustomize es de otra, `clone.sh` lee su token del secreto `alpred-lectura` del proyecto de GCP indicado en la
+  sustitución `_K8S_GITHUB_PROYECTO`. Va por trigger, sin etiqueta de proyecto, porque en un mismo proyecto conviven
+  despliegues con su propio kustomize y con el de otra organización. El paso «Clonar Repositorios» pasa a la imagen
+  `gcr.io/cloud-builders/gcloud` para poder leerlo.
+
+---
+
+## 2026.10.29 08:45 — [Jose]
+
+### Changed
+
+- **Yarn se prepara con corepack en las imágenes Node del despliegue.** Desde Node 25 la imagen `node:lts-alpine` no trae
+  ni `yarn` ni `corepack`, y el paso «Instalar Dependencias» y los `docker run` de `compilar.sh` y `auto-doc.sh` fallaban.
+  Ahora instalan corepack con npm y lo habilitan antes de llamar a Yarn, y lo mismo hacen las dos etapas de
+  `deployment/std/Dockerfile` y `Dockerfile-next`.
+- **`mrpack init` parchea los `Dockerfile` propios de los workspaces Node** para que preparen Yarn igual que los de
+  `deployment/std` (`clases/init/dockerfile.ts`). Cada etapa que usa Yarn y no tiene la instrucción la recibe tras
+  `RUN apk add --no-cache tzdata`, o tras su primer `WORKDIR`, o tras el `FROM`. Un `RUN corepack enable…` sin el
+  `npm install -g corepack` delante se sustituye en su sitio. Las etapas que no usan Yarn no se tocan.
+
+---
+
+## 2026.10.19 13:26 — [Alex]
+
+### Added
+
+- **`mrpack pubsub`: la topología de Pub/Sub local, desde la línea de comandos.** Cada workspace declara en su
+  `mrpack.pubsub.ts` los topics que publica y las suscripciones que consume; el módulo nuevo las junta y las da de alta en el
+  emulador (docker `pubsub` de mrenv). `-u/--up` da de alta (crea lo que falta, corrige el push y recrea lo que difiere),
+  `-s/--status` compara con el emulador y, para cada suscripción push, comprueba a qué modo responde el servicio
+  (`GET /admin/pubsub/`), `-r/--reset` purga las suscripciones declaradas y `-l/--limpiar` borra lo que este repo dio de alta y
+  ya no declara. Nunca arranca el docker: si no responde, lo dice y sale con error. Un repo sin declaraciones lo dice y termina
+  sin error y sin comprobar el emulador. La lógica vive en `clases/pubsub.ts`; el motor, en `@mr/core-dev/pubsub/*`.
+- **`mrpack devel -p/--pubsub`: ejecutar contra el emulador.** Antes de lanzar ningún servicio da de alta la topología y
+  lanza cada uno con `PUBSUB_EMULATOR_HOST` y `PUBSUB_PROJECT_ID` en el entorno de su proceso de ejecución (no en el de los
+  compiladores). Después la vigila cada 15 s: repone lo que falte (un emulador reiniciado arranca vacío), recarga los
+  `mrpack.pubsub.ts` si cambian y avisa una vez de lo que difiere sin tocarlo, porque recrear una suscripción quitaría los
+  mensajes en vuelo a los servicios. También repone antes de reiniciar un servicio caído o un cronjob. **Falla hacia el lado
+  seguro**: sin declaraciones, con el emulador caído o con una declaración inválida no se lanza ningún servicio, para que
+  nunca se ejecute contra Google Cloud sin avisar.
+- **`mrpack devel --solo=<ws>[,<ws>]`**: ejecuta únicamente esos workspaces, sin mirar el flag `ejecutar` de
+  `config.workspaces.json` y respetando lo demás (`-e`, runtime, `enabled`, `devel.enabled`). Un nombre que no sea un
+  workspace ejecutable falla con la lista de los disponibles, sin lanzar nada.
+- **`mrpack init` genera las acciones del IDE de Pub/Sub y el script `devel-pubsub`, solo en un monorepo con algún
+  `mrpack.pubsub.ts`.** Por cada servicio cuya clausura de dependencias de workspace (`workspace:`) contiene una declaración,
+  `.run/{type}-{service}.pubsub.run.xml` (`ejecutar + pubsub => {type} => {service}`: `devel -e -p --solo={service}`); en la
+  raíz, `develop => Ejecutar + PubSub`, `develop => Compilar + Ejecutar + PubSub`, `cli => PubSub estado` y `cli => PubSub reset`
+  (`.run/mrpack-pubsub-*.run.xml`); y el script raíz `devel-pubsub` (`yarn mrpack devel -e -p`). Si un repo se queda sin
+  declaraciones, `init` los borra; un repo que nunca las tuvo no recibe nada.
+- `Service` gana `IService.solo`, `setEntorno()` (variables que se suman al entorno del proceso de ejecución),
+  `setAntesDeReiniciar()` (se espera antes de cada reinicio automático; si falla se registra y se reinicia igual) y
+  `esEjecutable()`. Nueva etiqueta de log `Log.label_pubsub` (`PUBSUB`).
+
+### Changed
+
+- `mrpack init` conserva el bloque `pubsub` (`host`, `proyecto`, `pushHost`) de `config.workspaces.json` al regenerarlo; `IConfigServices`
+  lo declara. El módulo `config` ya lo conservaba porque modifica el fichero leído en vez de reconstruirlo.
+- `init/workspace-deps.ts` exporta `workspacesDelMonorepo()` (y `IWorkspaceLocal`), que ahora usa también `init/run.ts`.
+
+### Fixed
+
+- `mrpack pubsub -s`: el puerto con el que se comprueba una suscripción push sale de `puertoPush()` (`@mr/core-dev/pubsub/declaracion`,
+  el mismo cálculo que `endpointPush`) y no de `new URL(push.base).port`, que es `""` si se escribió el puerto por defecto del
+  protocolo (`http://localhost:80`).
+
+---
+
 ## 2026.10.19 11:05 — [Jose]
 
 ### Fixed

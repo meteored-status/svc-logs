@@ -47,7 +47,7 @@ steps:
     #####
     # CLONAR REPOSITORIOS
     #####
-  - name: 'gcr.io/cloud-builders/git'
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/clone.sh"
@@ -84,10 +84,10 @@ steps:
     # INSTALAR LAS DEPENDENCIAS DEL PROYECTO
     #####
   - name: 'node:lts-alpine'
-    entrypoint: 'yarn'
+    entrypoint: 'sh'
     args:
-      - install
-      - --mode=skip-build
+      - -c
+      - npm install -g corepack && corepack enable && corepack prepare yarn@latest --activate && yarn install --mode=skip-build
     id: 'Instalar Dependencias'
     waitFor:
       - 'Descargar Cache Dependencias'
@@ -202,7 +202,7 @@ steps:
 #####
 availableSecrets:
   secretManager:
-    - versionName: "projects/${PROJECT_ID}/secrets/alpred-lectura/versions/1"
+    - versionName: "projects/${PROJECT_ID}/secrets/alpred-lectura/versions/latest"
       env: 'GITTOKEN'
 # Valores por defecto de las sustituciones opcionales: el trigger que las defina las sobrescribe, y
 # en el que no, llegan vacías a los scripts en vez de hacer fallar el build.
@@ -210,6 +210,7 @@ substitutions:
   _CLUSTER: ''
   _K8S_CACHE: ''
   _K8S_GITHUB: ''
+  _K8S_GITHUB_PROYECTO: ''
 #  _ENTORNO: 'test'
 options:
   automapSubstitutions: true
@@ -224,6 +225,7 @@ options:
     - '_GENERAR_FORZAR=${_GENERAR_FORZAR}'
     - '_K8S_CACHE=${_K8S_CACHE}'
     - '_K8S_GITHUB=${_K8S_GITHUB}'
+    - '_K8S_GITHUB_PROYECTO=${_K8S_GITHUB_PROYECTO}'
     - '_MYSQL=${_MYSQL}'
     - 'COMMIT_SHA=${COMMIT_SHA}'
     - 'PROJECT_ID=${PROJECT_ID}'

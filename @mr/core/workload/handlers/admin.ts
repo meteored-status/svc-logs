@@ -1,10 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Mon, 27 Jul 2026 06:26:52 GMT
- * Hash: e0ff33ddc69ebc21fdac049e8de57712
- * Versión: 2026.7.27+1-josantoniojimnez
- * Anterior: 2026.6.17+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-web-www.git
+ * Editor: alexCG
+ * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
+ * Hash: 4d256246a32105d35bc18a7a2453394a
+ * Versión: 2026.10.20+1-alexcg
+ * Anterior: 2026.7.27+1-josantoniojimnez
+ * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
  */
 
 import type {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";
@@ -13,6 +13,7 @@ import {error} from "services-comun/modules/utiles/log";
 import {metricas} from "@mr/core-network/server/http/metrics";
 import server, {RUTA_DEBUG_HANDOFF} from "@mr/core-network/server/http/server";
 
+import {modoPubSub} from "../config/pubsub";
 import type {Configuracion} from "../config";
 import type {Engine} from "../engine/server";
 
@@ -27,6 +28,9 @@ import type {Engine} from "../engine/server";
  * - `GET /admin/doc/`     — devuelve la lista de rutas documentables del servicio.
  * - `POST /admin/debug-handoff/` — fuera de producción, cede el puerto HTTP a una
  *   sesión de depuración (ver `Server.cederPuertoParaDebug`); en producción responde 404.
+ * - `GET /admin/pubsub/` — fuera de producción, dice si el proceso corre contra el emulador de Pub/Sub:
+ *   `data: {emulador, proyecto}` (`PUBSUB_EMULATOR_HOST` y `PUBSUB_PROJECT_ID`, `null` si no están definidas);
+ *   en producción responde 404. Los tests e2e lo usan para comprobar que un servicio está levantado en modo emulador.
  *
  * Ninguna de estas rutas se incluye en la documentación pública.
  */
@@ -99,6 +103,17 @@ class Admin extends RouteGroup {
                             server.cederPuertoParaDebug()
                                 .catch((err: unknown) => error("Error cediendo el puerto HTTP para depuración", err));
                         });
+                },
+            },
+            {
+                expresiones: [
+                    {metodos: ["GET"], exact: "/admin/pubsub/", resumen: "/admin/pubsub/", log: false},
+                ],
+                handler: async (conexion) => {
+                    if (PRODUCCION) {
+                        return conexion.error(404, "not found");
+                    }
+                    return this.sendRespuesta(conexion, {data: modoPubSub(process.env)});
                 },
             },
         ];

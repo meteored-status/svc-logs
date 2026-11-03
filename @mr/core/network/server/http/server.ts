@@ -1,10 +1,10 @@
 /**
- * Editor: Pedro
- * Fecha: Mon, 05 Oct 2026 10:56:47 GMT
- * Hash: 4d860806cbdb2dffe02a16697ff5368a
- * Versión: 2026.10.5+1-pedro
- * Anterior: 2026.9.29+1-bixus
- * Proyecto: https://github.com/alpred/meteored-svc-panel-usuarios.git
+ * Editor: Bixus
+ * Fecha: Thu, 22 Oct 2026 07:08:16 GMT
+ * Hash: 1fc2d77505d5908e187d43263f4c036b
+ * Versión: 2026.10.22+1-bixus
+ * Anterior: 2026.10.5+1-pedro
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import formidable, {type Fields, type Files} from "formidable";
@@ -26,6 +26,7 @@ import type {Net} from "./config/net";
 import {metricas} from "./metrics";
 import type {Routes} from "./routes";
 import {route} from "./router";
+import {esLenta, esperaLenta, textoUmbral, umbralLento} from "./slow";
 
 /** Métodos HTTP que pueden traer cuerpo y que parseamos en `onRequest`. */
 const METODOS_CON_CUERPO: ReadonlySet<string> = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -546,18 +547,35 @@ export class Server {
                 conexion.error(500, err.message, err).finally(() => undefined);
             });
             request.addListener("end", () => {
-                const timeout: NodeJS.Timeout|undefined = config.slow > 0
-                    ? setTimeout(() => {
-                        warning("Tiempo de respuesta excesivo (>1sg)", conexion.url);
-                    }, config.slow)
-                    : undefined;
+                // El aviso se arma con el umbral del servidor porque aún no se sabe qué ruta atenderá la
+                // petición; cuando vence, se mira el umbral efectivo (el de la ruta, si fijó uno) y, si es
+                // mayor, se reprograma por lo que falte. `config.slow = 0` lo apaga para todo el servidor.
+                const vigilada = config.slow > 0;
+                let timeout: NodeJS.Timeout|undefined;
+                const vigilar = (espera: number): void => {
+                    timeout = setTimeout(() => {
+                        const umbral = umbralLento(config.slow, conexion.slow);
+                        const falta = esperaLenta(umbral, Date.now() - conexion.start.getTime());
+                        if (falta === null) {
+                            return;
+                        }
+                        if (falta > 0) {
+                            vigilar(falta);
+                            return;
+                        }
+                        warning(`Tiempo de respuesta excesivo (>${textoUmbral(umbral)})`, conexion.url);
+                    }, espera);
+                };
+                if (vigilada) {
+                    vigilar(config.slow);
+                }
                 conexion.iniciado();
                 request.removeAllListeners();
                 route(requestHandlers, conexion).finally(() => {
-                    if (timeout !== undefined) {
+                    if (vigilada) {
                         clearTimeout(timeout);
                         const intervalo = Date.now() - conexion.start.getTime();
-                        if (intervalo > 1000) {
+                        if (esLenta(umbralLento(config.slow, conexion.slow), intervalo)) {
                             warning(`Tiempo de respuesta excesivo (${formatTiempo(intervalo)})`, conexion.url);
                         }
                     }

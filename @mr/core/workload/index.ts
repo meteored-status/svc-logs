@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: e5b1323138c815d617d2f0691cf04aa5
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.6.17+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: alexCG
+ * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
+ * Hash: f7fc653fece65528ee8941692745b6f9
+ * Versión: 2026.10.20+1-alexcg
+ * Anterior: 2026.9.23+1-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
  */
 
 import cluster, {type Worker} from "node:cluster";
@@ -15,6 +15,7 @@ import os from "node:os";
 import {Deferred, PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info, warning} from "services-comun/modules/utiles/log";
 
+import {comprobarEmuladorPubSub, modoPubSub} from "./config/pubsub";
 import type {Configuracion} from "./config";
 import type {Engine} from "./engine";
 import type {IPodInfo} from "./config/pod";
@@ -325,12 +326,20 @@ export class Main {
 
     /**
      * Ejecuta el ciclo completo de arranque:
-     * 1. Carga la configuración (single-shot).
-     * 2. Espera al sidecar.
-     * 3. En modo cluster: primario → `startMaster`; worker → `startSlave`.
-     * 4. En modo simple: `build → master → ejecutar`. Si es cronjob, detiene el sidecar y termina.
+     * 1. Comprueba que `PUBSUB_EMULATOR_HOST` no esté definida en un bundle de test o producción (`comprobarEmuladorPubSub`):
+     *    si lo está, el arranque aborta. Si el proceso corre contra el emulador, lo deja en el log (solo el primario).
+     * 2. Carga la configuración (single-shot).
+     * 3. Espera al sidecar.
+     * 4. En modo cluster: primario → `startMaster`; worker → `startSlave`.
+     * 5. En modo simple: `build → master → ejecutar`. Si es cronjob, detiene el sidecar y termina.
      */
     protected async start(): Promise<void> {
+        comprobarEmuladorPubSub({produccion: PRODUCCION, env: process.env});
+        const {emulador, proyecto} = modoPubSub(process.env);
+        if (emulador !== null && cluster.isPrimary) {
+            info(`Pub/Sub: emulador ${emulador} (${proyecto})`);
+        }
+
         const configuracion = await this.configLoader.load();
         this.configLoader.load = () => { throw new Error("Solo se puede cargar la configuración una vez"); };
 

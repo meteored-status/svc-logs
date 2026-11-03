@@ -9,12 +9,13 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 ├─ config/
 │  ├─ index.ts        — Configuracion base + IConfiguracion (pod/env); cargar() sobreescribe defecto con files/config.json
 │  ├─ pod.ts          — creacion de IPodInfo; `aplanarBuckets()` aplana `deploy.buckets` (string / string[] / {buckets, basePath?}) en `buckets: Record<string, string|string[]>` + `bucketsBasePath?: Record<string, string>`
-│  └─ net.ts          — ConfiguracionNet + IConfiguracionNet (config de red)
+│  ├─ net.ts          — ConfiguracionNet + IConfiguracionNet (config de red)
+│  └─ pubsub.ts       — comprobarEmuladorPubSub (guarda de arranque) + modoPubSub (modo de Pub/Sub del proceso)
 ├─ engine/
 │  ├─ index.ts       — Engine base (build, ciclo de vida, abort, métricas)
 │  └─ server.ts      — Engine HTTP (initWebServer/S, shutdown watcher, prebuild)
 ├─ handlers/
-│  ├─ admin.ts       — rutas /admin/* (healthchecks, doc, metrics Prometheus)
+│  ├─ admin.ts       — rutas /admin/* (healthchecks, doc, metrics Prometheus, pubsub)
 │  ├─ error.ts       — handler de error HTTP por defecto (404 / JSON)
 │  └─ favicon.ts     — handler /favicon.ico
 ├─ index.ts          — Main, IEngine, IMainConfig
@@ -47,7 +48,7 @@ Mapa tecnico del workspace `@mr/core/workload/`.
     - `addSlave()` — levanta un worker en modo cluster
     - `startMaster(configuracion, hilos)` — proceso primario en cluster
     - `startSlave(configuracion)` — proceso worker en cluster
-    - `start()` — ciclo completo: load → sidecar → cluster/simple → cronjob cleanup
+    - `start()` — ciclo completo: guarda de Pub/Sub → load → sidecar → cluster/simple → cronjob cleanup. La guarda (`comprobarEmuladorPubSub`) aborta el arranque si un bundle de test/producción tiene `PUBSUB_EMULATOR_HOST`; si el proceso corre contra el emulador, `info("Pub/Sub: emulador <host> (<proyecto>)")` (solo el primario en cluster)
 
 ### `engine/index.ts`
 
@@ -150,6 +151,12 @@ hooks de salud que los handlers de admin necesitan.
 > **Migración:** `ConfiguracionNet` se movio desde
 > `@mr/core-network/server/http/config/config.ts` a `@mr/core-workload/config/net.ts`.
 
+### `config/pubsub.ts`
+
+- `comprobarEmuladorPubSub({produccion, env})` → `void` — lanza `Error` si `produccion` y `env.PUBSUB_EMULATOR_HOST` está definida (vacía ≡ no definida)
+- `modoPubSub(env)` → `IModoPubSub {emulador: string|null; proyecto: string|null}` — `PUBSUB_EMULATOR_HOST` / `PUBSUB_PROJECT_ID`, `null` si ausentes o vacías
+- Sin exports en `package.json`: se importa por ruta (`@mr/core-workload/config/pubsub`); `index.ts` y `handlers/admin.ts` lo usan.
+
 ### `handlers/admin.ts`
 
 Factory: `(config: Configuracion, engine: Engine) => Admin`
@@ -165,6 +172,7 @@ Grupo de rutas de administración interna. Ninguna aparece en la documentación 
 | `GET /admin/doc/` | Lista de rutas documentables en JSON |
 | `GET /admin/metrics/` | Métricas en formato Prometheus (`text/plain; version=0.0.4`) |
 | `POST /admin/debug-handoff/` | Solo fuera de producción: `server.cederPuertoParaDebug()` — cede el puerto HTTP a una sesión de depuración. 404 en producción. |
+| `GET /admin/pubsub/` | Solo fuera de producción: `data: modoPubSub(process.env)` (`{emulador, proyecto}`). 404 en producción. |
 
 ```ts
 import Admin from "@mr/core-workload/handlers/admin";
@@ -208,6 +216,7 @@ Factory: `(config: Configuracion) => Favicon`
 Main.ejecutar(...)
   -> instancia Main(engine, configLoader, cfg)
   -> start()
+     -> comprobarEmuladorPubSub(...) (lanza → catch de ejecutar: error + exit(1)); info si hay emulador
      -> this.configLoader.load() (single-shot)
      -> startSidecar(...)
       -> si minimo_hilos !== 1:

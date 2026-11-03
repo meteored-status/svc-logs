@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-i18n",
-  "version": "2026.10.14+1-juancmartinez",
+  "version": "2026.11.2+1-bixus",
   "description": "Utilidades relacionadas con las traducciones de MR{FW}",
   "author": "José Antonio Jiménez",
   "scripts": {
@@ -30,14 +30,14 @@
     "./value/singular-value": "./modules/value/singular-value.ts"
   },
   "dependencies": {
-    "chokidar": "^5.0.0",
+    "chokidar": "^6.0.0",
     "source-map-support": "^0.5.21",
-    "tslib": "^2.8.1"
+    "tslib": "^2.9.1"
   },
   "devDependencies": {
     "@mr/core-cli": "workspace:*",
     "@tsconfig/node24": "^24.0.5",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/source-map-support": "^0.5.10",
     "esbuild": "^0.28.2",
     "typescript": "^6.0.3"

@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: f997e2a15842116ef7f2a030c6eef479
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.8.6+1-bixus
+ * Fecha: Thu, 22 Oct 2026 07:08:16 GMT
+ * Hash: 84dae431fd7a32eb76995ce7f3472673
+ * Versión: 2026.10.22+1-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -55,6 +55,10 @@ type TUpdater = {
  * @property documentable - Si `false`, el bloque no aparece en la documentación generada. Por defecto `true`.
  * @property dominios      - Dominios por defecto para las expresiones del bloque. Se aplica a cada
  *   {@link IExpresion} de `expresiones` cuyo propio `dominios` no esté definido.
+ * @property slow         - Umbral en ms del aviso de petición lenta para las rutas del bloque, en lugar del del
+ *   servidor (`Net.slow`, 1000 ms por defecto). `0` desactiva el aviso. Sin definir, vale el del servidor. Solo
+ *   ajusta el aviso: si el servidor lo tiene apagado (`Net.slow = 0`), sigue apagado. Pensado para handlers que se
+ *   espera que tarden (consultas pesadas) y no deben inundar el log.
  */
 export interface IRouteGroup {
     expresiones?: IExpresion[];
@@ -65,6 +69,7 @@ export interface IRouteGroup {
     cache?: Partial<IRouteGroupCache>;
     documentable?: boolean;
     dominios?: string[];
+    slow?: number;
 }
 
 /**
@@ -80,6 +85,7 @@ interface IRouteGroupFinal {
     cache: IRouteGroupCache;
     documentable: boolean;
     dominios?: string[];
+    slow?: number;
 }
 
 /**
@@ -119,6 +125,7 @@ export class RouteGroupBlock {
             },
             documentable: data.documentable ?? true,
             dominios: data.dominios,
+            slow: data.slow,
         });
 
         nuevo.initUpdater();
@@ -204,6 +211,9 @@ export class RouteGroupBlock {
     /** Dominio de redirección para subdominios no habilitados. */
     private readonly redireccion?: Dominio;
 
+    /** Umbral de petición lenta de las rutas del bloque, en ms (`0` = sin aviso). `undefined` = el del servidor. */
+    private readonly slow?: number;
+
     /** Configuración de caché del bloque. */
     private readonly cache: IRouteGroupCache;
 
@@ -253,6 +263,7 @@ export class RouteGroupBlock {
             : { interval: 0, ...data.updater };
         this.documentable = data.documentable;
         this.dominiosDefault = data.dominios;
+        this.slow = data.slow;
     }
 
     /**
@@ -458,6 +469,9 @@ export class RouteGroupBlock {
                 // Etiquetar el span activo con el patrón de ruta para que Datadog
                 // agrupe trazas por endpoint en lugar de por URL concreta.
                 conexion.setRoute(expresion.resumen);
+                if (this.slow !== undefined) {
+                    conexion.slow = this.slow;
+                }
 
                 if (expresion.lang.redir[conexion.idioma.idioma] !== undefined) {
                     await conexion

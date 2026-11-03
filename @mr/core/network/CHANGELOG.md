@@ -2,6 +2,24 @@
 
 ---
 
+## 2026.10.22 08:52 — [Jose]
+
+### Added
+
+- **El aviso de petición lenta se puede ajustar o desactivar por ruta** (`IRouteGroup.slow`, en ms; `0` = sin
+  aviso). El router deja el valor en `Conexion.slow` cuando la ruta hace match; el temporizador de `server.ts` se
+  arma con `Net.slow` y, al vencer, mira el umbral efectivo y se reprograma por lo que falte si la ruta lo subió.
+  Pensado para handlers que se espera que tarden (consultas a BigQuery) y no deben inundar el log. Sin la opción,
+  nada cambia. La decisión es pura y está en `server/http/slow.ts`.
+
+### Fixed
+
+- El aviso final de petición lenta comparaba contra un `1000` fijo en vez de `Net.slow`: con un `slow` distinto
+  de 1000 avisaba por un umbral que no era el configurado. Y el aviso «en curso» decía siempre `>1sg`; ahora dice
+  el umbral real.
+
+---
+
 ## 2026.9.29 08:24 — [Jose]
 
 ### Changed

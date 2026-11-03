@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 5489904bd50135cf1cc3e3a4452e0f36
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.8.5+1-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 20 Oct 2026 10:27:34 GMT
+ * Hash: ec6f193523708f25a821762ba4f39c1e
+ * Versión: 2026.10.20+3-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-web-widget.git
  */
 
 import type {ClientOptions} from "@elastic/elasticsearch/client";
@@ -330,20 +330,20 @@ export class Elasticsearch {
     }
 
     /**
-     * Ejecuta una petición bulk (varias operaciones de escritura en una sola llamada).
+     * Ejecuta una petición bulk (varias operaciones de escritura en una sola llamada) contra el
+     * clúster principal, con el cliente cacheado en {@link cliente}, igual que el resto de
+     * operaciones.
      *
-     * A diferencia del resto de métodos, no reutiliza el cliente cacheado en {@link cliente}:
-     * abre un cliente nuevo y lo cierra al terminar, para que las peticiones bulk (potencialmente
-     * grandes y frecuentes en cargas masivas) no compitan por la misma conexión que usan las
-     * búsquedas normales.
+     * No crea un cliente propio ni lo cierra al terminar: eso suponía una conexión TLS nueva por
+     * cada bulk. Comparte con el resto de operaciones el pool de conexiones del cliente (undici),
+     * que abre hasta 256 conexiones por nodo y las reutiliza. Por encima de esa concurrencia, las
+     * peticiones (búsquedas incluidas) esperan turno en el pool, sin timeout mientras esperan; si
+     * hiciera falta aislar las búsquedas, habría que limitar la concurrencia de los bulk writers,
+     * no volver a un cliente por bulk.
      */
     public async bulk(params: BulkRequest): Promise<BulkResponse> {
-        const cliente = await this.load();
-        try {
-            return await cliente.regular.bulk(params);
-        } finally {
-            await cliente.regular.close();
-        }
+        const cliente = await this.cliente;
+        return cliente.regular.bulk(params);
     }
 
     /** Obtiene información general del clúster (versión, nombre, etc.). */

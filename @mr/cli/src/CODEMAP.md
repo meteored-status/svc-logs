@@ -59,6 +59,14 @@ reconstruye `framework` para que `patch` quede primero, ver el changelog de `@mr
 distinta longitud, por lo que la segunda casilla de cada fila arrancaba en una columna
 distinta; se calcula un ancho fijo por columna, `anchoColumnas[j]`, y se aplica `padEnd()` a
 cada etiqueta antes de colorearla).
+Última revisión: 2026-10-19 (soporte de Pub/Sub local: nuevo módulo `mrpack pubsub` —`modulos/pubsub.ts`— y
+nueva `clases/pubsub.ts`, que orquesta el motor de `@mr/core-dev/pubsub/*` (evaluar los `mrpack.pubsub.ts`,
+fusionar, dar de alta/estado/purga/limpieza en el emulador, vigilarlo); `mrpack devel` gana `-p/--pubsub` y
+`--solo=<ws>[,<ws>]` (`IConfigEjecucion.pubsub`/`.solo`; `Service` gana `IService.solo`, `setEntorno()`,
+`setAntesDeReiniciar()` y `esEjecutable()`); `init/run.ts` genera además las acciones del IDE de Pub/Sub y
+`init.ts` el script raíz `devel-pubsub`, solo si el monorepo tiene algún `mrpack.pubsub.ts`;
+`init/config-workspaces.ts` conserva el bloque `pubsub` de `config.workspaces.json`; nueva etiqueta de log
+`Log.label_pubsub`).
 
 ---
 
@@ -77,6 +85,7 @@ mrpack/
 │   ├── devel.ts                     ModuloDevel     — `mrpack devel`
 │   ├── framework.ts                 ModuloFramework — `mrpack framework`
 │   ├── init.ts                      ModuloInit      — `mrpack init`
+│   ├── pubsub.ts                    ModuloPubSub    — `mrpack pubsub`
 │   └── update.ts                    ModuloUpdate    — `mrpack update`
 │
 ├── clases/
@@ -88,6 +97,7 @@ mrpack/
 │   ├── log.ts                       Log — helpers info/error con timestamp
 │   ├── packagejson.ts               IPackageJson, IPackageJsonLegacy — tipos de package.json
 │   ├── patches.ts                   aplicarPatches() — lanza `yarn run patch:apply`
+│   ├── pubsub.ts                    alta/estado/reset/limpiar/preparar/vigilar — orquesta @mr/core-dev/pubsub/*
 │   ├── update.ts                    init() — init + framework update + patch:apply + yarn update
 │   ├── workspace.ts                 Workspace — clase base con watcher chokidar
 │   ├── yarn.ts                      install(), update() — operaciones Yarn (install/dedupe/upgrade)
@@ -120,8 +130,9 @@ mrpack/
 │   │   ├── ignore.ts                IGNORE — .gitignore
 │   │   ├── lint.ts                  checkLint() — devDependencies, scripts `lint`/`lint:fix` y
 │   │   │                            eslint.config.mjs de la raíz, a partir de @mr/core-lint
+│   │   ├── run.ts                   initRun() — acciones del IDE (.run/*.run.xml), también las de Pub/Sub
 │   │   └── workspace-deps.ts        checkWorkspaceDeps() — `workspace:*` en las devDependencies
-│   │                                que apuntan a otro workspace del monorepo
+│   │                                que apuntan a otro workspace del monorepo; workspacesDelMonorepo()
 │   │
 │   ├── manifest/
 │   │   ├── index.ts                 ManifestLoader<T,K> — cargador base abstracto de mrpack.json
@@ -202,7 +213,7 @@ import {type IModulo, type IModuloConfig, Modulo} from "@mr/core-cli/modulo";
 ### `mrpack.ts`
 ```ts
 export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
-    // Submódulos: "autodoc"|"config"|"devel"|"deploy"|"framework"|"init"|"update"
+    // Submódulos: "autodoc"|"config"|"devel"|"deploy"|"framework"|"init"|"pubsub"|"update"
     public static override run(): void
     protected override async run(): Promise<void>       // muestra versión del CLI
     protected override async parsePositionals(positionals: string[]): Promise<void>
@@ -219,9 +230,10 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
 | `auto-doc.ts` | `ModuloAutoDoc` | `--env <string>` | `clases/auto-doc.ts → run()` |
 | `config.ts` | `ModuloConfig` | _(ninguno extra)_ | `clases/config → gestionar()` |
 | `deploy.ts` | `ModuloDeploy` | `--env produccion\|test` | `clases/deploy.ts → run()` |
-| `devel.ts` | `ModuloDevel` | `-c/--compilar`, `-e/--ejecutar`, `-f/--forzar`, `-w/--watch` | `clases/devel.ts → run()` |
+| `devel.ts` | `ModuloDevel` | `-c/--compilar`, `-e/--ejecutar`, `-f/--forzar`, `-w/--watch`, `-p/--pubsub`, `--solo=<ws>[,<ws>]` | `clases/devel.ts → run()` |
 | `framework.ts` | `ModuloFramework` | `-u/--update`, `-r/--reset`, `-s/--send`, `-y/--yes` | `clases/framework → actualizarTodo/resetearTodo/enviarTodo/gestionar` |
 | `init.ts` | `ModuloInit` | _(ninguno extra)_ | `clases/init.ts → init()` |
+| `pubsub.ts` | `ModuloPubSub` | `-u/--up`, `-s/--status`, `-r/--reset`, `-l/--limpiar` (una sola por llamada) | `clases/pubsub.ts → alta/estado/reset/limpiar` |
 | `update.ts` | `ModuloUpdate` | _(ninguno extra)_ | `clases/update.ts → init()` |
 
 ---
@@ -261,12 +273,19 @@ export function flagsWorkspace(workspaces: IConfigWorkspaces|undefined, nombre:s
 export interface IConfigServices {
     workspaces?: IConfigWorkspaces;
     framework?: {patch?:string; updates: FrameworkUpdates};  // patch: último RXXX aplicado por patch:apply, primera propiedad
+    pubsub?: IConfigEmuladorParcial;                         // {host?, proyecto?, pushHost?} del emulador de Pub/Sub local (@mr/core-dev/pubsub/config)
 }
+export interface IService extends IWorkspace { pad; compilar; ejecutar; forzar; global: IConfigServices; solo?: string[]; }
 // Service: lanza/reinicia el proceso del servicio con spawn; respeta config.workspaces.json
 // (flags ejecutar/compilar resueltos vía flagsWorkspace(), sin importar en qué grupo esté)
 export class Service extends Workspace {
     public updateGlobal(config: IConfigServices): void
+    public setEntorno(entorno: Record<string,string>): void            // variables que se SUMAN al env del proceso de ejecución (no al de los compiladores); antes de init()
+    public setAntesDeReiniciar(hook: () => Promise<void>): void        // se espera antes de cada reinicio automático (caída a los 30 s, cronjob a los 10 min); si falla se registra y se reinicia igual
+    public async esEjecutable(): Promise<boolean>                      // por runtime (no browser/cfworker/php); false si el mrpack.json no carga
 }
+// checkEjecucion(): con `solo` definido el workspace se ejecuta si y solo si su nombre está en `solo`, SIN mirar el flag
+// `ejecutar` de config.workspaces.json (sí -e, runtime, manifest.enabled y manifest.devel.enabled)
 ```
 
 ### `clases/workspace/compilar.ts` — `Compilar`
@@ -556,9 +575,28 @@ export async function alternarMatriz(titulo:string, filas:IFilaMatriz[]): Promis
 export interface IPackageJson extends IPackageJsonBase { config?: IManifestLegacy; }
 export async function init(basedir:string): Promise<boolean>
 // Flujo: checkCliente → initBase → deleteFiles → limpiarLegacy → corregirGITs
-//        → initWorkspaces → initConfig → initYarnRC → mrlang init (si existe i18n)
+//        → initWorkspaces → checkWorkspaceDeps → initConfig → initRun → initYarnRC → mrlang init (si existe i18n)
 // Retorna true si hubo cambios que requieren reinstalar
 ```
+
+`initBase()` reescribe `scripts` del `package.json` raíz y añade `devel-pubsub` (`yarn mrpack devel -e -p`) solo si
+`buscarDeclaraciones()` (`@mr/core-dev/pubsub/descubrir`) encuentra algún `mrpack.pubsub.ts`.
+
+### `clases/init/run.ts`
+```ts
+export async function initRun(basedir: string, workspaces: IWorkspaces[]): Promise<void>
+export function alcanzaDeclaracion(nombre: string, grafo: ReadonlyMap<string, readonly string[]>, conDeclaracion: ReadonlySet<string>): boolean
+// Lo llama init() después de initConfig().
+```
+
+Genera en `.run/` una acción `{type}-{service}.run.xml` por cada workspace service/cronjob/job habilitado con framework
+`meteored`. Si el monorepo tiene algún `mrpack.pubsub.ts` genera además `{type}-{service}.pubsub.run.xml`
+(`devel -e -p --solo={service}`) para los que alcanzan una declaración, y cuatro acciones de la raíz
+(`mrpack-pubsub-ejecutar|compilar-ejecutar|estado|reset.run.xml`). «Alcanza» (`alcanzaDeclaracion`, pura, tolera ciclos): la
+clausura de sus `dependencies`/`devDependencies` con protocolo `workspace:`, él incluido, contiene un workspace con
+declaración (`grafoDependencias()` lee los `package.json` de `workspacesDelMonorepo()`). La limpieza (`REGEX_FICHERO`) cubre
+`service|cronjob|job-*.run.xml` y `mrpack-pubsub-*.run.xml`, así que un repo que se queda sin declaraciones pierde los de Pub/Sub; un
+repo que nunca tuvo no recibe ninguno. `.run.xml` ajenos no se tocan.
 
 `checkCliente()` añade `@mr/core/dev`, `@mr/core/i18n`, `@mr/core/lint` y `@mr/core/network` si faltan
 (`framework/cliente.ts → add()`), así que `@mr/core-lint` llega a cualquier monorepo con el primer
@@ -623,7 +661,7 @@ export function run(basedir:string, env:string): void
 
 ### `clases/devel.ts`
 ```ts
-export interface IConfigEjecucion { compilar:boolean; ejecutar:boolean; forzar:boolean; watch:boolean; }
+export interface IConfigEjecucion { compilar:boolean; ejecutar:boolean; forzar:boolean; watch:boolean; pubsub:boolean; solo?:string[]; }
 export function run(basedir:string, config:IConfigEjecucion): void
 // Si compilar: init + actualizarTodo + install
 // Siempre: ejecutarWorkspaces(@mr/core,@mr/user,framework,packages) → ejecutarServices(cronjobs,jobs,scripts,services)
@@ -631,7 +669,39 @@ export function run(basedir:string, config:IConfigEjecucion): void
 // watch=true: Watcher sobre config.workspaces.json para recargar en caliente + watchers de cada Workspace/Service
 // I18N es la excepción: su propio watch NO usa `config.watch` (el -w/--watch global), sino
 // `config_global.workspaces?.i18n?.watch ?? false`, fijado una sola vez al construir la instancia
+// ejecutarServices(): entre la fase 2 (inicializarDeps) y la 3 (init + lanzar), cuando ya existen todos los Service y
+// no se ha lanzado nada, comprueba lo que pidió el usuario y, si no se puede cumplir, `process.exitCode = 1`, devuelve
+// false y NO se lanza nada:
+//   - `--solo`: algún nombre que no sea un workspace ejecutable → error con la lista de los disponibles
+//   - `-p` sin `-e` → aviso, se ignora; `-p` con `-e` → clases/pubsub.ts::prepararEjecucion() (fail-closed: sin
+//     declaraciones, emulador caído o declaración inválida → no se lanza nada, nunca contra Google Cloud)
 ```
+
+### `clases/pubsub.ts` — Pub/Sub local
+```ts
+export const MENSAJE_SIN_DECLARACIONES: string
+export interface ISesionPubSub { emulador; topologia; entorno; repo; workspaces; firmas }
+export interface IVigilancia { parar(): void; reponer(): Promise<void> }     // reponer() no rechaza nunca; comparte la pasada en curso
+export interface IServicioPubSub { setEntorno(...); setAntesDeReiniciar(...) } // lo que necesita de un Service
+export function mensajeError(err: unknown): string
+export async function hayDeclaraciones(basedir: string): Promise<boolean>
+export async function preparar(basedir: string): Promise<ISesionPubSub>      // declaraciones → emulador → evaluar → fusionar → aplicar(arranque)
+export async function alta(basedir: string): Promise<void>                   // -u
+export async function estado(basedir: string): Promise<void>                 // -s (+ comprobarPush(): GET localhost:<puerto>/admin/pubsub/)
+export async function reset(basedir: string): Promise<void>                  // -r (aplicar + purgar)
+export async function limpiar(basedir: string): Promise<void>                // -l
+export function vigilar(basedir: string, sesion: ISesionPubSub): IVigilancia // cada 15 s (timer unref)
+export async function prepararEjecucion(basedir: string, servicios: IServicioPubSub[]): Promise<boolean>  // devel -p
+```
+
+Orquesta, sin tocar HTTP ni formato: el motor vive en `@mr/core-dev/pubsub/*` (`buscarDeclaraciones`, `fusionar`,
+`EmuladorPubSub`, `resolverConfigEmulador`/`leerConfigEmulador`). Lo propio de aquí: evaluar las declaraciones **fuera de proceso**
+(`Comando("yarn", ["workspace","@mr/core-dev","node","pubsub/evaluar.mjs", basedir, ...ws])`), el `repo` (`path.basename(basedir)`),
+el log (`Log.label_pubsub`, una línea por recurso) y la vigilancia: `Vigilancia` recarga las declaraciones si cambia el `mtime` de
+alguna (o aparece/desaparece una; si falla la evaluación, lo registra y sigue con la anterior), y `aplicar(…, {modo: "vigilancia"})`
+solo crea lo que falta — registra `topología restaurada` (o `recurso nuevo dado de alta` si es nuevo) y avisa una vez de cada
+diferencia y una vez de que el emulador no responde. Sin declaraciones, `alta/estado/reset/limpiar` lo dicen y terminan sin error y
+sin comprobar el emulador. Documentación de uso: `README.md` → `pubsub`.
 
 ---
 
@@ -746,6 +816,9 @@ MRPack
                           └─→ gestor/tabla      → GestorTabla (TUI readline + Render de utiles/tty + LCS de utiles/diff)
                           └─→ gestor/logs       → tmp/log/*.md
   └─→ ModuloInit    → clases/init     → checkCliente, initBase, initWorkspaces, ManifestWorkspaceLoader, yarn.install
+                          └─→ init/run → buscarDeclaraciones (@mr/core-dev/pubsub), workspacesDelMonorepo
+  └─→ ModuloPubSub  → clases/pubsub   → @mr/core-dev/pubsub/*, Comando (evaluar.mjs), Log
+  clases/devel → clases/pubsub (prepararEjecucion) → Service.setEntorno/setAntesDeReiniciar
   └─→ ModuloUpdate  → clases/update   → init(clases/init), actualizarTodo, aplicarPatches, yarn.update
   └─→ ModuloAutoDoc → clases/auto-doc → TypeScript API, ManifestWorkspaceLoader, MySQL
 

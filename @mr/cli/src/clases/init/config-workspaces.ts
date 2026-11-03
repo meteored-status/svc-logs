@@ -1,13 +1,14 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: f4177ad76cffdfe9b98f56f998055a6a
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: alexCG
+ * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
+ * Hash: 4489dc8eeebeb12f9e44f44a93fa3a8a
+ * Versión: 2026.10.20+1-alexcg
+ * Anterior: 2026.9.23+2-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
  */
 
 import {Runtime} from "@mr/core-dev/manifest/deployment";
+import type {IConfigEmuladorParcial} from "@mr/core-dev/pubsub/config";
 import {isFile, readJSON, safeWrite} from "@mr/core-cli/fs";
 import {Colors} from "@mr/core-cli/colors";
 
@@ -82,6 +83,7 @@ interface ILegacyConfigServices {
     i18n?: boolean;
     framework?: {patch?: unknown; updates?: unknown};
     patch?: unknown;
+    pubsub?: IConfigEmuladorParcial;
 }
 
 /**
@@ -155,14 +157,15 @@ function i18nAnterior(anterior: ILegacyConfigServices|undefined): IConfigWorkspa
  * Regenera `config.workspaces.json` con los workspaces del proyecto agrupados por
  * `deploy.type` (`workspaces.browser`/`.cronjobs`/`.jobs`/`.services`), preservando las
  * preferencias del usuario ya existentes (flags `compilar`/`ejecutar` por workspace,
- * `workspaces.i18n`, `framework.patch`, `framework.updates`). Migra automáticamente tanto el
+ * `workspaces.i18n`, `framework.patch`, `framework.updates`, `pubsub`). Migra automáticamente tanto el
  * formato original (`devel`/`packd` con listas `available`/`disabled` a nivel raíz, e
  * `i18n: boolean` también a nivel raíz) como el intermedio (`packd`/`devel` por workspace
  * dentro de `workspaces`) si el fichero todavía no ha sido migrado al formato vigente.
  * `workspaces.i18n` se añade como primera propiedad de `workspaces`, y solo si el proyecto
  * tiene workspace de internacionalización. La propiedad `services` (mapa de variables de
  * entorno, sin uso real) ya no se genera ni se preserva. `patch` a nivel raíz (ubicación
- * previa a `framework.patch`) se migra automáticamente a su nueva ubicación.
+ * previa a `framework.patch`) se migra automáticamente a su nueva ubicación. El bloque
+ * `pubsub` (datos del emulador de Pub/Sub local) se conserva tal cual si existe.
  *
  * @param basedir    - Raíz absoluta del monorepo.
  * @param workspaces - Agrupación de workspaces por directorio (`cronjobs`, `jobs`, `services`, `scripts`).
@@ -244,6 +247,7 @@ export async function initConfig(basedir: string, workspaces: IWorkspaces[]): Pr
             patch: sanitizePatch(anterior?.framework?.patch ?? anterior?.patch),
             updates: sanitizeFrameworkUpdates(anterior?.framework?.updates),
         },
+        pubsub: anterior?.pubsub,
     };
 
     await safeWrite(file, JSON.stringify(salida, null, 2), true);

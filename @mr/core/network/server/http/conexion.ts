@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: b9c656643fdb6eedc6101aa370ebe671
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.5.18+4-josantoniojimnez
+ * Fecha: Thu, 22 Oct 2026 07:08:16 GMT
+ * Hash: e1a765235d0f2c8740a8c543274b971a
+ * Versión: 2026.10.22+1-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -120,6 +120,13 @@ export class Conexion extends Respuesta {
     /** Contexto inmutable de la petición HTTP entrante. */
     public readonly request: RequestContext;
 
+    /**
+     * Umbral de petición lenta, en ms, fijado por la ruta que hizo match (`IRouteGroup.slow`). `undefined` =
+     * la ruta no lo fijó y vale el del servidor (`Net.slow`); `0` = sin aviso. Lo asigna el router y lo lee
+     * el aviso de petición lenta de `server.ts`.
+     */
+    public slow: number|undefined;
+
     private cors: boolean;
     private status: TStatus;
 
@@ -163,6 +170,7 @@ export class Conexion extends Respuesta {
         super(respuesta, errorHandler, config);
 
         this.request = new RequestContext(peticion, config, https);
+        this.slow = undefined;
         this.cors = this.request.get.startsWith("/web");
         this.status = TStatus.iniciando;
 

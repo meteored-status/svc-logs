@@ -1,12 +1,14 @@
 /**
  * Editor: Bixus
- * Fecha: Tue, 25 Aug 2026 10:03:08 GMT
- * Hash: bc11aa5ef170fabd2756f412ae8c7198
- * Versión: 2026.8.25+1-bixus
+ * Fecha: Mon, 26 Oct 2026 13:34:19 GMT
+ * Hash: 53f6a8e16a15adc2f141b018b9424cc2
+ * Versión: 2026.10.26+1-bixus
+ * Anterior: 2026.8.25+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {EOnCallCycle} from "../interface";
+import type {IConfirmable} from "../efectos/interface";
 
 /**
  * Reseteo de un ciclo: mueve el punto desde el que se cuenta para poder decir «a partir de aquí le toca a
@@ -23,7 +25,7 @@ import type {EOnCallCycle} from "../interface";
  *                   festivos ni al contrario.
  * @property user  - A quién le toca a partir de ese momento. Tiene que estar en la rueda.
  */
-export interface IResetIN {
+export interface IResetIN extends IConfirmable {
     cycle: EOnCallCycle;
     user: number;
 }

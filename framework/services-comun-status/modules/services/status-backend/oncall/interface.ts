@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 26 Aug 2026 10:32:05 GMT
- * Hash: 40e68169354b70de005b8c9b83bbbb0c
- * Versión: 2026.8.26+3-bixus
- * Anterior: 2026.8.26+1-bixus
+ * Fecha: Mon, 26 Oct 2026 13:34:19 GMT
+ * Hash: f38282cb940071f01a000c5d9a0e4620
+ * Versión: 2026.10.26+1-bixus
+ * Anterior: 2026.8.26+3-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -46,11 +46,15 @@ export enum EOnCallCycle {
  *                         usuario a propósito (ver `on_call_cycle` en el alter), con una consecuencia que
  *                         conviene enseñar: **reordenar la rueda después de un reseteo cambia a quién le
  *                         toca**.
+ * @property queue       - La **cola de la vuelta en curso**, si el ancla viene de reordenar la rueda a mitad de
+ *                         vuelta: ids de quien tiene el turno en esa fecha y, detrás, de los que faltan por hacer
+ *                         el suyo. Ausente en un reseteo y en las anclas que no la necesitan.
  */
 export interface IOnCallCycleInfo {
     cycle: EOnCallCycle;
     anchorDate: string;
     anchorIndex: number;
+    queue?: number[];
 }
 
 /**
@@ -87,9 +91,14 @@ export interface IOnCallCycleInfo {
  * @property userName  - Su nombre, resuelto por el backend.
  * @property reason    - Por qué. Siempre viene: un salto le quita turnos a alguien y se lo pone a otro, así
  *                       que sin el motivo el dato no se puede interpretar tres meses después.
+ * @property exempt    - Los tramos del salto que el contador **no cuenta**: aquellos en los que todos los días de
+ *                       ausencia de la persona los cubren cambios a nombre de otra, así que quitarle el turno no
+ *                       cambiaría nada de lo que se ve y sí descolocaría el reparto. Cada uno es `{cycle, date}`,
+ *                       con el lunes de la semana o la fecha del festivo. La ausencia se sigue viendo en los días.
  * @property created   - Cuándo se creó, en milisegundos epoch.
- * @property createdBy - Id de quien lo creó.
- * @property createdByName - Su nombre, y **por eso viaja resuelto**: quien administra la guardia no tiene por
+ * @property createdBy - Id de quien lo creó, o `null` si esa cuenta se ha borrado: lo que alguien creó para otros sobrevive a
+ *                       que se borre su cuenta.
+ * @property createdByName - Su nombre (ausente si `createdBy` es `null`), y **por eso viaja resuelto**: quien administra la guardia no tiene por
  *                       qué estar en la rueda —de eso van los permisos `status.oncall.*`—, así que resolverlo
  *                       en el cliente contra la rueda falla en el caso **normal** y no en el raro. Enseñaba un
  *                       «puesto por #1» que parecía un puesto o una posición y era un id de usuario.
@@ -105,9 +114,41 @@ export interface IOnCallSkip {
     user: number;
     userName: string;
     reason: string;
+    exempt?: {cycle: EOnCallCycle; date: string}[];
     created: number;
-    createdBy: number;
-    createdByName: string;
+    createdBy: number|null;
+    createdByName?: string;
+}
+
+/**
+ * Una dispensa: un turno que **se da por hecho**. Es lo que queda cuando alguien sale de la rueda y tenía un cambio
+ * acordado a medias con otra persona que ya hizo su parte: esa persona no tiene que hacer además su semana (o su
+ * festivo) teórica, y la cola corre un puesto.
+ *
+ * No es un salto: no la tacha de ausente ni le quita el festivo de esa semana. Solo quita **un** turno del reparto,
+ * y la planificación lo pinta como «turno dado por hecho».
+ *
+ * @property id            - Identificador de la dispensa.
+ * @property user          - A quién se le da el turno por hecho.
+ * @property userName      - Su nombre, resuelto por el backend.
+ * @property cycle         - Ciclo al que pertenece: semanal o de festivos.
+ * @property date          - Lunes de la semana (ciclo semanal) o fecha del festivo (ciclo de festivos), `YYYY-MM-DD`.
+ * @property reason        - Por qué, en texto: qué hizo esa persona que lo justifica.
+ * @property created       - Cuándo se creó, en milisegundos epoch.
+ * @property createdBy     - Id de quien la creó, o `null` si esa cuenta se ha borrado: una dispensa sobrevive a quien la
+ *                       creó.
+ * @property createdByName - Su nombre, resuelto por lo mismo que en `IOnCallSkip`; ausente si `createdBy` es `null`.
+ */
+export interface IOnCallWaiver {
+    id: number;
+    user: number;
+    userName: string;
+    cycle: EOnCallCycle;
+    date: string;
+    reason: string;
+    created: number;
+    createdBy: number|null;
+    createdByName?: string;
 }
 
 /**
@@ -250,8 +291,8 @@ export interface IOnCallHoliday {
  * @property userName  - Su nombre, resuelto por el backend.
  * @property created   - Cuándo se creó, en milisegundos epoch. Entre cambios que solapan gana el más
  *                       reciente, así que esto es lo que decide.
- * @property createdBy - Id de quien lo creó.
- * @property createdByName - Su nombre. Viaja resuelto por lo mismo que en `IOnCallSkip`: quien pone un cambio
+ * @property createdBy - Id de quien lo creó, o `null` si esa cuenta se ha borrado.
+ * @property createdByName - Su nombre (ausente si `createdBy` es `null`). Viaja resuelto por lo mismo que en `IOnCallSkip`: quien pone un cambio
  *                       no tiene por qué estar en la rueda, así que resolverlo contra ella falla en el caso
  *                       normal.
  * @property swap      - Identificador del **cambio de guardia** que creó esta fila, o ausente si es un cambio
@@ -267,8 +308,8 @@ export interface IOnCallOverride {
     userName: string;
     swap?: string;
     created: number;
-    createdBy: number;
-    createdByName: string;
+    createdBy: number|null;
+    createdByName?: string;
 }
 
 /**
