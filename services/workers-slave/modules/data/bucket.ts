@@ -59,7 +59,7 @@ export interface ICliente {
 export class Bucket {
     /* STATIC */
 
-    private static CACHE: NodeJS.Dict<Promise<Bucket>> = {};
+    private static CACHE: Record<string, Promise<Bucket>> = {};
 
     public static buildSource(notify: INotify): string {
         return `gs://${notify.bucketId}/${notify.objectId}`;
@@ -70,7 +70,7 @@ export class Bucket {
     }
 
     private static async findBucketEjecutar(bucket: string): Promise<Bucket> {
-        const [row] = await db.query<IBucketMySQL, Bucket>("SELECT id, cliente FROM buckets WHERE id=?", [bucket], {
+        const [row] = await db.select<IBucketMySQL, Bucket>("SELECT id, cliente FROM buckets WHERE id=?", [bucket], {
             fn: (row)=>new this(row),
         });
 
