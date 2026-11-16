@@ -44,6 +44,24 @@ const pool = WSPool.get({
 });
 ```
 
+Con cabeceras en el handshake (p. ej. un token): `headers` se pasa al `new WebSocket(url, {headers})` del
+`WebSocket` global de Node (undici) **solo si hay alguna**; en navegador el segundo argumento son los
+`protocols` y lanzaría `SyntaxError`, así que ahí no se usan.
+
+```ts
+const pool = WSPool.get({
+    socket: "https://status.meteored.com/status/external/heartbeat/",
+    headers: {"x-mr-heartbeat": token},
+});
+```
+
+Las cabeceras **no forman parte de la clave del singleton** (la ruta ya separa pools de servicios
+distintos): si se pide un pool que ya existe con otras cabeceras, se conserva el existente y se emite un
+`warning` (una vez por pool, sin los valores, que pueden ser credenciales). Un handshake rechazado (p. ej.
+`401`) es un fallo de conexión como cualquier otro: `head()`/`get()` rechazan, cuenta para el circuit
+breaker (a los 5 se abre y la sonda reintenta con backoff exponencial hasta 30 s) y el relleno de fondo
+solo reintenta cada 60 s.
+
 ### Métodos
 
 | Método | Devuelve | Descripción |
@@ -52,7 +70,8 @@ const pool = WSPool.get({
 | `pool.get(method, params?, buffer?)` | `Promise<Result>` | Envía una petición y devuelve el `Result` para consumir el stream de respuestas. |
 | `pool.head(method, params?)` | `Promise<void>` | Fire-and-forget: envía sin esperar respuesta. |
 | `pool.getCircuitState()` | `CircuitState` | Estado actual del circuit breaker (`"closed"`, `"open"`, `"half-open"`). |
-| `pool.destroy(code?, reason?)` | `void` | Cierra todas las conexiones y elimina el singleton. |
+| `pool.vaciar({timeoutMs?})` | `Promise<void>` | Espera a que todas las conexiones abiertas tengan `bufferedAmount === 0` (lo enviado con `head()` ya salió del proceso) o a que venza `timeoutMs` (1000 por defecto). **Nunca rechaza.** Pensado para una despedida justo antes de salir. |
+| `pool.destroy(code?, reason?)` | `void` | Cierra todas las conexiones y elimina el singleton. Tras `destroy()` el pool no repone conexiones (antes, el cierre de las suyas disparaba la reposición y quedaban sockets abiertos que mantenían vivo el proceso). |
 
 ### Cuántas conexiones abre
 

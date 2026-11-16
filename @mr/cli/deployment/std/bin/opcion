@@ -1,0 +1,63 @@
+#!/bin/bash
+# opcion [--valor] NOMBRE
+#
+# Resuelve una opción del despliegue: `desplegar`, `generar` o `generar-forzar`.
+# Sin `--valor` responde con el código de salida (0 sí, 1 no), para usarla en un `if`; con `--valor`
+# escribe `true` o `false`.
+#
+# Manda la sustitución del trigger (`_DESPLEGAR`, `_GENERAR`, `_GENERAR_FORZAR`) si vale `true`/`1`
+# o `false`/`0`. Si no, decide el `mrpack.json` de la raíz (`deploy.run.enabled`,
+# `deploy.build.enabled`, `deploy.build.force`): las dos primeras son «sí» salvo que valgan `false`, y
+# la última es «no» salvo que valga `true`.
+#
+# `_DESPLEGAR_LATEST` ya no es una opción del pipeline: no cambiaba nada (ver «Opciones del
+# despliegue» en el README de `deployment/`). `build.yaml` la sigue pasando a los pasos para no
+# romper los triggers que la definen.
+#
+# Se calcula cada vez en lugar de guardarse en ficheros (antes `DESPLEGAR.txt` y compañía, escritos
+# por «Descargas»): todo lo que usa sale del trigger y del repo, que no cambian durante el build, y un
+# fichero que faltaba se leía como «no» sin avisar. Es un script de `bin/` y no una función de
+# aliases.sh para que funcione también en los `bash -c` de `xargs`, que no ven las funciones.
+#
+# Necesita `jq` (lo instala «Descargas»). Si no puede resolverla sale con 2. Ojo: en un `if`, un 2
+# cuenta como «no»; por eso «Descargas» las resuelve todas con `--valor` en una asignación, que sí
+# hace fallar el build.
+set -e
+
+VALOR=false
+if [[ "${1}" == "--valor" ]]; then
+  VALOR=true
+  shift
+fi
+
+case "${1}" in
+  desplegar)      TRIGGER="${_DESPLEGAR:-}";      CAMPO=".deploy.run.enabled";   DEFECTO=true ;;
+  generar)        TRIGGER="${_GENERAR:-}";        CAMPO=".deploy.build.enabled"; DEFECTO=true ;;
+  generar-forzar) TRIGGER="${_GENERAR_FORZAR:-}"; CAMPO=".deploy.build.force";   DEFECTO=false ;;
+  *)
+    echo "ERROR: opción de despliegue desconocida: «${1}»" >&2
+    exit 2
+    ;;
+esac
+
+case "${TRIGGER}" in
+  true|1) RESULTADO=true ;;
+  false|0) RESULTADO=false ;;
+  *)
+    if ! CONFIG=$(configg "${CAMPO}"); then
+      echo "ERROR: no se puede leer ${CAMPO} de mrpack.json" >&2
+      exit 2
+    fi
+    if [[ "${DEFECTO}" == "true" ]]; then
+      if [[ "${CONFIG}" == "false" ]]; then RESULTADO=false; else RESULTADO=true; fi
+    else
+      if [[ "${CONFIG}" == "true" ]]; then RESULTADO=true; else RESULTADO=false; fi
+    fi
+    ;;
+esac
+
+if [[ "${VALOR}" == "true" ]]; then
+  echo "${RESULTADO}"
+  exit 0
+fi
+[[ "${RESULTADO}" == "true" ]]

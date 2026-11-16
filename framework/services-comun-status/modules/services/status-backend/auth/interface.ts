@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 23 Oct 2026 09:35:09 GMT
- * Hash: 777f169c2e46ab4d33f379f436f1184f
- * Versión: 2026.10.23+1-bixus
- * Anterior: 2026.10.21+1-bixus
+ * Fecha: Mon, 16 Nov 2026 08:05:11 GMT
+ * Hash: 87f2763eac8a516024abeabdc85d0c60
+ * Versión: 2026.11.16+1-bixus
+ * Anterior: 2026.10.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -26,6 +26,9 @@ export type EPermission =
     "status.audit.read"                 |
     "status.infra.view"                 |
     "status.infra.edit"                 |
+    "status.infra.cloudflare.view"      |
+    "status.infra.cloudflare.edit"      |
+    "status.infra.billing.view"         |
     "status.seo.url.view"               |
     "status.seo.crawler.view"           |
     "status.seo.project.edit"           |

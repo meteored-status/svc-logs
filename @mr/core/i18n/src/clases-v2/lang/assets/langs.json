@@ -475,15 +475,21 @@
   },
   {
     "code": "sr",
-    "name": "Serbian (Latin alphabet)",
+    "name": "Serbian (Default Cyrillic alphabet)",
     "parent_code": "en",
     "path": "sr.en.en-US"
   },
   {
     "code": "sr-Cyrl",
-    "name": "Serbian (Cirilic alphabet)",
+    "name": "Serbian (Cyrillic alphabet)",
     "parent_code": "sr",
     "path": "sr-Cyrl.sr.en.en-US"
+  },
+  {
+    "code": "sr-Latn",
+    "name": "Serbian (Latin alphabet)",
+    "parent_code": "sr",
+    "path": "sr-Latn.sr.en.en-US"
   },
   {
     "code": "sv",

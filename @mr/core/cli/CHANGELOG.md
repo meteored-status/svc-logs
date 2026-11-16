@@ -2,6 +2,13 @@
 
 ---
 
+## 2026.11.13 08:48 — [Jose]
+
+### Changed
+
+- **`tsconfig.json` con `target: es2025`** (antes `es2024`), el que da ahora la cadena de `@mr/core-dev`, que pasa a extender
+  `@tsconfig/node26`. El comentario del fichero ya lo decía. `tsc --noEmit` sin errores.
+
 ## 2026.9.23 09:25 — [Jose]
 
 ### Changed

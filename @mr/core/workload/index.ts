@@ -1,10 +1,10 @@
 /**
- * Editor: alexCG
- * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
- * Hash: f7fc653fece65528ee8941692745b6f9
- * Versión: 2026.10.20+1-alexcg
- * Anterior: 2026.9.23+1-bixus
- * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
+ * Editor: Bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 16895d2283eaffdf6ebeb00adbf8ed8a
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.10.20+1-alexcg
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import cluster, {type Worker} from "node:cluster";
@@ -12,6 +12,7 @@ import emitter from "node:events";
 import http from "node:http";
 import os from "node:os";
 
+import {ManifestDeploymentKind} from "@mr/core-dev/manifest/deployment";
 import {Deferred, PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info, warning} from "services-comun/modules/utiles/log";
 
@@ -19,6 +20,11 @@ import {comprobarEmuladorPubSub, modoPubSub} from "./config/pubsub";
 import type {Configuracion} from "./config";
 import type {Engine} from "./engine";
 import type {IPodInfo} from "./config/pod";
+import {type IHeartbeatCreado, type TModoHeartbeat, iniciarHeartbeat} from "./heartbeat/crear";
+import {type IWorkerCierre, instalarCierrePrimario} from "./heartbeat/cierre-primario";
+import {esMensajeHeartbeatWorker} from "./heartbeat/workers";
+import {borrarLockApagado} from "./engine/lock";
+import {instalarApagado} from "./engine/apagado";
 
 emitter.setMaxListeners(256);
 
@@ -97,6 +103,7 @@ export interface IMainConfig {
  * Responsabilidades:
  * 1. Cargar la configuración del servicio (una sola vez) a través de {@link IConfiguracionLoader}.
  * 2. Esperar a que el sidecar de Istio esté operativo (`/healthz/ready`).
+ *    Después, arrancar el heartbeat de pods si el servicio lo tiene activado (ver `heartbeat/` y el README).
  * 3. Elegir el modo de ejecución:
  *    - **Modo simple** (`minimo_hilos === 1`): ejecuta `build → master → ejecutar` en el proceso actual.
  *    - **Modo cluster** (`minimo_hilos !== 1`): el proceso primario ejecuta `master` y levanta N workers; cada worker ejecuta `ejecutar`.
@@ -152,7 +159,21 @@ export class Main {
     protected readonly unix: number;
     private readonly minimoHilos: number;
     private readonly slaves: Map<Worker, ClusterStatus>;
+    private heartbeat: IHeartbeatCreado|null;
+    private engineActual: Engine|null;
+    private ejecucionFinitaPendiente: boolean;
     protected cronjob: boolean;
+
+    /**
+     * Cómo corre este proceso a efectos del heartbeat: uno por pod, no uno por worker.
+     */
+    private get modoHeartbeat(): TModoHeartbeat {
+        if (!this.isClusterMode) {
+            return "simple";
+        }
+
+        return cluster.isPrimary ? "primario" : "worker";
+    }
 
     protected constructor(engine: IEngine, configLoader: IConfiguracionLoader, {minimo_hilos: minimoHilos = 1}: IMainConfig = {}) {
         this.engine = engine;
@@ -160,6 +181,9 @@ export class Main {
         this.unix = Date.now();
         this.minimoHilos = minimoHilos;
         this.slaves = new Map<Worker, ClusterStatus>();
+        this.heartbeat = null;
+        this.engineActual = null;
+        this.ejecucionFinitaPendiente = false;
         this.cronjob = false;
     }
 
@@ -236,11 +260,27 @@ export class Main {
     }
 
     /**
+     * Los workers del primario, vistos como los necesita el cierre del heartbeat.
+     */
+    private workersParaCierre(): IWorkerCierre[] {
+        return [...this.slaves.keys()].map((worker)=>({
+            haSalido: ()=>worker.isDead(),
+            alSalir: (cb)=>{ worker.once("exit", ()=>{ cb(); }); },
+            enviarSenal: (senal)=>{ worker.process.kill(senal); },
+        }));
+    }
+
+    /**
      * Levanta un worker y registra su ciclo básico de mensajes.
      */
     private addSlave(): void {
         const worker = cluster.fork();
         this.slaves.set(worker, ClusterStatus.RUNNING);
+        this.heartbeat?.workers?.alta(worker.id, Date.now());
+        worker.on("exit", ()=>{
+            this.heartbeat?.workers?.baja(worker.id);
+            this.heartbeat?.instancia.disparar();
+        });
         worker.on("message", (message)=>{
             if (typeof message !== "object" || message === null) {
                 return;
@@ -248,6 +288,11 @@ export class Main {
             switch (message.cmd) {
                 case "spawn":
                     this.addSlave();
+                    break;
+                case "heartbeat":
+                    if (esMensajeHeartbeatWorker(message) && this.heartbeat?.workers?.informe(worker.id, message, Date.now())) {
+                        this.heartbeat.instancia.disparar();
+                    }
                     break;
                 case undefined:
                     break;
@@ -280,7 +325,10 @@ export class Main {
     private async startSlave(configuracion: Configuracion): Promise<void> {
         info("Iniciando Worker");
         const engineInstance = await this.engine.build(configuracion, this.unix);
+        this.engineActual = engineInstance;
+        this.heartbeat?.instancia.setEngine(engineInstance);
         await engineInstance.ejecutar();
+        this.heartbeat?.instancia.marcarEjecutado();
     }
 
     private setupWarningHandler(): void {
@@ -335,6 +383,11 @@ export class Main {
      */
     protected async start(): Promise<void> {
         comprobarEmuladorPubSub({produccion: PRODUCCION, env: process.env});
+        if (!this.isClusterMode || !cluster.isPrimary) {
+            // Sin esto, `SIGTERM` mataba el proceso al instante salvo que el servidor HTTP la atendiera. El primario de un
+            // cluster lleva su propio manejador (`instalarCierrePrimario`).
+            instalarApagado({estado: ()=>({engine: this.engineActual, ejecucionPendiente: this.ejecucionFinitaPendiente, emisor: this.heartbeat?.emisor ?? null})});
+        }
         const {emulador, proyecto} = modoPubSub(process.env);
         if (emulador !== null && cluster.isPrimary) {
             info(`Pub/Sub: emulador ${emulador} (${proyecto})`);
@@ -344,6 +397,20 @@ export class Main {
         this.configLoader.load = () => { throw new Error("Solo se puede cargar la configuración una vez"); };
 
         await this.startSidecar(configuracion.pod);
+
+        // Un `shutdown.lock` que sobreviva a un reinicio del contenedor (el `emptyDir` es del pod) apagaría el nuevo al arrancar. Se borra
+        // **una sola vez por proceso de pod** (modo simple o primario, antes de forkear): si lo borrara cada worker, el que arrancase tarde
+        // se llevaría por delante un lock legítimo de un pod que ya está terminando y no drenaría.
+        if (!this.isClusterMode || cluster.isPrimary) {
+            await borrarLockApagado();
+        }
+
+        this.heartbeat = iniciarHeartbeat({pod: configuracion.pod, unix: this.unix, modo: this.modoHeartbeat});
+        const emisor = this.heartbeat?.emisor ?? null;
+        if (this.isClusterMode && cluster.isPrimary) {
+            // Con o sin heartbeat: el primario reenvía la señal a los workers y espera a que salgan; con él, además despide el pod.
+            instalarCierrePrimario({workers: ()=>this.workersParaCierre(), emisor});
+        }
 
         if (this.isClusterMode) {
             this.cronjob = false;
@@ -361,12 +428,22 @@ export class Main {
 
         this.cronjob = configuracion.pod.cronjob;
         const engineInstance = await this.engine.build(configuracion, this.unix);
+        this.engineActual = engineInstance;
+        // Cronjob o job: `master()` + `ejecutar()` son el trabajo entero y el proceso acaba cuando terminan, no por la señal
+        // (una señal durante `master()` saldría con 0 y el Job constaría como correcto).
+        this.ejecucionFinitaPendiente = configuracion.pod.cronjob || configuracion.pod.tipo === ManifestDeploymentKind.JOB;
         try {
-            await engineInstance.master();
-        } catch (err) {
-            error("Error iniciando el Master Engine", err);
+            try {
+                await engineInstance.master();
+            } catch (err) {
+                error("Error iniciando el Master Engine", err);
+            }
+            this.heartbeat?.instancia.setEngine(engineInstance);
+            await engineInstance.ejecutar();
+        } finally {
+            this.ejecucionFinitaPendiente = false;
         }
-        await engineInstance.ejecutar();
+        this.heartbeat?.instancia.marcarEjecutado();
         if (configuracion.pod.cronjob) {
             await this.stopSidecar({pod: configuracion.pod});
             info("Proceso terminado");

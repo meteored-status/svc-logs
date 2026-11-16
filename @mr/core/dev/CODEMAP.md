@@ -61,7 +61,7 @@ inyectadas por `bundler/rspack/plugins.ts` (`rspack.DefinePlugin`) y
 | Fichero | Rol |
 |---------|-----|
 | `tsconfig.json` | Extiende `./tsconfig/node.json`; añade `allowImportingTsExtensions`. Resuelto por defecto (condición de exportación `default`) para consumidores que no distinguen `node`/`browser` |
-| `tsconfig/node.json` | Configuración base real para servicios Node.js; extiende `@tsconfig/node24/tsconfig.json` |
+| `tsconfig/node.json` | Configuración base real para servicios Node.js; extiende `@tsconfig/node26/tsconfig.json` |
 
 ### Opciones destacadas (`tsconfig/node.json`)
 
@@ -79,7 +79,7 @@ quien lo extiende: TypeScript resuelve las rutas relativas heredadas contra el f
 que apuntarían aquí y no al workspace. Tener la clave presente además desactiva las exclusiones por defecto
 de TypeScript, con lo que salía peor que no ponerla. Ver `README.md` → «Sin `exclude`, a propósito».
 
-**Depende de:** `@tsconfig/node24` (paquete público).
+**Depende de:** `@tsconfig/node26` (paquete público).
 **Usado por:** todo workspace `runtime: node` (ver `manifest/deployment` → `Runtime.node`) vía:
 
 ```jsonc

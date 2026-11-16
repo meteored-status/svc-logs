@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 28 Sep 2026 15:07:30 GMT
- * Hash: 5e3c3c83b62231dfdc141b6100cb3ac0
- * Versión: 2026.9.28+2-bixus
- * Anterior: 2026.9.23+1-bixus
+ * Fecha: Mon, 16 Nov 2026 08:05:11 GMT
+ * Hash: 845e4d80eb3a5f25547eabdc4e2be6c5
+ * Versión: 2026.11.16+1-bixus
+ * Anterior: 2026.9.28+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -50,7 +50,7 @@ interface ICloudflareConfig {
  * La infraestructura: lo que se consume y lo que se ha contratado.
  *
  * El consumo es solo lectura —lo mete el cronjob `status-control`—, y los **límites** sí se escriben: viven en
- * `infra_limit`, versionados por fecha de efecto, y se editan desde el panel con `status.infra.edit`.
+ * `infra_limit`, versionados por fecha de efecto, y se editan desde el panel con `status.infra.cloudflare.edit`.
  */
 export default class Index extends BackendRequest {
     /* STATIC */
@@ -61,7 +61,7 @@ export default class Index extends BackendRequest {
      *
      * Sin `auditRequest`, igual que los listados de logs y por el mismo motivo: es una lectura que la pantalla
      * repite al cambiar de rango o de zona, y auditarla llenaría el registro de entradas que no dicen nada que
-     * la auditoría de accesos no diga ya. Lo que sí lleva es permiso propio, `status.infra.view`, porque aquí
+     * la auditoría de accesos no diga ya. Lo que sí lleva es permiso propio, `status.infra.cloudflare.view`, porque aquí
      * viajan las cifras del contrato con el proveedor.
      */
     @logRejection(true)
@@ -106,7 +106,7 @@ export default class Index extends BackendRequest {
     /**
      * Las fechas de efecto con sus límites, más el catálogo de métricas.
      *
-     * Sin `auditRequest`: es una lectura. Va con `status.infra.view` y no con `edit` porque son la otra mitad de lo
+     * Sin `auditRequest`: es una lectura. Va con `status.infra.cloudflare.view` y no con `cloudflare.edit` porque son la otra mitad de lo
      * que la pantalla de consumo ya enseña — quien puede ver un 133% puede ver contra qué tope se calculó.
      */
     @logRejection(true)

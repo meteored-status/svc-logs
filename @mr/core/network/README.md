@@ -113,6 +113,18 @@ import {randomUA} from "@mr/core-network/client/ua";
 
 ---
 
+## Pruebas
+
+`yarn workspace @mr/core-network test` (`node:test` sobre `tsc -p tsconfig.spec.json`, sin runners nuevos).
+Las pruebas viven en `spec/` y levantan un servidor HTTP+WebSocket local en el puerto 0, sin servicios
+externos. Los `exports` de `services-comun` y `@mr/core-i18n` apuntan a `.ts`, que `node --test` no resuelve
+sin bundler: `spec/stubs/instalar.ts` (el primer import de cada spec, vía `spec/helpers.ts`) redirige esos
+especificadores a réplicas mínimas en `spec/stubs/` (`Deferred`/`PromiseTimeout`, un `log` que deja los
+avisos en un array y un módulo vacío para `fs`, `stream` y `langs`). Cubren la ruta y la autorización en el
+handshake WebSocket, `WSPool.vaciar()` y las cabeceras del cliente, y los hooks del cierre del servidor HTTP.
+
+---
+
 ## Changelog
 
 Consulta [`CHANGELOG.md`](./CHANGELOG.md) para el historial de cambios del paquete.

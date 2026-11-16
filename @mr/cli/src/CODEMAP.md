@@ -89,7 +89,24 @@ mrpack/
 │   └── update.ts                    ModuloUpdate    — `mrpack update`
 │
 ├── clases/
-│   ├── auto-doc.ts                  run() — genera docs OpenAPI via TypeScript AST + MySQL
+│   ├── auto-doc/                    run() — genera docs OpenAPI via TypeScript (type checker) + MySQL/ficheros
+│   │   ├── index.ts                 E/S: lista servicios, aislamiento por servicio, --out/--dry-run/--strict, MySQL
+│   │   ├── almacen.ts               guardarDocumentos(): MySQL `doc` (openapi_service/openapi_version), versiones por hash, bajas
+│   │   ├── topologia.ts             leerTopologia()/calcularTopologia(): hosts públicos, Service interno y alone de cada deployment, del clon de kustomize
+│   │   ├── canonico.ts              forma canónica + hash, necesitaVersion(), calcularBajas(), normalizarRepositorio(), aplicarSocket()
+│   │   ├── mapping/                 ddl-create.sql (+ alter/ddl-alter-NNNN.sql, 0001: topology/topology_at): tablas de la base `doc`
+│   │   ├── programa.ts              crearPrograma(): programa TS con el tsconfig del servicio (falla con extends roto o sin RouteGroup)
+│   │   ├── literal.ts               tsToJSON()/tsToString(): evalúa literales y constantes del AST
+│   │   ├── rutas.ts                 extraerRutas(): RouteGroup → grupos/operaciones (+ avisos); separarQuery() (query string del resumen)
+│   │   ├── ast.ts                   buscarPropiedad()/resolverExpresion(): utilidades de AST comunes
+│   │   ├── contrato.ts              leerContrato(): `Contract<T>()` → tipos (type checker) + errors/description/envelope
+│   │   ├── esquema.ts               GeneradorEsquemas: tipo TS → JSON Schema (components.schemas + $ref)
+│   │   ├── jsdoc.ts                 LectorJSDoc: description/@property/@deprecated de tipos y propiedades
+│   │   ├── openapi.ts               construirOpenAPI(): modelo → IOpenAPI
+│   │   ├── visibilidad.ts           esPrivada() (criterio de `public` de doc-backend), compararParaNombres() (orden de reparto de nombres)
+│   │   ├── validar.ts               validarOpenAPI(): coherencia ($ref, paths, parámetros)
+│   │   ├── avisos.ts                IAviso, ubicacionDe(), formatearAviso()
+│   │   └── modelo.ts                tipos del modelo intermedio
 │   ├── comando.ts                   Comando() — ejecuta proceso y captura stdout/stderr
 │   ├── deploy.ts                    run() — compila todos los workspaces para producción
 │   ├── devel.ts                     run() — arranca modo desarrollo (compilar+ejecutar)
@@ -126,8 +143,13 @@ mrpack/
 │   │   ├── attributes.ts            ATTRIBUTES — .gitattributes
 │   │   ├── datadog.ts               DATADOG — static-analysis.datadog.yml
 │   │   ├── devel.ts                 DEVEL — devel.js
+│   │   ├── dockerfile.ts            parchearCorepack() — Yarn preparado con `corepack install` en los
+│   │   │                            Dockerfile propios, como en deployment/std (pruebas en spec/init/)
+│   │   │                            parchearArranque() / lineaArranque() — run.sh con `exec node <yarnPath>`,
+│   │   │                            para que SIGTERM llegue a Node
 │   │   ├── editorconfig.ts          EDITORCONFIG — .editorconfig
 │   │   ├── ignore.ts                IGNORE — .gitignore
+│   │   ├── node.ts                  NODE_VERSION — versión mayor de Node que escribe en .node-version
 │   │   ├── lint.ts                  checkLint() — devDependencies, scripts `lint`/`lint:fix` y
 │   │   │                            eslint.config.mjs de la raíz, a partir de @mr/core-lint
 │   │   ├── run.ts                   initRun() — acciones del IDE (.run/*.run.xml), también las de Pub/Sub
@@ -169,8 +191,14 @@ mrpack/
 │   ├── paquete/
 │   │   ├── index.ts                 Paquete — ciclo de vida GCS (pull/push/reset/checkUpdate/…)
 │   │   │                            + subirLogHtml() — sube el log HTML del último push
+│   │   ├── autoria.ts               stripAutoria()/versionAutoria()/conAutoria() — bloque de
+│   │   │                            autoría de los .ts, con LF o CRLF (pruebas en spec/paquete/)
+│   │   ├── bin.ts                   enviaBinMin()/compilarBinMin() — si el paquete envía bin/min
+│   │   │                            y su recompilación en producción (escribe bin/hash.md5)
 │   │   ├── directory.ts             PaqueteDirectory — árbol de directorios recursivo
-│   │   ├── file.ts                  PaqueteFile — nodo hoja con hash MD5; stripAutoria()
+│   │   ├── file.ts                  PaqueteFile — nodo hoja con hash MD5; reexporta stripAutoria()
+│   │   ├── package-json.ts          packageJsonTrasUpdate() — package.json raíz tras un update:
+│   │   │                            la mezcla con la versión remota, o el remoto si hay conflicto
 │   │   ├── push-log.ts              IPushLogData/IArchivoConDiff — tipos y generador HTML del
 │   │   │                            log de push; subirLogHtmlPush() — sube a GCS
 │   │   │                            (LCS de utiles/diff.ts)
@@ -178,6 +206,7 @@ mrpack/
 │   │   └── storage.ts               PaqueteStorage — acceso GCS (stable.txt, ZIP upload/download)
 │   │
 │   └── workspace/
+│       ├── build-id.ts              Previsión del BUILD_ID de Next sin compilar (PREVER_BUILD_ID, md5Fichero)
 │       ├── compilar.ts              Compilar — compila/empaqueta un workspace (rspack/nextjs/…)
 │       ├── i18n.ts                  I18N extends Workspace — lanza mrlang generate --watch
 │       └── service.ts               Service extends Workspace — ejecuta/compila un servicio
@@ -227,7 +256,7 @@ export class MRPack<T extends IMRPackConfig> extends Modulo<T> {
 
 | Fichero | Clase | Flags CLI | Delega en |
 |---------|-------|-----------|-----------|
-| `auto-doc.ts` | `ModuloAutoDoc` | `--env <string>` | `clases/auto-doc.ts → run()` |
+| `auto-doc.ts` | `ModuloAutoDoc` | `--env <string>`, `--out <dir>`, `--dry-run`, `--servicio <ws>`, `--strict` | `clases/auto-doc/index.ts → run()` |
 | `config.ts` | `ModuloConfig` | _(ninguno extra)_ | `clases/config → gestionar()` |
 | `deploy.ts` | `ModuloDeploy` | `--env produccion\|test` | `clases/deploy.ts → run()` |
 | `devel.ts` | `ModuloDevel` | `-c/--compilar`, `-e/--ejecutar`, `-f/--forzar`, `-w/--watch`, `-p/--pubsub`, `--solo=<ws>[,<ws>]` | `clases/devel.ts → run()` |
@@ -299,6 +328,21 @@ export class Compilar {
 }
 ```
 
+En los workspaces Next, `pack()` prevé el `BUILD_ID` antes de compilar (`build-id.ts`: carga el
+`next.config` con el cargador de Next y llama a `generateBuildId()`), calcula con él el hash de la
+imagen (`hashServicio()`) y, si coincide con el desplegado, no lanza `next build`. `hashServicio()`
+calcula el hash, `esNuevaVersion()` lo compara con el de `tags.json` y `registrarVersion()` escribe
+`version.txt`, `hash.txt` y, si hay versión nueva, `nuevo.txt`. A los workspaces desactivados,
+`mantenerVersion()` les escribe la versión desplegada: su `hash.txt` entra en el hash de los que
+dependen de ellos. Sigue la misma regla (`getVersion()`) que `deployment/std/bin/mantener-version`.
+
+### `clases/workspace/build-id.ts`
+```ts
+export const PREVER_BUILD_ID: string                 // script de `node -e` que escribe el BUILD_ID tras una marca
+export function leerBuildId(salida: string): string|undefined
+export function md5Fichero(ruta: string, contenido: string): string   // = md5Dir() de un fichero con ese contenido
+```
+
 ### `clases/workspace/i18n.ts` — `I18N extends Workspace`
 ```ts
 export class I18N extends Workspace {
@@ -340,7 +384,7 @@ export class Paquete {
     public async getVersionRemota(): Promise<string|undefined>
     public getVersionesRemota(): Promise<string[]>
     public async pull(actualizar:boolean): Promise<boolean>          // descarga y aplica última versión
-    public async push(autor:string): Promise<boolean>                // empaqueta y sube a GCS
+    public async push(autor:string): Promise<boolean>                // empaqueta y sube a GCS; si envía bin/min lo recompila tras estampar autorías (error → this.error)
     public async reset(): Promise<void>                              // descarta cambios locales
     public async checkUpdate(): Promise<string|undefined>
     public async checkCambiosLocales(): Promise<boolean>
@@ -418,7 +462,7 @@ export class PaqueteDirectory extends PaqueteFile {
 
 ### `clases/paquete/file.ts` — `PaqueteFile`
 ```ts
-export function stripAutoria(contenido:string): string    // elimina bloque de autoría de .ts
+export {stripAutoria} from "./autoria"                     // elimina bloque de autoría de .ts (LF o CRLF)
 export class PaqueteFile {
     // nodo hoja con hash MD5 y métodos de actualización/reset individual
 }
@@ -482,7 +526,7 @@ export async function resetearTodo(basedir:string, config?:{forzar?:boolean;rein
 ### `gestor/acciones.ts`
 ```ts
 export async function ejecutarAcciones(basedir:string, infos:IPaqueteGestion[], accionesArr:Accion[], config?:{reiniciar?:boolean}): Promise<boolean>
-// Flujo: instalar → actualizar → resetear → desinstalar → add deps transitivas → install → patches → recompilarCliente → enviar (+ subirLogHtml) → enviarConUpdate (+ subirLogHtml) → gestionar conflictos
+// Flujo: instalar → actualizar → resetear → desinstalar → add deps transitivas → install → patches → recompilarCliente → enviar (push + subirLogHtml) → enviarConUpdate (update → push + subirLogHtml); si push deja paquete.error (p. ej. no compila bin/min) no se envía y se avisa → gestionar conflictos
 ```
 
 ### `gestor/tabla.ts` — `GestorTabla`
@@ -655,8 +699,11 @@ export function aplicarPatches(basedir:string): Promise<void>
 ### `clases/deploy.ts`
 ```ts
 export function run(basedir:string, env:string): void
-// Carga ManifestRoot → Compilar.build para cronjobs/services/jobs → i18n generate (si habilitado)
+// Carga ManifestRoot → sin generar (deploy.build.enabled a false) termina sin hacer nada
+// → Compilar.build para cronjobs/services/jobs → i18n generate (si hay i18n/)
 // → Compilar.md5Deps + compilar en paralelo filtrando dependientes
+// Sin generar, en Cloud Build la versión desplegada la escribe deployment/std/bin/mantener-version
+// (compilar.sh), sin arrancar mrpack.
 ```
 
 ### `clases/devel.ts`
@@ -707,13 +754,61 @@ sin comprobar el emulador. Documentación de uso: `README.md` → `pubsub`.
 
 ## Clases de auto-doc
 
-### `clases/auto-doc.ts`
+### `clases/auto-doc/` (`index.ts`)
 ```ts
-export interface IConfigEjecucion { env:string; }
-export function run(basedir:string, config:IConfigEjecucion): void
-// Parsea main.ts de cada service con TypeScript API
-// Busca clases que extienden RouteGroup → extrae endpoints y esquemas
-// Genera spec OpenAPI 3.1 y guarda en MySQL (base de datos "doc")
+export interface IConfigEjecucion { env?:string; out?:string; dryRun?:boolean; servicio?:string; strict?:boolean; }
+export async function run(basedir:string, config:IConfigEjecucion): Promise<void>
+// Por cada service de services/ (con main.ts, habilitado, runtime node, framework meteored):
+//   crearPrograma(tsconfig del servicio) → extraerRutas() → construirOpenAPI() por deployment (kustomize) → validarOpenAPI()
+// Cada servicio se aísla: los correctos se guardan (MySQL "doc".openapi_service/openapi_version o <out>/<deployment>.openapi.json),
+// los fallidos se informan y run() rechaza (exit 1). Los avisos solo fallan con --strict.
+// Los módulos internos solo importan `typescript` e `import type` (testables en spec/auto-doc/).
+// Visibilidad: se documenta todo salvo documentable:false (bloque o super()) y la lista por nombre
+// (RouteGroupError, Admin, Favicon); las rutas internal:true salen con `x-internal: true`.
+// Contrato (`Contract<T>({errors, description, envelope})` de @mr/core-network, campo `contract` del bloque o de
+//   la expresión; el de la expresión gana): leerContrato() pide al checker el tipo de la expresión (propiedad
+//   fantasma `types`) y GeneradorEsquemas lo convierte a JSON Schema. Interfaces/alias/enums con nombre y sin
+//   genéricos → components.schemas + $ref (los ciclos terminan; colisiones de nombre con sufijo de ruta); lo
+//   demás en línea; lo no representable (bigint, Buffer, getters...) → {} con aviso; un tipo sin resolver → error.
+//   openapi.ts: requestBody desde `post`, parámetros desde `query`/`headers`, 200 envuelto en RespuestaOK_<Nombre>
+//   ({ok, expiracion, data}) y un RespuestaKO por código de `errors`; `envelope:false` = respuesta cruda.
+//   El contrato manda sobre los spec literales (post/query/headers/response); sin contrato la ruta no cambia.
+//   Sin `response` en el contrato, el `response` literal es el `data`. El envoltorio se nombra por el tipo de
+//   `data` (RespuestaOK_<Nombre>[_opcional], o RespuestaOK_<hash> si va en línea); RespuestaKO/RespuestaOK* reservados.
+//   `Authorization` (contrato o literal) → components.securitySchemes.IdToken + `security` en la operación;
+//   `Accept`/`Content-Type` se omiten con aviso. `resumen` con `?k=v` → path sin query + parámetros `query`.
+//   validarOpenAPI(doc, ubicaciones) sitúa sus errores con la ubicación de la operación y comprueba los `security`.
+//   El manifest se carga dentro del aislamiento por servicio.
+// Almacén (almacen.ts, `guardarDocumentos()`): una transacción por deployment (SELECT ... FOR UPDATE en openapi_service);
+//   inserta openapi_version solo si hash (canonico.ts: SHA-256 del documento canónico) != hash de la versión vigente;
+//   después marca removed_at en los deployments del repository que ya no están en ningún mrpack.json (listarDeployments
+//   en index.ts; sin bajas si un manifest no se lee o con --servicio). Funciones puras en canonico.ts: canonico(),
+//   hashDocumento(), necesitaVersion(), calcularBajas(), normalizarRepositorio(), aplicarSocket() (MYSQL_SOCKET).
+//   DDL en mapping/ddl-create.sql (se aplica a mano en la base `doc` de cada proyecto). La tabla `openapi` ya no se escribe.
+// Topología (topologia.ts, BAK-1810 «Probar»): con --env test|produccion y un clon de kustomize en <basedir>/kustomizar, por cada
+//   deploy.kustomize[] {name, dir} de un workspace target k8s, leerTopologia() lee SOLO (ruta validada con ^[a-z0-9-]+$, sin
+//   enlaces simbólicos, ≤64 KiB, contenido nunca registrado) _all/kustomization(.tmpl).yaml, <env>/kustomization.yaml y, si se aplica
+//   Y _all declara router.yaml (D17′), <env>/router.json. Nunca tmp/, credenciales/ ni Secret (y `tmp`/`credenciales` se rechazan como dir y name).
+//   calcularTopologia() es pura; descarta hosts con sufijo interno (.svc, .cluster.local, .internal, .local, .localhost), etiquetas 0x… o que new URL
+//   vuelva IP, y su aviso solo lleva cuántos descartó, nunca su contenido.
+//   JSON (openapi_service.topology): {v:1, entorno, kustomizer, publico:{hosts, aplicaRouter, tieneRouter},
+//   interno:{servicio:"(proxy|switch)-servicio-<deployment>", namespace, puerto:80}, alone, soloZona}; topology_at = NOW().
+//   almacen.ts la escribe en la misma transacción que el documento, fuera del hash. Sin columnas/GRANT (esTopologiaNoSoportada)
+//   o sin clon: aviso y sin topología, sin romper la documentación. `run()` registra «N de M deployments con topología».
+//   soloZona sale de entornos.json[0].resourceLabels.zona (<basedir>/entornos.json o /root/entornos.json).
+// programa.ts: crearPrograma() falla si parseado.errors trae algo (extends roto) o si el programa no incluye el fichero de RouteGroup.
+// esquema.ts: la pila de recursión sin nombre se aparta al entrar en un componente con nombre (IMenu[] → IMenu → IMenu[] termina en $ref).
+// Nombres y alcance `public` (BAK-1814): lo que se reparte por orden de llegada (nombre limpio de un esquema frente a sus
+//   homónimos, operationId sin `_2`, description de IdToken) se reparte en el orden de visibilidad.ts::compararParaNombres:
+//   públicas antes que privadas (esPrivada: internal o path /private[/...], el mismo criterio que doc-backend) y, dentro de cada
+//   lado, por path y método. rutas.ts deja los contratos pendientes (IPendiente) y los lee al final en ese orden; openapi.ts
+//   construye las operaciones en ese orden y las coloca en el del código. Así el documento filtrado a `public` no cambia al
+//   añadir, quitar o mover operaciones privadas, ni con el orden en que TypeScript descubre los ficheros.
+//   esquema.ts::union convierte las alternativas no literales en el orden de su declaración (claveDeOrden), no en el de
+//   `tipo.types` (id interno del checker, que cambia con lo que se resolvió antes, privado incluido). La clave incluye,
+//   recursivamente, las de los argumentos de tipo: si no, `IA[] | IB[]` con IA/IB homónimos empatarían.
+//   openapi.ts ordena `tags` por nombre (el orden de los grupos sigue al de los ficheros). rutas.ts::leerInternal: un
+//   `internal` que no evalúa a booleano se documenta como interno, con aviso (nunca público por defecto).
 ```
 
 ---

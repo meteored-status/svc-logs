@@ -6,7 +6,7 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
-if [[ -f "DESPLEGAR.txt" ]]; then
+if opcion desplegar; then
   if [[ -z "${_AUTORIZAR}" || "${_AUTORIZAR}" == "true" ]]; then
 
     echo "Obteniendo IP"
@@ -21,9 +21,17 @@ if [[ -f "DESPLEGAR.txt" ]]; then
       echo "${CLUSTER}: Limpiando"
       # LIMPIAMOS EL CLUSTER
       OK=false
+      INTENTOS=0
       while [[ ${OK} != "true" ]]; do
-      #  IP=$(cat ip.txt)
-        IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | jq ".masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock | select(.!=\"${IP}/32\")" | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//' || "")
+        # Con tope, como en autorizar.sh: si `gcloud` no devolvía la lista, o solo quedaba nuestra IP
+        # (la lista filtrada sale vacía), seguía hasta el timeout del build. Falla en vez de acabar
+        # bien, porque deja la IP del worker autorizada en el cluster.
+        INTENTOS=$((INTENTOS + 1))
+        if [[ ${INTENTOS} -gt 20 ]]; then
+          echo "ERROR: ${CLUSTER}: no se ha podido desautorizar la IP ${IP} en 20 intentos; queda autorizada"
+          exit 1
+        fi
+        IPS=$(gcloud container clusters describe "${CLUSTER}" --region "${REGION}" --format=json | jq ".masterAuthorizedNetworksConfig.cidrBlocks[].cidrBlock | select(.!=\"${IP}/32\")" | sed 's/"//g' | tr '\r\n' ',' | sed 's/.$//' || true)
 
         if [[ "${IPS}" == "" ]]; then
           sleep $(( ( RANDOM % 5 )  + 1 ))

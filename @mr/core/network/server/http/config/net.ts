@@ -1,11 +1,69 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 918b8f29db48a81d2a047f80f6897501
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.5.18+3-josantoniojimnez
+ * Fecha: Mon, 16 Nov 2026 11:00:00 GMT
+ * Hash: 66997d53b1339e85f7831ff098cf56ba
+ * Versión: 2026.11.16+2-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
+
+// **Sin imports de servidor**, a propósito: este módulo lo carga también el navegador (los paneles lo arrastran a través de
+// `service.ts`, la base de las peticiones a servicios), y `services-comun/modules/utiles/log` trae `dd-trace`, `cluster` y `os`, que
+// rompen la compilación de Next con `Can't resolve 'fs'`. Por eso el recorte no avisa aquí: el aviso lo emite el servidor al arrancar
+// con el texto de `avisoShutdownTimeout()`.
+
+/** `shutdownTimeout` por defecto (y tope) en producción, en ms. Ver {@link INet.shutdownTimeout}. */
+export const SHUTDOWN_TIMEOUT_PRODUCCION_MS = 18_000;
+
+/** `shutdownTimeout` por defecto en desarrollo, en ms: mrpack reinicia y preferimos cierres casi instantáneos. */
+export const SHUTDOWN_TIMEOUT_DESARROLLO_MS = 2_000;
+
+/** Presupuesto total (ms) de los callbacks de `Server.antesDeSalir`: pasado ese tiempo se sale igualmente. */
+export const PRESUPUESTO_ANTES_DE_SALIR_MS = 1000;
+
+/** Presupuesto total (ms) de los callbacks de `Server.antesDeCerrar` (el margen para salir de los endpoints). */
+export const PRESUPUESTO_ANTES_DE_CERRAR_MS = 3_000;
+
+/**
+ * Límite duro (ms) de `Server.cerrarYSalir`, que se arma **después** del margen de `antesDeCerrar`: `shutdownTimeout` + el
+ * presupuesto de `antesDeSalir` + 1 s de margen, con un suelo de 5 s.
+ *
+ * @param shutdownTimeout - `shutdownTimeout` de la configuración de red.
+ */
+export function limiteDuroMs(shutdownTimeout: number): number {
+    return Math.max(shutdownTimeout + PRESUPUESTO_ANTES_DE_SALIR_MS + 1_000, 5_000);
+}
+
+/**
+ * Acota un `shutdownTimeout` para que el cierre quepa en los 25 s de `terminationGracePeriodSeconds`.
+ * En producción, un valor mayor que {@link SHUTDOWN_TIMEOUT_PRODUCCION_MS} o menor o igual que 0 (que
+ * desactiva el corte forzoso) se recorta a ese tope; los menores se respetan. Fuera de producción no se toca.
+ * **No avisa**: el aviso lo da el servidor al arrancar con {@link avisoShutdownTimeout} (ver el comentario de los imports).
+ *
+ * @param ms - Valor ya resuelto del `shutdownTimeout`.
+ * @param config - `produccion`: si se ejecuta en producción.
+ * @returns El valor a usar.
+ */
+export function acotarShutdownTimeout(ms: number, {produccion}: {produccion: boolean}): number {
+    if (!produccion || (ms > 0 && ms <= SHUTDOWN_TIMEOUT_PRODUCCION_MS)) {
+        return ms;
+    }
+    return SHUTDOWN_TIMEOUT_PRODUCCION_MS;
+}
+
+/**
+ * El texto del aviso de recorte del `shutdownTimeout`, para que lo emita quien puede registrar (el servidor, al arrancar).
+ *
+ * @param net - La configuración de red ya construida.
+ * @returns El aviso si {@link acotarShutdownTimeout} recortó el valor pedido, o `null` si se usa tal cual.
+ */
+export function avisoShutdownTimeout(net: Pick<Net, "shutdownTimeout"|"shutdownTimeoutPedido">): string|null {
+    if (net.shutdownTimeout === net.shutdownTimeoutPedido) {
+        return null;
+    }
+
+    return `shutdownTimeout de ${net.shutdownTimeoutPedido} ms fuera de lo que cabe en la gracia del pod: se recorta a ${net.shutdownTimeout} ms`;
+}
 
 /**
  * Par de puertos de escucha para los protocolos HTTP y HTTPS.
@@ -126,7 +184,13 @@ export interface INetService extends INetServiceBase, INetPuertos {
  * @property headersTimeout - Timeout en ms para recibir las cabeceras de una petición. Debe ser
  *     mayor que {@link INet.keepAliveTimeout} para evitar 408 espurios. Por defecto `80_000`.
  * @property shutdownTimeout - Tiempo máximo en ms que el servidor espera a drenar conexiones tras
- *     recibir `SIGTERM`/`SIGINT` antes de cerrar forzosamente. Por defecto `25_000`.
+ *     recibir `SIGTERM`/`SIGINT` antes de cerrar forzosamente. Por defecto `18_000` en producción y `2_000` fuera.
+ *     En producción un valor mayor o `<= 0` se recorta a `18_000`, con un `warning` al arrancar el servidor (ver {@link acotarShutdownTimeout});
+ *     los menores se respetan. Los 25 s de `terminationGracePeriodSeconds` (el máximo de Autopilot) se reparten,
+ *     contando desde el inicio del preStop: un margen de hasta 3 s desde el `shutdown.lock` para que el pod salga
+ *     de los endpoints (con un `sleep 3` en el preStop ya se ha consumido), después el cierre y el `shutdown()`
+ *     del Engine en paralelo (hasta este valor), 1 s de `antesDeSalir` y 1 s de margen del límite duro, que se
+ *     arma tras el margen: 22 s de salida, 23 s en el peor caso.
  */
 export interface INet {
     puertos: INetPuertos;
@@ -183,7 +247,7 @@ export class Net implements INet {
             headersTimeout: 80_000,
             // En producción interesa un drenado generoso para terminar peticiones largas;
             // en desarrollo (mrpack reiniciando) preferimos cierres casi instantáneos.
-            shutdownTimeout: global.PRODUCCION ? 25_000 : 2_000,
+            shutdownTimeout: global.PRODUCCION ? SHUTDOWN_TIMEOUT_PRODUCCION_MS : SHUTDOWN_TIMEOUT_DESARROLLO_MS,
         };
 
         if (global.PRODUCCION) {
@@ -254,6 +318,8 @@ export class Net implements INet {
     public readonly keepAliveTimeout: number;
     public readonly headersTimeout: number;
     public readonly shutdownTimeout: number;
+    /** El `shutdownTimeout` que se pidió, antes de {@link acotarShutdownTimeout}: si difiere del usado, hubo recorte. */
+    public readonly shutdownTimeoutPedido: number;
 
     public constructor(defecto: INet, user: Partial<INet>) {
         this.puertos   = new NetPuertos(defecto.puertos, user.puertos??{});
@@ -269,6 +335,7 @@ export class Net implements INet {
         this.trustProxy = user.trustProxy??defecto.trustProxy;
         this.keepAliveTimeout = user.keepAliveTimeout??defecto.keepAliveTimeout;
         this.headersTimeout = user.headersTimeout??defecto.headersTimeout;
-        this.shutdownTimeout = user.shutdownTimeout??defecto.shutdownTimeout;
+        this.shutdownTimeoutPedido = user.shutdownTimeout??defecto.shutdownTimeout;
+        this.shutdownTimeout = acotarShutdownTimeout(this.shutdownTimeoutPedido, {produccion: global.PRODUCCION});
     }
 }

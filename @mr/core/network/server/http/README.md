@@ -51,6 +51,13 @@ import server from "@mr/core-network/server/http/server";
 |--------|-------------|
 | `iniciarHTTP(routes, config, upgrades?)` | Crea el servidor HTTP y lo pone en escucha. Idempotente: devuelve la instancia existente si ya fue creado. `upgrades` (`IUpgradeHandler[]`, por defecto `[]`) registra el listener del evento nativo `'upgrade'` solo si la lista no está vacía — ver [Upgrade](#upgrade). |
 | `iniciarHTTPs(routes, config, upgrades?)` | Crea el servidor HTTPS con soporte SNI multi-dominio cargando certificados desde `files/ssl/<dominio>/`. Devuelve `Promise<https.Server>`. Mismo tratamiento de `upgrades` que `iniciarHTTP`. |
+| `alIniciarCierre(cb)` | Registra un callback **síncrono** que se ejecuta al entrar en el cierre por `SIGTERM`/`SIGINT`, antes de `close()`. Errores: `warning`, no detienen el cierre. |
+| `antesDeCerrar(cb)` | Registra un callback asíncrono que se ejecuta **antes** de `close()`, con el servidor todavía atendiendo. Sirve de margen para que el pod salga de los endpoints. Presupuesto de 3 s (`PRESUPUESTO_ANTES_DE_CERRAR_MS`, inyectable con `presupuestoAntesDeCerrarMs`); errores: `warning`. `isShuttingDown()` ya es `true` dentro. |
+| `duranteCierre(cb)` | Registra un callback asíncrono que corre **en paralelo** con `close()` y comparte con él el plazo `shutdownTimeout` (la salida espera a los dos; pasado el plazo, `warning` y se sigue). Para el `shutdown()` del Engine. |
+| `gestionaSenales()` | `true` si este servidor ya atiende `SIGTERM`/`SIGINT` (registró sus señales al empezar a escuchar). |
+| `antesDeSalir(cb)` | Registra un callback asíncrono que se ejecuta tras `close()` y antes de `process.exit(0)`. Todos comparten un presupuesto de 1 s (`PRESUPUESTO_ANTES_DE_SALIR_MS`); errores: `warning`. Sin callbacks registrados el cierre no cambia. |
+| `cerrarYSalir(config, {salir?, presupuestoAntesDeCerrarMs?}?)` | La secuencia completa del cierre por señal: `isShuttingDown()` pasa a `true` → `alIniciarCierre` → `antesDeCerrar` (≤ 3 s) → se arma el límite duro (`limiteDuroMs(shutdownTimeout)`, **después** del margen) → `close()` en paralelo con `duranteCierre` → `antesDeSalir` (≤ 1 s) → `salir(0)`. `salir` es inyectable (por defecto `process.exit`) para probarla sin terminar el proceso. Los manejadores de `SIGTERM`/`SIGINT` ya existentes la llaman; no se registran señales nuevas. Tras `close()`, las respuestas de las keep-alive que aún se atienden salen con `Connection: close` (Envoy no reutiliza el socket). |
+| `close(timeoutMs)` | Cierre graceful: deja de aceptar conexiones y espera a que terminen las en curso; pasados `timeoutMs` ms corta el resto con `closeAllConnections()`. `http.Server.close()` no resuelve mientras haya una conexión abierta, y ni un WebSocket entrante ni una keep-alive con una petición en vuelo se cierran solos, así que **durante el cierre** (a) se cierra **en paralelo el servidor WebSocket** del proceso, si lo hay (`servidorWebSocketActual()` de `server/websocket`; manda `Shutdown` a los clientes para que se reconecten a una réplica viva), y (b) se llama a `closeIdleConnections()` cada 150 ms (`INTERVALO_CONEXIONES_OCIOSAS_MS`). Sin eso solo salía por el timeout y, en producción, el SIGKILL llegaba antes de `antesDeSalir`. `shutdownTimeout` por defecto: 18 s en producción, 2 s fuera; en producción un valor mayor o ≤ 0 se recorta a 18 s (`acotarShutdownTimeout`), con un `warning` una vez al arrancar el servidor (`avisoShutdownTimeout`; `config/net.ts` lo carga también el navegador y no puede importar el log). Los 25 s de `terminationGracePeriodSeconds` (el máximo de Autopilot), desde el inicio del preStop: margen de endpoints ≤ 3 s (`antesDeCerrar`, medido desde `shutdown.lock`; con un `sleep 3` en el preStop ya está consumido) + 18 s de `close()` ∥ `duranteCierre` + 1 s de `antesDeSalir` + 1 s de margen del límite duro: 23 s en el peor caso. |
 | `cederPuertoParaDebug()` | Solo fuera de producción. Cierra el servidor HTTP para cederle el puerto a una sesión de depuración y queda reintentando la escucha hasta recuperarlo. La invoca `POST /admin/debug-handoff/`. |
 
 ### Handoff de puerto para depuración local (solo `!PRODUCCION`)
@@ -349,6 +356,11 @@ class MiGrupo extends RouteGroup {
 }
 ```
 
+Un `IWSHandler` puede declarar `ruta` y `autorizar(req)` para reservar un path del upgrade y exigir
+credenciales en el handshake (`401` si fallan); ver
+[`server/websocket/README.md`](../websocket/README.md#ruta-propia-y-autorización-en-el-handshake). Se
+resuelve dentro del propio servidor WebSocket (`verifyClient`), sin otro listener de `'upgrade'`.
+
 Los `IWSHandler` devueltos se registran en el servidor WebSocket singleton a través de
 `createWSServer()` / `addHandlers()`. Consulta
 [`server/websocket/README.md`](../websocket/README.md) para la documentación del protocolo
@@ -424,6 +436,7 @@ interface IRouteGroup {
     cache?: Partial<IRouteGroupCache>; // configuración de caché HTTP
     documentable?: boolean;            // visible en /admin/doc/ (defecto true)
     dominios?: string[];               // por defecto para las IExpresion de `expresiones` que no lo definan
+    contract?: IContract;              // tipos por defecto para la documentación OpenAPI (ver «Contrato de tipos»)
     slow?: number;                     // umbral (ms) del aviso de petición lenta para estas rutas; 0 = sin aviso
 }
 ```
@@ -453,6 +466,37 @@ ejemplo) no tiene por qué inundar el log: el bloque puede fijar su propio umbra
 - Solo rige en peticiones sin cuerpo (`GET`, `HEAD`, `OPTIONS`): la rama con cuerpo (`POST`/`PUT`/`PATCH`/`DELETE`)
   no tiene aviso de petición lenta, ni antes ni ahora.
 - La decisión es pura y vive en `server/http/slow.ts` (`umbralLento`, `esperaLenta`, `esLenta`, `textoUmbral`).
+
+### Contrato de tipos (`contract`)
+
+**Entrada:** `@mr/core-network/server/http/routes/group/contract`
+
+Asocia tipos TypeScript a una ruta para que `mrpack autodoc` los convierta en esquemas OpenAPI. **No tiene
+efecto en tiempo de ejecución**: `Contract<T>()` devuelve una copia de su configuración y el `T` solo existe en el
+tipo (propiedad fantasma `types`), que el generador lee con el type checker. Es opcional y compatible con rutas
+sin contrato.
+
+```ts
+import {Contract} from "@mr/core-network/server/http/routes/group/contract";
+
+{
+    expresiones: [{
+        metodos: ["POST"],
+        exact: "/app/user/restore/register",
+        resumen: "/app/user/restore/register",
+        contract: Contract<{post: IRestoreRegisterIN; response: IRestoreRegisterOUT}>({errors: [400, 401, 403, 404, 409, 500]}),
+    }],
+    handler: ...,
+}
+```
+
+- `contract` puede ir en el bloque (`IRouteGroup.contract`, lo heredan sus expresiones) o en la expresión
+  (`IExpresion.contract`, sustituye al del bloque).
+- Tipos (`T`): `post` (cuerpo), `response` (el tipo de `data`, **no** el envoltorio `{ok, expiracion, data}`),
+  `query` y `headers`.
+- Configuración: `errors` (códigos HTTP de error), `description` (resumen de la operación) y `envelope: false`
+  (rutas que responden en crudo, sin `{ok, expiracion, data}`).
+- Tiene precedencia sobre los specs literales `post`/`response`/`headers`/`query` de la expresión.
 
 ### Updater dinámico
 
@@ -626,6 +670,7 @@ import type {IExpresion} from "@mr/core-network/server/http/checkers";
 | `internal` | `boolean` | Ruta de uso interno. |
 | `deprecated` | `boolean` | Ruta obsoleta. |
 | `post` / `response` / `headers` | `CustomSpecification` | Esquema para documentación y validación. |
+| `contract` | `IContract` | Tipos de la ruta para la documentación OpenAPI (`Contract<T>()`, ver «Contrato de tipos»). Sin efecto en ejecución. |
 
 ### Matchers disponibles
 

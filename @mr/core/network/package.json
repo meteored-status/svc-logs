@@ -1,21 +1,24 @@
 {
   "name": "@mr/core-network",
-  "version": "2026.11.2+1-bixus",
+  "version": "2026.11.16+2-bixus",
   "description": "Utilidades de red de MR{FW}",
   "author": "José Antonio Jiménez",
+  "scripts": {
+    "test": "rm -rf tmp/spec && yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
+  },
   "config": {
     "subible": true,
     "tipo": "core"
   },
   "dependencies": {
-    "dd-trace": "^6.23.0",
+    "dd-trace": "^6.25.0",
     "formidable": "^3.5.4",
     "qs": "^6.17.1",
     "tslib": "^2.9.1",
-    "ws": "^8.22.1"
+    "ws": "^8.23.0"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.1.0"
+    "bufferutil": "^4.2.0"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
@@ -26,6 +29,7 @@
     "@types/node": "^26.6.6",
     "@types/qs": "^6.15.1",
     "@types/ws": "^8.18.2",
-    "services-comun": "workspace:*"
+    "services-comun": "workspace:*",
+    "typescript": "^6.0.3"
   }
 }

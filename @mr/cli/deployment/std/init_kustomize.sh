@@ -6,7 +6,7 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
-if [[ -f "DESPLEGAR.txt" ]]; then
+if opcion desplegar; then
   echo "Inicializando el proyecto kustomize"
 
 #  TIPOS=(credenciales ssl)

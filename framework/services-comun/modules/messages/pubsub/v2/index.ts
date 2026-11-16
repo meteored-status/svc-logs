@@ -1,9 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: f32e301eef4c7660ec078b6b24f1e306
- * Versión: 2026.9.23+3-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Thu, 05 Nov 2026 09:55:17 GMT
+ * Hash: 4b800ac7f654b1101ab6dcefbae55f81
+ * Versión: 2026.11.5+1-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-puntos.git
  */
 
 import type {
@@ -13,7 +14,6 @@ import type {
 import {PubSub as OriginalPubSub} from "@google-cloud/pubsub";
 import type {MessageOptions} from "@google-cloud/pubsub/build/src/topic";
 
-import {readJSON} from "../../../utiles/fs";
 import {Message} from "./message";
 
 export type PubSubBuild = {
@@ -47,16 +47,9 @@ export class PubSub {
 
     private async initClient(): Promise<OriginalPubSub> {
         if (!this._client) {
-
-            this._client = new Promise((resolve, reject) => {
-                readJSON(this.credenciales).then(data => {
-                    // TODO - No funciona la solución sugerida. Seguimos usando "credentials".
-                    const client = new OriginalPubSub({
-                        credentials: data,
-                    })
-                    resolve(client);
-                }).catch(reject);
-            });
+            this._client = Promise.resolve(new OriginalPubSub({
+                keyFilename: this.credenciales,
+            }));
         }
         return this._client;
     }

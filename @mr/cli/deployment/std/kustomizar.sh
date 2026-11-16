@@ -11,7 +11,7 @@ BASETOP=$(pwd)
 export BASETOP
 export PROJECT_ID
 
-if [[ -f "DESPLEGAR.txt" ]]; then
+if opcion desplegar; then
   # Deja en `REGISTRO`, `PAQUETE` y `NOMBRE` dónde ha subido `contenedor.sh` la imagen del workspace de
   # `RUTA`, a partir de `deploy.imagen.<entorno>` y con sus mismos valores por defecto. Si no coinciden, el
   # despliegue apunta a una imagen que no existe.
@@ -386,7 +386,14 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 
     confige ".[].resourceLabels.zona" | xargs -I '{}' -P 1 bash -c "echo \"# ${WORKSPACE}\" > despliegue_${WORKSPACE}_{}.yaml"
 
-    VERSION=$(cat "${RUTA}/version.txt" || echo "0000.00.00")
+    # Lo escribe `mrpack deploy` en «Compilar» para todos los workspaces. Antes, si faltaba, se
+    # desplegaba la versión `0000.00.00`, que no existe, y el fallo se veía en «Desplegar» tras 5 min
+    # esperando a pods que no podían bajar la imagen.
+    if [[ ! -s "${RUTA}/version.txt" ]]; then
+      echo "ERROR: ${RUTA} no tiene version.txt (lo escribe «Compilar»)"
+      exit 1
+    fi
+    VERSION=$(cat "${RUTA}/version.txt")
     KUSTOMIZE_ARRAY=$(configw "${RUTA}" '.deploy.kustomize')
     LENGTH=$(echo "${KUSTOMIZE_ARRAY}" | jq 'length')
     for ((i=0; i<LENGTH; i++)); do
@@ -400,6 +407,14 @@ if [[ -f "DESPLEGAR.txt" ]]; then
 # .resourceLabels.client-ids
 
       if [[ "$(configw "${RUTA}" '.deploy.target')" == "k8s" ]]; then
+        # Sin ninguno de los tres directorios no se genera nada y el workspace no se despliega. Es un
+        # aviso y no un error porque hay workspaces así a propósito (desactivados de hecho, o que se
+        # despliegan por otra vía); lo que no debe es pasar sin que se vea en el log.
+        BASE_KUSTOMIZE="kustomizar/${KUSTOMIZER}/${SERVICIO}"
+        if [[ ! -d "${BASE_KUSTOMIZE}/_all" && ! -d "${BASE_KUSTOMIZE}/entornos" && ! -d "${BASE_KUSTOMIZE}/clientes" ]]; then
+          echo "AVISO: ${WORKSPACE} (${SERVICIO}): no existe ${KUSTOMIZER}/${SERVICIO} en el repo de kustomize (ni _all, ni entornos, ni clientes); no se despliega"
+          continue
+        fi
         NUM_CLIENTES=$(configc "length")
         if [[ "$NUM_CLIENTES" -eq 0 ]]; then
           ZONAS=$(confige '.[] | .resourceLabels.zona')

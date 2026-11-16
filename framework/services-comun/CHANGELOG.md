@@ -2,6 +2,72 @@
 
 ---
 
+## 2026.11.16 11:14 — [Jose]
+
+### Changed
+
+- `@google-cloud/storage` 8.4.0 → 9.0.0 (versión mayor: capa HTTP en gaxios, `GaxiosError` en vez de `ApiError`, Node ≥ 22).
+  `modules/fs/storage.ts` no usa nada de lo que cambia: `getMetadata`, `download`, `createReadStream` y `createWriteStream`
+  devuelven lo mismo (comprobado contra el bucket). `firebase-admin` 14.5.1 sigue pidiendo `^8.1.0`, así que conviven la 8.4.0
+  (suya) y la 9.0.0 hasta que suba.
+
+---
+
+## 2026.11.12 17:30 — [Jose]
+
+### Changed
+
+- `EngineEvent` (`modules/engine_event.ts`): `shutdown()` pasa a `protected override` (la clase base de `@mr/core-workload` ya lo declara, y
+  `noImplicitOverride` lo exige), y el watcher de `shutdown.lock` llama a `solicitarApagado()` en vez de `abort()` + `shutdown()` sueltos: si no, `shutdown()`
+  correría dos veces (una por el lock, otra por la señal). **Requiere `@mr/core-workload` con `solicitarApagado()`**: se envían juntos.
+
+## 2026.11.10 13:58 — [Juan Carlos]
+
+### Changed
+
+- `openapi/interface.ts`: `IComponents.securitySchemes` (`ISecuritySchemes`, `ISecurityScheme`) y `IHTTPMethod.security`,
+  para documentar `Authorization` como esquema de seguridad; `ISchema.examples` pasa de `any[]` a `unknown[]`.
+
+---
+
+## 2026.11.10 13:18 — [Juan Carlos]
+
+### Changed
+
+- `openapi/interface.ts` ampliado para lo que genera `mrpack autodoc`: `IPath` con `put`, `delete`, `patch`, `head`,
+  `options` y `parameters`; la operación (`IHTTPMethod`) con `summary`, `description`, `operationId`, `requestBody` y
+  la extensión `x-internal`; `ISchema` recursivo y único (`type` string o lista, `enum`, `const`, `anyOf`/`oneOf`/
+  `allOf`, `items`, `prefixItems`, `additionalProperties`, `pattern`, `format`, `description`, `deprecated`, `$ref`);
+  `IProperty` e `IItems` pasan a ser alias de `ISchema`; `IResponses` se indexa por `string` (admite `"default"`).
+
+---
+
+## 2026.11.5 10:30 — [JuanCarlos]
+
+### Fixed
+- `PubSub` v2 (`modules/messages/pubsub/v2/index.ts`): el cliente de `@google-cloud/pubsub` se creaba pasando el JSON de
+  credenciales ya parseado vía la opción `credentials`, que no permite detectar el `projectId` del entorno. Causaba
+  `Error: Unable to detect a Project Id in the current environment` en el arranque (CrashLoopBackOff) de todo servicio que use
+  esta clase (`puntos`, `puntos-generate`, y otros consumidores del framework). Ahora usa `keyFilename`, igual que ya hacían
+  `PubSub` v1, `EventarcPublisher` y `Storage` en este mismo framework.
+
+## 2026.11.3 16:45 — [Chema]
+
+### Changed
+- `Valkey.deletePattern` (`modules/net/cache/valkey/valkey.ts`): **memoria acotada al borrar.** Sin `namespace` vacía la cache con
+  `FLUSHDB ASYNC` (en cluster, node-redis lo envía a todos los shards) en vez de `KEYS *` + un `DEL` por clave en un `Promise.all` sin
+  límite. Con `namespace`, `SCAN` + `UNLINK` por lotes de ~500 claves en vez de `KEYS pattern`, y un único log con el total en lugar
+  de uno por clave. Ahora rechaza con el error original.
+
+### Fixed
+- `Valkey.delete` hacía dos `DEL` seguidos, así que siempre registraba «no encontrada». Ahora es un único `UNLINK`.
+
+## 2026.11.3 12:00 — [Miguel]
+
+### Removed
+- `modules/utiles/unidades.ts` — movido a `@mr/core-utils/unidades` (separado por magnitud). Los imports se migran con el patch
+  **R036** (`yarn run patch:apply`).
+
 ## 2026.10.30 08:58 — [Juan Carlos]
 
 ### Changed

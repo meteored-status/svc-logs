@@ -11,8 +11,8 @@
     "@elastic/elasticsearch": "^9.5.1",
     "@google-cloud/common": "^8.2.2",
     "@google-cloud/eventarc-publishing": "^5.2.0",
-    "@google-cloud/pubsub": "^6.3.2",
-    "@google-cloud/storage": "^8.4.0",
+    "@google-cloud/pubsub": "^6.4.1",
+    "@google-cloud/storage": "^9.0.0",
     "@mr/core-dev": "workspace:*",
     "@mr/core-i18n": "workspace:*",
     "@mr/core-network": "workspace:*",
@@ -28,15 +28,15 @@
     "@types/sparkpost": "^2.1.9",
     "@types/ungap__structured-clone": "^1.2.0",
     "@ungap/structured-clone": "^1.4.0",
-    "@valkey/valkey-glide": "^2.5.3",
+    "@valkey/valkey-glide": "^2.6.0",
     "chokidar": "^6.0.0",
-    "cron-parser": "^5.10.3",
-    "dd-trace": "^6.23.0",
+    "cron-parser": "^5.10.6",
+    "dd-trace": "^6.25.0",
     "formidable": "^3.5.4",
-    "isbot": "^5.2.2",
+    "isbot": "^5.2.3",
     "moment-timezone": "^0.6.6",
     "mysql2": "^3.24.6",
-    "node-ical": "^0.27.3",
+    "node-ical": "^0.27.6",
     "pg": "^8.23.1",
     "pidusage": "^4.1.0",
     "qs": "^6.17.1",
@@ -47,5 +47,5 @@
     "typescript": "^6.0.3",
     "uuid": "^14.0.3"
   },
-  "version": "2026.11.2+2-juancmartinez"
+  "version": "2026.11.16+2-bixus"
 }

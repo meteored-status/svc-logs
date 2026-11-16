@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 0b55c1225dea5055fc94dd49e702469a
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Fecha: Mon, 16 Nov 2026 09:46:04 GMT
+ * Hash: 856f42512f1509564a5e7b658a5b6d05
+ * Versión: 2026.11.16+4-bixus
+ * Anterior: 2026.11.16+3-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
  */
 
 import {mkdir, readFileString, safeWrite, unlink} from "@mr/core-cli/fs";
@@ -241,6 +241,10 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
         Paquete.setupConsolaParaUpdate(aEnviar.map(i => i.paquete));
         await Promise.all(aEnviar.map(async info => {
             await info.paquete.push(autor);
+            if (info.paquete.error !== undefined) {
+                avisos.push(`⚠  ${info.npmName}: ${info.paquete.error} — no se ha enviado`);
+                return;
+            }
             cambio = true;
             await info.paquete.subirLogHtml().catch((err) => { Log.error({type: Log.label_base, label: "framework"}, "Error subiendo log HTML", err); });
             if (info.paquete.logs.length > 0) {
@@ -268,6 +272,10 @@ export async function ejecutarAcciones(basedir: string, infos: IPaqueteGestion[]
                 avisos.push(`⚠  ${info.npmName}: error durante la actualización — no se ha enviado — ver ${logPath}`);
             } else if (!conflictos) {
                 await info.paquete.push(autor);
+                if (info.paquete.error !== undefined) {
+                    avisos.push(`⚠  ${info.npmName}: ${info.paquete.error} — no se ha enviado`);
+                    return;
+                }
                 cambio = true;
                 await info.paquete.subirLogHtml().catch((err) => { Log.error({type: Log.label_base, label: "framework"}, "Error subiendo log HTML", err); });
                 if (info.paquete.logs.length > 0) {

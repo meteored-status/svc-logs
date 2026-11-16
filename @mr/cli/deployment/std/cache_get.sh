@@ -6,15 +6,8 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
-# El bucket de la caché sale de `_K8S_CACHE` si el trigger la define; si no, de la etiqueta
-# `k8s-cache` de `labels.json`, como siempre.
-buckets() {
-  if [[ -n "${_K8S_CACHE}" ]]; then
-    echo "${_K8S_CACHE}"
-  else
-    configl ".labels[\"k8s-cache\"]"
-  fi
-}
+# El bucket sale de `bucketCache()` (aliases.sh), que no necesita `labels.json`: este paso espera solo
+# a la guarda y corre en paralelo con «Descargas» y «Labels».
 
 parseBucket() {
   BUCKET="${1}"
@@ -22,10 +15,14 @@ parseBucket() {
   gcloud storage --no-user-output-enabled cp -r "gs://${BUCKET}/cache/${TRIGGER_NAME}/cache" .yarn || echo "No hay caché"
 }
 
-export -f parseBucket
 
 echo "Descargando caché de dependencias"
-buckets | xargs -I '{}' -P 10 bash -c "parseBucket {}"
+BUCKET=$(bucketCache)
+if [[ -n "${BUCKET}" ]]; then
+  parseBucket "${BUCKET}"
+else
+  echo "No hay bucket de caché (ni _K8S_CACHE ni etiqueta k8s-cache)"
+fi
 if [[ -f .yarn/cache/.md5 ]]; then
   cp .yarn/cache/.md5 yarn.md5
 else

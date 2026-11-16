@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: 80e9d7bd3393992dc7571ad69984bdd1
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.8.7+1-bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 137a6ba11ba0e6a9a4ff0600d76e2bd1
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -21,6 +21,7 @@ import {Routes} from "@mr/core-network/server/http/routes";
 import type {IUpgradeHandler} from "@mr/core-network/server/http/upgrade";
 import type {IWSHandler} from "@mr/core-network/server/websocket/handler";
 import {error, info, warning} from "services-comun/modules/utiles/log";
+import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {isDir, mkdir} from "services-comun/modules/utiles/fs";
 import server from "@mr/core-network/server/http/server";
 import webSocket from "@mr/core-network/server/websocket";
@@ -28,6 +29,8 @@ import webSocket from "@mr/core-network/server/websocket";
 import type {Configuracion} from "../config";
 import type {ConfiguracionNet} from "../config/net";
 import {Engine as EngineBase} from ".";
+import {heartbeatActual} from "../heartbeat/registro";
+import {DIR_ADMIN, NOMBRE_LOCK_APAGADO, esperaMargenMs, margenPendienteMs} from "./lock";
 import AdminHandler from "../handlers/admin";
 import ErrorHandler from "../handlers/error";
 import FaviconHandler from "../handlers/favicon";
@@ -66,7 +69,10 @@ interface IHandlersAuxiliares {
  * - Montaje automático de los handlers internos `Admin` y `Favicon`.
  * - Watcher de shutdown mediante `chokidar` sobre `files/tmp/admin/shutdown.lock`.
  * - Configuración de las variables estáticas de {@link Respuesta} con los metadatos del pod.
- * - Hooks de salud sobreescribibles: `started()`, `ready()`, `ok()`, `okAll()` y `shutdown()`.
+ * - Hooks de salud sobreescribibles: `started()`, `ready()`, `ok()`, `okAll()` y `shutdown()` (este último, con el
+ *   contrato de {@link EngineBase.shutdown}: se espera, con presupuesto, y solo se ejecuta una vez).
+ * - Lo que lee la sonda del heartbeat de pods (`heartbeat/`): `ultimoReady`, `preStopSolicitado`, y el
+ *   enlace con el cierre por señal del servidor HTTP.
  *
  * ### Uso típico
  *
@@ -125,23 +131,78 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
     private handlers: RouteGroup[];
 
     /**
+     * Último resultado de `/admin/ready/` con su hora, o `null` si aún no ha habido ninguna petición.
+     */
+    private _ultimoReady: {ok: boolean; ts: number}|null;
+
+    /**
+     * `true` desde que aparece `shutdown.lock` (lo escribe el hook preStop del kustomize).
+     */
+    private _preStopSolicitado: boolean;
+
+    /**
+     * `true` una vez enlazados el heartbeat y los ganchos de apagado con el cierre del servidor, para no registrarlos
+     * dos veces si el servicio arranca HTTP y HTTPS.
+     */
+    private servidorEnlazado: boolean;
+
+    /**
      * Tabla de rutas activa, disponible tras llamar a {@link initWebServer} o
      * {@link initWebServerS}. Útil para introspección (p.ej. listing de rutas en `/admin/doc/`).
      */
     public routes?: Routes;
 
+    /**
+     * Último resultado de `/admin/ready/` y cuándo se produjo (`null` si nunca se ha consultado). Lo usa la
+     * sonda del heartbeat para no repetir una consulta que puede ser cara.
+     */
+    public get ultimoReady(): {ok: boolean; ts: number}|null {
+        return this._ultimoReady;
+    }
+
+    /**
+     * Si ha aparecido `shutdown.lock`, es decir, si el hook preStop ha pedido el apagado del pod.
+     */
+    public get preStopSolicitado(): boolean {
+        return this._preStopSolicitado;
+    }
+
+    /**
+     * Si el servidor HTTP de este proceso ya atiende `SIGTERM`/`SIGINT` (y llama él a {@link solicitarApagado}).
+     */
+    public override get apagadoPorServidor(): boolean {
+        return server.gestionaSenales();
+    }
+
     protected constructor(configuracion: T, inicio: number) {
         super(configuracion, inicio);
 
         this.handlers = [];
+        this._ultimoReady = null;
+        this._preStopSolicitado = false;
+        this.servidorEnlazado = false;
+    }
+
+    /**
+     * Anota el resultado de una consulta a {@link ready} hecha por `/admin/ready/`. Si cambia respecto al
+     * anterior, avisa al heartbeat para que lo mande sin esperar al siguiente segundo.
+     *
+     * @param ok - `true` si `ready()` resolvió.
+     */
+    public registrarReady(ok: boolean): void {
+        const cambio = this._ultimoReady !== null && this._ultimoReady.ok !== ok;
+        this._ultimoReady = {ok, ts: Date.now()};
+        if (cambio) {
+            heartbeatActual()?.disparar();
+        }
     }
 
     /**
      * Sobreescribe el hook base para montar el watcher de shutdown.
      *
      * Si el directorio `files/tmp/` existe, crea `files/tmp/admin/` y lanza un watcher
-     * con `chokidar`. Cuando aparece el fichero `shutdown.lock`, invoca {@link abort}
-     * y {@link shutdown} para iniciar el apagado graceful del pod.
+     * con `chokidar`. Cuando aparece el fichero `shutdown.lock`, invoca {@link solicitarApagado}
+     * (aborta y ejecuta {@link shutdown} una sola vez) para iniciar el apagado graceful del pod.
      *
      * Las subclases **deben** llamar a `super.init()` antes de su propia lógica
      * para garantizar que el watcher quede activo.
@@ -152,16 +213,18 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
         if (!await isDir("files/tmp")) {
             return;
         }
-        await mkdir("files/tmp/admin/", true);
-        const watcher = chokidar.watch("files/tmp/admin/", {
+        await mkdir(DIR_ADMIN, true);
+        // El `shutdown.lock` rancio lo borra `Main` una vez por pod, antes de forkear los workers: aquí, cada worker borraría el legítimo.
+        const watcher = chokidar.watch(DIR_ADMIN, {
             persistent: true,
         });
         watcher.on("add", (path) => {
             const fileName = path.split('/').pop();
 
-            if (fileName === "shutdown.lock") {
-                this.abort("Se ha solicitado el apagado del POD");
-                this.shutdown().then(()=>{}).catch(()=>{});
+            if (fileName === NOMBRE_LOCK_APAGADO) {
+                this._preStopSolicitado = true;
+                heartbeatActual()?.disparar();
+                void this.solicitarApagado("Se ha solicitado el apagado del POD");
             }
         });
     }
@@ -198,6 +261,23 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
         }
 
         this.handlers = handlers;
+
+        if (!this.servidorEnlazado) {
+            this.servidorEnlazado = true;
+            heartbeatActual()?.enlazarServidor(server);
+            // Margen para salir de los endpoints, con el servidor aún atendiendo, antes de dejar de escuchar.
+            server.antesDeCerrar(async () => {
+                const inicio = Date.now();
+                const margen = await margenPendienteMs();
+                const espera = esperaMargenMs({margenMs: margen, transcurridoMs: Date.now() - inicio});
+                if (espera > 0) {
+                    info(`Esperando ${espera} ms a que el pod salga de los endpoints antes de cerrar el servidor`);
+                    await PromiseDelayed(espera);
+                }
+            });
+            // El `shutdown()` del engine corre en paralelo con el cierre del servidor y comparte su plazo.
+            server.duranteCierre(async () => this.solicitarApagado("Recibida señal de apagado"));
+        }
 
         if (webSockets.length > 0 && upgrades.length > 0) {
             // Ambos mecanismos se enganchan al mismo evento nativo `'upgrade'` y ningún
@@ -310,11 +390,12 @@ export abstract class Engine<T extends ConfiguracionNet=ConfiguracionNet> extend
 
     /**
      * Hook de apagado graceful. No-op en la clase base.
-     * Invocado automáticamente por {@link init} cuando aparece `shutdown.lock`.
-     * Las subclases lo sobreescriben para cerrar conexiones, vaciar buffers o
-     * completar tareas en vuelo antes de que el pod sea terminado.
+     * Lo invoca {@link solicitarApagado}, una sola vez, cuando aparece `shutdown.lock` o el servidor HTTP recibe
+     * `SIGTERM`/`SIGINT`. Las subclases lo sobreescriben (con `override`) para cerrar conexiones, vaciar buffers o
+     * completar tareas en vuelo antes de que el pod sea terminado. Se espera, con el plazo `shutdownTimeout` del
+     * servidor, en paralelo con su cierre: lo que se dispare sin esperar solo cuenta con el margen de salida.
      */
-    protected async shutdown(): Promise<void> {
+    protected override async shutdown(): Promise<void> {
         return;
     }
 }

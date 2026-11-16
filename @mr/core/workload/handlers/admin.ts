@@ -1,10 +1,10 @@
 /**
- * Editor: alexCG
- * Fecha: Tue, 20 Oct 2026 07:44:09 GMT
- * Hash: 4d256246a32105d35bc18a7a2453394a
- * Versión: 2026.10.20+1-alexcg
- * Anterior: 2026.7.27+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-amateur.git
+ * Editor: Bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 336c4585ff1715667d7aee0780bda237
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.10.20+1-alexcg
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {IRouteGroup} from "@mr/core-network/server/http/routes/group/block";
@@ -22,7 +22,8 @@ import type {Engine} from "../engine/server";
  *
  * Expone los endpoints de Kubernetes / healthchecks:
  * - `GET /admin/started/` — indica si el servicio ha arrancado.
- * - `GET /admin/ready/`   — indica si el servicio está listo para recibir tráfico.
+ * - `GET /admin/ready/`   — indica si el servicio está listo para recibir tráfico. Guarda el resultado en el
+ *   engine (`registrarReady`) para que la sonda del heartbeat no repita la consulta.
  * - `GET /admin/live/`    — liveness probe.
  * - `GET /admin/check/`   — alias de `/admin/live/`.
  * - `GET /admin/doc/`     — devuelve la lista de rutas documentables del servicio.
@@ -54,14 +55,20 @@ class Admin extends RouteGroup {
                     {metodos: ["GET"], exact: "/admin/ready/", resumen: "/admin/ready/", log: false},
                 ],
                 handler: async (conexion) => {
-                    // Durante el drain (SIGTERM) devolvemos 503 sin cache para que el orquestador
+                    // Durante el drain (SIGTERM o `shutdown.lock` del preStop) devolvemos 503 sin cache para que el orquestador
                     // (GKE/Istio) deje de mandarnos tráfico nuevo mientras terminamos las en curso.
-                    if (server.isShuttingDown()) {
+                    if (server.isShuttingDown() || this.engine.preStopSolicitado) {
                         return conexion.noCache().error(503, "shutting down");
                     }
                     return this.engine.ready()
-                        .then(() => this.sendRespuesta(conexion))
-                        .catch((err: unknown) => conexion.error(404, err instanceof Error ? err.message : String(err), err));
+                        .then(() => {
+                            this.engine.registrarReady(true);
+                            return this.sendRespuesta(conexion);
+                        })
+                        .catch((err: unknown) => {
+                            this.engine.registrarReady(false);
+                            return conexion.error(404, err instanceof Error ? err.message : String(err), err);
+                        });
                 },
             },
             {

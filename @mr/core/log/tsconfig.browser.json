@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "types": [
+      "@mr/core-dev"
+    ]
+  },
+  "files": [
+    "modules/interface.ts",
+    "modules/logger.ts",
+    "modules/destino/base.ts",
+    "modules/destino/http.ts"
+  ]
+}

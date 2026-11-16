@@ -2,6 +2,597 @@
 
 ---
 
+## 2026.11.16 11:14 — [Jose]
+
+### Changed
+
+- `@google-cloud/storage` 8.4.0 → 9.0.0 y `node-diff3` 3.2.1 → 4.0.0 (las dos, versión mayor).
+  - storage 9 cambia la capa HTTP a gaxios. Los errores pasan a ser `GaxiosError`, pero `err.message` sigue llevando el texto
+    de la API (`"No such object: …"`, comprobado contra el bucket), así que `PaqueteStorage` los sigue reconociendo igual.
+    `download`, `createReadStream` y `getMetadata` devuelven lo mismo que antes.
+  - node-diff3 4 es solo ESM y compara con `===`. Con arrays de líneas el merge da lo mismo, y esbuild la mete en `bin/min`.
+
+### Fixed
+
+- `listarNombresGCS()` (`framework/gestor/datos.ts`): con storage 9, el tercer elemento de `getFiles()` es la respuesta de
+  gaxios entera y los prefijos van en `data.prefixes`. Leídos de la raíz daban `undefined`, y el `catch` lo convertía en una
+  lista vacía: la tabla de `mrpack framework` no habría visto los paquetes del bucket que no estuvieran instalados.
+
+---
+
+## 2026.11.16 10:43 — [Jose]
+
+### Fixed
+
+- La recompilación de `bin/min` al enviar (entrada de las 10:00) se hacía antes de `push()`, y `push()` estampa después los
+  bloques de autoría. El sourcemap lleva el contenido de las fuentes, así que el bundle enviado y su `bin/hash.md5` no
+  cuadraban con los de compilar lo que quedaba en el repo: el hash no servía para saber si el binario estaba al día. Ahora
+  se compila dentro de `Paquete.push()`, tras `prepararParaPush()` y antes de empaquetar, y se rehacen en el `status.json`
+  solo los hashes del nodo `bin/min` (está en `.mr-nohash`). Las funciones pasan a `paquete/bin.ts` (`enviaBinMin()`,
+  `compilarBinMin()`); se quitan `compilarBinEnviado()` de `framework/cliente.ts` y `Paquete.descartarSnapshot()`, que ya
+  no hacen falta. Si la compilación falla, `push()` deja el motivo en `paquete.error`, restaura la versión y no sube nada.
+
+---
+
+## 2026.11.16 10:00 — [Jose]
+
+### Changed
+
+- `mrpack framework`: antes de enviar cada paquete se recompila en modo producción si envía su `bin/min/` (lo lista
+  `bin/.mr-bin` y no lo excluye `bin/.mr-ignore`; hoy `@mr/cli`), para que el bucket reciba siempre el bundle de las
+  fuentes actuales. Si la compilación falla, ese paquete no se envía y se avisa. Nuevas `enviaBinMin()` y
+  `compilarBinEnviado()` en `framework/cliente.ts`, enganchadas en `gestor/acciones.ts`. Tras compilar se descarta el
+  snapshot del listado (`Paquete.descartarSnapshot()`) para que el `status.json` lleve los hashes del bundle nuevo: el
+  receptor solo aplica un fichero `.mr-bin` si su hash cambia.
+
+---
+
+## 2026.11.16 09:31 — [Jose]
+
+### Changed
+
+- Plantilla `IGNORE` (`init/ignore.ts`): añadido `**/.claude/scheduled_tasks.lock`, el lock de tareas programadas de Claude
+  Code, para que `mrpack init` lo deje fuera de git en cada monorepo, igual que `settings.local.json`.
+
+---
+
+## 2026.11.12 15:15 — [Jose]
+
+### Added
+
+- **`mrpack init` deja el arranque de los `Dockerfile` propios como el de `deployment/std`** (`parchearArranque()` en
+  `src/clases/init/dockerfile.ts`, llamado tras `parchearCorepack()` con `deploy.runtime = "node"`): la línea
+  `RUN echo "yarn workspace ${WS} …" >> run.sh` de la etapa final, con o sin `exec`, pasa a ser `lineaArranque()`
+  (`exec node <yarnPath> workspace ${WS} …`) con su comentario, `COMENTARIO_ARRANQUE`. Sin esto, los workspaces con
+  Dockerfile propio seguirían muriendo por SIGKILL al apagarse. Si la etapa final arranca con Yarn de otra forma (`CMD yarn …`,
+  un `ENTRYPOINT` propio), no se toca y sale un aviso. Idempotente. Probado en `spec/init/dockerfile.spec.ts`, que comprueba
+  además que los Dockerfile estándar llevan exactamente `lineaArranque()` y su comentario, para que no se separen.
+- Medido en svc-status (2026-11-12) con la imagen de `09db1068`: los pods apagados con `rollout restart` acaban en `parado`
+  con causa `senal` (antes, `drenando`/`prestop` y SIGKILL a los 25 s), y cierran unos 4–5 s después del lock.
+
+## 2026.11.12 14:51 — [Jose]
+
+### Fixed
+
+- **`exec yarn` no bastaba: el PID 1 era el shim de corepack**, que con `yarnPath` lanza el Yarn del repo como proceso hijo y no
+  le reenvía SIGTERM. Desplegado en svc-status, los pods seguían en `drenando` con causa `prestop` y morían por SIGKILL; dentro del
+  contenedor, `ps` daba `1 node /usr/local/bin/yarn …` con el Yarn real debajo. Comprobado también fuera: con `corepack yarn node …`
+  la señal mata a corepack y Yarn y Node se quedan huérfanos sin recibirla; con `node .yarn/releases/yarn-4.18.1.cjs node …` el hijo
+  la recibe (Yarn instala un handler que hace `kill()` a sus hijos). `run.sh` arranca ahora con `exec node <yarnPath> workspace …`,
+  con el `yarnPath` del `.yarnrc.yml` leído al construir la imagen (sin comillas ni CR); sin `yarnPath`, `exec yarn`. La prueba de
+  `spec/init/dockerfile.spec.ts` ejecuta los `RUN` que escriben `run.sh` con varios `.yarnrc.yml`.
+
+## 2026.11.12 14:32 — [Jose]
+
+### Fixed
+
+- **SIGTERM ya llega a Node** (`deployment/std/Dockerfile` y `Dockerfile-next`): `run.sh` arranca el servicio con `exec yarn
+  workspace …`. Sin `exec` el PID 1 del contenedor era `sh`, que ignora SIGTERM y no la pasaba a yarn: el servidor no drenaba,
+  `antesDeSalir` no corría y cada pod moría por SIGKILL al acabar los 25 s de gracia. Medido en svc-status el 2026-11-12 con el
+  heartbeat: tras un `rollout restart`, los dos pods se quedaron en `drenando` con causa `prestop` (solo vieron el `shutdown.lock`),
+  siguieron hablando 24 s y no llegaron a `parado`. Prueba nueva en `spec/init/dockerfile.spec.ts`. Los Dockerfile propios de
+  otros monorepos (los que parchea `parchearCorepack`) no cambian: hay que revisarlos aparte.
+
+## 2026.11.12 13:52 — [Juan Carlos]
+
+### Fixed
+
+- `autodoc`, topología: los avisos de hosts descartados de `router.json` ya no llevan su contenido, solo cuántos son. `tmp` y `credenciales` se rechazan
+  explícitamente como `dir` y `name`. Se descartan los hosts con sufijo de red interna (`.svc`, `.cluster.local`, `.internal`, `.local`, `.localhost`), con etiquetas `0x…` o que
+  `new URL` convertiría en un literal IP (`0x7f.0x1`), igual que en la intranet.
+
+## 2026.11.12 13:07 — [Juan Carlos]
+
+### Added
+
+- **`mrpack autodoc` guarda la topología de cada deployment (BAK-1810, «Probar» en API Docs).** Nuevo
+  `clases/auto-doc/topologia.ts`. Con `--env test|produccion` y el clon de kustomize en `kustomizar/`, lee por cada
+  `deploy.kustomize[]` (workspaces `target: k8s`) solo `_all/kustomization(.tmpl).yaml`, `<env>/kustomization.yaml` y, si se
+  aplica y `_all` declara `router.yaml` (D17′), `<env>/router.json`. Con eso guarda en `openapi_service.topology` (JSON) y
+  `topology_at`: los hosts públicos, el `Service` interno (`proxy|switch-servicio-<deployment>`, namespace, puerto 80),
+  `alone` y `soloZona`. Se escribe en la misma transacción que el documento pero fuera de él: no entra en el hash, no crea
+  versiones ni entradas de historial. La ruta se valida (`^[a-z0-9-]+$`, sin `..`, sin enlaces simbólicos, ≤ 64 KiB) y
+  nunca se lee `tmp/`, `credenciales/` ni ningún `Secret`. Un `router.json` aplicado sin `router.yaml` (`arts-backend`,
+  `translation`, `videos-estaticos-nowcast`) no da hosts. Sin clon, sin las columnas o sin el `GRANT`, el autodoc sigue
+  igual, sin topología y con un aviso. El log dice cuántos deployments tienen topología y cuántas se han escrito.
+- **DDL:** `mapping/alter/ddl-alter-0001.sql` (columnas `topology JSON NULL` y `topology_at DATETIME NULL`, a aplicar a
+  mano en la base `doc` de test y producción, con el `GRANT` correspondiente) y `ddl-create.sql` consolidado.
+
+## 2026.11.12 11:22 — [Juan Carlos]
+
+### Changed
+
+- **`mrpack autodoc`: lo privado ya no decide los nombres de lo público (BAK-1814).** Cuando dos tipos se llaman igual
+  (`IProductOffer` en dos ficheros), el nombre limpio era del primero que aparecía en el código, privadas incluidas, y el
+  otro llevaba el sufijo de su fichero. En `panel-usuarios-backend` el `IProductOffer` de `catalog/get-public` salía como
+  `IProductOffer_framework_…_catalog_get_public_interface` porque el limpio se lo quedaba el de `bi/execute`, que es
+  privado. El documento `public` de API Docs delataba así el homónimo privado, y un cambio solo privado podía renombrar
+  un esquema público y abrir una entrada en su historial. Ahora los contratos se leen al final (`rutas.ts`): primero
+  los de las operaciones públicas y después los de las privadas (`internal: true` o path `/private[/…]`, el mismo
+  criterio que doc-backend). Dentro de cada lado se ordenan por path y método, no por el orden de los ficheros, que
+  cambia con los `import`. Con el mismo orden se reparten el `operationId` sin `_2` y la `description` de
+  `securitySchemes.IdToken`, que también salía de la primera operación con `Authorization` aunque fuera privada. Las
+  paths siguen en el orden del código. Las alternativas de una unión (`IRamaA | IRamaB`) se convierten en el orden de
+  sus declaraciones y no en el de `tipo.types`, que va por id interno del checker: código privado, o ajeno a la API
+  (`class X extends Base<IRamaB>`), podía cambiar ese orden y con él qué homónimo alcanzado desde la unión se quedaba
+  el nombre limpio (`esquema.ts`, `claveDeOrden()`). La clave baja a los argumentos de tipo, para que `IA[] | IB[]`,
+  `ICaja<IA> | ICaja<IB>` o `Record<string, IA> | …` no empaten cuando `IA` e `IB` se llaman igual. Nuevo `clases/auto-doc/visibilidad.ts` (`esPrivada()`,
+  `compararParaNombres()`) y `spec/auto-doc/nombres-publicos.spec.ts`.
+- **Los `tags` del documento salen ordenados por nombre** (`openapi.ts`). Seguían el orden de los grupos, que es el
+  orden en que TypeScript descubre los ficheros: un `import` nuevo en código privado podía invertir dos tags públicos, y
+  el historial `public` ganaba una entrada que solo decía «tags changed».
+- **Aviso: el primer despliegue con esta versión renombra esquemas** en los servicios con homónimos: el limpio pasa al
+  público y el privado se queda con el sufijo. Entre dos homónimos públicos puede cambiar también cuál lleva el sufijo,
+  porque ahora decide el path y no el orden del código; lo mismo con el `operationId` de dos operaciones públicas cuyo
+  path da el mismo (`/a-b` y `/a_b`: el `_2` lo lleva ahora `/a_b`). Saldrá una entrada en el historial de API Docs de
+  esos servicios (también en `public`), una sola vez. El orden nuevo de los `tags` también cambia la huella de todos
+  los servicios con más de un tag.
+
+### Fixed
+
+- **Un `internal` que no es un booleano literal ya no publica la ruta.** `internal: !PRODUCCION`, un ternario o
+  `Boolean(x)` no se pueden evaluar sin ejecutar el código; antes la ruta salía como pública y sin aviso. Ahora se
+  documenta como interna y se avisa (`rutas.ts`, `leerInternal()`). Una constante (`const INTERNA = true`) se sigue
+  leyendo.
+
+## 2026.11.10 16:49 — [Jose]
+
+### Changed
+
+- **Un despliegue sin generar (`_GENERAR=false`) ya no instala dependencias ni arranca `mrpack`.** Lo único que
+  necesita es la versión desplegada de cada workspace (`version.txt` y `hash.txt`), y para eso se instalaban todas las
+  dependencias del monorepo (13,5 s) y se arrancaba `mrpack deploy` en un `docker run` (hasta 25 s). Ahora la escribe
+  el nuevo `deployment/std/bin/mantener-version` con `jq`, a partir de lo que deja «Obtener Tags», y lo llama
+  `compilar.sh`. «Instalar Dependencias» no instala nada salvo con `_MYSQL`, porque `mrpack autodoc` sí las necesita;
+  ahora espera también a «Descargas» por el `jq` de `opcion`, sin coste: los dos pasos acaban a la vez. Comparado con
+  la lógica de `getVersion()` sobre etiquetas de ejemplo, da lo mismo. Pendiente de verlo en Cloud Build.
+- **Sin versión desplegada, el despliegue sin generar falla en «Compilar».** Antes `mrpack` escribía
+  `0000.00.00-000`, una imagen que no existe, y el fallo no salía hasta que «Desplegar» agotaba sus 5 min.
+- **«Generar Contenedor» solo arranca buildkit si algún workspace tiene `nuevo.txt`** (`contenedor.sh`). En un
+  despliegue sin cambios eran unos 5 de los 7,6 s del paso.
+
+### Removed
+
+- **`mrpack deploy` con `deploy.build.enabled` a `false` termina sin hacer nada** (`src/clases/deploy.ts`). Se quita
+  la rama «Versión mantenida» de `Compilar.pack()`; `mantenerVersion()` se queda para los workspaces desactivados,
+  cuyo `hash.txt` entra en el hash de los que dependen de ellos.
+
+## 2026.11.10 16:07 — [Juan Carlos]
+
+### Changed
+
+- **`mrpack autodoc` reescrito en `clases/auto-doc/`** (antes un único `auto-doc.ts`). El programa TypeScript se crea
+  con el `tsconfig.json` del servicio; `RouteGroup` se detecta por símbolo y fichero (también subclases indirectas y de
+  `RouteGroupError`); se respeta `documentable`; las rutas `internal: true` llevan `x-internal: true`; se fusionan los
+  métodos de un mismo path y los segmentos opcionales se expanden en dos paths; `resumen`/`exact` admiten plantillas y
+  constantes; los specs literales traducen `options`, `exact`, `regex`/`regexp`, anidados y `requestBody`. Un `resumen` con
+  query string pasa a parámetros `query`; uno sin `/` inicial se documenta con ella (con aviso). Lo que no se puede leer
+  sale como aviso con `fichero:línea`. Textos en español, un tag por clase con rutas, `operationId` y `summary`.
+- **Tipos de las rutas.** Lee `contract` (`Contract<T>()` de `@mr/core-network`) de bloques y expresiones y, con el type
+  checker, convierte `post`/`response`/`query`/`headers` a JSON Schema (`esquema.ts`, `jsdoc.ts`, `contrato.ts`):
+  `components.schemas` con `$ref`, recursión por referencia, colisiones de nombre con sufijo de ruta, uniones de
+  literales y enums como `enum`, `T | null`, opcionales, índices, intersecciones, `toJSON`/`Date`, `description` desde el
+  JSDoc y `deprecated`. La respuesta correcta va en `RespuestaOK_<Nombre>` (nombrado por el tipo de `data`) y cada código
+  de `errors` apunta a `RespuestaKO`; `envelope: false` documenta una respuesta cruda. `Authorization` sale como
+  `components.securitySchemes.IdToken` (`apiKey`) y `security`; `Accept` y `Content-Type` se omiten con aviso. Un tipo sin
+  resolver es un error; lo no representable es `{}` con aviso.
+- **Documento estable.** Los literales de un `enum` y las alternativas de `anyOf` se ordenan (`tipo.types` de TypeScript
+  sale por id interno, que cambia según qué tipos se hayan resuelto antes), así que el hash no cambia sin que cambie el
+  contrato. Los enums salen en orden alfabético, no en el de declaración.
+- **Guardado en dos tablas nuevas de la base `doc`; deja de escribir `openapi`.** `openapi_service` (un registro por
+  deployment) y `openapi_version` (hash SHA-256 del documento canónico, `version`, `commit_sha`, `doc`). Una transacción
+  por deployment con `SELECT ... FOR UPDATE`; solo se crea una versión si el hash cambia. Un error en un deployment no
+  corta el resto: se registra, se reintenta una vez ante `ER_DUP_ENTRY` o `ER_LOCK_DEADLOCK`, se calculan las bajas y el
+  comando termina con código 1 si alguno no se pudo guardar. Un fallo del `rollback` se registra sin ocultar el error
+  original. Tras guardar se marcan retiradas (`removed_at`) las entradas del repositorio que ya no están en ningún
+  `mrpack.json` (nunca con `--servicio` ni con un manifest ilegible). DDL en `src/clases/auto-doc/mapping/ddl-create.sql`,
+  **a aplicar a mano en la base `doc` de test y de producción antes del primer build**.
+- `run()` es asíncrono y se espera (el código de salida refleja el fallo). Cada servicio se genera aislado; se descartan
+  los que no son servicios Node del framework meteored o están deshabilitados. Un `mrpack.json` roto no aborta a los demás.
+  `REPO_FULL_NAME` vacío (Cloud Build pasa `https://github.com/`) se trata como ausente y se prueba `git remote`.
+- Cloud Build: sustitución `_MYSQL_DOC` (instancia de la base `doc`) **obligatoria** para generar la documentación: sin
+  ella el paso no hace nada, aunque el trigger defina `_MYSQL`, que ya no se usa para esto. Solo cambia el socket: usuario
+  y contraseña siguen siendo los de `mysql-services-socket-<env>.json`. `descargas.sh` baja `cloud_sql_proxy` con
+  `_MYSQL` o `_MYSQL_DOC`; `instalar.sh`, sin generar, instala las dependencias solo si hay `_MYSQL_DOC` (las necesita
+  `mrpack autodoc`; antes miraba `_MYSQL`). El `docker run` recibe `REPO_FULL_NAME`, `COMMIT_SHA` y `MYSQL_SOCKET`. `auto-doc.sh`: `trap` que
+  mata el proxy y borra el socket también si algo falla, espera activa del socket con timeout, el fallo de `autodoc` se
+  propaga como código de salida y ya no escribe `/workspace/mysql.txt`. «Generar Documentación» tiene `allowFailure: true`
+  y `timeout: 600s` propio.
+- **Orden de envío:** `services-comun` y `@mr/core-network` antes que `@mr/cli` (con `@mr/cli` nuevo y `services-comun`
+  antiguo el consumidor no compila).
+
+### Fixed
+
+- `crearPrograma` trata `parseado.errors` como error y falla si el programa no incluye el fichero de `RouteGroup`.
+- `esquema.ts`: reentrar en un componente con nombre a través de un array (`IMenu {sub?: IMenu[]}`) ya no se confunde
+  con una recursión sin nombre.
+- Aviso si un documento serializado supera 1 MB.
+
+### Added
+
+- Opciones `--out=<dir>` (escribe `<deployment>.openapi.json` sin MySQL), `--dry-run`, `--servicio=<ws>` y `--strict`. La
+  validación de coherencia (`validar.ts`) corre siempre y un documento incoherente no se guarda.
+- Tests `node:test` en `spec/auto-doc/` (literales, rutas, OpenAPI, validación, esquema, contrato, programa, forma
+  canónica y hash, bajas, repositorio, socket, estabilidad del orden de `enum`/`anyOf`).
+
+## 2026.11.10 14:59 — [Jose]
+
+### Changed
+
+- **La caché de capas del contenedor se exporta en zstd** (`contenedor.sh`, `--cache-to … compression=zstd`). Con
+  `mode=max`, buildkit comprime todas las capas de las etapas intermedias. En gzip, eso le llevó 29 de los 35 s de
+  la exportación de la caché del frontend en el build `1d2685b1`, más que construir la imagen. La imagen que se
+  despliega sigue en gzip. Pendiente de verlo en Cloud Build.
+
+## 2026.11.10 14:38 — [Jose]
+
+### Removed
+
+- **`mrpack init` borra `.run/cli =_ PUSH.run.xml`, `manifest/workspace/` y `src/mrlang/` de `@mr/cli`**
+  (`deleteFiles()`, en `src/clases/init.ts`), como ya hacía con `develop =_ Ejecutar (Todos).run.xml`. Son restos de
+  versiones antiguas (`manifest/workspace/` pasó a `src/clases/manifest/workspace/` y `mrlang` a `@mr/core-i18n`;
+  nadie los importa) que hay copias locales que siguen restaurando en cada envío del framework.
+
+## 2026.11.10 12:39 — [Jose]
+
+### Changed
+
+- **«Clonar Repositorios» ya no espera a «Labels»** (`build.yaml`, `clone.sh`). Solo lo necesitaba para leer la
+  etiqueta `k8s-github` de `labels.json`; ahora la lee `etiquetaProyecto()` (`aliases.sh`) con `gcloud`, y
+  `bucketCache()` pasa a usarla. «Iniciar Kustomize» acaba así antes que la instalación de dependencias (en el último
+  despliegue sin cambios, «Compilar» la esperaba hasta el segundo 38 con la instalación terminada en el 33). Ningún
+  `init.sh` de los repos de kustomize (seis organizaciones, `master` y `develop`) ni nada de «Compilar» en adelante
+  usa lo que escribe «Labels». Sin organización (ni `_K8S_GITHUB` ni etiqueta), falla con el motivo en vez de intentar
+  clonar `null/kustomize`. Pendiente de verlo en Cloud Build.
+- **El diagrama de dependencias del README pasa a ser una tabla** con el `waitFor` de cada paso: se había quedado
+  desfasado.
+
+---
+
+## 2026.11.10 11:01 — [Jose]
+
+### Changed
+
+- **«Instalar Dependencias» sin `enableHardenedMode` y con `--immutable`** (`instalar.sh`). El modo endurecido vuelve
+  a comprobar todo el `yarn.lock` contra el registro de npm en cada instalación: 10 de los ~22 s del paso en Cloud
+  Build (en local, 12,2 s con él y 0,7 s sin él con el lockfile sin cambios). Sigue activo en local. `--immutable`
+  hace fallar el build si el `yarn.lock` no cuadra con los `package.json`, que antes no se comprobaba.
+
+### Fixed
+
+- **Pasos que acababan bien sin hacer nada.** «Labels» falla si no hay ningún cluster del entorno y sí workspaces
+  que desplegar (antes «Autorizar», «Kustomizar» y «Desplegar» no recorrían nada y el build acababa en `SUCCESS`).
+  «Kustomizar» falla si un workspace no tiene `version.txt` (antes desplegaba la versión `0000.00.00` y el fallo se
+  veía en «Desplegar», tras 5 min esperando a pods sin imagen). Y avisa en el log cuando un workspace `k8s` no tiene
+  directorio en el repo de kustomize, en vez de no desplegarlo sin decir nada: es aviso y no error porque hay
+  workspaces así a propósito: en `master` y `develop` de los repos de kustomize no están `esqui-assoc-resort`
+  (svc-esqui), `proxy` (svc-proxy), `widget-migrate` (web-widget, solo en `services-deprecated`) ni la entrada
+  `tiempo-web/panel-usuarios-intranet-api` de `panel-usuarios-api` (svc-panel-usuarios), y todos son `k8s` y
+  están activos.
+- **Bucles sin tope en «Autorizar» y «Desautorizar».** Si `gcloud` no devolvía la lista de IPs autorizadas, seguían
+  hasta el timeout de 30 min del build. Ahora fallan tras 20 intentos. Probado con `gcloud` simulado: el script de
+  antes seguía en bucle y el nuevo falla con el mensaje; con la IP ya autorizada sigue funcionando igual.
+
+---
+
+## 2026.11.10 09:54 — [Jose]
+
+### Changed
+
+- **«Descargar Cache Dependencias» arranca justo después de la guarda** (`build.yaml`, `cache_get.sh`). Esperaba a
+  «Labels» solo para leer el bucket de `labels.json`; ahora lo lee `bucketCache()` (`aliases.sh`) con `gcloud`:
+  `_K8S_CACHE` o la etiqueta `k8s-cache` del proyecto, como ya hacía «Descargas», que pasa a usarla también, igual
+  que `cache_set.sh`. La caché y la instalación corren en paralelo con «Descargas» y «Labels». En el último
+  despliegue sin cambios, la instalación acababa a los 56 s y «Compilar» la esperaba; ahora debería acabar hacia los
+  42 s, y «Compilar» pasaría a esperar a «Iniciar Kustomize» (34 s). Sin bucket, o si `gcloud` falla, sigue sin
+  caché en vez de intentar `gs://null`. Pendiente de verlo en Cloud Build.
+
+---
+
+## 2026.11.9 17:50 — [Jose]
+
+### Changed
+
+- **Opciones del despliegue sin ficheros** (`deployment/std/bin/opcion`). `_DESPLEGAR`, `_GENERAR` y
+  `_GENERAR_FORZAR` ya no se guardan en `DESPLEGAR.txt`, `GENERAR.txt` y `.env` desde «Descargas»: cada paso las
+  calcula con `opcion` (`if opcion desplegar; then`), con la misma regla de antes (manda el trigger si vale
+  `true`/`1`/`false`/`0`; si no, el `mrpack.json` raíz). Un fichero que faltaba contaba como «no» sin avisar.
+  «Descargas» las resuelve igualmente para dejarlas en el log y fallar ahí si alguna no se puede resolver. Es un
+  script de `bin/` para que funcione en los `bash -c` de `xargs`. Comprobado que da lo mismo que la lógica anterior
+  en 72 combinaciones de trigger y `mrpack.json`.
+
+### Removed
+
+- **`_DESPLEGAR_LATEST` en el pipeline** (`contenedor.sh`). No cambiaba nada: solo se leía al desplegar sin imagen
+  nueva, y cada imagen recibe a la vez las etiquetas `<entorno>` y `deployed_<entorno>`, así que las dos opciones
+  daban la misma. Su única rama volvía a etiquetar como `deployed-<entorno>`, con guion, que `tags.sh` no lee. La
+  sustitución sigue en `build.yaml` porque casi todos los triggers la definen. `mrpack` la recibía por el `.env`
+  (con `true`, así que comparaba el hash con `tags.json`) y ahora usa `deploy.run.latest` del `mrpack.json`
+  (`false`, `deployed.json`): es la misma imagen, por lo mismo de antes.
+
+### Changed
+
+- **`compilar.sh` pasa `_GENERAR` y `_GENERAR_FORZAR` al `docker run` de `mrpack`.** Hasta ahora le llegaban por el
+  `.env` de la raíz, que `mrpack` carga con `dotenv/config` (`clases/manifest/root/index.ts`). Sin ese fichero, el
+  contenedor no las heredaría. Probado en Cloud Build con `_GENERAR_FORZAR=true` (despliegue `adef1496`): `next
+  build` en el frontend e imagen nueva de los cuatro servicios; y sin forzar (`07917a95`): «Sin cambios» y ninguna
+  imagen nueva.
+
+---
+
+## 2026.11.9 15:10 — [Jose]
+
+### Changed
+
+- **«Compilar» no lanza `next build` si el frontend no ha cambiado** (`clases/workspace/compilar.ts`,
+  `clases/workspace/build-id.ts`). El `BUILD_ID` de los proyectos Next sale del `generateBuildId` del
+  `next.config`, que hashea las fuentes, así que se calcula antes de compilar (cargando la configuración con el
+  cargador de Next) y con él el hash de la imagen. Si coincide con el desplegado, se escribe la versión de siempre
+  y no se compila; si no, se compila y se comprueba que el `BUILD_ID` real es el previsto (si no lo es, avisa y ese
+  proyecto se compila siempre, como antes). Siempre se compila con `_GENERAR_FORZAR`, sin versión desplegada o sin
+  `generateBuildId`. El formato del hash no cambia: no regenera imágenes. `checkVersionService()` se parte en
+  `hashServicio()`, `esNuevaVersion()` y `registrarVersion()`, y el hash ya no añade las rutas de `build.deps` a la
+  lista que recibe. Probado en una copia de `svc-status` con `mrpack deploy --env=produccion`: sin versión
+  desplegada compila (hash `9c3cf90e`, el mismo que con el código anterior); con ese hash desplegado se omite
+  (32 s → 6 s); tocando una fuente vuelve a compilar. Pruebas en `spec/workspace/build-id.spec.ts`. Visto en Cloud
+  Build (despliegue `bfd53ba7` de `svc-status`): «Sin cambios» en `status-frontend`, sin aviso, «Compilar» de 90 s
+  a 25 s y sin imagen nueva del frontend. En el log solo sale «Sin cambios»; la previsión tarda unos 4 s.
+
+---
+
+## 2026.11.9 14:10 — [Jose]
+
+### Changed
+
+- **Herramientas del pipeline con versión y sha256 fijos, cacheadas en GCS** (`deployment/std/descargas.sh`). Antes se
+  bajaban de GitHub en cada build, y `yq` de `releases/latest`. Ahora se buscan primero en `gs://<bucket>/herramientas/`
+  (`_K8S_CACHE` o la etiqueta `k8s-cache` del proyecto, el bucket de la caché de Yarn); si no están, se bajan de la URL
+  oficial con reintentos y se suben ahí. Siempre se comprueba el sha256, y si no coincide el build falla. El paso
+  «Descargas» pasa a la imagen `gcloud` para leer y escribir en GCS. Versiones nuevas: `jq` 1.7.1 → 1.8.2 (de
+  `jqlang/jq`; la URL antigua de `stedolan/jq` era una redirección), `yq` latest → v4.54.2 (la v4.54.3 tenía horas),
+  `kustomize` v5.8.1 → v5.8.3 y `cloud-sql-proxy` v2.22.0 → v2.27.0, con los sha256 oficiales comprobados. Probado en
+  la imagen `gcloud` del pipeline: sin bucket baja las cuatro de la URL oficial y funcionan; con un bucket sin acceso
+  avisa y sigue; con un sha256 equivocado falla. Las expresiones `jq` del pipeline dan la misma salida con 1.7.1 y
+  1.8.2 sobre ficheros reales. Pendiente de ver en un build real la lectura desde la caché.
+
+---
+
+## 2026.11.9 13:40 — [Jose]
+
+### Changed
+
+- **Una sola versión de Node, fija, para local, CI y producción.** `mrpack init` escribe en `.node-version` la versión
+  mayor de `NODE_VERSION` (`clases/init/node.ts`, hoy `26`) en vez de `lts-latest`. El pipeline la lee
+  (`versionNode()`/`imagenNode()` en `deployment/std/aliases.sh`) y la usa en «Instalar Dependencias» (ahora
+  `instalar.sh`, en `docker run`, porque la imagen de un paso de `build.yaml` es fija), «Compilar», «Generar
+  Documentación» y como imagen base de los contenedores, salvo que el workspace fije la suya. Un trigger puede
+  usar otra con la sustitución opcional `_NODE_VERSION`. Entra en el hash de la imagen, así que cambiarla regenera
+  las imágenes. `lts-latest` o un `.node-version` ausente siguen dando `node:lts-alpine` y no cambian el hash,
+  para que los proyectos que aún no han ejecutado `mrpack init` sigan igual. Antes `node:lts-alpine` saltaba de
+  versión mayor cada octubre sin avisar (así se rompió el pipeline el 2026-10-29). Comprobado: la resolución de la
+  versión en seis casos (fichero, `lts-latest`, sin fichero, sustitución del trigger, prefijo `v` con espacios,
+  versión completa) y que `node:26-alpine` existe para amd64 y arm64 con la misma 26.13.0 que corre hoy.
+- `build.yaml` declara las sustituciones opcionales `_NODE_VERSION` y `_GUARDA_ESPERA_MAX`.
+
+---
+
+## 2026.11.9 13:05 — [Jose]
+
+### Added
+
+- **Guarda contra builds concurrentes del mismo trigger** (`deployment/std/guarda.sh`, primer paso de `build.yaml`).
+  Cloud Build no serializa los builds de un trigger: con dos a la vez, el más antiguo podía terminar después y dejar
+  desplegado lo suyo (el 2026-11-09 hubo dos builds del mismo commit por un webhook de GitHub retrasado). Gana el
+  último build creado: los anteriores del mismo trigger que aún no han hecho nada (en `QUEUED` o solo en su `Guarda`)
+  se cancelan, y a los que ya trabajan se les espera, con tope (`_GUARDA_ESPERA_MAX`, 900 s, y `timeout` de 1000 s en
+  el paso); al agotarlo el build falla en la guarda, sin efectos secundarios. No salta los repetidos del mismo commit
+  (es como se redespliega tras cambiar una credencial). Si la primera consulta falla, avisa y sigue; dentro de la
+  espera reintenta cuatro veces y luego falla. Ordena por creación del build, no por commit: un webhook retrasado de
+  un commit viejo sigue pudiendo dejarlo desplegado. Revisado en modo adversarial por opus-planner (no por Fable),
+  que encontró que la primera versión, que solo esperaba, se comía el `timeout` del build con builds anteriores
+  atascados en la cola y podía acabar desplegando la versión vieja. Probado contra Cloud Build (build real sin
+  anteriores, ID inexistente, formato de los pasos en `describe`) y con un `gcloud` simulado en los cinco casos: build
+  anterior en cola (se cancela), solo en su guarda (se cancela), trabajando (se espera hasta el tope y falla), API
+  caída en la espera (reintenta y falla) y sin permisos (avisa y sigue). En las pruebas apareció que el `WARNING` que
+  `gcloud` escribe por stderr sin resultados, mezclado con la salida, se tomaba por un build en marcha: stderr va
+  aparte. **Pendiente de ver en un build real de Cloud Build antes de enviar.**
+
+---
+
+## 2026.11.9 12:18 — [Jose]
+
+### Changed
+
+- **`contenedor.sh` construye con `BUILDX_GIT_INFO=0`.** Con los workers `regular` de Cloud Build, la imagen
+  `gcr.io/cloud-builders/docker` pasa a Docker 29 con buildx 0.38 y sin `git`, y buildx avisaba en cada build con «git
+  was not found» al intentar apuntar el commit en los metadatos de procedencia de la imagen. No se pierde nada: el
+  commit ya va en la imagen con `DD_GIT_COMMIT_SHA`.
+
+---
+
+## 2026.11.9 11:39 — [Jose]
+
+### Fixed
+
+- **La stage `app` reutiliza sus capas entre commits.** `ARG DD_GIT_REPOSITORY_URL` y `ARG DD_GIT_COMMIT_SHA` estaban al
+  principio de la stage, y un `ARG` declarado entra como variable de entorno en todos los `RUN` posteriores: como el
+  SHA cambia en cada commit, el `apk add`, el corepack y el `corepack install` se ejecutaban en cada build (visto en
+  el despliegue de svc-status del 2026-11-09: ni una capa `CACHED` en `app`; en arm64, ~30 s emulados). En
+  `deployment/std/Dockerfile` y `Dockerfile-next` van ahora al final, después del último `RUN`. Comprobado en local:
+  con otro SHA todos los `RUN` de `app` salen `CACHED` y la imagen lleva el SHA nuevo. Los `Dockerfile` propios tienen
+  el mismo problema si declaran esos `ARG` arriba; `mrpack init` no los mueve.
+
+---
+
+## 2026.11.9 11:27 — [Jose]
+
+### Fixed
+
+- **Cambiar un Dockerfile estándar vuelve a regenerar las imágenes.** El hash del contenedor (`workspace/compilar.ts`)
+  incluía `framework/services-comun/despliegue/Dockerfile` y `Dockerfile-next`, que se movieron a `deployment/std/` el
+  2024-11-19 (`244d1b75`). Una ruta que no existe no aporta nada al hash, sin error, así que desde entonces los cambios
+  de esos Dockerfile solo llegaban a cada imagen con el siguiente cambio de código de su workspace. **Al recibir esta
+  versión, cada proyecto regenerará en su siguiente despliegue todas las imágenes Node que usan los Dockerfile
+  estándar** (y así reciben de una vez el Yarn preparado, `bufferutil` nativo y la caché del install). La referencia a
+  `Dockerfile-php` se deja: ese fichero no ha existido nunca y los workspaces PHP construyen con el suyo.
+
+---
+
+## 2026.11.9 11:08 — [Jose]
+
+### Changed
+
+- **El pipeline ya no prepara `yarn@latest`.** El paso «Instalar Dependencias» de `deployment/std/build.yaml` y los
+  `docker run` de `compilar.sh` y `auto-doc.sh` hacían `corepack prepare yarn@latest --activate` antes de llamar a
+  Yarn, que de todas formas ejecuta la versión de `packageManager`: cuando no coincidían se descargaban dos Yarn en
+  cada paso (en svc-ads, el 2026-11-05, `latest` 4.18.1 y luego la fijada 4.18.0, en «Instalar Dependencias»,
+  «Compilar» y cada etapa de la imagen). Ahora `corepack install`, en el directorio del proyecto, como en los
+  Dockerfile. Probado el comando en un `node:lts-alpine`: una sola descarga, la fijada.
+
+### Fixed
+
+- **Cambiar `deploy.arch` regenera la imagen.** El hash que decide si se genera el contenedor
+  (`checkVersionService()` en `workspace/compilar.ts`) no incluía las plataformas, así que añadir `linux/arm64` a un
+  workspace no construía nada hasta el siguiente cambio de código (pasó al probarlo en status-backend). Ahora entran
+  en el hash, salvo que sean solo `linux/amd64`, lo de siempre: así las imágenes que ya existen no se regeneran todas
+  de golpe al actualizar el framework.
+
+---
+
+## 2026.11.9 11:04 — [Jose]
+
+### Fixed
+
+- **La caché de capas vuelve a saltarse el install.** El paso Compilar escribe una versión nueva en el `package.json`
+  del workspace cada vez que se genera la imagen, y la stage del install lo copiaba tal cual: esa capa cambiaba en
+  cada build y no se reutilizaba nunca (en los logs de svc-ads y svc-vienty, el `focus` arm64 se ejecutaba en todos
+  los builds, de 68 a 228 s, sin cambios de dependencias). `deployment/std/Dockerfile` y `Dockerfile-next` tienen una
+  stage `manifiesto`, nativa, que le quita la `version` antes del install; la imagen final conserva la real. Medido
+  en local: segundo build con otra versión, de 59 s a 1 s.
+
+### Changed
+
+- **El install ya no se emula para otra arquitectura.** La stage `build` se parte en `deps`, en la plataforma del
+  builder (`FROM --platform=$BUILDPLATFORM`), que resuelve, descarga y enlaza para la arquitectura destino
+  (`supportedArchitectures` con `TARGETARCH`, sin scripts), y `build`, en la destino, que repite el `focus` y solo
+  ejecuta los scripts de build (compilar `bufferutil`). En frío, con amd64 emulado en un Mac ARM: de 80 s a 34 s. Las
+  imágenes salen equivalentes (mismos zips, dependencias de producción cargando, `bufferutil` nativo en las dos
+  arquitecturas, `.yarnrc.yml` intacto) y `next start` arranca en la de Next. Solo probado de arm64 a amd64; en Cloud
+  Build es al revés. `mrpack init` no lleva esta estructura a los `Dockerfile` propios (se documenta en el README).
+
+---
+
+## 2026.11.9 09:40 — [Jose]
+
+### Fixed
+
+- **`bufferutil` nativo en las imágenes arm64.** Su binario precompilado para `linux-arm64` pide `ld-linux-aarch64.so.1`,
+  el cargador de glibc, que Alpine no tiene; la instalación intentaba compilarlo, fallaba por falta de compilador y
+  `ws` se quedaba con la versión en JavaScript sin que nadie se enterara. La stage `build` de
+  `deployment/std/Dockerfile` y `Dockerfile-next` instala `build-base` y `python3`, y compila contra musl. La imagen
+  final no crece. `mrpack init` añade lo mismo a la etapa que instala las dependencias de los `Dockerfile` propios
+  de Alpine (si es la final, no lo añade y avisa). Comprobado construyendo `status-backend` en local: arm64 carga el
+  `.node` compilado, amd64 el precompilado.
+- **`deployment/README.md` corregido.** La entrada anterior decía que con la 4.2.0 bastaba en arm64 y que no hacía falta
+  compilador, a partir de un `require("bufferutil")` que devuelve `mask` y `unmask` también desde el fallback en
+  JavaScript. Lo cierto está medido en la tabla de la sección «Arquitecturas».
+
+---
+
+## 2026.11.9 09:24 — [Jose]
+
+### Fixed
+
+- **Un update ya no deja desordenadas las claves del `package.json` del framework.** Desde la 2026.11.9+2 el update
+  conserva la mezcla a tres bandas del `package.json`, pero esa mezcla ordena alfabéticamente todas las claves
+  (`normalizarJSON()` en `paquete/file.ts`), y en `exports` el orden decide: en `@mr/core-dev` quedaba `default`
+  delante de `node` y esbuild avisaba de que la condición `node` no se usaría nunca. Antes no se notaba porque la mezcla
+  se tiraba. `packageJsonTrasUpdate()` devuelve ahora las claves al orden del `package.json` remoto, a todos los
+  niveles; lo que solo está en local va detrás, y `default` siempre la última. Dos pruebas nuevas, vistas fallar.
+
+---
+
+## 2026.11.9 09:17 — [Jose]
+
+### Changed
+
+- **`deployment/README.md`: `bufferutil` en arm64.** Ya no dice que la imagen arm64 sale sin el acelerador nativo de
+  `ws`: eso era hasta la 4.1.0, que no traía binario para `linux-arm64` e intentaba compilarlo sin compilador. La
+  4.2.0 lo trae, y el binario de glibc carga en Alpine porque musl trata `libc.so.6` como un alias de sí mismo
+  (comprobado en un pod amd64 de producción; en arm64, no). No hace falta meter compilador en la imagen.
+
+---
+
+## 2026.11.9 08:49 — [Jose]
+
+### Changed
+
+- **`mrpack init` borra `@mr/cli/.run/develop =_ Ejecutar (Todos).run.xml`**, junto a los otros restos de versiones
+  antiguas (`status.json`, `bin/mrdev.js`). Es una configuración de ejecución vieja que algunos IDE siguen restaurando
+  al enviar `@mr/cli`, y volvió así en la 2026.11.9+1.
+
+---
+
+## 2026.11.9 08:15 — [Jose]
+
+### Fixed
+
+- **Los pods ya no descargan Yarn al arrancar.** Corepack ejecuta la versión exacta del `packageManager` raíz y, si no
+  la tiene en su caché, la descarga en el primer `yarn` de cada contenedor, aunque `yarnPath` apunte a
+  `.yarn/releases`. Las dos etapas de `deployment/std/Dockerfile` y `Dockerfile-next` preparaban `yarn@latest`, que
+  solo coincide con la fijada por casualidad y además se congelaba en la caché de capas del registro. Ahora preparan
+  la de `packageManager` con `corepack install` detrás del `COPY ./package.json`; la etapa `app` guarda la caché de
+  corepack en una ruta fija (`COREPACK_HOME=/usr/local/share/corepack`), para que valga con cualquier usuario o
+  `HOME` en el pod, y comprueba con `COREPACK_ENABLE_NETWORK=0 yarn --version` que arrancar Yarn no necesita red: si
+  la necesitara, falla el build y no el pod.
+- **`mrpack init` deja igual los `Dockerfile` propios de los workspaces Node** (`clases/init/dockerfile.ts`). En cada
+  etapa que usa Yarn sustituye `corepack prepare yarn@latest --activate` (o lo añade, si no había corepack) por
+  `npm install -g corepack && corepack enable` y pone `corepack install` detrás del último `COPY` del `package.json`
+  raíz; en la última etapa añade también `COREPACK_HOME` y la comprobación sin red. Una etapa que habilita corepack
+  de otra forma, o que no copia el `package.json` raíz, no se toca y sale un aviso en rojo. Probado en seco sobre
+  los 8 `Dockerfile` propios de svc-alertas, svc-localizacion, svc-newsletter, svc-weather y web-widget: los
+  parchea todos sin avisos, y una segunda pasada no cambia nada.
+- **El envío reconoce la cabecera de autoría de un fichero con saltos CRLF.** El patrón solo admitía `\n`, así que a un
+  `.ts` con CRLF no le quitaba la cabecera vieja y le ponía la nueva encima (le pasó a `@mr/core-i18n` 2026.11.7+1,
+  enviado desde bixloader), y la versión «Anterior» salía con un `\r` pegado. Ahora se admite `\r\n`, y la cabecera
+  nueva se escribe con el mismo salto de línea que el resto del fichero. La lógica sale de `paquete/file.ts` a
+  `paquete/autoria.ts` (`stripAutoria` se sigue importando desde `file.ts`).
+- **Un update de framework ya no pisa los cambios locales del `package.json` del paquete.** Se mezclaba a tres bandas
+  como cualquier fichero, pero justo después `actualizarVersion()` (`paquete/root.ts`) lo sobrescribía con el
+  remoto: así se perdió el script `test` de `@mr/cli` al traer la 2026.11.9+1. Ahora se conserva la mezcla con la
+  `version` de la nueva (`paquete/package-json.ts`); si la mezcla tiene conflictos se queda el remoto, como antes,
+  para no dejar un `package.json` roto, y el conflicto sale en el log del update.
+
+### Added
+
+- **Pruebas en `@mr/cli`**: `yarn workspace @mr/cli test` (`node:test`, `tsconfig.spec.json`, `spec/`), con las del
+  parche de los `Dockerfile` en `spec/init/dockerfile.spec.ts`. Una de ellas comprueba que los `Dockerfile` de
+  `deployment/std` ya tienen la forma que deja el parche, para que no se separen. También las del bloque de autoría
+  con LF y CRLF (`spec/paquete/autoria.spec.ts`) y las del `package.json` tras un update
+  (`spec/paquete/package-json.spec.ts`).
+
+---
+
 ## 2026.11.2 12:56 — [Jose]
 
 ### Fixed

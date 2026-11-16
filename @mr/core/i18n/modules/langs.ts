@@ -1,10 +1,10 @@
 /**
- * Editor: miguel
- * Fecha: Thu, 24 Sep 2026 12:33:20 GMT
- * Hash: c70357f8b79c06a95e4a5da159618869
- * Versión: 2026.9.24+2-miguel
- * Anterior: 2026.9.24+1-miguel
- * Proyecto: https://github.com/alpred/meteored-web-www.git
+ * Editor: Isabel Martínez
+ * Fecha: Thu, 12 Nov 2026 11:33:48 GMT
+ * Hash: 68a534f220a886a3e007ab39e26469b3
+ * Versión: 2026.11.12+1-isabelmartinez
+ * Anterior: 2026.9.24+2-miguel
+ * Proyecto: https://github.com/alpred/meteored-svc-translation.git
  */
 
 /**
@@ -49,7 +49,7 @@ export type IdiomaLargo =
     | "nl-NL"
     | "pt-PT" | "pt-BR"
     | "ru-RU"
-    | "sr-Cyrl";
+    | "sr-Cyrl" | "sr-Latn";
 
 /**
  * Código de idioma soportado por el sistema: corto (`"es"`) o largo (`"es-ES"`).
@@ -78,7 +78,7 @@ export const soportados: Idioma[] = [
     "nl-NL",
     "pt-PT", "pt-BR",
     "ru-RU",
-    "sr-Cyrl"
+    "sr-Latn", "sr-Cyrl"
 ];
 
 /**

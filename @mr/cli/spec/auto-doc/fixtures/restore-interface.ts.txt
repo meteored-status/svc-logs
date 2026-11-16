@@ -1,0 +1,200 @@
+/**
+ * Contrato de los endpoints de Restore Credentials de Android (BAK-1802, el «Zero-Tap Sign-In» de Google Play),
+ * `/app/user/restore/*` de `panel-usuarios-api`.
+ *
+ * Los tipos `*JSON` son copias de la forma JSON de WebAuthn Level 3, con uniones de literales, para que el
+ * contrato no dependa de ninguna librería. Los opcionales lo son donde también lo son en `@simplewebauthn/server`.
+ */
+
+/**
+ * Cadena base64url sin relleno (RFC 4648 §5), tal como la usa WebAuthn en su forma JSON.
+ */
+export type TRestoreBase64URL = string;
+
+/**
+ * Descriptor de una credencial dentro de las opciones de WebAuthn.
+ *
+ * @property id - Id de la credencial.
+ * @property type - Siempre `public-key`.
+ * @property transports - Transportes con los que se puede usar.
+ */
+export interface IRestoreCredentialDescriptorJSON {
+    id: TRestoreBase64URL;
+    type: "public-key";
+    transports?: string[];
+}
+
+/**
+ * Opciones para crear la credencial (`PublicKeyCredentialCreationOptionsJSON`).
+ *
+ * @property rp - Parte confiante: dominio (`id`) y nombre visible.
+ * @property user - Usuario de WebAuthn; `id` es el `user handle` en base64url.
+ * @property challenge - Reto de un solo uso, 32 bytes en base64url.
+ * @property pubKeyCredParams - Algoritmos COSE aceptados.
+ * @property timeout - Milisegundos que tiene el usuario para completar el registro.
+ * @property excludeCredentials - Credenciales que no se deben volver a registrar.
+ * @property authenticatorSelection - Tipo de autenticador admitido.
+ * @property attestation - Tipo de atestación pedida (siempre `none`).
+ * @property hints - Pistas de la interfaz para el navegador.
+ * @property extensions - Extensiones de cliente.
+ */
+export interface IRestoreCreationOptionsJSON {
+    rp: {id?: string; name: string};
+    user: {id: TRestoreBase64URL; name: string; displayName: string};
+    challenge: TRestoreBase64URL;
+    pubKeyCredParams: {type: "public-key"; alg: number}[];
+    timeout?: number;
+    excludeCredentials?: IRestoreCredentialDescriptorJSON[];
+    authenticatorSelection?: {
+        authenticatorAttachment?: "platform"|"cross-platform";
+        residentKey?: "discouraged"|"preferred"|"required";
+        requireResidentKey?: boolean;
+        userVerification?: "discouraged"|"preferred"|"required";
+    };
+    attestation?: "none"|"indirect"|"direct"|"enterprise";
+    hints?: string[];
+    extensions?: {credProps?: boolean};
+}
+
+/**
+ * Opciones para usar la credencial (`PublicKeyCredentialRequestOptionsJSON`).
+ *
+ * @property challenge - Reto de un solo uso, 32 bytes en base64url.
+ * @property timeout - Milisegundos que tiene el usuario para responder.
+ * @property rpId - Dominio de la parte confiante.
+ * @property allowCredentials - Credenciales admitidas; vacío en la restauración (sin usuario conocido).
+ * @property userVerification - Verificación de usuario pedida.
+ * @property hints - Pistas de la interfaz para el navegador.
+ * @property extensions - Extensiones de cliente.
+ */
+export interface IRestoreRequestOptionsJSON {
+    challenge: TRestoreBase64URL;
+    timeout?: number;
+    rpId?: string;
+    allowCredentials?: IRestoreCredentialDescriptorJSON[];
+    userVerification?: "discouraged"|"preferred"|"required";
+    hints?: string[];
+    extensions?: {credProps?: boolean};
+}
+
+/**
+ * Respuesta de la creación de la credencial (`RegistrationResponseJSON`).
+ *
+ * @property id - Id de la credencial; igual que `rawId`.
+ * @property rawId - Id de la credencial.
+ * @property type - Siempre `public-key`.
+ * @property response - Objeto de atestación y datos del cliente.
+ * @property authenticatorAttachment - Tipo de autenticador que la creó.
+ * @property clientExtensionResults - Resultado de las extensiones de cliente.
+ */
+export interface IRestoreRegistrationResponseJSON {
+    id: TRestoreBase64URL;
+    rawId: TRestoreBase64URL;
+    type: "public-key";
+    response: {
+        clientDataJSON: TRestoreBase64URL;
+        attestationObject: TRestoreBase64URL;
+        authenticatorData?: TRestoreBase64URL;
+        transports?: string[];
+        publicKeyAlgorithm?: number;
+        publicKey?: TRestoreBase64URL;
+    };
+    authenticatorAttachment?: "platform"|"cross-platform";
+    clientExtensionResults: {credProps?: {rk?: boolean}};
+}
+
+/**
+ * Respuesta del uso de la credencial (`AuthenticationResponseJSON`).
+ *
+ * @property id - Id de la credencial; igual que `rawId`.
+ * @property rawId - Id de la credencial.
+ * @property type - Siempre `public-key`.
+ * @property response - Datos del cliente, del autenticador, firma y `user handle`.
+ * @property authenticatorAttachment - Tipo de autenticador que firmó.
+ * @property clientExtensionResults - Resultado de las extensiones de cliente.
+ */
+export interface IRestoreAuthenticationResponseJSON {
+    id: TRestoreBase64URL;
+    rawId: TRestoreBase64URL;
+    type: "public-key";
+    response: {
+        clientDataJSON: TRestoreBase64URL;
+        authenticatorData: TRestoreBase64URL;
+        signature: TRestoreBase64URL;
+        userHandle?: TRestoreBase64URL;
+    };
+    authenticatorAttachment?: "platform"|"cross-platform";
+    clientExtensionResults: {credProps?: {rk?: boolean}};
+}
+
+/**
+ * `POST /app/user/restore/options` (ID token de Firebase en `Authorization`, sin cuerpo).
+ *
+ * @property options - Opciones para `createCredential`.
+ */
+export interface IRestoreOptionsOUT {
+    options: IRestoreCreationOptionsJSON;
+}
+
+/**
+ * `POST /app/user/restore/register` (ID token de Firebase en `Authorization`).
+ *
+ * @property credential - Respuesta de `createCredential`.
+ */
+export interface IRestoreRegisterIN {
+    credential: IRestoreRegistrationResponseJSON;
+}
+
+/**
+ * Salida de `POST /app/user/restore/register`.
+ *
+ * @property id - Id de la credencial guardada.
+ */
+export interface IRestoreRegisterOUT {
+    id: TRestoreBase64URL;
+}
+
+/**
+ * Salida de `POST /app/user/restore/challenge` (pública, sin cuerpo).
+ *
+ * @property options - Opciones para `getCredential`.
+ */
+export interface IRestoreChallengeOUT {
+    options: IRestoreRequestOptionsJSON;
+}
+
+/**
+ * `POST /app/user/restore/verify` (pública).
+ *
+ * @property credential - Respuesta de `getCredential`; `response.userHandle` es obligatorio.
+ */
+export interface IRestoreVerifyIN {
+    credential: IRestoreAuthenticationResponseJSON;
+}
+
+/**
+ * Salida de `POST /app/user/restore/verify`.
+ *
+ * @property token - Custom token de Firebase para `signInWithCustomToken`.
+ */
+export interface IRestoreVerifyOUT {
+    token: string;
+}
+
+/**
+ * `POST /app/user/restore/revoke` (ID token de Firebase en `Authorization`).
+ *
+ * @property id - Id de la credencial a revocar; sin él se revocan todas las del usuario.
+ */
+export interface IRestoreRevokeIN {
+    id?: TRestoreBase64URL;
+}
+
+/**
+ * Salida de `POST /app/user/restore/revoke`.
+ *
+ * @property revoked - Número de credenciales borradas (0 si no había ninguna).
+ */
+export interface IRestoreRevokeOUT {
+    revoked: number;
+}

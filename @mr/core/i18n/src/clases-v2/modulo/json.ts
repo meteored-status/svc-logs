@@ -1,10 +1,10 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Mon, 28 Sep 2026 06:38:15 GMT
- * Hash: 13bc9a82e66f8926056f03bb17d2152b
- * Versión: 2026.9.28+1-juancmartinez
- * Anterior: 2026.9.23+1-bixus
- * Proyecto: git@github.com:alpred/meteored-svc-panel-frontend.git
+ * Editor: Bixus
+ * Fecha: Fri, 06 Nov 2026 12:55:17 GMT
+ * Hash: 962efae332e15400c20d740c9897426c
+ * Versión: 2026.11.6+1-bixus
+ * Anterior: 2026.9.28+1-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {isFile, readJSON} from "@mr/core-cli/fs";
@@ -286,15 +286,13 @@ export class ModuloJSON extends Modulo<IModuloConfig> {
                     args.push(`params: Partial<${pascalCase(translation.id)}Params>`);
                 }
 
+                // El argumento se decide por su **nombre** (lo que va antes de `:`), no buscando la palabra en
+                // toda la firma: con `includes()`, un id cuyo PascalCase contiene «key» o «idx»
+                // (`sankey_aria` → `params: Partial<SankeyAriaParams>`) emitía `sankey_aria(key)`, que revienta
+                // al usarse con «key is not defined» y que `tsc` no ve porque el index.ts es generado.
                 indexLines.push(`    public ${translation.id}(${args.join(', ')}) {return ${translation.id}(${args.map(arg => {
-                    if (arg.includes('key')) {
-                        return `key`;
-                    } else if (arg.includes('idx')) {
-                        return `idx`;
-                    } else if (arg.includes('params')) {
-                        return `params`;
-                    }
-                    return '';
+                    const nombre = arg.split(':')[0].trim();
+                    return nombre === 'key' || nombre === 'idx' || nombre === 'params' ? nombre : '';
                 }).join(', ')})};`);
 
             }

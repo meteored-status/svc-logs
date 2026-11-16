@@ -1,9 +1,9 @@
 /**
  * Editor: Chema
- * Fecha: Tue, 20 Oct 2026 06:31:15 GMT
- * Hash: 9337c705854928f163015a3786939b78
- * Versión: 2026.10.20+1-chema
- * Anterior: 2026.9.23+3-bixus
+ * Fecha: Wed, 04 Nov 2026 07:49:02 GMT
+ * Hash: b0c89df335f35ecf3270ef5d772b42e4
+ * Versión: 2026.11.4+2-chema
+ * Anterior: 2026.11.4+1-chema
  * Proyecto: https://github.com/alpred-cms/svc-redaccion.git
  */
 
@@ -42,6 +42,8 @@ export class Valkey {
     private static instance: Valkey | DefaultValkey | undefined = undefined;
     private static instanceOk: boolean = false;
     private static readonly MAX_RECONNECT_TRIES: number = 3;
+    /** Claves que se piden a Valkey en cada vuelta de SCAN (orientativo): acota la memoria al borrar por patrón. */
+    private static readonly SCAN_COUNT: number = 500;
 
     public static async getInstance(): Promise<Valkey | DefaultValkey> {
         if (!this.instanceOk) {
@@ -159,11 +161,20 @@ export class Valkey {
         return null;
     }
 
+    /**
+     * Guarda un valor en la cache, serializado como JSON.
+     *
+     * @param namespace - Prefijo de la clave.
+     * @param ids - Resto de partes de la clave; se unen con `:` tras el namespace.
+     * @param data - Valor a guardar.
+     * @param ttl - Caducidad en **segundos** (`EX`), no en milisegundos. Si se omite o es `<= 0`, la clave no caduca.
+     */
     public async set<T>(namespace: string, ids: (string | number)[], data: T, ttl?: number): Promise<void> {
         const key = this.buildCacheKey(namespace, ids);
         try {
             const value = JSON.stringify(data);
-            if (ttl !== undefined && ttl >= 0) {
+            // EX 0 lo rechaza Valkey ("invalid expire time"), así que solo se envía con un TTL positivo
+            if (ttl !== undefined && ttl > 0) {
                 await this.client.set(key, value, {EX: ttl});
             } else {
                 await this.client.set(key, value);
@@ -176,13 +187,18 @@ export class Valkey {
         }
     }
 
+    /**
+     * Elimina una única clave de la cache.
+     *
+     * @param namespace - Prefijo de la clave.
+     * @param ids - Resto de partes de la clave; se unen con `:` tras el namespace.
+     */
     public async delete(namespace: string, ids: (string | number)[]): Promise<void> {
         try {
-
             const key = this.buildCacheKey(namespace, ids);
-
-            await this.client.del(key);
-            const deleted = await this.client.del(key);
+            // UNLINK quita la clave al momento y libera su memoria en segundo plano.
+            // Devuelve cuántas claves borró (0 si no existía).
+            const deleted = await this.client.unlink(key);
             if (deleted > 0) {
                 info(`Valkey: Cache eliminada ${key}`);
             } else {
@@ -194,29 +210,54 @@ export class Valkey {
         }
     }
 
+    /**
+     * Elimina un grupo de claves de la cache, o la cache entera.
+     *
+     * - Con `namespace`: borra la clave exacta `namespace:ids` y todas las que cuelgan de ella (`namespace:ids:*`).
+     * - Sin `namespace`: vacía la base de datos completa. En modo cluster solo hay una por instancia, así que
+     *   se borra todo lo que contenga la instancia, sea o no de esta cache.
+     *
+     * Nunca se cargan todas las claves en memoria: el borrado por patrón va por lotes y el vaciado completo es un
+     * único comando.
+     *
+     * @param namespace - Prefijo de las claves a borrar. Si se omite, se vacía toda la cache.
+     * @param ids - Partes adicionales del prefijo; se unen con `:` tras el namespace.
+     */
     public async deletePattern(namespace?: string, ids?: (string | number)[]): Promise<void> {
         try {
             if (namespace) {
                 const key = this.buildCacheKey(namespace, ids);
-                const pattern = `${key}:*`;
-                const keys = await this.client.keys(pattern);
-                keys.push(key); // También eliminamos la clave exacta
-                if (keys.length > 0) {
-                    await Promise.all(keys.map(async (k: string) => {
-                        await this.client.del(k).then(() => info(`Valkey: Cache eliminada ${k}`));
-                    }));
-                }
+                // La clave exacta no casa con el patrón `${key}:*`, así que se borra aparte.
+                let total = await this.client.unlink(key);
+                // SCAN recorre el keyspace por tramos sin bloquear Valkey (KEYS lo recorre entero de una vez y
+                // devuelve todas las claves juntas). Cada llamada devuelve un lote de ~SCAN_COUNT claves y un cursor
+                // para pedir el siguiente; el recorrido termina cuando el cursor vuelve a "0".
+                // El cursor es un string opaco: un entero de 64 bits que no cabe en un number y, en cluster,
+                // node-redis codifica además en qué shard va. Se devuelve tal cual en la siguiente llamada.
+                // Borrar mientras se recorre es seguro: SCAN devuelve igualmente las claves que siguen existiendo.
+                let cursor = "0";
+                do {
+                    const reply = await this.client.scan(cursor, {MATCH: `${key}:*`, COUNT: Valkey.SCAN_COUNT});
+                    // toString() por si el cliente devuelve el cursor como Buffer
+                    cursor = reply.cursor.toString();
+                    if (reply.keys.length > 0) {
+                        // Se borra el lote antes de pedir el siguiente, así que en memoria solo hay un lote cada vez.
+                        // En cluster, node-redis reparte el UNLINK por shard, aunque las claves sean de slots distintos.
+                        total += await this.client.unlink(reply.keys);
+                    }
+                } while (cursor !== "0");
+                info(`Valkey: ${total} claves eliminadas para ${key}`);
             } else {
-                const pattern = `*`;
-                const keys = await this.client.keys(pattern);
-                if (keys.length > 0) {
-                    await Promise.all(keys.map((k: string) => this.client.del(k)));
-                }
+                // Un único comando en vez de recorrer las claves: la memoria en Node no depende de cuántas haya.
+                // En cluster, node-redis envía FLUSHDB a todos los shards y solo da por buena la operación si todos
+                // responden OK. ASYNC vacía la base de datos al momento y libera la memoria en un hilo de fondo,
+                // sin bloquear el resto de peticiones.
+                await this.client.flushDb("ASYNC");
                 info(`Valkey: Cache vaciada completamente`);
             }
         } catch (e) {
             warning(`Valkey: Error eliminando cache`, e);
-            return Promise.reject();
+            return Promise.reject(e);
         }
     }
 }

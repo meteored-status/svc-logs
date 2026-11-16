@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 8f9544e94dc93adf58b5ce604a18763a
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Fecha: Mon, 16 Nov 2026 09:46:04 GMT
+ * Hash: d57ab2e190ec08d767abd011262491ba
+ * Versión: 2026.11.16+4-bixus
+ * Anterior: 2026.11.16+3-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
  */
 
 import {confirm} from "@inquirer/prompts";
@@ -17,6 +17,7 @@ import type {IPackageJson} from "../packagejson";
 import {PaqueteDirectoryRoot, type PaqueteDirectoryRootFiles} from "./root";
 import {PaqueteStorage} from "./storage";
 import {type IEntradaActualizacion, stripAutoria} from "./file";
+import {compilarBinMin, enviaBinMin} from "./bin";
 import {capturarDatosPush, type IPushLogData, subirLogHtmlPush} from "./push-log";
 import {combinarArchivosCambiados, EstadoArchivo, type IArchivoCambiado, OrigenArchivo} from "./archivos-cambiados";
 import {ConsolaEstado, PaqueteConsola} from "./consola";
@@ -425,6 +426,11 @@ export class Paquete {
             }
             this.version = status.version;
             await status.prepararParaPush(autor);
+            if (!await this.compilarBinParaPush(status, autor)) {
+                this.version = versionAnterior;
+                this._pushLogData = undefined;
+                return false;
+            }
             this.paquete.version = this.version;
             await this.savePaquete();
             await this.gcs.subirPaquete(this.version, status);
@@ -440,6 +446,53 @@ export class Paquete {
             nueva: status.version,
             mensaje: "Se ha subido la nueva versión",
         });
+
+        return true;
+    }
+
+    /**
+     * Si el paquete envía su `bin/min` (ver {@link enviaBinMin}), lo recompila en modo producción
+     * justo antes de empaquetar y vuelve a calcular en `status` los hashes de ese directorio.
+     *
+     * Tiene que ir **después** de `prepararParaPush()`: el sourcemap lleva el contenido de las
+     * fuentes, bloques de autoría incluidos, así que un bundle compilado antes de estamparlos no es
+     * el que sale de compilar lo que queda en el repo, y su `bin/hash.md5` no cuadraría con el de
+     * nadie que compile después. Y tiene que rehacer los hashes de `bin/min` en `status` porque el
+     * receptor solo sobrescribe un fichero `.mr-bin` si su hash cambia en el `status.json`. Solo ese
+     * nodo: está en `bin/.mr-nohash`, así que no altera el hash de `bin` ni el de la raíz, y
+     * re-escanear todo el árbol aquí vería el `package.json` sin normalizar.
+     *
+     * @param status - Árbol que se va a empaquetar.
+     * @param autor  - Autor que se estampa en los nodos que cambien.
+     * @returns `false` si la compilación ha fallado; el motivo queda en {@link error}.
+     */
+    private async compilarBinParaPush(status: PaqueteDirectoryRoot, autor: string): Promise<boolean> {
+        if (!await enviaBinMin(this.basedir)) {
+            return true;
+        }
+
+        this.consolaUI.render({
+            estado: ConsolaEstado.PENDING,
+            actual: true,
+            nueva: status.version,
+            mensaje: "Compilando bin/min en modo producción",
+        });
+        const {ok, stderr} = await compilarBinMin(this.basedir);
+        if (!ok) {
+            this.error = `no se ha podido compilar bin/min:\n${stderr}`;
+            this.consolaUI.render({
+                estado: ConsolaEstado.KO,
+                actual: true,
+                nueva: status.version,
+                mensaje: "No se ha podido compilar bin/min",
+            });
+            return false;
+        }
+
+        const min = status.directorios["bin"]?.directorios["min"];
+        if (min !== undefined) {
+            await min.update(this.basedir, autor);
+        }
 
         return true;
     }

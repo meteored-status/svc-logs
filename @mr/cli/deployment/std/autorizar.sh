@@ -6,7 +6,7 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
-if [[ -f "DESPLEGAR.txt" ]]; then
+if opcion desplegar; then
   if [[ -z "${_AUTORIZAR}" || "${_AUTORIZAR}" == "true" ]]; then
 
     echo "Obteniendo IP"
@@ -25,7 +25,15 @@ if [[ -f "DESPLEGAR.txt" ]]; then
         echo "${CLUSTER}: Iteración ${i}"
 
         local OK=false
+        local INTENTOS=0
         while [[ ${OK} != "true" ]]; do
+          # Antes no tenía tope: si `gcloud` no devolvía la lista de IPs, o la actualización no llegaba a
+          # aplicarse, el bucle seguía hasta el timeout de 30 min del build.
+          INTENTOS=$((INTENTOS + 1))
+          if [[ ${INTENTOS} -gt 20 ]]; then
+            echo "ERROR: ${CLUSTER}: no se ha podido autorizar la IP ${IP} en 20 intentos"
+            exit 1
+          fi
 
           sleep $(( ( RANDOM % 5 )  + 1 ))
 

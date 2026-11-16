@@ -2,6 +2,27 @@
 
 ---
 
+## 2026.11.16 09:31 — [Jose]
+
+### Changed
+
+- `.claude/.mr-ignore` excluye también `scheduled_tasks.lock`: el lock de tareas programadas (`/loop`, cron) que Claude Code
+  escribe en el `.claude/` del proyecto, y que por el symlink cae en `@mr/core/dev/.claude/`. Si la sesión no lo borra al salir,
+  sin esto viajaba en `mrpack framework --send` a todos los monorepos.
+
+---
+
+## 2026.11.13 08:48 — [Jose]
+
+### Changed
+
+- **Base de TypeScript: `@tsconfig/node24` → `@tsconfig/node26`** (`tsconfig/node.json` y `bundler/rspack/tsconfig.json`), a juego
+  con Node 26 en tiempo de ejecución. Cambia el `target` heredado (`es2024` → `es2025`); el `lib` no, porque `tsconfig/node.json` lo
+  fija. La base nueva ya no trae `"strict": true` ni `moduleResolution`: `strict` lo pone por defecto TypeScript 6, y con TypeScript 5
+  ni siquiera se compila (no conoce `target: es2025`), así que no hay un caso en que se pierda en silencio. Comprobado con `tsc --noEmit`
+  en todos los workspaces de svc-status: los mismos errores que con la base anterior. También `@tsconfig/recommended` 1.0.14 y
+  `prettier` 3.10.1.
+
 ## 2026.10.20 13:12 — [Alex]
 
 ### Changed

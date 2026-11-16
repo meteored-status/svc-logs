@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-cli",
-  "version": "2026.11.2+1-bixus",
+  "version": "2026.11.13+1-bixus",
   "description": "Infraestructura compartida por las herramientas de línea de comandos de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {
