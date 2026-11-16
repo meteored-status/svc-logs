@@ -10,7 +10,7 @@
 
 ```txt
 .claude/
-├── .mr-ignore                    Excluye settings.local.json del envío del framework
+├── .mr-ignore                    Excluye settings.local.json y scheduled_tasks.lock del envío del framework
 ├── settings.json                 Declara el hook Stop -> hooks/check-codemap.mjs
 │                                  y permisos (ask sobre los dos agentes caros)
 ├── delegacion-multimodelo.md     Política de delegación a subagentes (importada desde CLAUDE.md)
@@ -47,6 +47,13 @@ garantizan:
   antes de tener este framework), `initClaudeDir()` migra sus entradas a
   `@mr/core/dev/.claude/` (sin sobreescribir lo que ya hubiera) antes de sustituirlo por el
   symlink, para no perder configuración local del desarrollador.
+
+`.claude/scheduled_tasks.lock` sigue el mismo camino que `settings.local.json` (está en
+`.mr-ignore` y en la plantilla `IGNORE`, como `**/.claude/scheduled_tasks.lock`). Es el lock que
+Claude Code escribe en el `.claude/` del proyecto cuando una sesión usa tareas programadas
+(`/loop`, cron) —`sessionId`, `pid` y momento de adquisición— para que solo una sesión las
+ejecute. Por el symlink acaba en `@mr/core/dev/.claude/`, y si la sesión no lo limpia al salir
+se queda ahí: sin estas dos exclusiones aparecería como untracked y viajaría en el envío.
 
 ## `settings.json`
 

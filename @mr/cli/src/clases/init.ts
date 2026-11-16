@@ -1,10 +1,10 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 29 Oct 2026 07:47:56 GMT
- * Hash: 074bfd4f0df9d9ea99a32b04ec7e7cdc
- * Versión: 2026.10.29+1-bixus
- * Anterior: 2026.10.20+1-alexcg
- * Proyecto: https://github.com/alpred/tiempo-web-estaticos.git
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: c92f9f84f8d0916117460f2459df3003
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.11.10+2-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {md5} from "services-comun/modules/utiles/hash";
@@ -35,7 +35,8 @@ import {initConfig, type IWorkspaces} from "./init/config-workspaces";
 import {initRun} from "./init/run";
 import {checkLint} from "./init/lint";
 import {checkWorkspaceDeps} from "./init/workspace-deps";
-import {parchearCorepack} from "./init/dockerfile";
+import {parchearArranque, parchearCorepack} from "./init/dockerfile";
+import {NODE_VERSION} from "./init/node";
 import APP from "./init/app";
 import ATTRIBUTES from "./init/attributes";
 import DEVEL from "./init/devel";
@@ -153,10 +154,21 @@ async function checkFiles(config: Manifest, basedir: string): Promise<void> {
             cambio = true;
         }
         if (config.deploy.runtime===Runtime.node) {
-            const parcheado = parchearCorepack(contenido);
+            const {contenido: parcheado, avisos} = parchearCorepack(contenido);
             if (parcheado!==contenido) {
                 contenido = parcheado;
                 cambio = true;
+            }
+            for (const aviso of avisos) {
+                Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgRed], `${basedir}/Dockerfile: ${aviso}`));
+            }
+            const arranque = parchearArranque(contenido);
+            if (arranque.contenido!==contenido) {
+                contenido = arranque.contenido;
+                cambio = true;
+            }
+            for (const aviso of arranque.avisos) {
+                Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgRed], `${basedir}/Dockerfile: ${aviso}`));
             }
         }
         if (cambio) {
@@ -340,7 +352,7 @@ async function initBase(basedir: string): Promise<IWorkspaces[]> {
     await safeWrite(`${basedir}/.editorconfig`, EDITORCONFIG, true);
     await safeWrite(`${basedir}/.gitattributes`, ATTRIBUTES, true);
     await safeWrite(`${basedir}/.gitignore`, IGNORE, true);
-    await safeWrite(`${basedir}/.node-version`, "lts-latest\n", true);
+    await safeWrite(`${basedir}/.node-version`, `${NODE_VERSION}\n`, true);
     if (await isFile(`${basedir}/.sonarcloud.properties`)) {
         await unlink(`${basedir}/.sonarcloud.properties`);
     }
@@ -398,7 +410,11 @@ async function deleteFiles(basedir: string): Promise<void> {
             await unlink(item);
         }
     }
-    for (const file of ["status.json", "bin/mrdev.js"]) {
+    // Restos de versiones antiguas que hay copias locales que siguen restaurando al enviar @mr/cli: las
+    // configuraciones de ejecución `develop => Ejecutar (Todos)` y `cli => PUSH` (el resto de `.run/` sí son
+    // del paquete), `manifest/workspace/`, que pasó a `src/clases/manifest/`, y `src/mrlang/`, que pasó a
+    // `@mr/core-i18n`.
+    for (const file of ["status.json", "bin/mrdev.js", ".run/develop =_ Ejecutar (Todos).run.xml", ".run/cli =_ PUSH.run.xml", "manifest/workspace", "src/mrlang"]) {
         const item = `${basedir}/@mr/cli/${file}`;
         if (await isFile(item) || await isDir(item)) {
             Log.info({type: Log.label_base, label: "init"}, `Eliminando ${Colors.colorize([Colors.FgYellow], `@mr/cli/${file}`)}`);

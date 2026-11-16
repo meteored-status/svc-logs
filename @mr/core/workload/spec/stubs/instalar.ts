@@ -1,0 +1,38 @@
+/**
+ * Editor: Bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: f84b7f84ba59bddfb37da277d8d8ddd9
+ * Versión: 2026.11.13+1-bixus
+ * Proyecto: https://github.com/meteored-status/svc-status.git
+ */
+
+import Module from "node:module";
+import path from "node:path";
+
+/**
+ * Los `exports` de `services-comun` y de `@mr/core-log` apuntan a `.ts`, que `node --test` no resuelve sin
+ * bundler. Este módulo se importa **el primero** en cada spec (TypeScript conserva el orden de los
+ * `import` al emitir CommonJS) y redirige esos especificadores: `services-comun` a las réplicas de
+ * `spec/stubs`, y `@mr/core-log/interface` y `@mr/core-network/server/http/config/net` (solo constantes) al `.js` que
+ * TypeScript emite junto a las pruebas.
+ */
+
+const SUSTITUTOS: Record<string, string> = {
+    "services-comun/modules/utiles/log": path.join(__dirname, "log.js"),
+    "services-comun/modules/utiles/promise": path.join(__dirname, "promise.js"),
+    "services-comun/modules/utiles/fs": path.join(__dirname, "vacio.js"),
+    "@mr/core-log/interface": path.join(__dirname, "../../../log/modules/interface.js"),
+    "@mr/core-network/server/http/config/net": path.join(__dirname, "../../../network/server/http/config/net.js"),
+};
+
+type TResolver = (request: string, ...resto: unknown[]) => string;
+const modulo = Module as unknown as {_resolveFilename: TResolver};
+const original = modulo._resolveFilename;
+modulo._resolveFilename = function (this: unknown, request: string, ...resto: unknown[]): string {
+    const sustituto = SUSTITUTOS[request];
+    if (sustituto !== undefined) {
+        return sustituto;
+    }
+
+    return original.call(this, request, ...resto);
+};

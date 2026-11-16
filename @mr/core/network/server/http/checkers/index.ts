@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: 43fa7c3ee0d187cb8520eb9919023acc
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.5.18+2-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Wed, 11 Nov 2026 10:30:11 GMT
+ * Hash: ed893f3a0735ad338389d87a9d27b80f
+ * Versión: 2026.11.11+1-juancmartinez
+ * Anterior: 2026.9.23+1-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-panel-usuarios.git
  */
 
 import type {URLSearchParams} from "node:url";
@@ -18,6 +18,7 @@ import {Prefix} from "./query/prefix";
 import {Options} from "./query/options";
 import {Cualquiera} from "./query/cualquiera";
 import type {CustomSpecification} from "../schema/spec";
+import type {IContract} from "../routes/group/contract";
 
 /**
  * Configuración de visibilidad en la documentación generada del servicio.
@@ -68,6 +69,8 @@ interface IExpresionLang {
  * @property internal      - Si `true`, la ruta es de uso interno (no expuesta al exterior). Por defecto `false`.
  * @property deprecated    - Si `true`, la ruta está marcada como obsoleta. Por defecto `false`.
  * @property documentacion - Configuración de visibilidad en la documentación generada.
+ * @property contract      - Tipos de la ruta para la documentación OpenAPI generada (`Contract<T>()`). Sustituye al
+ *   `contract` del {@link IRouteGroup} que contiene la expresión. Sin efecto en tiempo de ejecución.
  */
 export interface IExpresion {
     metodos?: TMetodo[];
@@ -87,6 +90,7 @@ export interface IExpresion {
     internal?: boolean;
     deprecated?: boolean;
     documentacion?: Partial<IDocumentable>;
+    contract?: IContract;
 }
 
 /**

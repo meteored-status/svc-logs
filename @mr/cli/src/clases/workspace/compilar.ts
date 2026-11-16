@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 0a32eea7690a9461c638e978c6d93346
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
+ * Fecha: Wed, 11 Nov 2026 08:40:54 GMT
+ * Hash: c51de67c204f2953163d3055212bdc24
+ * Versión: 2026.11.11+1-bixus
+ * Anterior: 2026.11.9+15-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -24,6 +24,7 @@ import {
     unlink,
 } from "@mr/core-cli/fs";
 
+import {leerBuildId, md5Fichero, PREVER_BUILD_ID} from "./build-id";
 import {Comando} from "../comando";
 import {Log} from "../log";
 import type {IPackageJson} from "../packagejson";
@@ -36,6 +37,15 @@ interface ITag {
 
 interface IPackConfig {
     compilar?: Compilar;
+}
+
+/**
+ * Opciones del cálculo del hash de despliegue.
+ *
+ * @property previstos - Contenido de rutas que todavía no existen, por ruta (ver `md5Fichero`).
+ */
+interface IHashConfig {
+    previstos?: Record<string, string>;
 }
 
 /**
@@ -153,22 +163,19 @@ export class Compilar {
             return Promise.all(this.dependencias.map((dependencia) => dependencia.pack(env, manifest, {compilar: this}))).then(() => undefined);
         }
 
-        if (manifest.deploy.build.enabled) {
-            await this.prepararCredenciales();
+        // Sin generar (`deploy.build.enabled` a `false`) no se llega aquí: `run()` de `deploy.ts` termina
+        // antes, y en Cloud Build la versión desplegada la mantiene `mantener-version`, sin `mrpack`.
+        await this.prepararCredenciales();
 
-            switch (this.config.build.framework) {
-                case BuildFW.meteored:
-                    await this.packMeteored(env, manifest);
-                    break;
-                case BuildFW.nextjs:
-                    await this.packNextJS(env, manifest);
-                    break;
-            }
-            Log.info({type: Log.label_compilar, label: this.name}, "Servicio compilado");
-        } else {
-            await this.mantenerVersion(env, manifest);
-            Log.info({type: Log.label_compilar, label: this.name}, "Versión mantenida");
+        switch (this.config.build.framework) {
+            case BuildFW.meteored:
+                await this.packMeteored(env, manifest);
+                break;
+            case BuildFW.nextjs:
+                await this.packNextJS(env, manifest);
+                break;
         }
+        Log.info({type: Log.label_compilar, label: this.name}, "Servicio compilado");
 
         if (this.dependencias.length==0) {
             return;
@@ -201,7 +208,7 @@ export class Compilar {
                         case BuildFW.nextjs:
                             checks.push(`${this.dir}/.next/BUILD_ID`);
                             if (!customDockerfile) {
-                                checks.push(`${this.basedir}/framework/services-comun/despliegue/Dockerfile-next`);
+                                checks.push(`${this.basedir}/@mr/cli/deployment/std/Dockerfile-next`);
                             }
                             break;
 
@@ -209,7 +216,7 @@ export class Compilar {
                         default:
                             checks.push(`${this.dir}/output`);
                             if (!customDockerfile) {
-                                checks.push(`${this.basedir}/framework/services-comun/despliegue/Dockerfile`);
+                                checks.push(`${this.basedir}/@mr/cli/deployment/std/Dockerfile`);
                             }
                             break;
                     }
@@ -265,6 +272,33 @@ export class Compilar {
             Log.info({type: Log.label_compilar, label: this.name}, "Existe el fichero .env.local, se mantiene tal cual.");
         }
 
+        const buildId = `${this.dir}/.next/BUILD_ID`;
+        const checks = [
+            `${this.basedir}/.yarnrc.yml`,
+            buildId,
+            await isFile(`${this.dir}/Dockerfile`) ?
+                `${this.dir}/Dockerfile` :
+                `${this.basedir}/@mr/cli/deployment/std/Dockerfile-next`,
+            `${this.basedir}/framework/services-comun/next.config.js`,
+            `${this.basedir}/framework/services-comun/next.config.deps.js`,
+            `${this.dir}/next.config.js`,
+            `${this.dir}/public`,
+        ];
+
+        // `next build` es casi todo el tiempo del paso «Compilar», y si el hash no cambia su salida
+        // no se usa: no hay `nuevo.txt` y no se genera imagen. El `buildId` lo calcula el
+        // `generateBuildId` del proyecto a partir de sus fuentes, así que se puede prever sin
+        // compilar y, con él, el hash entero. Si coincide con el de la imagen desplegada, se omite.
+        const previsto = manifest.deploy.build.force ? undefined : await this.preverBuildId(nodeEnv);
+        if (previsto!==undefined) {
+            const md5Hash = await this.hashServicio(env, checks, {previstos: {[buildId]: previsto}});
+            if (!await this.esNuevaVersion(md5Hash, manifest)) {
+                Log.info({type: Log.label_compilar, label: this.name}, "Sin cambios");
+                await this.registrarVersion(env, manifest, md5Hash);
+                return;
+            }
+        }
+
         {
             // todo falta añadir la fecha del commit (this.fecha)
             const {status, stderr} = await Comando("yarn", ["run", this.name, "run", "next", "build", "--webpack"], {cwd: this.basedir, env: {NODE_OPTIONS: '--max_old_space_size=10240', ZONA: nodeEnv}, colores: false});
@@ -273,19 +307,42 @@ export class Compilar {
                 throw new Error(`Error compilando "${this.name}" con next`);
             }
         }
-        await this.checkVersionService(env, manifest, [
-            `${this.basedir}/.yarnrc.yml`,
-            `${this.dir}/.next/BUILD_ID`,
-            await isFile(`${this.dir}/Dockerfile`) ?
-                `${this.dir}/Dockerfile` :
-                `${this.basedir}/framework/services-comun/despliegue/Dockerfile-next`,
-            `${this.basedir}/framework/services-comun/next.config.js`,
-            `${this.basedir}/framework/services-comun/next.config.deps.js`,
-            `${this.dir}/next.config.js`,
-            `${this.dir}/public`,
-        ]);
+
+        if (previsto!==undefined) {
+            const real = await isFile(buildId) ? (await readFileString(buildId)).trim() : "";
+            if (real!==previsto) {
+                Log.error({type: Log.label_compilar, label: this.name}, `AVISO: next build ha dado el BUILD_ID ${real}, no el previsto ${previsto}. Mientras no coincidan, este workspace se compilará siempre aunque no cambie.`);
+            } else if (md5Fichero(buildId, real)!==await md5Dir(buildId)) {
+                Log.error({type: Log.label_compilar, label: this.name}, "AVISO: md5Fichero() ya no da lo mismo que md5Dir() para el BUILD_ID. Mientras no coincidan, este workspace se compilará siempre aunque no cambie.");
+            }
+        }
+        await this.registrarVersion(env, manifest, await this.hashServicio(env, checks));
     }
 
+    /**
+     * Calcula, sin compilar, el `buildId` que dará `next build` (ver {@link PREVER_BUILD_ID}).
+     *
+     * @param nodeEnv - Valor de `ZONA`, el mismo que recibe `next build`.
+     * @returns El `buildId`, o `undefined` si no se puede prever: el proyecto no tiene
+     *          `generateBuildId` (Next usaría uno aleatorio) o el cálculo ha fallado. En los dos
+     *          casos se compila, como siempre.
+     */
+    private async preverBuildId(nodeEnv: string): Promise<string|undefined> {
+        const {status, stdout, stderr} = await Comando("yarn", ["run", this.name, "node", "-e", PREVER_BUILD_ID], {cwd: this.basedir, env: {NODE_ENV: "production", ZONA: nodeEnv}, colores: false});
+        if (status !== 0) {
+            Log.info({type: Log.label_compilar, label: this.name}, "No se puede prever el BUILD_ID; se compila:", stderr.trim());
+            return undefined;
+        }
+        const id = leerBuildId(stdout);
+        if (id===undefined) {
+            Log.info({type: Log.label_compilar, label: this.name}, "Sin generateBuildId en next.config: el BUILD_ID es aleatorio y se compila siempre");
+        }
+
+        return id;
+    }
+
+    // Misma regla que `deployment/std/bin/mantener-version`, que la aplica en Cloud Build cuando no se
+    // genera: si se cambia una, hay que cambiar la otra.
     private async getVersion(latest: boolean): Promise<[string | undefined, string | undefined]> {
         const tags: string[] = [];
 
@@ -313,6 +370,8 @@ export class Compilar {
         return [version, hash];
     }
 
+    // Solo para workspaces desactivados: su `hash.txt` entra en el hash de los que dependen de ellos
+    // (`hashServicio`).
     private async mantenerVersion(env: string, manifest: ManifestRoot): Promise<void> {
         const [version = "0000.00.00-000", anterior = ""] = await this.getVersion(manifest.deploy.run.latest);
         await safeWrite(`${this.dir}/version.txt`, `${version}-${env}`, true, true);
@@ -320,24 +379,38 @@ export class Compilar {
     }
 
     private async checkVersionService(env: string, manifest: ManifestRoot, checks: string[]): Promise<void> {
-        const [version, anterior] = await this.getVersion(true);
-        let fecha: string | undefined;
-        let index: string | undefined;
-        if (version != undefined) {
-            const partes = version.split("-");
-            fecha = partes[0];
-            index = partes[1];
-        }
+        await this.registrarVersion(env, manifest, await this.hashServicio(env, checks));
+    }
 
-        for (const actual of this.config.build.deps) {
-            checks.push(`${this.basedir}/services/${actual}/hash.txt`);
-        }
+    /**
+     * Hash de despliegue del workspace (`<hash>-<entorno>`): decide si hace falta una imagen nueva.
+     *
+     * @param env    - Entorno de despliegue.
+     * @param checks - Ficheros y directorios que entran en el hash, además de las dependencias, la
+     *                 plataforma y la imagen base.
+     * @param config - `previstos`: rutas de `checks` cuyo contenido se conoce sin que existan todavía
+     *                 (el `.next/BUILD_ID` antes de `next build`); se hashean como si lo hicieran.
+     * @returns El hash, como se escribe en `hash.txt`.
+     */
+    private async hashServicio(env: string, checks: string[], {previstos = {}}: IHashConfig = {}): Promise<string> {
+        const rutas = [
+            ...checks,
+            ...this.config.build.deps.map((actual)=>`${this.basedir}/services/${actual}/hash.txt`),
+        ];
 
         const hashes = [
             JSON.stringify(this.packagejson.dependencies??{}),
         ];
         if (this.packagejson.optionalDependencies) {
             hashes.push(JSON.stringify(this.packagejson.optionalDependencies));
+        }
+        // Las plataformas también deciden la imagen: sin esto, añadir `linux/arm64` a `deploy.arch` no
+        // generaba nada hasta el siguiente cambio de código. Solo entran si no son la de siempre
+        // (`linux/amd64`, que es lo que construye `contenedor.sh` sin `deploy.arch`), para no regenerar
+        // de golpe todas las imágenes que ya existen.
+        const arch = [...this.config.deploy.arch ?? []].sort();
+        if (arch.length > 0 && arch.join(",")!=="linux/amd64") {
+            hashes.push(JSON.stringify(arch));
         }
         if (this.config.deploy.imagen) {
             if (env==="test") {
@@ -362,17 +435,56 @@ export class Compilar {
                 hashes.push(this.config.deploy.imagen.produccion.nombre);
             }
         }
-        for (const actual of checks) {
-            hashes.push(await md5Dir(actual));
+        // La versión de Node de la imagen base por defecto, que pasa compilar.sh en `MRPACK_NODE_VERSION`
+        // (sale del `.node-version` del monorepo o de `_NODE_VERSION`): cambiarla tiene que regenerar la
+        // imagen. No entra si el workspace fija su propia base, ni si es `lts`, el comportamiento de
+        // siempre, para no regenerar nada en los proyectos que aún no han fijado versión.
+        const imagenEntorno = env==="test" ? this.config.deploy.imagen?.test : this.config.deploy.imagen?.produccion;
+        const versionNode = process.env["MRPACK_NODE_VERSION"] ?? "";
+        if (imagenEntorno?.base===undefined && versionNode.length > 0 && versionNode!=="lts") {
+            hashes.push(`node:${versionNode}`);
+        }
+        for (const actual of rutas) {
+            const previsto = previstos[actual];
+            hashes.push(previsto!==undefined ? md5Fichero(actual, previsto) : await md5Dir(actual));
         }
         const hash = md5(
             hashes
                 .filter(actual=>actual.length>0)
                 .map(actual=>md5(actual)).join("")
         ).substring(0, 8);
-        const md5Hash = `${hash}-${env}`;
 
-        if (fecha == undefined || index == undefined || anterior != md5Hash || manifest.deploy.build.force) {
+        return `${hash}-${env}`;
+    }
+
+    /**
+     * Si el hash pide una versión nueva: no hay versión desplegada, el hash es otro que el de la
+     * imagen desplegada, o el despliegue va forzado.
+     *
+     * @param md5Hash  - Hash de {@link hashServicio}.
+     * @param manifest - Manifest raíz (para `deploy.build.force`).
+     * @returns `true` si hay que generar imagen.
+     */
+    private async esNuevaVersion(md5Hash: string, manifest: ManifestRoot): Promise<boolean> {
+        const [version, anterior] = await this.getVersion(true);
+        const [fecha, index] = version?.split("-") ?? [];
+
+        return fecha === undefined || index === undefined || anterior !== md5Hash || manifest.deploy.build.force;
+    }
+
+    /**
+     * Escribe `version.txt`, `hash.txt` y la versión del `package.json`. Con versión nueva escribe
+     * además `nuevo.txt`, que es lo que hace que el pipeline genere la imagen.
+     *
+     * @param env      - Entorno de despliegue.
+     * @param manifest - Manifest raíz.
+     * @param md5Hash  - Hash de {@link hashServicio}.
+     */
+    private async registrarVersion(env: string, manifest: ManifestRoot, md5Hash: string): Promise<void> {
+        const [version] = await this.getVersion(true);
+        const [fecha, index] = version?.split("-") ?? [];
+
+        if (await this.esNuevaVersion(md5Hash, manifest)) {
             const date = new Date();
             const fechaActual = [
                 date.getUTCFullYear(),

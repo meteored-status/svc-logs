@@ -5,7 +5,8 @@
   "scripts": {
     "mrpack": "yarn workspace @mr/cli node --no-warnings bin/mrpack",
     "compile": "node src/esbuild.config.mjs",
-    "compile:watch": "node src/esbuild.config.mjs --watch"
+    "compile:watch": "node src/esbuild.config.mjs --watch",
+    "test": "yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
   },
   "bin": {
     "mrpack": "bin/mrpack.js"
@@ -18,11 +19,11 @@
   "main": "bin/mrpack.js",
   "exports": {},
   "dependencies": {
-    "@google-cloud/storage": "^8.4.0",
-    "@inquirer/prompts": "^8.7.5",
+    "@google-cloud/storage": "^9.0.0",
+    "@inquirer/prompts": "^8.8.0",
     "chokidar": "^6.0.0",
-    "dd-trace": "^6.23.0",
-    "dotenv": "^18.0.9",
+    "dd-trace": "^6.25.0",
+    "dotenv": "^18.0.10",
     "js-yaml": "^5.5.0",
     "jszip": "^3.10.2",
     "mysql2": "^3.24.6",
@@ -32,14 +33,15 @@
   "devDependencies": {
     "@mr/core-cli": "workspace:*",
     "@mr/core-dev": "workspace:*",
+    "@mr/core-network": "workspace:*",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.6.6",
     "@types/source-map-support": "^0.5.10",
     "esbuild": "^0.28.2",
-    "node-diff3": "^3.2.1",
+    "node-diff3": "^4.0.0",
     "services-comun": "workspace:*",
     "tslib": "^2.9.1",
     "typescript": "^6.0.3"
   },
-  "version": "2026.11.2+6-bixus"
+  "version": "2026.11.16+5-bixus"
 }

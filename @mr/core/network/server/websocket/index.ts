@@ -1,20 +1,22 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 2d1f18b108c3e3b06ca678df3a2fccbb
- * Versión: 2026.9.23+1-bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 8e883108189f7fd523eb1aab098d2c7b
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import tracer, {type Span} from "dd-trace";
 import {formats} from "dd-trace/ext";
-import type {Server} from "node:http";
+import type {IncomingMessage, Server} from "node:http";
 import {type RawData, WebSocketServer, type WebSocket as WS} from "ws";
 
+import {warning} from "services-comun/modules/utiles/log";
 import {Deferred, PromiseTimeout, PromiseTimeoutError} from "services-comun/modules/utiles/promise";
 
 import type {IMessageClient, IMessageServerKO, IMessageServerOK} from "../../metadata/websocket/message";
-import {type IWSHandler, WSHandler} from "./handler";
+import {type IWSHandler, normalizarRuta, WSHandler} from "./handler";
 
 /**
  * Mensajes de control que el servidor envía al cliente fuera del flujo
@@ -38,6 +40,10 @@ export const enum EWSControlMessage {
  *   (ArrayBuffer) esperado tras un mensaje que declaró `buffer: true`.
  * @property traceContext - Span del upgrade HTTP capturado en el momento de la conexión.
  *   Se usa como padre de cada span de mensaje WebSocket cuando el cliente no propaga contexto propio.
+ * @property ruta - Ruta (normalizada) a la que hizo el upgrade la conexión, si es una ruta reservada por
+ *   handlers con `ruta`. Con ella se eligen los handlers que resuelven sus mensajes; `undefined` = solo los
+ *   handlers globales (sin `ruta`). Se fija en la conexión y no se reevalúa por mensaje.
+ * @property request - Petición HTTP del upgrade, tal como llegó al handshake.
  * @property activeRequests - Número de handlers actualmente en vuelo para esta conexión.
  *   Se compara con {@link WebSocket.MAX_CONCURRENT_REQUESTS} para limitar la concurrencia
  *   y proteger el servidor frente a inundaciones de peticiones.
@@ -48,6 +54,8 @@ interface IClientMap {
     client: WS;
     pendingBuffer?: Deferred<ArrayBuffer|undefined>;
     traceContext: Span | null;
+    ruta: string | undefined;
+    request: IncomingMessage;
     activeRequests: number;
 }
 
@@ -136,6 +144,19 @@ class WebSocket {
      */
     private readonly handlers: Record<string, IWSHandler>;
 
+    /**
+     * Tabla de enrutamiento de los handlers que declaran `ruta`, indexada por la ruta normalizada y,
+     * dentro de ella, por nombre de método. Una conexión ligada a una ruta solo consulta su entrada
+     * (nunca {@link handlers}), y una conexión no ligada nunca consulta esta tabla.
+     */
+    private readonly handlersRuta: Map<string, Record<string, IWSHandler>>;
+
+    /**
+     * Handlers con `autorizar` indexados por ruta normalizada: los que hay que consultar en el handshake.
+     * Una ruta sin entrada aquí (pero con handlers) es de acceso libre.
+     */
+    private readonly autorizadores: Map<string, IWSHandler[]>;
+
     /** Si es `true`, el servidor está en proceso de shutdown y rechaza nuevas conexiones. */
     private draining: boolean;
 
@@ -147,11 +168,21 @@ class WebSocket {
     public constructor(protected readonly http: Server, handlers: IWSHandler[]) {
         this.clientes = new Map<WS, IClientMap>();
         this.handlers = {};
+        this.handlersRuta = new Map<string, Record<string, IWSHandler>>();
+        this.autorizadores = new Map<string, IWSHandler[]>();
         this.draining = false;
-        this.server = new WebSocketServer({ server: http });
+        // El rechazo por ruta/token se decide en `verifyClient`, dentro del propio handshake de `ws`: el
+        // upgrade lo atiende un único listener (el de `ws`), así que no hay dos que escriban en el mismo
+        // socket ni hace falta tocar el listener de `IUpgradeHandler` del servidor HTTP.
+        this.server = new WebSocketServer({
+            server: http,
+            verifyClient: ({req}, cb) => {
+                this.verificar(req, cb);
+            },
+        });
         this.addHandlers(handlers);
 
-        this.server.on('connection', (ws: WS) => {
+        this.server.on('connection', (ws: WS, req: IncomingMessage) => {
             // Rechazar nuevas conexiones durante el shutdown
             if (this.draining) {
                 ws.close(1001, "Server shutting down");
@@ -161,6 +192,8 @@ class WebSocket {
             const cliente = {
                 timestamp: Date.now(),
                 traceContext: tracer.scope().active(),
+                ruta: this.rutaReservada(req),
+                request: req,
                 activeRequests: 0,
                 timer: setInterval(()=>{
                     if ((Date.now()-cliente.timestamp)<WebSocket.MAX_LIVENESS_MS) {
@@ -218,6 +251,54 @@ class WebSocket {
     }
 
     /**
+     * Devuelve la ruta normalizada de la petición de upgrade si la reserva algún handler con `ruta`
+     * (la conexión queda ligada a ella) o `undefined` si no (conexión solo para handlers globales).
+     *
+     * @param req - Petición de upgrade.
+     */
+    private rutaReservada(req: IncomingMessage): string|undefined {
+        let ruta: string;
+        try {
+            ruta = normalizarRuta(req.url ?? "/");
+        } catch {
+            return undefined;
+        }
+
+        return this.handlersRuta.has(ruta) ? ruta : undefined;
+    }
+
+    /**
+     * Decide en el handshake si se acepta el upgrade. Solo las rutas reservadas por handlers con
+     * `autorizar` se comprueban: tienen que autorizar todos; si alguno devuelve `false`, rechaza o lanza,
+     * el handshake termina con `401` y el socket no llega a abrirse. El resto de rutas pasan sin cambios.
+     *
+     * @param req - Petición de upgrade.
+     * @param cb - Callback de `verifyClient` de `ws`.
+     */
+    private verificar(req: IncomingMessage, cb: (res: boolean, code?: number, message?: string) => void): void {
+        const ruta = this.rutaReservada(req);
+        const autorizadores = ruta !== undefined ? this.autorizadores.get(ruta) : undefined;
+        if (autorizadores === undefined || autorizadores.length === 0) {
+            cb(true);
+            return;
+        }
+
+        Promise.all(autorizadores.map(async handler => handler.autorizar!(req)))
+            .then(resultados => resultados.every(ok => ok === true))
+            .catch((err: unknown) => {
+                warning("Error autorizando el upgrade WebSocket", ruta, err);
+                return false;
+            })
+            .then(ok => {
+                if (ok) {
+                    cb(true);
+                } else {
+                    cb(false, 401, "Unauthorized");
+                }
+            });
+    }
+
+    /**
      * Parsea y gestiona un mensaje WebSocket entrante.
      *
      * Si el mensaje declara que vendrá seguido de un buffer binario (`data.buffer === true`),
@@ -254,7 +335,7 @@ class WebSocket {
             }
 
             deferred.promise
-                .then(async (buffer)=>this.handleRequest(ws, data, cliente.traceContext, buffer))
+                .then(async (buffer)=>this.handleRequest(ws, data, cliente, buffer))
                 .catch(err=>{
                     // Si la conexión ya se cerró no intentar enviar: ws.send() lanzaría una excepción
                     if (ws.readyState !== ws.OPEN) {
@@ -313,15 +394,16 @@ class WebSocket {
      *
      * @param ws - Socket del cliente al que se devolverá la respuesta.
      * @param data - Mensaje cliente ya deserializado.
-     * @param traceContext - Span del upgrade HTTP usado como padre fallback si el cliente no propaga contexto.
+     * @param cliente - Estado interno del cliente: su `traceContext` (span del upgrade HTTP, padre fallback
+     *   si el cliente no propaga contexto) y su `ruta`, que decide qué handlers pueden atender el mensaje.
      * @param buffer - Buffer binario opcional asociado al mensaje.
      */
-    private async handleRequest(ws: WS, data: IMessageClient, traceContext: Span | null, buffer?: ArrayBuffer): Promise<void> {
+    private async handleRequest(ws: WS, data: IMessageClient, cliente: IClientMap, buffer?: ArrayBuffer): Promise<void> {
         // Preferir el contexto propagado por el cliente sobre el del upgrade HTTP,
         // para enlazar la traza del servidor con la del cliente como traza distribuida.
         const parentContext = data._datadog
             ? tracer.extract(formats.TEXT_MAP, data._datadog)
-            : traceContext;
+            : cliente.traceContext;
 
         const span = tracer.startSpan(`websocket.${data.method}`, {
             childOf: parentContext ?? undefined,
@@ -334,13 +416,13 @@ class WebSocket {
 
         return tracer.scope().activate(span, async () => {
             try {
-                const handler = this.handlers[data.method];
+                const handler = (cliente.ruta !== undefined ? this.handlersRuta.get(cliente.ruta) : this.handlers)?.[data.method];
                 if (!handler) {
-                    await Promise.reject(new Error(`No handler for method ${data.method}`));
+                    throw new Error(`No handler for method ${data.method}`);
                 }
 
                 const timeoutMs = handler.timeoutMs ?? WebSocket.HANDLER_TIMEOUT_MS;
-                const wsHandler = new WSHandler(ws, data.id, data.method, buffer, data.head);
+                const wsHandler = new WSHandler(ws, data.id, data.method, {buffer, head: data.head, ruta: cliente.ruta, request: cliente.request});
 
                 // Envolver la ejecución del handler en un try/catch independiente para que
                 // los errores del handler se entreguen al cliente vía wsHandler (cola FIFO +
@@ -451,6 +533,10 @@ class WebSocket {
      * de modo que el lookup en {@link handleRequest} es O(1). Si un método ya tenía
      * handler asignado, el nuevo lo sobrescribe.
      *
+     * Los handlers con {@link IWSHandler.ruta} van a una tabla propia por ruta; los que no la declaran
+     * quedan como globales. Ambos espacios de nombres son independientes: el mismo método puede existir
+     * en un handler global y en uno de ruta sin pisarse.
+     *
      * Permite una arquitectura modular en la que diferentes módulos registran sus
      * handlers de forma independiente tras la inicialización inicial.
      *
@@ -458,8 +544,23 @@ class WebSocket {
      */
     public addHandlers(handlers: IWSHandler[]): void {
         for (const handler of handlers) {
+            let tabla: Record<string, IWSHandler>;
+            if (handler.ruta !== undefined) {
+                const ruta = normalizarRuta(handler.ruta);
+                tabla = this.handlersRuta.get(ruta) ?? {};
+                this.handlersRuta.set(ruta, tabla);
+                if (handler.autorizar !== undefined) {
+                    const lista = this.autorizadores.get(ruta) ?? [];
+                    if (!lista.includes(handler)) {
+                        lista.push(handler);
+                    }
+                    this.autorizadores.set(ruta, lista);
+                }
+            } else {
+                tabla = this.handlers;
+            }
             for (const method of handler.method) {
-                this.handlers[method] = handler;
+                tabla[method] = handler;
             }
         }
     }
@@ -475,4 +576,11 @@ export default (http: Server, handlers: IWSHandler[]): WebSocket => {
     }
     return instance;
 };
+/**
+ * El servidor WebSocket de este proceso, o `undefined` si no se ha creado (o ya se ha cerrado). No lo crea:
+ * lo usa `Server.close()` del servidor HTTP para cerrarlo sin depender de quién lo montó.
+ */
+export function servidorWebSocketActual(): WebSocket|undefined {
+    return instance;
+}
 export type {WebSocket};

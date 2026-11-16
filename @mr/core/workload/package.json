@@ -1,20 +1,26 @@
 {
   "name": "@mr/core-workload",
-  "version": "2026.11.2+1-bixus",
+  "version": "2026.11.13+1-bixus",
   "description": "Utilidades relacionadas con las cargas de trabajo",
   "author": "José Antonio Jiménez",
+  "scripts": {
+    "test": "rm -rf tmp/spec && yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
+  },
   "config": {
     "subible": true,
     "tipo": "core"
   },
   "dependencies": {
-    "chokidar": "^6.0.0"
+    "chokidar": "^6.0.0",
+    "tslib": "^2.9.1"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
+    "@mr/core-log": "workspace:*",
     "@mr/core-network": "workspace:*",
     "@mr/core-utils": "workspace:*",
     "@types/node": "^26.6.6",
-    "services-comun": "workspace:*"
+    "services-comun": "workspace:*",
+    "typescript": "^6.0.3"
   }
 }

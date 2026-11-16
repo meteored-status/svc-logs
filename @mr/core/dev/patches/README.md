@@ -152,6 +152,7 @@ Se ejecutan sobre cada fichero individualmente. El cursor `config.workspaces.jso
 | `R033` | `import {DominioTiempoList} from "@mr/user-tiempo-domain/loader"` *(breaking)* | `import {DominioList as DominioTiempoList} from "@mr/user-tiempo-domain/loader"` |
 | `R034` | `services-comun/modules/frontend/*` | `@mr/core-templates/legacy/*` |
 | `R035` | `services-comun/modules/traduccion/v2/*` | `@mr/core-i18n/*` |
+| `R036` | `services-comun/modules/utiles/unidades` | `@mr/core-utils/unidades` *(solo las unidades: enums, etiquetas, `convertir*`/`redondear*` y `TRayos`; el uso por portal vive aparte en `@mr/core-utils/unidades/portal` y no existía en el módulo antiguo)* |
 
 > **Orden de evaluación:** subpaths deben ir **antes** que sus paths padre en `RULES` para
 > evitar matches parciales (p.ej. R017/R019 antes que R018).

@@ -1,0 +1,31 @@
+{
+  "extends": "@mr/core-dev/tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "module": "node16",
+    "moduleResolution": "node16",
+    "noEmit": false,
+    "outDir": "tmp/spec",
+    "rootDir": "../../..",
+    "incremental": false,
+    "removeComments": false,
+    "sourceMap": true,
+    "paths": {
+      "@mr/core-log/interface": ["../log/modules/interface.ts"],
+      "@mr/core-network/server/http/config/net": ["../network/server/http/config/net.ts"]
+    },
+    "types": [
+      "node",
+      "@mr/core-dev"
+    ]
+  },
+  "include": [
+    "spec/**/*.spec.ts",
+    "spec/stubs/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "output",
+    "tmp"
+  ]
+}

@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: e5290c7546ceec6f79dfbd0dfad33f6f
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
+ * Fecha: Mon, 16 Nov 2026 10:17:55 GMT
+ * Hash: cee686dcf03b22f29b7f08a8173b6391
+ * Versión: 2026.11.16+5-bixus
+ * Anterior: 2026.9.23+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -99,12 +99,15 @@ export async function listarNombresGCS(subdir: string, config: IListarNombresGCS
     const {bucket = "meteored-yarn-packages"} = config;
     const storage = new Storage();
     try {
-        const [, , fws] = await storage.bucket(bucket).getFiles({
+        const [, , respuesta] = await storage.bucket(bucket).getFiles({
             delimiter: "/",
             prefix:    `${subdir}/`,
         });
-        const {prefixes} = fws as {prefixes: string[]};
-        return prefixes
+        // Desde @google-cloud/storage 9 el tercer elemento es la respuesta de gaxios entera: los
+        // prefijos van en `data`, no en la raíz. Leerlos de la raíz daba `undefined` y el `catch`
+        // lo convertía en una lista vacía, sin avisar.
+        const {data} = respuesta as {data?: {prefixes?: string[]}};
+        return (data?.prefixes ?? [])
             .map(p => p.replace(`${subdir}/`, "").replace(/\/$/, "").split("/")[0])
             .filter(Boolean);
     } catch {

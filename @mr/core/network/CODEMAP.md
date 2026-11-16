@@ -224,6 +224,8 @@ WSPool                                    (singleton por socket+reconnect)
   head(method, params?)             → Promise<void>        — fire-and-forget
   get(method, params?, buffer?)     → Promise<Result>      — streaming con respuesta
   getCircuitState()                 → CircuitState
+  vaciar({timeoutMs?})              → Promise<void>        — espera bufferedAmount===0 o timeout; nunca rechaza
+  destroy(code?, reason?)           → void                 — sin reposición posterior
 ```
 
 **Conexiones:** `minConnections` es cuántas se mantienen calientes, **no un tope**. `getConnection()` es
@@ -251,6 +253,8 @@ IWSPoolConfig
   reconnect?: boolean            — true por defecto
   requestTimeoutMs?: number      — 30 000 ms por defecto
   heartbeatTimeoutMs?: number    — 45 000 ms por defecto
+  headers?: Record<string,string> — cabeceras del handshake (solo Node); no entran en la clave del singleton;
+                                    si se pide un pool existente con otras, `warning` una vez
 ```
 
 #### `Result`
@@ -295,6 +299,7 @@ No contiene ficheros `.ts` propios; agrupa los dos sub-bloques siguientes.
 | `server/http/routes/index.ts` | `Routes` |
 | `server/http/routes/group/index.ts` | `RouteGroup<T>`, `RouteGroupError<T>`, `IRouteGroupParams`, `IConfigError` |
 | `server/http/routes/group/block.ts` | `RouteGroupBlock`, `IRouteGroup` |
+| `server/http/routes/group/contract.ts` | `Contract<T>()`, `IContract`, `IContractTypes`, `IContractConfig` (tipos de una ruta para el auto-doc; sin efecto en ejecución; campo `contract` de `IRouteGroup`/`IExpresion`) |
 | `server/http/checkers/index.ts` | `Checker` (abstract), `IExpresion` |
 | `server/http/checkers/exact.ts` | `Exact` |
 | `server/http/checkers/prefix.ts` | `Prefix` |
@@ -329,7 +334,13 @@ No contiene ficheros `.ts` propios; agrupa los dos sub-bloques siguientes.
 Server (singleton)
   iniciarHTTP(routes, config, upgrades?)  → http.Server
   iniciarHTTPs(routes, config, upgrades?) → Promise<https.Server>   (solo dev, TLS SNI multi-dominio)
-  close(timeoutMs)             → Promise<void>            (graceful shutdown, SIGTERM/SIGINT)
+  close(timeoutMs)             → Promise<void>            (graceful shutdown, SIGTERM/SIGINT; cierra en paralelo el servidor WS y las keep-alive ociosas cada 150 ms)
+  alIniciarCierre(cb)          → void                     (cb síncrono, al entrar en el cierre por señal, antes de close())
+  antesDeCerrar(cb)            → void                     (cb async ANTES de close(), servidor aún atendiendo; presupuesto 3 s: margen de endpoints)
+  duranteCierre(cb)            → void                     (cb async en paralelo con close(); comparte shutdownTimeout)
+  antesDeSalir(cb)             → void                     (cb async tras close(), antes de exit; presupuesto total 1 s)
+  gestionaSenales()            → boolean                  (si este servidor ya atiende SIGTERM/SIGINT)
+  cerrarYSalir(config, {salir?, presupuestoAntesDeCerrarMs?}?) → Promise<void>  (secuencia del cierre por señal; Connection: close tras close(); límite duro = `limiteDuroMs(shutdownTimeout)`)
   cederPuertoParaDebug()       → Promise<void>            (solo !PRODUCCION, ver abajo)
         │
         ▼
@@ -458,7 +469,7 @@ type TDevice = "pc" | "mv"
 | Fichero | Símbolos exportados |
 |---------|---------------------|
 | `server/websocket/index.ts` | `WebSocket` (clase, default export singleton), `EWSControlMessage` |
-| `server/websocket/handler.ts` | `WSHandler`, `IWSHandler` |
+| `server/websocket/handler.ts` | `WSHandler`, `IWSHandler`, `IWSHandlerConfig`, `normalizarRuta()` |
 
 ### Símbolos
 
@@ -470,6 +481,8 @@ WebSocket
   constructor(http: Server, handlers: IWSHandler[])
   addHandlers(handlers: IWSHandler[])    — registra handlers adicionales en caliente
   shutdown(timeoutMs)   → Promise<void>  — drena conexiones activas, rechaza nuevas
+
+servidorWebSocketActual() → WebSocket|undefined  — el singleton, sin crearlo (lo usa Server.close())
 ```
 
 **Constantes de ciclo de vida:**
@@ -490,10 +503,18 @@ Contrato que implementan los handlers de mensajes WebSocket.
 
 ```
 IWSHandler
-  metodos: string[]           — lista de nombres de método que gestiona
+  method: string[]            — lista de nombres de método que gestiona
+  ruta?: string               — path exacto del upgrade (con/sin barra final); ligado a esa ruta, solo
+                                resuelve los handlers de esa ruta. Sin `ruta`: handler global
+  autorizar?(req: IncomingMessage) → boolean | Promise<boolean>
+                              — comprobación del handshake para `ruta`; false/rechazo/lanza → 401 sin socket
   timeoutMs?: number          — timeout propio (sobreescribe el global)
   handler: (ws: WSHandler, params: unknown) → Promise<void>
 ```
+
+**Ruta y autorización:** el rechazo se decide con `verifyClient` de `ws` (un solo listener de `'upgrade'`, sin
+pelearse con `IUpgradeHandler`). La conexión queda ligada a su ruta en `IClientMap.ruta` y no se
+reevalúa por mensaje; `handlers` (globales) y `handlersRuta` (por ruta) son tablas independientes.
 
 #### `WSHandler`
 Objeto inyectado al handler con la API de respuesta hacia el cliente.
@@ -503,6 +524,9 @@ WSHandler
   sendRespuesta<T>(data, opts?) → Promise<void>   — envía IMessageServerOK (done:false por defecto)
   sendError(message, extra?)    → Promise<void>   — envía IMessageServerKO
   buffer?: ArrayBuffer                            — frame binario adjunto a la petición
+  ruta?: string                                   — ruta (normalizada) a la que está ligada la conexión
+  request?: IncomingMessage                       — petición del upgrade (cabeceras, IP)
+  constructor(ws, id, method, {buffer, head, ruta, request}?)
 ```
 
 **Flujo de integración con `server/http`:** si un `RouteGroup` sobreescribe `getWSHandlers()` devolviendo instancias de `IWSHandler`, el servidor HTTP instancia automáticamente el servidor WebSocket y registra los handlers.
@@ -593,3 +617,17 @@ client/http                         server/http
 **Regla de dependencia:** cliente nunca importa de servidor ni viceversa.
 El protocolo (`metadata/websocket`) es el único punto de acoplamiento entre ambos lados.
 
+---
+
+## 11. Pruebas — `spec/`
+
+`yarn workspace @mr/core-network test` (`tsconfig.spec.json` → `tmp/spec`, `node --test`).
+
+| Fichero | Qué cubre |
+|---------|-----------|
+| `spec/websocket-ruta.spec.ts` | `IWSHandler.ruta`/`autorizar`: 401 en el handshake, aislamiento entre rutas, normalización, circuit breaker ante un 401, `destroy()` |
+| `spec/websocket-cliente.spec.ts` | `WSPool.vaciar()` y el aviso por cabeceras distintas sobre un singleton existente |
+| `spec/servidor-cierre.spec.ts` | `Server.alIniciarCierre`/`antesDeCerrar`/`duranteCierre`/`antesDeSalir`/`cerrarYSalir`: orden, `isShuttingDown()` desde el inicio, topes y plazo |
+| `spec/net-shutdown.spec.ts` | `shutdownTimeout` acotado a 18 s en producción (25 000 → 18 000, 0 → 18 000, 10 000 se respeta; desarrollo no se toca), el texto de `avisoShutdownTimeout()` y que `config/net.ts` no importa nada de `services-comun` |
+| `spec/servidor-cierre-conexiones.spec.ts` | `Server.close()` con un WebSocket abierto, una keep-alive ociosa y otra con petición en vuelo: resuelve mucho antes del timeout y `antesDeSalir` se ejecuta |
+| `spec/helpers.ts`, `spec/stubs/*` | servidor local en el puerto 0; réplicas de `services-comun` (`instalar.ts` redirige los especificadores) |

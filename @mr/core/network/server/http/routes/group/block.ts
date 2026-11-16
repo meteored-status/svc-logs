@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Thu, 22 Oct 2026 07:08:16 GMT
- * Hash: 84dae431fd7a32eb76995ce7f3472673
- * Versión: 2026.10.22+1-bixus
- * Anterior: 2026.9.23+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Wed, 11 Nov 2026 10:30:11 GMT
+ * Hash: 93880169135281eb60a11ed20656ab73
+ * Versión: 2026.11.11+1-juancmartinez
+ * Anterior: 2026.10.22+1-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-panel-usuarios.git
  */
 
 import type {IRouteGroupCache, NetCache} from "services-comun/modules/net/cache";
@@ -14,6 +14,7 @@ import {error, warning} from "services-comun/modules/utiles/log";
 import type {Checker, IExpresion} from "../../checkers";
 import type {Conexion, TMetodo} from "../../conexion";
 import type {Dominio} from "../../config/dominio";
+import type {IContract} from "./contract";
 import {Comodin} from "../../checkers/comodin";
 import {Exact} from "../../checkers/exact";
 import {Prefix} from "../../checkers/prefix";
@@ -55,6 +56,8 @@ type TUpdater = {
  * @property documentable - Si `false`, el bloque no aparece en la documentación generada. Por defecto `true`.
  * @property dominios      - Dominios por defecto para las expresiones del bloque. Se aplica a cada
  *   {@link IExpresion} de `expresiones` cuyo propio `dominios` no esté definido.
+ * @property contract     - Tipos por defecto para la documentación OpenAPI generada (`Contract<T>()`) de las
+ *   expresiones del bloque que no declaren el suyo. Sin efecto en tiempo de ejecución.
  * @property slow         - Umbral en ms del aviso de petición lenta para las rutas del bloque, en lugar del del
  *   servidor (`Net.slow`, 1000 ms por defecto). `0` desactiva el aviso. Sin definir, vale el del servidor. Solo
  *   ajusta el aviso: si el servidor lo tiene apagado (`Net.slow = 0`), sigue apagado. Pensado para handlers que se
@@ -69,6 +72,7 @@ export interface IRouteGroup {
     cache?: Partial<IRouteGroupCache>;
     documentable?: boolean;
     dominios?: string[];
+    contract?: IContract;
     slow?: number;
 }
 

@@ -1,42 +1,57 @@
+# El pipeline siempre pasa BASE_IMAGE: la versión de Node del `.node-version` del monorepo (ver
+# `versionNode()` en aliases.sh) o la base que fije el workspace. Este valor solo vale para builds a mano.
 ARG BASE_IMAGE=node:lts-alpine
 
-# Etapa de build idéntica a la del `Dockerfile` genérico, y por los mismos motivos — ver los
-# comentarios de allí: no copia código, no declara los ARG de Datadog y desactiva el modo endurecido
-# de Yarn.
-FROM ${BASE_IMAGE} AS build
+# Etapas antes de `app` idénticas a las del `Dockerfile` genérico, y por los mismos motivos — ver los
+# comentarios de allí: no copian código ni declaran los ARG de Datadog, el `package.json` del workspace
+# entra sin `version`, el install se resuelve en la plataforma del builder para la arquitectura destino
+# y solo los scripts de build corren en la destino, y el modo endurecido de Yarn va desactivado.
+FROM --platform=$BUILDPLATFORM ${BASE_IMAGE} AS manifiesto
 ARG RUTA
 ARG WS
+COPY ./${RUTA}/${WS}/package.json /manifiesto/package.json
+RUN node -e 'const f="/manifiesto/package.json"; const j=require(f); delete j.version; require("fs").writeFileSync(f, JSON.stringify(j, null, 2) + "\n");'
+
+FROM --platform=$BUILDPLATFORM ${BASE_IMAGE} AS deps
+ARG RUTA
+ARG WS
+ARG TARGETARCH
 WORKDIR /usr/src/app
-RUN npm install -g corepack && corepack enable && corepack prepare yarn@latest --activate
+RUN npm install -g corepack && corepack enable
 RUN mkdir ./.yarn && mkdir ./.yarn/unplugged
 COPY ./.yarn/plugins ./.yarn/plugins
 COPY ./.yarn/releases ./.yarn/releases
 COPY ./.yarnrc* ./
 COPY ./package.json ./yarn.lock ./
-COPY ./${RUTA}/${WS}/package.json ./${RUTA}/${WS}/
+RUN corepack install
+COPY --from=manifiesto /manifiesto/package.json ./${RUTA}/${WS}/
 ENV NODE_ENV=production
 ENV YARN_ENABLE_HARDENED_MODE=0
-# **`.yarn/cache` no se puede montar aquí, y el motivo no es evidente.** Con `enableGlobalCache: false`
-# no es una caché de descarga: es el almacén de paquetes en tiempo de ejecución. PnP resuelve cada
-# paquete desde su `.zip` dentro de `.yarn/cache`, y el `COPY --from=build /usr/src/app/.yarn` de la
-# etapa de abajo es lo que lo mete en la imagen. Montarla con `--mount=type=bind` deja los zips en el
-# montaje, que se descarta al acabar la instrucción: la imagen sale con un `.pnp.cjs` que apunta a
-# unos zips que no existen y el contenedor muere al arrancar con «Required package missing from disk».
-# Se probó, y es lo que pasó. Para saltarse la descarga de npm está la caché de capas del registro,
-# que reutiliza esta capa entera —zips incluidos— mientras no cambien `yarn.lock` ni el
-# `package.json` del workspace.
-RUN yarn workspaces focus --production ${WS}
+RUN CPU="$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "$TARGETARCH")" \
+ && cp .yarnrc.yml /tmp/yarnrc.yml \
+ && yarn config set supportedArchitectures --json "{\"os\":[\"linux\"],\"cpu\":[\"$CPU\"],\"libc\":[\"musl\"]}" \
+ && YARN_ENABLE_SCRIPTS=false yarn workspaces focus --production ${WS} \
+ && cp /tmp/yarnrc.yml .yarnrc.yml
+
+FROM ${BASE_IMAGE} AS build
+ARG WS
+WORKDIR /usr/src/app
+RUN npm install -g corepack && corepack enable
+# Compilador para los módulos nativos sin binario para musl: ver el comentario de esta línea en el
+# `Dockerfile` genérico.
+RUN apk add --no-cache build-base python3
+COPY --from=deps /usr/src/app ./
+ENV NODE_ENV=production
+ENV YARN_ENABLE_HARDENED_MODE=0
+RUN corepack install && yarn workspaces focus --production ${WS}
 
 FROM ${BASE_IMAGE} AS app
-ARG DD_GIT_REPOSITORY_URL
-ARG DD_GIT_COMMIT_SHA
 ARG RUTA
 ARG WS
 WORKDIR /usr/src/app
 RUN apk add --no-cache tzdata
-RUN npm install -g corepack && corepack enable && corepack prepare yarn@latest --activate
-ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
-ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
+RUN npm install -g corepack && corepack enable
+ENV COREPACK_HOME=/usr/local/share/corepack
 ENV NODE_ENV=production
 RUN mkdir ./.yarn && mkdir ./files && mkdir -p ./${RUTA}/${WS}/.next && mkdir -p ./${RUTA}/${WS}/public
 COPY --from=build /usr/src/app/.yarn ./.yarn
@@ -44,6 +59,9 @@ COPY --from=build /usr/src/app/.pnp.* ./
 COPY --from=build /usr/src/app/.yarnrc* ./
 COPY --from=build /usr/src/app/yarn.lock ./
 COPY ./package.json ./
+# Yarn preparado en la imagen para que el pod no lo descargue al arrancar — ver el comentario de esta
+# misma línea en el `Dockerfile` genérico.
+RUN corepack install && COREPACK_ENABLE_NETWORK=0 yarn --version
 COPY ./framework/services-comun/next.config.js ./${RUTA}/${WS}/next.config.base.js
 COPY ./framework/services-comun/next.config.deps.js ./${RUTA}/${WS}
 COPY ./framework/services-comun/package.json ./framework/services-comun
@@ -54,10 +72,22 @@ COPY ./${RUTA}/${WS}/.next ./${RUTA}/${WS}/.next
 COPY ./${RUTA}/${WS}/public ./${RUTA}/${WS}/public
 RUN echo "#!/usr/bin/env bash" > run.sh
 RUN echo "[ -n \"\${DD_SERVICE}\" ] && export DD_SERVICE=\"\$(echo \"\${K8S_NAMESPACE:-default}\" | sed 's/meteored/mr/g')/\${DD_SERVICE}\"" >> run.sh
-RUN echo "yarn workspace ${WS} run next start -p 8080" >> run.sh
+# El PID 1 tiene que ser Yarn, que sí reenvía SIGTERM a su hijo. Sin `exec` lo era `sh`, que ignora SIGTERM (al PID 1
+# el kernel no le aplica la acción por defecto de una señal sin handler); y con `exec yarn` lo es el shim de corepack,
+# que con `yarnPath` lanza el Yarn del repo como proceso hijo y tampoco reenvía la señal. Las dos cosas medidas en
+# svc-status el 2026-11-12: Node no se enteraba del apagado y moría por SIGKILL al acabar la gracia. Por eso se arranca
+# `node <yarnPath>` directamente; sin `yarnPath` en el `.yarnrc.yml` se queda `yarn`.
+RUN Y="$(sed -n 's/^yarnPath:[[:space:]]*//p' .yarnrc.yml | tr -d "\"' \r")" && echo "exec ${Y:+node }${Y:-yarn} workspace ${WS} run next start -p 8080" >> run.sh
 WORKDIR /usr/src/app/${RUTA}/${WS}
 RUN ln -s ../../files ./
 WORKDIR /usr/src/app
+
+# Al final de la etapa, después del último RUN: ver el comentario de esta línea en el `Dockerfile`
+# genérico.
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
 
 EXPOSE 8080
 CMD [ "sh", "run.sh" ]

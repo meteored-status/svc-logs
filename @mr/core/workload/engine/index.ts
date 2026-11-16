@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: c0e88622091b77956470d43d0535595d
- * Versión: 2026.6.17+1-josantoniojimnez
+ * Editor: Bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: c8b416e2290510da04a452a1f7902547
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.6.17+1-josantoniojimnez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import fs from "node:fs/promises";
@@ -11,6 +13,7 @@ import {formatMemoria, formatTiempo, info} from "services-comun/modules/utiles/l
 import {exists, isDir, mkdir, readDir} from "services-comun/modules/utiles/fs";
 
 import type {Configuracion} from "../config";
+import {ApagadoUnico} from "./apagado-unico";
 
 /**
  * Función de cancelación que puede llamarse desde cualquier punto del código para
@@ -143,6 +146,7 @@ export class Engine<T extends Configuracion=Configuracion> {
     /* INSTANCE */
 
     private abortController: AbortController;
+    private readonly apagado: ApagadoUnico;
 
     /**
      * Señal de cancelación que pueden observar operaciones asíncronas largas.
@@ -153,11 +157,20 @@ export class Engine<T extends Configuracion=Configuracion> {
     }
 
     /**
+     * `true` si el cierre por señal (`SIGTERM`/`SIGINT`) lo atiende ya el servidor HTTP de este proceso (que llama a
+     * {@link solicitarApagado} él mismo). En la clase base es siempre `false`: la señal la atiende {@link Main}.
+     */
+    public get apagadoPorServidor(): boolean {
+        return false;
+    }
+
+    /**
      * @param configuracion - Configuración tipada de la instancia (readonly, accesible en subclases).
      * @param inicio        - Timestamp de arranque en milisegundos (readonly, usado por {@link usoTiempo}).
      */
     protected constructor(protected readonly configuracion: T, public readonly inicio: number) {
         this.abortController = new AbortController();
+        this.apagado = new ApagadoUnico(async () => this.shutdown());
     }
 
     /**
@@ -168,6 +181,22 @@ export class Engine<T extends Configuracion=Configuracion> {
      */
     public abort(motivo?: string): void {
         this.abortController.abort(motivo);
+    }
+
+    /**
+     * Pide el apagado del engine: aborta {@link abortSignal} (si no lo estaba) y ejecuta {@link shutdown} **una sola
+     * vez**, aunque se pida varias veces por distintas vías (watcher del `shutdown.lock`, cierre del servidor HTTP,
+     * señal). Las llamadas posteriores devuelven la misma promesa. Nunca rechaza: un error de `shutdown()` se registra
+     * con `warning`.
+     *
+     * @param motivo - Motivo del aborto, propagado a {@link abortSignal}.
+     */
+    public solicitarApagado(motivo: string): Promise<void> {
+        if (!this.abortController.signal.aborted) {
+            this.abort(motivo);
+        }
+
+        return this.apagado.solicitar();
     }
 
     /**
@@ -204,6 +233,24 @@ export class Engine<T extends Configuracion=Configuracion> {
      */
     protected async init(): Promise<void> {
         // Placeholder for initialization
+    }
+
+    /**
+     * Hook de apagado graceful. No-op en la clase base. Lo invoca {@link solicitarApagado}, una sola vez, cuando
+     * aparece `shutdown.lock` o llega `SIGTERM`/`SIGINT`. Las subclases lo sobreescriben (con `override`) para cerrar
+     * conexiones, vaciar buffers o completar tareas en vuelo.
+     *
+     * **Se espera, con presupuesto**: en un servicio HTTP, hasta `shutdownTimeout` (18 s en producción); en un proceso sin
+     * HTTP, hasta el mismo plazo. Lo que se dispare sin esperar solo cuenta con el margen de salida (~1 s). En un cronjob/job
+     * no hay plazo: el proceso termina cuando acaba `ejecutar()`.
+     *
+     * **Cuándo corre**: en Kubernetes, al aparecer el `shutdown.lock` del preStop, antes del margen de endpoints y del
+     * drenado, con el servidor todavía atendiendo peticiones; solo sin lock (SIGTERM directo) arranca en paralelo con el
+     * cierre del servidor. Por eso aquí no se cierra lo que las peticiones necesitan (pools de BD, clientes): eso va en
+     * `server.antesDeSalir`, que corre después del drenado.
+     */
+    protected async shutdown(): Promise<void> {
+        return;
     }
 
     /**

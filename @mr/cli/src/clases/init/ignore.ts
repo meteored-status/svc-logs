@@ -1,14 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 8d9d654f9c8cca6abdfd7bb371d6a52c
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.7.17+3-josantoniojimnez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Fecha: Mon, 16 Nov 2026 08:32:54 GMT
+ * Hash: 422cfdc8f3786e9050eca9a7295d4159
+ * Versión: 2026.11.16+2-bixus
+ * Anterior: 2026.9.7+1-bixus
+ * Proyecto: https://github.com/alpred/meteored-svc-proxy.git
  */
 
 export default `
 **/.claude/settings.local.json
+**/.claude/scheduled_tasks.lock
 .codex/
 .DS_Store
 .dev.vars

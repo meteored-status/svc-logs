@@ -13,7 +13,27 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 │  └─ pubsub.ts       — comprobarEmuladorPubSub (guarda de arranque) + modoPubSub (modo de Pub/Sub del proceso)
 ├─ engine/
 │  ├─ index.ts       — Engine base (build, ciclo de vida, abort, métricas)
-│  └─ server.ts      — Engine HTTP (initWebServer/S, shutdown watcher, prebuild)
+│  ├─ server.ts      — Engine HTTP (initWebServer/S, shutdown watcher, prebuild)
+│  ├─ lock.ts        — `borrarLockApagado()` (lo llama `Main` una vez por pod, antes de forkear) y el margen de endpoints: `MARGEN_ENDPOINTS_MS`, `calcularMargenPendiente()` (pura), `margenPendienteMs()` (mira el mtime del lock), `esperaMargenMs()` (lo que espera de verdad `antesDeCerrar`: descuenta el stat y deja `HOLGURA_PRESUPUESTO_MS` bajo el presupuesto)
+│  ├─ apagado.ts     — `atenderSenal()` / `instalarApagado()` (devuelve el desinstalador): SIGTERM/SIGINT de un proceso que no es el primario de un cluster (señal repetida → `128+n`; servidor HTTP; cronjob: en producción no sale, en desarrollo sí; sin HTTP)
+│  └─ apagado-unico.ts — `ApagadoUnico`: ejecuta el `shutdown()` del engine una sola vez; nunca rechaza
+├─ heartbeat/
+│  ├─ interface.ts   — contrato único del mensaje (`IHeartbeat`, `TEstadoPod`, `TCausaDrenado`, ruta/método/cabecera); solo tipos y constantes, sin Node
+│  ├─ estado.ts      — `calcularEstado`, `agregarEstados` (cluster); puras
+│  ├─ workers.ts     — `RegistroWorkers` (primario) + mensaje IPC `IMensajeHeartbeatWorker`
+│  ├─ config.ts      — `decidirHeartbeat` (cuándo emite y con qué), `construirUrl`, `tokenConFormato`
+│  ├─ metadatos.ts   — cluster/proyecto/ubicación del servidor de metadatos de GKE (+ `HEARTBEAT_*`); reintento con backoff en producción
+│  ├─ contexto.ts    — `resolverContexto`: `info` al resolver, `warning` y sin emitir si falla
+│  ├─ metricas.ts    — `MedidorMetricas` (RSS, retraso del event loop, uptime)
+│  ├─ payload.ts     — `construirContexto`, `construirHeartbeat`, `revisionDePod`; puras
+│  ├─ sonda.ts       — `Sonda`: estado de este proceso (started/ready/señal/preStop)
+│  ├─ vuelo.ts       — `UnSoloVuelo`: un envío en vuelo, gana la última petición
+│  ├─ emisor.ts      — `Heartbeat`: emisor por WebSocket (pod simple / primario de cluster) + despedida
+│  ├─ informante.ts  — `InformanteWorker`: informe por IPC de un worker al primario
+│  ├─ registro.ts    — `heartbeatActual()` / `registrarHeartbeat()`, `IInstanciaHeartbeat`, `IServidorCierre`
+│  ├─ cierre-primario.ts — `cerrarPrimario`, `instalarCierrePrimario`: SIGTERM/SIGINT del primario de un cluster (con o sin heartbeat), `despedirAcotado`
+│  └─ crear.ts       — `iniciarHeartbeat()`: lo que llama `Main` tras el sidecar
+├─ spec/             — pruebas `node:test` (`yarn workspace @mr/core-workload test`) + `stubs/`
 ├─ handlers/
 │  ├─ admin.ts       — rutas /admin/* (healthchecks, doc, metrics Prometheus, pubsub)
 │  ├─ error.ts       — handler de error HTTP por defecto (404 / JSON)
@@ -22,7 +42,8 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 ├─ CODEMAP.md
 ├─ CHANGELOG.md
 ├─ package.json
-└─ tsconfig.json
+├─ tsconfig.json
+└─ tsconfig.spec.json
 ```
 
 ## Superficie publica
@@ -48,7 +69,11 @@ Mapa tecnico del workspace `@mr/core/workload/`.
     - `addSlave()` — levanta un worker en modo cluster
     - `startMaster(configuracion, hilos)` — proceso primario en cluster
     - `startSlave(configuracion)` — proceso worker en cluster
-    - `start()` — ciclo completo: guarda de Pub/Sub → load → sidecar → cluster/simple → cronjob cleanup. La guarda (`comprobarEmuladorPubSub`) aborta el arranque si un bundle de test/producción tiene `PUBSUB_EMULATOR_HOST`; si el proceso corre contra el emulador, `info("Pub/Sub: emulador <host> (<proyecto>)")` (solo el primario en cluster)
+    - `modoHeartbeat` *(getter privado)* — `simple`, `primario` o `worker` según `minimo_hilos` y `cluster.isPrimary`
+    - `workersParaCierre()` *(privado)* — los workers como los necesita `cierre-primario.ts`; `start()` instala ahí el manejador de señales del primario, con o sin heartbeat
+    - `start()` instala `instalarApagado` (modo simple y workers) al inicio y guarda `engineActual` / `ejecucionFinitaPendiente` (cronjob/job con `master()`/`ejecutar()` en marcha, desde justo tras el `build`: en producción la señal no hace salir el proceso)
+    - `addSlave()` además da de alta el worker en el `RegistroWorkers`, atiende `cmd: "heartbeat"` y lo da de baja al `exit`
+    - `start()` — tras el sidecar llama a `iniciarHeartbeat()` y, después de construir el engine, le pasa la instancia (`setEngine`) y marca `marcarEjecutado()` al resolver `ejecutar()`. Ciclo completo: guarda de Pub/Sub → load → sidecar → cluster/simple → cronjob cleanup. La guarda (`comprobarEmuladorPubSub`) aborta el arranque si un bundle de test/producción tiene `PUBSUB_EMULATOR_HOST`; si el proceso corre contra el emulador, `info("Pub/Sub: emulador <host> (<proyecto>)")` (solo el primario en cluster)
 
 ### `engine/index.ts`
 
@@ -91,6 +116,9 @@ Mapa tecnico del workspace `@mr/core/workload/`.
     - `init()` *(hook protegido)* — no-op en la base; **debe sobreescribirse**
   - Utilidades:
     - `abort(motivo?)` — activa el `AbortController` interno
+    - `solicitarApagado(motivo)` — aborta (si no estaba) y ejecuta `shutdown()` una sola vez (`ApagadoUnico`); nunca rechaza
+    - `apagadoPorServidor` (getter) — `false` en la base; en el Engine HTTP, `server.gestionaSenales()`
+    - `shutdown()` *(protegido, hook)* — no-op; se sobreescribe con `override`; se espera con presupuesto
     - `usoMemoria()` *(protegido)* — imprime heap/buffers/rss en el log
     - `usoTiempo()` *(protegido)* — imprime tiempo transcurrido desde `inicio`
 
@@ -106,6 +134,7 @@ hooks de salud que los handlers de admin necesitan.
 - `abstract class Engine<T extends ConfiguracionNet> extends EngineBase<T>`
   - Propiedades de instancia:
     - `handlers: RouteGroup[]` (privado) — lista de grupos activos; consultada por `okAll`
+    - `ultimoReady` / `preStopSolicitado` (getters públicos) y `registrarReady(ok)` — lo que lee la sonda del heartbeat; `iniciar()` engancha el heartbeat al cierre por señal del servidor (`alIniciarCierre`, `antesDeSalir`)
     - `routes?: Routes` (público) — tabla de rutas; disponible tras `initWebServer/S`
   - Hook estático sobreescribible:
     - `prebuild(configuracion)` — fija `Respuesta.setContextoDefecto(service/pod/version/zona)`
@@ -126,7 +155,8 @@ hooks de salud que los handlers de admin necesitan.
     - `ready()` — probe de disponibilidad de tráfico (`/admin/ready/`); delega en `ok()`
     - `okAll()` — liveness probe (`/admin/live/`); verifica `handler.ok` de todos los grupos + `ok()`
     - `ok()` *(protegido)* — comprobación genérica personalizable; no-op en la base
-    - `shutdown()` *(protegido)* — apagado graceful al detectar `shutdown.lock`; no-op en la base
+    - `shutdown()` *(protegido, `override`)* — apagado graceful al detectar `shutdown.lock` o recibir la señal; lo llama `solicitarApagado()` una vez; no-op en la base
+    - `iniciar()` registra, una vez por proceso, `server.antesDeCerrar` (margen de endpoints) y `server.duranteCierre` (`solicitarApagado`) y enlaza el heartbeat (`servidorEnlazado`)
 
 ### `config/index.ts`
 
@@ -238,7 +268,7 @@ Engine.build(config, unix)         ← hereda de Engine base
 
 engine.init()
   -> monta watcher chokidar en files/tmp/admin/
-     si aparece shutdown.lock → this.abort() + this.shutdown()
+     si aparece shutdown.lock → this.solicitarApagado() (abort + shutdown() una vez)
 
 engine.initWebServer(handlers, net, config?)
   -> iniciar(handlers, config)     ← añade Admin + Favicon, setCache, recoge WSHandlers + upgrades
@@ -258,3 +288,18 @@ engine.initWebServer(handlers, net, config?)
 - `@mr/core-network/server/http/*`
 - `@mr/core-network/server/websocket`
 - `chokidar`
+
+### `heartbeat/`
+
+Ver el apartado «Heartbeat» del `README.md`. API pública:
+
+- `interface.ts` (importable como `@mr/core-workload/heartbeat/interface`): `IHeartbeat` (v1, con `revision`), `IHeartbeatProcesos`, `IHeartbeatMetricas`, `TEstadoPod`, `TCausaDrenado`, `RUTA_HEARTBEAT`, `METODO_HEARTBEAT`, `CABECERA_HEARTBEAT`.
+- `estado.ts`: `calcularEstado(entrada)`, `agregarEstados(workers, ahora, {timeoutMs?, drenadoAntes?})` (sin workers y con `drenadoAntes` sigue `drenando`; un worker con `informado: false`, solo dado de alta, no caduca con el timeout y sigue `arrancando`), `causaMasFuerte`, `TIMEOUT_WORKER_MS`.
+- `config.ts`: `decidirHeartbeat({env, entorno, tipo, target})` → `TDecision` (en producción exige un token `hb1.<id>.<secreto>`; los `avisos` solo salen si está habilitado); `tokenConFormato(token)`; `construirUrl(base)`; `SOCKET_POR_DEFECTO`.
+- `metadatos.ts`: `leerMetadatos({env, leer?, consultar?, reintentar?, esperar?, primeraEsperaMs?, maxEsperaMs?})` (con `reintentar` no resuelve hasta tener los tres), `interpretarRespuesta`, `resolverMetadatos`.
+- `contexto.ts`: `resolverContexto(metadatos, construir)`.
+- `payload.ts`: `construirContexto(...)`, `construirHeartbeat(contexto, foto)`, `revisionDePod({env, hostname, produccion, avisar?})` (manda vacía una `POD_REVISION` que no encaje con `^[a-z0-9]{1,16}$`).
+- `cierre-primario.ts`: `cerrarPrimario({senal, workers, emisor|null, salir?, esperaMs?, despedidaMs?, margen?})` (espera `margen + esperaMs`), `despedirAcotado(emisor|null, ms?)`, `instalarCierrePrimario({workers, emisor|null, salir?})` (devuelve el desinstalador; segunda señal → `128+n`), `ESPERA_WORKERS_MS` (19 s, derivado de las constantes de core-network), `DESPEDIDA_MAX_MS` (1 s).
+- `emisor.ts`: `class Heartbeat` (`iniciar`, `setEngine`, `marcarEjecutado`, `disparar`, `enlazarServidor`, `alIniciarCierre`, `despedir`). Entrega el primer estado (`arrancando`, `tseq` 0) antes que cualquier transición durante `PRIMER_ESTADO_MAX_MS` (25 s): si no se entrega, la foto actual espera al siguiente ciclo.
+- `crear.ts`: `iniciarHeartbeat({pod, unix, modo})` → `{instancia, workers, emisor}` o `null` (`emisor` es `null` en un worker).
+- `registro.ts`: `heartbeatActual()`; `IInstanciaHeartbeat`, `IServidorCierre`.

@@ -15,11 +15,11 @@
     "test": "rm -rf tmp/spec && yarn workspace services-comun exec tsc -p ../../services/logs-slave/tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
   },
   "dependencies": {
-    "@google-cloud/bigquery": "^9.5.0",
-    "@google-cloud/storage": "^8.4.0",
+    "@google-cloud/bigquery": "^9.6.1",
+    "@google-cloud/storage": "^9.0.0",
     "chokidar": "^6.0.0",
-    "crawler-user-agents": "^1.66.0",
-    "dd-trace": "^6.23.0",
+    "crawler-user-agents": "^1.67.0",
+    "dd-trace": "^6.25.0",
     "formidable": "^3.5.4",
     "geoip-lite": "^2.0.3",
     "qs": "^6.17.1",
@@ -28,7 +28,7 @@
     "supports-color": "^11.0.0",
     "tslib": "^2.9.1",
     "ua-parser-js": "^2.0.10",
-    "ws": "^8.22.1",
+    "ws": "^8.23.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -44,6 +44,6 @@
   },
   "main": "app.js",
   "optionalDependencies": {
-    "bufferutil": "^4.1.0"
+    "bufferutil": "^4.2.0"
   }
 }

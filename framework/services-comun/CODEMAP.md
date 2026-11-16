@@ -28,13 +28,13 @@ Patrón de engine para procesos **sin servidor HTTP** (workers de eventos, cronj
 EngineEvent<T>
   init()                    → arranca waitEventReady() → launchEventLive(); monta watcher
                                chokidar sobre files/tmp/admin/ (solo si el directorio existe)
-                               shutdown.lock → this.abort(motivo) + this.shutdown()
+                               shutdown.lock → this.solicitarApagado(motivo)  (abort + shutdown() una sola vez)
   waitEventReady()           → sondea started() cada 1000ms hasta que resuelve; luego writeLockFile()
   launchEventLive()          → bucle cada 1000ms: ok() + writeLockFile() (heartbeat de vida del pod)
   writeLockFile()             → escribe files/tmp/run.lock con el timestamp actual
   started() → ok()            (hook, delega en ok())
   ok()                        (hook protegido, no-op en la base — sobreescribible)
-  shutdown()                  (hook protegido, no-op en la base — sobreescribible)
+  shutdown()                  (hook protegido `override`, no-op — sobreescribible; lo llama solicitarApagado(), una vez, también al recibir SIGTERM)
 ```
 
 **Depende de:** `@mr/core-workload/config` (`Configuracion`, solo tipo), `@mr/core-workload/engine`
@@ -116,7 +116,6 @@ Utilidades de dominio específico (meteorología / geo / negocio):
 
 | Fichero | Propósito |
 |---------|-----------|
-| `unidades.ts` | Enums y conversores de unidades meteorológicas: `TVelocidad`, `TPrecipitacion`, `TNieve`, `TPresion`, `TTemperatura`, `TDistancia` + `convertir*`/`redondear*` |
 | `geopoint.ts` | `Coordenadas`, `ICoordenadas`, `Hemisferio`, `distanceKm`, `near`, `plain` — geometría geográfica |
 | `geojson.ts` | `IGeoJSON<P>`, `IProperties`, `IGeometry` — tipos GeoJSON |
 | `fecha.ts` | `Fecha` (clase), `TTimeUnit` |
@@ -426,7 +425,7 @@ Subdirectorios pequeños y autocontenidos (1–15 ficheros); se documentan aquí
 | `google-elevation/` | 1 | `Client`, `IElevationConfig`/`IElevationResult`/`IElevationItem`/`ILocation` | Cliente de la API de Google Elevation (altitud por coordenadas) |
 | `hash/` | 2 | `HashElement<T> extends EventEmitter` | Estructura tipo tabla hash con eventos de cambio |
 | `img/` | 1 | `Spline` | Interpolación por *spline* (usado en generación de gráficas/imágenes) |
-| `openapi/` | 1 | `IOpenAPI`, `IInfo`, `IPaths`, `IComponents`, ... | Tipos TypeScript del esquema OpenAPI (sin lógica, solo tipado) |
+| `openapi/` | 1 | `IOpenAPI`, `IInfo`, `IPaths`, `IComponents` (`schemas`, `securitySchemes`), ... | Tipos TypeScript del esquema OpenAPI 3.1 (sin lógica, solo tipado; `ISchema` recursivo, `IPath` con todos los métodos) |
 | `services/` | 1 | `ConfigService`/`IConfigService` | Configuración de registro de un servicio individual (nombre/id), consumida por `Service` de `@mr/core-network` |
 | `browser/` | 15 | `Validator`/`InputValidator`/`SelectValidator`/`TextAreaValidator`/`CheckValidator`/`FileValidator`/`MailValidator`, `PromiseDelayed`, `AnimationFrame`, `Scheduler`/`Prioridad`, `isBot`, `info`/`warn`/`error`, `cookies` (`default`), `yieldToMainBackground`/`yieldToMainUiBlocking` | **Único módulo orientado a cliente/navegador** del workspace: validación de formularios, utilidades DOM, scheduler cooperativo (`isInputPending`/prioridad), logging y promesas adaptadas al *event loop* del navegador, cookies. No usar desde código de servidor. |
 

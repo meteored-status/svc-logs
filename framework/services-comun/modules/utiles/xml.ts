@@ -1,9 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: d6f6a196922f5ea9f98a7b82ff913efd
- * Versión: 2026.9.23+3-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: David Martínez Moya
+ * Fecha: Thu, 05 Nov 2026 10:20:32 GMT
+ * Hash: b12d1dee017979e1e3c0b75ea8ebfbc3
+ * Versión: 2026.11.5+2-davidmartinezmoya
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-translation.git
  */
 
 interface BuilderConfig {
@@ -75,9 +76,50 @@ export class XMLNode {
 
             return parts.join(separator);
         } else {
-            return `${indent}<${this.name} ${attributes}>${this.text}</${this.name}>`;
+            const attrString = attributes ? ` ${attributes}` : '';
+            const textString = this.text !== undefined ? this.text : '';
+
+            if (textString === '') {
+                return `${indent}<${this.name}${attrString}/>`;
+            }
+
+            if (config.pretty && textString.includes('\n')) {
+                // Dividimos, limpiamos líneas vacías e indentamos el texto interno
+                const formattedText = textString
+                    .split('\n')
+                    .filter(line => line.trim() !== '')
+                    .map(line => `${indent}${config.indent}${line}`)
+                    .join('\n');
+
+                // Devolvemos el nodo con el texto y la etiqueta de cierre bien alineada
+                return `${indent}<${this.name}${attrString}>\n${formattedText}\n${indent}</${this.name}>`;
+            }
+
+            return `${indent}<${this.name}${attrString}>${textString}</${this.name}>`;
         }
     }
 
 }
 
+export class XLIFFNode extends XMLNode {
+    public constructor(version: string = '1.2') {
+        // Llamamos al constructor padre forzando el nombre del nodo a 'xliff'
+        super('xliff');
+
+        // Añadimos automáticamente los atributos obligatorios del estándar
+        this.addAttribute('version', version);
+        this.addAttribute('xmlns', 'urn:oasis:names:tc:xliff:document:1.2');
+    }
+
+    // Opcional pero muy útil: Un helper para crear el nodo <file> obligatorio
+    public addFileNode(original: string, sourceLang: string, targetLang: string): XMLNode {
+        const fileNode = new XMLNode('file');
+        fileNode.addAttribute('original', original);
+        fileNode.addAttribute('source-language', sourceLang);
+        fileNode.addAttribute('target-language', targetLang);
+        fileNode.addAttribute('datatype', 'plaintext');
+
+        this.addChildren(fileNode);
+        return fileNode; // Devolvemos el nodo file por si quieres seguir anidando cosas (header, body...)
+    }
+}

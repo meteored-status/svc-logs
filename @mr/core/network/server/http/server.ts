@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Thu, 22 Oct 2026 07:08:16 GMT
- * Hash: 1fc2d77505d5908e187d43263f4c036b
- * Versión: 2026.10.22+1-bixus
- * Anterior: 2026.10.5+1-pedro
+ * Fecha: Mon, 16 Nov 2026 11:00:00 GMT
+ * Hash: 585c3d46b87e382e64dfb8bfe9db7dd6
+ * Versión: 2026.11.16+2-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -22,11 +22,12 @@ import {Deferred} from "services-comun/modules/utiles/promise";
 
 import {abortUpgrade, buildUpgradeContext, type IUpgradeHandler, matchUpgradeHandler, protegerSocket} from "./upgrade";
 import {Conexion} from "./conexion";
-import type {Net} from "./config/net";
+import {PRESUPUESTO_ANTES_DE_CERRAR_MS, PRESUPUESTO_ANTES_DE_SALIR_MS, avisoShutdownTimeout, limiteDuroMs, type Net} from "./config/net";
 import {metricas} from "./metrics";
 import type {Routes} from "./routes";
 import {route} from "./router";
 import {esLenta, esperaLenta, textoUmbral, umbralLento} from "./slow";
+import {servidorWebSocketActual} from "../websocket";
 
 /** Métodos HTTP que pueden traer cuerpo y que parseamos en `onRequest`. */
 const METODOS_CON_CUERPO: ReadonlySet<string> = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -56,6 +57,23 @@ export const RUTA_DEBUG_HANDOFF = "/admin/debug-handoff/";
 
 /** Intervalo de reintento de escucha para el proceso que quiere el puerto para depurar (prioridad alta). */
 const INTERVALO_REINTENTO_DEBUG_MS = 300;
+
+export {PRESUPUESTO_ANTES_DE_CERRAR_MS, PRESUPUESTO_ANTES_DE_SALIR_MS};
+
+/**
+ * Opciones de {@link Server.cerrarYSalir}.
+ *
+ * @property salir - Función que termina el proceso con el código dado. Por defecto `process.exit`.
+ * @property presupuestoAntesDeCerrarMs - Tope de los callbacks de {@link Server.antesDeCerrar}.
+ *   Por defecto {@link PRESUPUESTO_ANTES_DE_CERRAR_MS}.
+ */
+export interface IOpcionesCierre {
+    salir?: (codigo: number) => void;
+    presupuestoAntesDeCerrarMs?: number;
+}
+
+/** Cada cuánto (ms) se cierran las conexiones keep-alive que quedan ociosas mientras dura {@link Server.close}. */
+export const INTERVALO_CONEXIONES_OCIOSAS_MS = 150;
 
 /** Intervalo de reintento de escucha para el proceso que espera recuperar el puerto tras la depuración. */
 const INTERVALO_REINTENTO_NORMAL_MS = 2000;
@@ -125,17 +143,84 @@ export class Server {
     private serverHTTP: http.Server|null;
     private serverHTTPS: https.Server|null;
     private _shuttingDown: boolean;
+    private cerrando: boolean;
     private signalsAttached: boolean;
     private netHTTP: Net|null;
     private esperandoPuertoHTTP: NodeJS.Timeout|null;
+    private readonly callbacksInicioCierre: (() => void)[];
+    private readonly callbacksAntesDeSalir: (() => Promise<void>)[];
+    private readonly callbacksAntesDeCerrar: (() => Promise<void>)[];
+    private readonly callbacksDuranteCierre: (() => Promise<void>)[];
 
     public constructor() {
         this.serverHTTP = null;
         this.serverHTTPS = null;
         this._shuttingDown = false;
+        this.cerrando = false;
         this.signalsAttached = false;
         this.netHTTP = null;
         this.esperandoPuertoHTTP = null;
+        this.callbacksInicioCierre = [];
+        this.callbacksAntesDeSalir = [];
+        this.callbacksAntesDeCerrar = [];
+        this.callbacksDuranteCierre = [];
+    }
+
+    /**
+     * Registra un callback **síncrono** que se ejecuta al entrar en el cierre por señal (`SIGTERM`/`SIGINT`),
+     * antes de `close()`. Sirve para avisar de que el proceso se va a parar mientras aún se puede. Un error
+     * del callback se registra con `warning` y no detiene el cierre. Sin callbacks registrados, el cierre
+     * no cambia.
+     *
+     * @param cb - Callback a ejecutar.
+     */
+    public alIniciarCierre(cb: () => void): void {
+        this.callbacksInicioCierre.push(cb);
+    }
+
+    /**
+     * Registra un callback asíncrono que se ejecuta cuando `close()` ha terminado y justo antes de
+     * `process.exit(0)`. Todos los callbacks comparten un presupuesto total de
+     * {@link PRESUPUESTO_ANTES_DE_SALIR_MS} ms: pasado ese tiempo se sale igualmente. Los errores se
+     * registran con `warning` y no impiden la salida. Sin callbacks registrados, el cierre no cambia.
+     *
+     * @param cb - Callback a ejecutar.
+     */
+    public antesDeSalir(cb: () => Promise<void>): void {
+        this.callbacksAntesDeSalir.push(cb);
+    }
+
+    /**
+     * Registra un callback asíncrono que se ejecuta **antes** de `close()`, con el servidor todavía
+     * aceptando conexiones y peticiones. Sirve para dar margen a que el pod salga de los endpoints
+     * del balanceador antes de dejar de escuchar. Todos los callbacks comparten un presupuesto de
+     * {@link PRESUPUESTO_ANTES_DE_CERRAR_MS} ms (inyectable con `presupuestoAntesDeCerrarMs`); los
+     * errores se registran con `warning` y no detienen el cierre. {@link isShuttingDown} ya es `true`
+     * dentro de ellos, así que `/admin/ready/` responde 503.
+     *
+     * @param cb - Callback a ejecutar.
+     */
+    public antesDeCerrar(cb: () => Promise<void>): void {
+        this.callbacksAntesDeCerrar.push(cb);
+    }
+
+    /**
+     * Registra un callback asíncrono que se ejecuta **en paralelo** con `close()` y comparte con él el
+     * plazo `shutdownTimeout`: la salida espera a que terminen los dos o a que venza el plazo (con un
+     * `warning`). Los errores se registran con `warning`. Pensado para el `shutdown()` del Engine.
+     *
+     * @param cb - Callback a ejecutar.
+     */
+    public duranteCierre(cb: () => Promise<void>): void {
+        this.callbacksDuranteCierre.push(cb);
+    }
+
+    /**
+     * Indica si este servidor atiende él mismo `SIGTERM`/`SIGINT` (ya escucha y registró sus señales).
+     * Si es `false`, la señal debe atenderla quien arranca el proceso.
+     */
+    public gestionaSenales(): boolean {
+        return this.signalsAttached;
     }
 
     /**
@@ -152,17 +237,32 @@ export class Server {
      * nuevas y espera a que las en curso terminen. Si pasados `timeoutMs` ms quedan
      * conexiones vivas se cierran forzosamente con `closeAllConnections()`.
      *
+     * `http.Server.close()` no resuelve mientras quede una conexión abierta, y ni un WebSocket entrante
+     * (el socket upgradeado ya no es del servidor HTTP) ni una keep-alive con una petición en vuelo se
+     * cierran solos. Por eso, mientras dura el cierre:
+     *
+     * - Se cierra **en paralelo el servidor WebSocket** de este proceso, si lo hay
+     *   ({@link servidorWebSocketActual}): manda `Shutdown` a los clientes para que se reconecten a una
+     *   réplica viva y les da unos segundos para cerrar.
+     * - Cada {@link INTERVALO_CONEXIONES_OCIOSAS_MS} ms se llama a `closeIdleConnections()`, que cierra las
+     *   keep-alive que ya han terminado su petición.
+     *
+     * Sin eso, `close()` solo salía por `timeoutMs` y, en producción, el SIGKILL llegaba antes de
+     * `antesDeSalir`.
+     *
      * Se invoca automáticamente al recibir `SIGTERM` o `SIGINT`; también puede
      * llamarse manualmente desde el ciclo de vida del servicio.
      *
      * @param timeoutMs - Tiempo máximo en ms a esperar el drenado. `0` desactiva el corte forzoso.
      */
     public async close(timeoutMs: number): Promise<void> {
-        if (this._shuttingDown) {
+        if (this.cerrando) {
             return;
         }
+        this.cerrando = true;
         this._shuttingDown = true;
 
+        const timers: NodeJS.Timeout[] = [];
         const cerrar = (srv: http.Server|https.Server|null): Promise<void> => {
             if (srv === null) {
                 return Promise.resolve();
@@ -177,20 +277,146 @@ export class Server {
                     resolve();
                 };
                 srv.close(() => fin());
+                const ociosas = setInterval(() => {
+                    try {
+                        srv.closeIdleConnections?.();
+                    } catch {
+                        // ignorar
+                    }
+                }, INTERVALO_CONEXIONES_OCIOSAS_MS);
+                ociosas.unref();
+                timers.push(ociosas);
                 if (timeoutMs > 0) {
-                    setTimeout(() => {
+                    const forzar = setTimeout(() => {
                         try {
                             srv.closeAllConnections?.();
                         } catch {
                             // ignorar
                         }
                         fin();
-                    }, timeoutMs).unref();
+                    }, timeoutMs);
+                    forzar.unref();
+                    timers.push(forzar);
                 }
             });
         };
 
-        await Promise.all([cerrar(this.serverHTTP), cerrar(this.serverHTTPS)]);
+        const webSocket = servidorWebSocketActual();
+        const cierreWebSocket = webSocket !== undefined ?
+            webSocket.shutdown(timeoutMs > 0 ? timeoutMs : undefined).catch((err: unknown) => {
+                warning("Error cerrando el servidor WebSocket", err);
+            }) :
+            Promise.resolve();
+
+        try {
+            await Promise.all([cerrar(this.serverHTTP), cerrar(this.serverHTTPS), cierreWebSocket]);
+        } finally {
+            for (const timer of timers) {
+                clearInterval(timer);
+                clearTimeout(timer);
+            }
+        }
+    }
+
+    /**
+     * Secuencia de cierre por señal: marca {@link isShuttingDown}, callbacks de {@link alIniciarCierre} y de
+     * {@link antesDeCerrar} (el margen de endpoints), `close()` en paralelo con {@link duranteCierre},
+     * callbacks de {@link antesDeSalir} (con su presupuesto) y salida. La salida es inyectable para poder
+     * probar el orden sin terminar el proceso.
+     *
+     * Orden: (1) {@link isShuttingDown} pasa a `true`; (2) {@link alIniciarCierre}; (3) {@link antesDeCerrar}
+     * con su tope; (4) se arma el límite duro (después del margen, para que éste no lo consuma);
+     * (5) `close()` en paralelo con {@link duranteCierre}, acotado a `shutdownTimeout`; (6)
+     * {@link antesDeSalir}; (7) salida.
+     *
+     * @param config - Configuración de red (`shutdownTimeout`).
+     * @param opciones - Salida inyectable y tope de {@link antesDeCerrar}.
+     */
+    public async cerrarYSalir(config: Net, {salir = (codigo) => process.exit(codigo), presupuestoAntesDeCerrarMs = PRESUPUESTO_ANTES_DE_CERRAR_MS}: IOpcionesCierre = {}): Promise<void> {
+        this._shuttingDown = true;
+
+        for (const cb of this.callbacksInicioCierre) {
+            try {
+                cb();
+            } catch (err) {
+                warning("Error en un callback de inicio de cierre", err);
+            }
+        }
+
+        await this.ejecutarConPresupuesto(this.callbacksAntesDeCerrar, presupuestoAntesDeCerrarMs, "antesDeCerrar");
+
+        // Hard safety: si por cualquier razón `close()` no resuelve (handles activos que no
+        // sueltan, un `antesDeSalir` colgado…) salimos forzosamente para no colgar al
+        // orquestador/watcher. Es `shutdownTimeout` + el presupuesto de `antesDeSalir` + 1 s
+        // de margen, y no el doble del timeout como antes: el doble quedaba por encima de los
+        // 25 s de `terminationGracePeriodSeconds`, así que en Kubernetes este seguro no llegaba
+        // nunca a actuar antes del SIGKILL. Con 18 s en producción son 20 s, y se arma tras el
+        // margen de `antesDeCerrar` (hasta 3 s), así que el peor caso son 23 s desde el preStop.
+        const hardLimitMs = limiteDuroMs(config.shutdownTimeout);
+        const hardTimeout = setTimeout(() => {
+            warning("Shutdown graceful no finalizó a tiempo; forzando salida");
+            salir(1);
+        }, hardLimitMs);
+        hardTimeout.unref();
+
+        const cierre = this.close(config.shutdownTimeout).catch((err: unknown) => {
+            error("Error en shutdown graceful", err);
+        });
+        await Promise.all([cierre, this.ejecutarDuranteCierre(config.shutdownTimeout)]);
+
+        await this.ejecutarConPresupuesto(this.callbacksAntesDeSalir, PRESUPUESTO_ANTES_DE_SALIR_MS, "antesDeSalir");
+
+        clearTimeout(hardTimeout);
+        // Registrar el listener de señal anula el comportamiento por defecto
+        // de Node (terminar el proceso), por lo que debemos salir explícitamente
+        // una vez se ha drenado el servidor.
+        salir(0);
+    }
+
+    /**
+     * Ejecuta callbacks en paralelo con un presupuesto total; pasado el presupuesto se sigue adelante con
+     * un `warning`. Los errores de cada callback se registran con `warning`. Nunca rechaza.
+     */
+    private async ejecutarConPresupuesto(callbacks: (() => Promise<void>)[], presupuestoMs: number, nombre: string): Promise<void> {
+        if (callbacks.length === 0) {
+            return;
+        }
+
+        const deferred = new Deferred<void>();
+        const timer = setTimeout(() => {
+            warning(`Los callbacks de ${nombre} superaron el presupuesto de ${presupuestoMs} ms`);
+            deferred.resolve();
+        }, presupuestoMs);
+        timer.unref();
+
+        Promise.all(callbacks.map(async (cb) => {
+            try {
+                await cb();
+            } catch (err) {
+                warning(`Error en un callback de ${nombre}`, err);
+            }
+        })).then(() => deferred.resolve(), () => deferred.resolve());
+
+        await deferred.promise;
+        clearTimeout(timer);
+    }
+
+    /**
+     * Ejecuta los callbacks de {@link duranteCierre} en paralelo, acotados al plazo `shutdownTimeout`
+     * (`0` = sin tope). Nunca rechaza.
+     */
+    private async ejecutarDuranteCierre(timeoutMs: number): Promise<void> {
+        if (timeoutMs <= 0) {
+            await Promise.all(this.callbacksDuranteCierre.map(async (cb) => {
+                try {
+                    await cb();
+                } catch (err) {
+                    warning("Error en un callback de duranteCierre", err);
+                }
+            }));
+            return;
+        }
+        await this.ejecutarConPresupuesto(this.callbacksDuranteCierre, timeoutMs, "duranteCierre");
     }
 
     private attachSignals(config: Net): void {
@@ -199,33 +425,19 @@ export class Server {
         }
         this.signalsAttached = true;
 
+        // El aviso del recorte del `shutdownTimeout` sale aquí, una vez al arrancar, y no al construir `Net`: `config/net.ts` lo carga
+        // también el navegador y no puede importar el log del servidor.
+        const aviso = avisoShutdownTimeout(config);
+        if (aviso !== null) {
+            warning(aviso);
+        }
+
         const onSignal = (signal: NodeJS.Signals): void => {
             if (this._shuttingDown) {
                 return;
             }
             info(`Recibida señal ${signal}; iniciando shutdown graceful`);
-
-            // Hard safety: si por cualquier razón `close()` no resuelve (sockets keep-alive
-            // que no drenan, handles activos, etc.) salimos forzosamente al doble del
-            // `shutdownTimeout` para no colgar al orquestador/watcher.
-            const hardLimitMs = Math.max(config.shutdownTimeout * 2, 5_000);
-            const hardTimeout = setTimeout(() => {
-                warning("Shutdown graceful no finalizó a tiempo; forzando salida");
-                process.exit(1);
-            }, hardLimitMs);
-            hardTimeout.unref();
-
-            this.close(config.shutdownTimeout)
-                .catch((err) => {
-                    error("Error en shutdown graceful", err);
-                })
-                .finally(() => {
-                    clearTimeout(hardTimeout);
-                    // Registrar el listener de señal anula el comportamiento por defecto
-                    // de Node (terminar el proceso), por lo que debemos salir explícitamente
-                    // una vez se ha drenado el servidor.
-                    process.exit(0);
-                });
+            this.cerrarYSalir(config).catch(() => undefined);
         };
 
         process.once("SIGTERM", onSignal);
@@ -500,6 +712,18 @@ export class Server {
      * @param seguro          - `true` si la conexión llega por HTTPS.
      */
     private onRequest(request: http.IncomingMessage, response: http.ServerResponse, requestHandlers: Routes, config: Net, seguro: boolean): void {
+        // Tras `close()` una petición por una keep-alive ya abierta se sigue atendiendo (Node emite `request` al
+        // parsearla, así que también las encadenadas que llegaron antes del cierre) y la conexión se quedaría
+        // reutilizable: con `Connection: close` el proxy (Envoy) no vuelve a usar ese socket. Se decide al
+        // escribir las cabeceras, no al recibir la petición, para cubrir las que estaban en vuelo.
+        const escribirCabeceras = response.writeHead.bind(response) as (...args: unknown[]) => http.ServerResponse;
+        (response as unknown as {writeHead: (...args: unknown[]) => http.ServerResponse}).writeHead = (...args: unknown[]): http.ServerResponse => {
+            if (this.cerrando && !response.headersSent) {
+                response.setHeader("Connection", "close");
+            }
+
+            return escribirCabeceras(...args);
+        };
         // Solo confiamos en `x-forwarded-proto` si la configuración nos indica que estamos detrás de un proxy.
         let https = seguro;
         if (config.trustProxy) {

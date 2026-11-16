@@ -150,6 +150,8 @@ await ws.shutdown(10_000); // máximo 10 s antes de forzar cierre
 
 El método: (1) deja de aceptar nuevas conexiones; (2) envía `"Shutdown"` a todos los clientes activos; (3) espera a que cierren limpiamente; (4) fuerza el cierre de los que no respondan; (5) elimina el singleton.
 
+`Server.close()` del servidor HTTP lo llama por su cuenta (`servidorWebSocketActual()`, que devuelve el singleton sin crearlo) al cerrar por señal, en paralelo al cierre del servidor HTTP: no hace falta llamarlo desde el servicio.
+
 ### Implementar un handler
 
 Cada handler implementa la interfaz `IWSHandler` e indica los métodos que sabe gestionar.
@@ -176,6 +178,46 @@ export class NombreHandler implements IWSHandler {
     }
 }
 ```
+
+#### Ruta propia y autorización en el handshake
+
+Por defecto un handler es **global**: sus métodos se resuelven en las conexiones de cualquier ruta
+(el servidor acepta el upgrade en cualquier path). Con `ruta` el handler pasa a ser **de una ruta**, y con
+`autorizar` esa ruta exige credenciales en el handshake:
+
+```ts
+export class HeartbeatHandler implements IWSHandler {
+    public method = ["heartbeat"];
+    public ruta = "/status/external/heartbeat/";
+
+    public autorizar(req: IncomingMessage): boolean {
+        return req.headers["x-mr-heartbeat"] === process.env["TOKEN"];
+    }
+
+    public async handler<T>(ws: WSHandler, params: T): Promise<void> {
+        // ws.ruta y ws.request (cabeceras del upgrade) están disponibles
+    }
+}
+```
+
+- **`ruta`**: path exacto; con o sin barra final es lo mismo y la query se ignora (`/a/b`, `/a/b/` y
+  `/a/b/?x=1` son la misma). La conexión que hace upgrade a esa ruta queda **ligada** a ella y solo resuelve
+  los métodos de los handlers de esa ruta; **nunca** los globales. Al revés, una conexión a cualquier otra
+  ruta solo resuelve handlers sin `ruta`. Los dos espacios de nombres son independientes (el mismo método
+  puede existir en ambos). Sin `ruta` todo funciona exactamente como antes (p. ej. la ingesta de logs de
+  `status-external`).
+- **`autorizar(req)`**: se evalúa **una vez, en el handshake** (no por mensaje), solo para la ruta del
+  handler. Puede ser síncrona o devolver una `Promise`. Si devuelve `false`, rechaza o lanza, el upgrade
+  termina con `401 Unauthorized` y el socket no llega a abrirse (un error se registra con `warning`). Si
+  varios handlers de la misma ruta la declaran, tienen que autorizar **todos**. Una ruta con handlers pero
+  sin `autorizar` es de acceso libre (aunque aislada). `autorizar` sin `ruta` no tiene efecto.
+- `WSHandler` expone `ruta` (normalizada, o `undefined`) y `request` (la `IncomingMessage` del upgrade:
+  cabeceras, IP de origen…).
+
+**Cómo convive con `IUpgradeHandler`:** el rechazo se decide con `verifyClient` de `ws`, dentro del propio
+handshake del `WebSocketServer`. El upgrade lo sigue atendiendo un único listener (el de `ws`); no se añade
+otro listener ni se pasa a `noServer`, así que no hay dos escritores sobre el mismo socket. La restricción
+de no declarar `getWSHandlers()` y `getUpgradeHandlers()` en el mismo servicio sigue vigente.
 
 #### Enviar un error desde el handler
 
@@ -358,8 +400,9 @@ Cliente                                        Servidor
 | `IMetadata`                   | `metadata/websocket/message.ts`                | Metadatos opcionales de respuesta (`expires`). |
 | `IStreamFrame`                | `metadata/websocket/message.ts`                | Par `{ message, buffer? }` que produce el generator: el mensaje JSON del servidor y el `ArrayBuffer` opcional asociado. |
 | `EWSControlMessage`           | `server/websocket/index.ts`                    | Enum con los mensajes de control (`Ready`, `Alive`, `Shutdown`). |
-| `IWSHandler`                  | `server/websocket/handler.ts`                  | Interfaz que deben implementar los handlers. |
-| `WSHandler`                   | `server/websocket/handler.ts`                  | Wrapper de conexión con helpers `sendRespuesta` / `sendError`. Ambos son no-op si la petición llegó con `head: true`. |
+| `IWSHandler`                  | `server/websocket/handler.ts`                  | Interfaz que deben implementar los handlers. Opcionales: `ruta` (path exacto del upgrade), `autorizar(req)` (handshake, 401 si falla) y `timeoutMs`. |
+| `WSHandler`                   | `server/websocket/handler.ts`                  | Wrapper de conexión con helpers `sendRespuesta` / `sendError`. Ambos son no-op si la petición llegó con `head: true`. Expone `buffer`, `ruta` y `request`; su constructor recibe `{buffer, head, ruta, request}` como objeto de configuración. |
+| `normalizarRuta(ruta)`        | `server/websocket/handler.ts`                  | Path sin query y con barra final; así se comparan las rutas. |
 | `IHandlerRespuesta<T>`        | `server/websocket/handler.ts`                  | Carga útil del handler: `{ data: T; buffer?: ArrayBuffer }`. Con `buffer` envía un frame binario tras el JSON; sin él, solo JSON. |
 | `WSPool`                      | `client/websocket/index.ts`                    | Pool de conexiones WebSocket del lado cliente. `get()` — petición con respuesta; `head()` — fire-and-forget sin respuesta. |
 | `Result`                      | `client/websocket/result.ts`                   | Resultado de `WSPool.get()`: encapsula el generator y expone `next()`, `consume()` y `pipe()`. `next()` solo acepta la firma sin parámetros; para Deferreds con fallback usar `pipe()`, sin fallback usar `consume()`. |

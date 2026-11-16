@@ -1,10 +1,10 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Mon, 28 Sep 2026 06:38:15 GMT
- * Hash: 310d2e6edc68801620cd0edc101e4b57
- * Versión: 2026.9.28+1-juancmartinez
- * Anterior: 2026.9.23+1-bixus
- * Proyecto: git@github.com:alpred/meteored-svc-panel-frontend.git
+ * Editor: Bixus
+ * Fecha: Fri, 06 Nov 2026 12:55:17 GMT
+ * Hash: f0e7aea6f63273a950d3b068090f27ae
+ * Versión: 2026.11.6+1-bixus
+ * Anterior: 2026.9.28+1-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {describe, it} from "node:test";
@@ -132,6 +132,24 @@ const TRADUCCIONES: JSONItem[] = [
         }}}},
     },
     {
+        // «key» dentro del nombre: pascalCase("sankey_aria") es "SankeyAria". El método de la clase decidía su
+        // argumento buscando «key»/«idx»/«params» en el texto de la firma, y emitía `sankey_aria(key)`, que
+        // revienta al usarse con «key is not defined».
+        id: "sankey_aria",
+        origen: "interno",
+        tipo: "literal",
+        params: ["periodo"],
+        values: {valor: {es: {type: "singular", value: "Diagrama de {{periodo}}"}}},
+    },
+    {
+        // Lo mismo con «idx»: pascalCase("midx_total") es "MidxTotal".
+        id: "midx_total",
+        origen: "interno",
+        tipo: "literal",
+        params: ["n"],
+        values: {valor: {es: {type: "singular", value: "{{n}} en total"}}},
+    },
+    {
         id: "estado",
         origen: "interno",
         tipo: "map",
@@ -222,6 +240,8 @@ describe("generateLangIndex()", () => {
         assert.equal(instancia.bienvenida({nombre: "Juan"}), "Hola Juan");
         assert.equal(instancia.dias_restantes({dias: 1, total: 5}), "Queda 1 de 5 día");
         assert.equal(instancia.dias_restantes({dias: 3, total: 5}), "Quedan 3 de 5 días");
+        assert.equal(instancia.sankey_aria({periodo: "octubre"}), "Diagrama de octubre");
+        assert.equal(instancia.midx_total({n: 4}), "4 en total");
         assert.equal(instancia.estado.get("activo", {n: 3}), "3 activo");
         assert.equal(instancia.estado.get("inactivo", {n: 1}), "1 inactivo");
         assert.deepEqual(instancia.colores.allValues({n: 3}), ["Rojo", "3 verdes"]);

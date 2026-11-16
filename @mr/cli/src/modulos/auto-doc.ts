@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 9f744f70115b31d2b617cbf37b4bc79c
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Wed, 11 Nov 2026 10:30:12 GMT
+ * Hash: 1f3188a9abea8d1428f34a0ec649181f
+ * Versión: 2026.11.11+2-juancmartinez
+ * Anterior: 2026.9.23+2-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-panel-usuarios.git
  */
 
 import {type IModulo, type IModuloConfig, Modulo} from "@mr/core-cli/modulo";
@@ -15,11 +15,19 @@ import {run} from "../clases/auto-doc";
 export interface IAutoDocConfig extends IModuloConfig {
     options: IModuloConfig["options"] & {
         env: { type: "string" };
+        out: { type: "string" };
+        "dry-run": { type: "boolean" };
+        servicio: { type: "string" };
+        strict: { type: "boolean" };
     };
 }
 
 export interface IAutoDoc extends IModulo {
     env?: string;
+    out?: string;
+    "dry-run"?: boolean;
+    servicio?: string;
+    strict?: boolean;
 }
 
 /**
@@ -32,6 +40,10 @@ export class ModuloAutoDoc<T extends IAutoDocConfig> extends Modulo<T> {
         options: {
             ...Modulo.OPTIONS.options,
             env: { type: "string", },
+            out: { type: "string", },
+            "dry-run": { type: "boolean", },
+            servicio: { type: "string", },
+            strict: { type: "boolean", },
         },
         strict: true,
     };
@@ -53,9 +65,8 @@ export class ModuloAutoDoc<T extends IAutoDocConfig> extends Modulo<T> {
     protected async parseParams(config: IAutoDoc): Promise<void> {
         if (config.help) {
             this.mostrarAyuda();
-        } else if (config.env !== undefined) {
-            const env: string = config.env;
-            run(this.root, { env });
+        } else if (config.env !== undefined || config.out !== undefined || config["dry-run"]) {
+            await run(this.root, { env: config.env, out: config.out, dryRun: config["dry-run"], servicio: config.servicio, strict: config.strict });
         } else {
             this.mostrarAyuda();
         }
@@ -65,7 +76,11 @@ export class ModuloAutoDoc<T extends IAutoDocConfig> extends Modulo<T> {
         console.log(`${Colors.colorize([Colors.FgCyan, Colors.Bright], "Descripción")}: Genera la documentación automática del proyecto`);
         console.log("");
         console.group();
-
+        console.log(`${Colors.colorize([Colors.FgCyan], "--env=<entorno>")}      Guarda los documentos en MySQL (base \`doc\`, tablas \`openapi_service\` y \`openapi_version\`)`);
+        console.log(`${Colors.colorize([Colors.FgCyan], "--out=<dir>")}          Escribe \`<dir>/<deployment>.openapi.json\` en vez de usar MySQL`);
+        console.log(`${Colors.colorize([Colors.FgCyan], "--dry-run")}            Genera y valida sin escribir nada`);
+        console.log(`${Colors.colorize([Colors.FgCyan], "--servicio=<ws>")}      Solo documenta ese workspace de services/`);
+        console.log(`${Colors.colorize([Colors.FgCyan], "--strict")}             Los avisos hacen fallar la generación del servicio`);
         console.groupEnd();
     }
 
