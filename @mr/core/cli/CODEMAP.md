@@ -78,7 +78,7 @@ longitud pedida. `md5()` si es identica, que importa: de ella salen los hashes c
 `mrpack framework` decide si un paquete ha cambiado.
 
 **El `tsconfig` no extiende el de `@mr/core-dev`.** Lleva escritas las opciones que aquella cadena
-(`@mr/core-dev` → `tsconfig/node.json` → `@tsconfig/node24`) resolvia, menos los tipos globales del
+(`@mr/core-dev` → `tsconfig/node.json` → `@tsconfig/node26`) resolvia, menos los tipos globales del
 bundler (`PRODUCCION`, `ENTORNO`, `NEXTJS`, …), que este codigo no usa — comprobado antes de
 quitarlos. El riesgo es quedarse atras si el tsconfig base cambia; lo compensa que estos cinco
 ficheros se compilan tambien **dentro** de las dos CLI, que si lo extienden, asi que una

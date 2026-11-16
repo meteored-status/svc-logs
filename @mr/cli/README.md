@@ -509,6 +509,27 @@ versión del paquete, crear el fichero `bin/.mr-nohash` con el contenido:
 min
 ```
 
+#### Recompilación al enviar
+
+Al enviar con `mrpack framework`, todo paquete que **envía** su `bin/min/` —el que lo lista en
+`bin/.mr-bin` y no lo excluye en `bin/.mr-ignore`; hoy `@mr/cli`, porque `@mr/core-i18n` lo excluye—
+se recompila en modo producción (`yarn run compile`) dentro de `Paquete.push()`, y se anota el
+`bin/hash.md5` resultante. Si la compilación falla, ese paquete **no se envía**, se avisa al final y
+se sigue con los demás.
+
+El momento importa, y por dos motivos:
+
+- **Después de estampar los bloques de autoría.** El sourcemap lleva el contenido de las fuentes,
+  bloques incluidos. Un bundle compilado antes de estamparlos no es el que sale de compilar lo que
+  queda en el repo, así que su `bin/hash.md5` no cuadraría con el de nadie que compile después y no
+  serviría para detectar que el binario está al día.
+- **Antes de empaquetar, rehaciendo los hashes de `bin/min` en el `status.json`.** El receptor solo
+  sobrescribe un fichero `.mr-bin` si su hash cambia entre versiones; con los hashes de antes de
+  compilar, el ZIP llevaría el bundle nuevo y nadie lo aplicaría. Se rehace solo ese nodo: está en
+  `bin/.mr-nohash`, así que no altera el hash de la raíz.
+
+El `bin/hash.md5` que queda modificado tras el envío se comitea con él.
+
 #### Bloque de autoría
 
 Al publicar una nueva versión, cada fichero `.ts` modificado recibe al inicio del
@@ -716,12 +737,33 @@ Entre otras acciones:
   conflictos de versión eligiendo siempre la más reciente.
 - `bufferutil` se elimina de `dependencies` si estuviera presente (por propagación transitiva
   o por declaración previa), ya que este módulo nativo solo debe aparecer en `optionalDependencies`.
-- Elimina artefactos legacy en `@mr/cli` si existen (`status.json` y `bin/mrdev.js`).
+- Escribe el `.node-version` de la raíz con la versión mayor de Node del framework (`NODE_VERSION`
+  en `init/node.ts`, hoy `26`), que usan `fnm` en local y el pipeline: ver
+  [«Versión de Node»](deployment/README.md#versión-de-node).
+- Elimina artefactos legacy en `@mr/cli` si existen (`status.json`, `bin/mrdev.js`, las configuraciones de
+  ejecución antiguas `.run/develop =_ Ejecutar (Todos).run.xml` y `.run/cli =_ PUSH.run.xml` y los directorios
+  `manifest/workspace/` y `src/mrlang/`, que hay copias locales que siguen restaurando al enviar el framework).
 - Gestiona el campo `resolutions` del `package.json` raíz: elimina entradas obsoletas
   (`@elastic/elasticsearch`, `@types/node`, `mysql2`, `gaxios`, `node-fetch`) y
   borra el campo si queda vacío.
 - En la autocorrección de `Dockerfile` por workspace, solo inserta `ENV NODE_ENV=production`
   (junto a `COPY ./yarn.lock ./`) cuando `deploy.runtime = "node"`.
+- Con `deploy.runtime = "node"`, deja Yarn preparado en el `Dockerfile` propio igual que en los de
+  `deployment/std` (`init/dockerfile.ts → parchearCorepack()`), para que el pod no lo descargue al
+  arrancar: en cada etapa que usa Yarn, `npm install -g corepack && corepack enable` (sustituye el
+  antiguo `corepack prepare yarn@latest --activate`) y `corepack install` detrás del `COPY` del
+  `package.json` raíz; en la etapa intermedia que instala las dependencias, si el Dockerfile es de
+  Alpine, `apk add --no-cache build-base python3` (para `bufferutil` en arm64); en la última etapa,
+  `COREPACK_HOME` fijo y la comprobación sin red `COREPACK_ENABLE_NETWORK=0 yarn --version`. Por qué, en
+  [«Yarn ya preparado en la imagen»](deployment/README.md#yarn-ya-preparado-en-la-imagen). Una etapa
+  que habilita corepack de otra forma, o que no copia el `package.json` raíz, no se toca y sale un
+  aviso en rojo para revisarla a mano.
+- Con `deploy.runtime = "node"`, deja también el arranque del `Dockerfile` propio como el de `deployment/std`
+  (`init/dockerfile.ts → parchearArranque()`), para que SIGTERM llegue a Node: la línea
+  `RUN echo "yarn workspace ${WS} …" >> run.sh` de la etapa final, con o sin `exec`, pasa a arrancar
+  `exec node <yarnPath> workspace ${WS} …` (o `exec yarn …` sin `yarnPath`). Por qué, en el párrafo del entrypoint
+  de [`deployment/README.md`](deployment/README.md). Si la etapa final arranca con Yarn de otra forma, no se
+  toca y sale un aviso en rojo.
 - Normaliza `build.bundler` en `mrpack.json` según runtime/framework:
   `browser -> rspack`, `php/cfworker -> none`, `node+nextjs -> none`, `node+componentes -> rspack`,
   `node+bundle.web -> rspack`. La condición de `componentes` mira tanto el bundle principal
@@ -864,11 +906,107 @@ Genera la documentación automática del proyecto a partir del código fuente.
 
 ```
 yarn mrpack autodoc --env=<entorno>
+yarn mrpack autodoc --out=tmp/autodoc [--servicio=<workspace>]
 ```
 
 | Opción | Descripción |
 |--------|-------------|
-| `--env` | Entorno para el que generar la documentación |
+| `--env` | Entorno de las credenciales de MySQL donde se guarda la documentación (tablas `openapi_service` y `openapi_version` de la base `doc`) |
+| `--out` | Directorio donde escribir `<deployment>.openapi.json`, sin MySQL. Para probar en local |
+| `--dry-run` | Genera y valida sin escribir nada |
+| `--servicio` | Solo documenta ese workspace de `services/` |
+| `--strict` | Los avisos (rutas no legibles, duplicadas...) hacen fallar el servicio |
+
+Cada servicio se genera aislado: los correctos se guardan, los fallidos se informan y el comando termina con
+código 1. Se documentan todas las rutas salvo las de grupos o bloques con `documentable: false`; las
+`internal: true` salen con `x-internal: true`. `internal` tiene que ser un booleano literal (o una constante): si es
+una expresión (`!PRODUCCION`, un ternario), la ruta se documenta como interna, con aviso. Los `tags` salen por nombre.
+
+**Tipos de las rutas (`contract`).** Para que una ruta salga con su `requestBody`, parámetros y respuestas
+tipadas, se le asocia un contrato con los tipos TypeScript (ver «Contrato de tipos» en
+[`@mr/core/network/server/http/README.md`](../core/network/server/http/README.md)):
+
+```ts
+contract: Contract<{post: IRegisterIN; response: IRegisterOUT}>({errors: [400, 401, 500]})
+```
+
+Los tipos se leen con el type checker y se vuelcan en `components.schemas` (con `$ref`; el JSDoc del tipo y
+`@property nombre - texto` pasan a `description`). La respuesta correcta se documenta envuelta en
+`RespuestaOK_<Nombre>` (`{ok, expiracion, data}`) y cada código de `errors` apunta a `RespuestaKO`;
+`envelope: false` documenta una respuesta cruda. Un tipo sin resolver es un error (el servicio no se
+documenta); lo que no se puede describir (`bigint`, `Buffer`, clases con getters...) sale como `{}` con aviso.
+
+**Qué sale y qué no.**
+
+- `documentacion: {enabled: false}` **no** oculta una ruta: solo `documentable: false` (en el bloque o en el segundo
+  argumento del `super()`) la deja fuera.
+- Un `resumen` con query string (`/a/?x=1&y={v}`) se documenta sin ella (con aviso) y cada `k=v` pasa a parámetro
+  `query` obligatorio salvo que el `query` del literal o del contrato ya lo declare.
+- La cabecera `Authorization` no es un parámetro (OpenAPI lo ignora): sale como `securitySchemes.IdToken`
+  (`apiKey` en cabecera) y `security` en la operación. `Accept` y `Content-Type` se omiten con aviso.
+- `RespuestaOK_<Nombre>` se nombra por el tipo de `data` (`_opcional` si `data` es opcional; hash del contenido si la
+  respuesta va en línea); sin `response` en el contrato vale el `response` literal. `RespuestaKO` y `RespuestaOK*`
+  son nombres reservados.
+- Dos tipos con el mismo nombre (`IProductOffer` en dos ficheros) no pueden compartir componente: uno se queda el
+  nombre limpio y el otro lleva como sufijo la ruta de su fichero (`IProductOffer_bi_oferta`). El limpio es para el que
+  usan las operaciones **públicas** (sin `internal: true` y fuera de `/private/`); entre dos públicos, para el de la
+  operación que va antes por path y método. Lo mismo con un `operationId` repetido (`_2`) y con la `description` de
+  `IdToken`. Así el documento `public` de API Docs no cambia por cambios solo privados. Excepción: una ruta privada
+  con el mismo método y path que una pública (`internal: true` en `/z` y una pública en `/z/{a?}`), declarada antes,
+  se queda la operación por «repetida» y la pública la pierde; no lo hagas.
+- Limitación conocida: `E | null` con enums sale en línea (`enum` + `null`), no como `$ref` al enum.
+
+**Almacenamiento en MySQL (`--env`).** La documentación se guarda en la base `doc`, en dos tablas (DDL en
+[`src/clases/auto-doc/mapping/ddl-create.sql`](src/clases/auto-doc/mapping/ddl-create.sql); los cambios futuros irán en
+`mapping/alter/ddl-alter-NNNN.sql`). Cada entorno (test, producción) es un proyecto GCP con su propia base, así que no
+hay columna de entorno.
+
+| Tabla | Contenido |
+|-------|-----------|
+| `openapi_service` | Un registro por deployment (`info.title`, único): `repository` (`propietario/nombre`), `workspace` (`services/<ws>`), `current_version`, `first_seen_at`, `last_seen_at` y `removed_at` (baja) |
+| `openapi_version` | Contratos distintos de cada servicio: `hash` (SHA-256 del documento canónico), `version` (`version.txt` del workspace), `commit_sha` (`COMMIT_SHA`), `doc` (JSON) y `created_at` |
+
+- **El DDL se aplica a mano, antes del primer build**, en la base `doc` de cada proyecto (test y producción). El
+  comando no crea tablas.
+- **La tabla `openapi` anterior deja de escribirse.** Se puede conservar o retirar a mano.
+- Cada documento se guarda en **una transacción por deployment**: se bloquea su fila (`SELECT ... FOR UPDATE`), se
+  actualizan `repository`, `workspace` y `last_seen_at` (y `removed_at = NULL`) y solo se inserta una versión nueva si no
+  hay versión vigente o su `hash` difiere. Un contrato que no cambia no genera versiones.
+- El hash se calcula en Node sobre el documento en forma canónica (claves de objeto ordenadas recursivamente, arrays en
+  su orden), nunca sobre lo que devuelve MySQL (el tipo `JSON` reordena las claves). Versión, commit y fecha viven solo
+  en columnas, nunca dentro del documento (`info.version` es fijo), para que el hash sea estable entre despliegues.
+  Volver a un contrato anterior crea una versión nueva (no reutiliza la antigua).
+- **Bajas:** tras guardar, se marca `removed_at` en los `openapi_service` del mismo `repository` cuyo `deployment` ya no
+  aparece en ningún `mrpack.json` de `services/` (habilitado o no). El conjunto de vigentes sale de los manifests, no de
+  los documentos generados: un servicio que falla al generar no se da de baja. Si algún `mrpack.json` no se puede leer, o
+  se ejecuta con `--servicio`, no se marca ninguna baja (se avisa).
+- `repository` sale de `REPO_FULL_NAME` (URL, `git@...` o `propietario/nombre`; se normaliza y se quitan credenciales) y,
+  si falta o no tiene esa forma (Cloud Build pasa `https://github.com/` con la sustitución vacía), de
+  `git remote get-url origin`. Sin ninguno de los dos, error. Un documento de más de 1 MB solo avisa.
+- **Un fallo no corta el resto.** Si un deployment no se puede guardar, se registra, se sigue con los demás (los
+  correctos se guardan), las bajas se calculan igualmente y el comando termina con código 1. Ante `ER_DUP_ENTRY` (dos
+  builds insertando el mismo servicio nuevo) o `ER_LOCK_DEADLOCK` se reintenta una vez.
+- **El orden de `enum` y `anyOf` es determinista** (valores y alternativas ordenados): sin eso el hash dependía del
+  orden interno de TypeScript. Los enums salen en orden alfabético. Cambiar de versión del generador puede crear una
+  versión nueva por servicio una sola vez.
+- **Conexión.** Lee `kustomizar/tmp/credenciales/mysql-services-socket-<env>.json`. Si existe la variable de entorno
+  `MYSQL_SOCKET`, sustituye el socket de esas credenciales (master, slaves y plano, como `mrpack deploy`) usando un fichero
+  temporal fuera del repo, que se borra al acabar.
+
+**Cloud Build.** El paso «Generar Documentación» solo se ejecuta si el trigger define `_MYSQL_DOC` (vacía por defecto
+en `build.yaml`), la instancia con la base `doc`. Es a propósito: generar la documentación es una decisión explícita
+de cada trigger, y la `_MYSQL` de los servicios **no** se usa aunque exista. Sin `_MYSQL_DOC` el paso escribe «no se
+genera documentación» y termina sin hacer nada.
+**Solo cambia el socket**: usuario y contraseña siguen siendo los de `mysql-services-socket-<env>.json`, así que ese
+usuario tiene que existir en esa instancia y tener permisos sobre `doc`.
+`descargas.sh` baja `cloud_sql_proxy` si está `_MYSQL` (para `Compilar`) o `_MYSQL_DOC`; el
+`docker run` recibe `REPO_FULL_NAME`, `COMMIT_SHA` y `MYSQL_SOCKET=/root/<socket>`. El paso tiene `timeout: 600s` propio
+(`allowFailure` no cubre el de 1800 s del build). La imagen de Node (alpine) no trae `git`: en Cloud Build, sin
+`REPO_FULL_NAME` (trigger sin repositorio asociado) el guardado falla con un mensaje claro en vez de adivinar el repo.
+
+> **Orden de envío obligatorio de frameworks:** `services-comun` y `@mr/core-network` **antes** que `@mr/cli`. Con un
+> `@mr/cli` nuevo y un `services-comun` antiguo, el consumidor no compila (49 errores de `tsc`: el auto-doc usa
+> `RouteGroup`/`Contract` y `IOpenAPI` nuevos).
 
 ---
 
@@ -1007,6 +1145,7 @@ a partir del código TypeScript en `src/`. La configuración vive en
 |--------|-------------|
 | `yarn workspace @mr/cli run compile` | Build de producción: esbuild (minificado) + `tsc --noEmit` en paralelo. Falla si hay errores de tipos. |
 | `yarn workspace @mr/cli run compile:watch` | Watch: esbuild reconstruye en ~50 ms al guardar; `tsc --watch` muestra errores de tipos en tiempo real. **Arranca también el watch de `mrlang`** si `@mr/core-i18n` está instalado. |
+| `yarn workspace @mr/cli test` | Pruebas de `spec/` con `node:test`: compila con `tsconfig.spec.json` a `tmp/spec` y las ejecuta. |
 
 > **Nota de rendimiento:** esbuild tarda ~70 ms en bundlear; el tiempo total del script
 > `compile` (~0.85 s) lo determina `tsc --noEmit`, que corre en paralelo.

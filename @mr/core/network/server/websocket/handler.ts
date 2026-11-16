@@ -1,11 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 8bc703009c31065ee74b95780ebac9be
- * Versión: 2026.9.23+1-bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 5e7edc16742b3a5efd7eaa273bcd8dbc
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
+import type {IncomingMessage} from "node:http";
 import {WebSocket} from "ws";
 
 import type {IMessageServerKO, IMessageServerOK, IMetadata} from "../../metadata/websocket/message";
@@ -14,6 +16,15 @@ import type {IMessageServerKO, IMessageServerOK, IMetadata} from "../../metadata
  * Interfaz que deben implementar los manejadores de mensajes WebSocket.
  * Cada handler se encarga de procesar uno o varios métodos entrantes.
  * @property method - Lista de métodos (acciones) que este handler es capaz de procesar.
+ * @property ruta - Path exacto del upgrade al que pertenece este handler (p. ej. `"/status/external/heartbeat/"`;
+ *   con o sin barra final es equivalente, se normaliza). Si se omite, el handler es **global**: atiende a las
+ *   conexiones de cualquier ruta que no esté reservada por otros handlers. Si se indica, solo atiende a las
+ *   conexiones que han hecho el upgrade a esa ruta, y esas conexiones solo resuelven los métodos de los
+ *   handlers de esa ruta (nunca los globales).
+ * @property autorizar - Comprobación del handshake para la `ruta` del handler. Recibe la petición de upgrade
+ *   y decide si la conexión se acepta; si devuelve `false` (o rechaza) el handshake termina con `401` y el
+ *   socket no llega a abrirse. Se evalúa una sola vez por conexión, no por mensaje. Si varios handlers de
+ *   la misma ruta la declaran, tienen que autorizar todos. Sin efecto si no hay `ruta`.
  * @property timeoutMs - Timeout de ejecución (ms) específico para este handler. Si se omite,
  *   el servidor aplica su valor por defecto (`HANDLER_TIMEOUT_MS`). Útil para handlers
  *   que realizan operaciones costosas (p. ej. generación de informes) y necesitan más tiempo.
@@ -23,7 +34,9 @@ import type {IMessageServerKO, IMessageServerOK, IMetadata} from "../../metadata
  */
 export interface IWSHandler {
     method: string[];
+    ruta?: string;
     timeoutMs?: number;
+    autorizar?(req: IncomingMessage): boolean|Promise<boolean>;
     handler<T>(ws: WSHandler, params: T): Promise<void>;
 }
 
@@ -39,6 +52,34 @@ export interface IWSHandler {
 export interface IHandlerRespuesta<T> {
     data: T;
     buffer?: ArrayBuffer;
+}
+
+/**
+ * Normaliza el path de una ruta de upgrade: sin query string y con barra final, de modo que
+ * `"/a/b"` y `"/a/b/"` son la misma ruta.
+ *
+ * @param ruta - Path o URL relativa (`req.url`).
+ */
+export function normalizarRuta(ruta: string): string {
+    const path = new URL(ruta, "http://localhost").pathname;
+
+    return path.endsWith("/") ? path : `${path}/`;
+}
+
+/**
+ * Datos opcionales de un {@link WSHandler}.
+ *
+ * @property buffer - Datos binarios opcionales adjuntos al mensaje.
+ * @property head - Si `true`, el cliente no espera respuesta (fire-and-forget). Cualquier llamada
+ *   a {@link WSHandler.sendRespuesta} o {@link WSHandler.sendError} será silenciada.
+ * @property ruta - Ruta (normalizada) a la que hizo el upgrade la conexión; `undefined` si no está ligada a ninguna.
+ * @property request - Petición HTTP del upgrade (cabeceras, IP de origen…).
+ */
+export interface IWSHandlerConfig {
+    buffer?: ArrayBuffer;
+    head?: boolean;
+    ruta?: string;
+    request?: IncomingMessage;
 }
 
 /**
@@ -74,6 +115,18 @@ export class WSHandler {
 
     /* INSTANCE */
 
+    /** Datos binarios adjuntos al mensaje, si los hay. */
+    public readonly buffer: ArrayBuffer|undefined;
+
+    /** Ruta (normalizada) del upgrade de la conexión; `undefined` si no está ligada a ninguna. */
+    public readonly ruta: string|undefined;
+
+    /** Petición HTTP del upgrade de la conexión (cabeceras, IP de origen…). */
+    public readonly request: IncomingMessage|undefined;
+
+    /** `true` si el cliente no espera respuesta (fire-and-forget). */
+    private readonly head: boolean;
+
     /** Cola FIFO de frames pendientes de envío al cliente. */
     private readonly outQueue: IOutQueueItem[];
 
@@ -102,17 +155,13 @@ export class WSHandler {
      * @param ws - Socket WebSocket subyacente sobre el que se enviarán las respuestas.
      * @param id - Identificador único del mensaje, utilizado para correlacionar petición y respuesta.
      * @param method - Nombre del method/acción solicitado por el cliente.
-     * @param buffer - Datos binarios opcionales adjuntos al mensaje.
-     * @param head - Si `true`, el cliente no espera respuesta (fire-and-forget). Cualquier llamada
-     *   a {@link sendRespuesta} o {@link sendError} será silenciada.
+     * @param config - Datos opcionales del mensaje ({@link IWSHandlerConfig}).
      */
-    public constructor(
-        private readonly ws: WebSocket,
-        private readonly id: string,
-        public readonly method: string,
-        public readonly buffer?: ArrayBuffer,
-        private readonly head: boolean = false,
-    ) {
+    public constructor(private readonly ws: WebSocket, private readonly id: string, public readonly method: string, {buffer, head = false, ruta, request}: IWSHandlerConfig = {}) {
+        this.buffer = buffer;
+        this.head = head;
+        this.ruta = ruta;
+        this.request = request;
         this.outQueue = [];
         this.draining = false;
         this.done = false;

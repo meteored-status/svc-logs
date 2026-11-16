@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: abbbf413afce84faefe54597ab4db42d
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
+ * Fecha: Mon, 09 Nov 2026 07:46:18 GMT
+ * Hash: bf70685fda5973acf26ee32cd7835e46
+ * Versión: 2026.11.9+2-bixus
+ * Anterior: 2026.9.23+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -14,36 +14,14 @@ import {Fecha} from "services-comun/modules/utiles/fecha";
 import {md5} from "services-comun/modules/utiles/hash";
 import {isFile, mkdir, readFile, readFileString, safeWrite, unlink} from "@mr/core-cli/fs";
 
+import {conAutoria, stripAutoria, versionAutoria} from "./autoria";
 import {PaqueteDirectory} from "./directory";
 import merge3, {type IConflictoBloque} from "../../utiles/merge";
 
+// Sigue exportándose desde aquí, que es donde la buscan los que ya la importaban.
+export {stripAutoria} from "./autoria";
+
 const PACKAGE_JSON_PRIORIDAD = ["name", "description", "author", "scripts", "bin", "config"];
-
-/**
- * Patrón que identifica el bloque de autoría al inicio de un fichero `.ts`.
- * Se excluye del cálculo del hash para que actualizar el comentario
- * (fecha, autor) no genere un hash diferente y evitar así falsos positivos en
- * los pushes sucesivos.
- */
-const PATRON_AUTORIA = /^\/\*\*\n \* Editor: [^\n]*\n \* Fecha: [^\n]*\n(?: \* Hash: [^\n]*\n)?(?: \* Versión: [^\n]*\n)?(?: \* Anterior: [^\n]*\n)?(?: \* Proyecto: [^\n]*\n)? \*\/\n\n/;
-
-const PATRON_VERSION_BLOQUE = /^ \* Versión: ([^\n]+)$/m;
-
-/**
- * Elimina todos los bloques de autoría consecutivos del inicio del contenido.
- * Puede haber más de uno si un push anterior inyectó un bloque encima de otro
- * que aún no había sido limpiado.
- *
- * @param contenido - Texto completo del fichero `.ts`.
- * @returns Texto sin los bloques de autoría iniciales.
- */
-export function stripAutoria(contenido: string): string {
-    let resultado = contenido;
-    while (PATRON_AUTORIA.test(resultado)) {
-        resultado = resultado.replace(PATRON_AUTORIA, "");
-    }
-    return resultado;
-}
 
 function normalizarJSON(obj: unknown, prioridad: string[] = []): unknown {
     if (Array.isArray(obj)) {
@@ -187,16 +165,10 @@ export class PaqueteFile {
         }
 
         const contenido = await readFileString(`${basedir}/${this.filename}`);
-        // Extraer versión anterior del bloque de autoría actual (si existe)
-        const matchVersion = PATRON_VERSION_BLOQUE.exec(contenido);
-        const versionAnterior = matchVersion?.[1];
         // Extraemos el cuerpo sin TODOS los bloques de autoría anteriores (si los hubiera)
         const cuerpo = stripAutoria(contenido);
         const hashCuerpo = md5(cuerpo);
-        const lineaAnterior = versionAnterior !== undefined ? ` * Anterior: ${versionAnterior}\n` : "";
-        const lineaProyecto = proyecto.length > 0 ? ` * Proyecto: ${proyecto}\n` : "";
-        const comentario = `/**\n * Editor: ${autor}\n * Fecha: ${new Date().toUTCString()}\n * Hash: ${hashCuerpo}\n * Versión: ${version}\n${lineaAnterior}${lineaProyecto} */\n\n`;
-        const nuevo = comentario + cuerpo;
+        const nuevo = conAutoria(cuerpo, {autor, fecha: new Date(), hash: hashCuerpo, version, anterior: versionAutoria(contenido), proyecto});
         await safeWrite(`${basedir}/${this.filename}`, nuevo, true);
         // El hash se calcula sobre el CUERPO (sin el bloque de autoría) para que sea
         // coherente con lo que calcula update() y no genere falsos positivos en el

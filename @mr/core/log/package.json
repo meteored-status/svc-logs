@@ -1,0 +1,31 @@
+{
+  "name": "@mr/core-log",
+  "version": "2026.11.4+1-bixus",
+  "description": "Logging de los servicios de MR{FW}",
+  "author": "José Antonio Jiménez",
+  "scripts": {
+    "test": "yarn tsc -p tsconfig.browser.json && yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
+  },
+  "config": {
+    "subible": true,
+    "tipo": "core"
+  },
+  "exports": {
+    "./destino": "./modules/destino/index.ts",
+    "./destino/base": "./modules/destino/base.ts",
+    "./destino/http": "./modules/destino/http.ts",
+    "./destino/websocket": "./modules/destino/websocket.ts",
+    "./interface": "./modules/interface.ts",
+    "./pod": "./modules/pod.ts",
+    "./logger": "./modules/logger.ts"
+  },
+  "dependencies": {
+    "tslib": "^2.9.1"
+  },
+  "devDependencies": {
+    "@mr/core-dev": "workspace:*",
+    "@mr/core-network": "workspace:*",
+    "@types/node": "^26.6.6",
+    "typescript": "^6.0.3"
+  }
+}

@@ -13,6 +13,7 @@ configuración de los servicios.
 | Módulo | Entrada | Descripción |
 |--------|---------|-------------|
 | [Configuración base](#configuración-base) | `@mr/core-utils/config` | `IConfiguracion` + `Configuracion<T>` — raíz de todas las configuraciones |
+| Unidades de medida | `@mr/core-utils/unidades` | Enums, etiquetas, conversión y redondeo de velocidad, precipitación, nieve, presión, temperatura y distancia (subpaths `/velocidad`, `/nieve`, …) |
 
 ---
 

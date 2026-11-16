@@ -183,6 +183,13 @@ persistir la de webpack (`.next/cache`) entre builds y se quitó porque en Cloud
 cuatro segundos, contra el 43% que daba en local. El porqué está medido en el README, en la sección
 «Caché de compilación de webpack, y por qué no se quedó»; conviene leerla antes de reintentarlo.
 
+Sin generar (`_GENERAR=false`), ninguno de los dos cuesta nada: «Instalar Dependencias» no instala
+(salvo con `_MYSQL`), `Compilar` no arranca `mrpack` y solo escribe la versión desplegada con
+`deployment/std/bin/mantener-version`, y `Generar Contenedor` tampoco arranca buildkit, igual que en
+un despliegue sin imágenes nuevas. `mantener-version` repite la regla de `getVersion()`
+(`src/clases/workspace/compilar.ts`), que se queda para los workspaces desactivados: si se cambia una,
+hay que cambiar la otra.
+
 Los mecanismos se explican, con sus porqués y con lo que no se puede tocar sin romperlos, en las
 secciones «Caché del contenedor» y la citada del [`README.md`](./deployment/README.md) del
 directorio.

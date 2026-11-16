@@ -104,6 +104,15 @@ Controla si se ejecuta el despliegue y qué versión se usa.
 | `_DESPLEGAR`        | `run.enabled` | `"true"` / `"1"` → `true`; `"false"` / `"0"` → `false` |
 | `_DESPLEGAR_LATEST` | `run.latest`  | `"true"` / `"1"` → `true`; cualquier otro → `false`     |
 
+En Cloud Build, `mrpack deploy` corre en un `docker run` que solo recibe `_GENERAR` y `_GENERAR_FORZAR`
+(ver «Opciones del despliegue» en [`deployment/README.md`](../deployment/README.md#opciones-del-despliegue)), y solo
+cuando se genera: sin generar, `compilar.sh` escribe la versión desplegada con `bin/mantener-version`, que aplica
+`run.latest` igual que hacía `mrpack`. Lanzado a mano con `build.enabled` a `false`, `mrpack deploy` termina sin hacer
+nada.
+`_DESPLEGAR` y `_DESPLEGAR_LATEST` solo cuentan si se lanza `mrpack` a mano con ellas, o si están en un `.env` de la
+raíz, que `mrpack` carga al arrancar (`dotenv/config`). En el pipeline ya no hay `.env`, así que `run.latest` sale del
+`mrpack.json`.
+
 ---
 
 ## Loader

@@ -1,20 +1,21 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: df884f6b42018ce32f72c742b46cd69a
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
+ * Fecha: Mon, 09 Nov 2026 07:46:18 GMT
+ * Hash: f80f1b8d634c887e6eea29d1dfab1115
+ * Versión: 2026.11.9+2-bixus
+ * Anterior: 2026.9.23+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import JSZip from "jszip";
 
-import {readDir, safeWrite, unlink} from "@mr/core-cli/fs";
+import {readDir, readFileString, safeWrite, unlink} from "@mr/core-cli/fs";
 
 import {incrementarVersion} from "../../utiles/version";
 import {Comando} from "../comando";
 import {type IPaqueteDirectory, PaqueteDirectory} from "./directory";
 import {type IEntradaActualizacion, type IUpdateTracker} from "./file";
+import {packageJsonTrasUpdate} from "./package-json";
 
 /**
  * Representación serializable del directorio raíz de un paquete,
@@ -138,8 +139,9 @@ export class PaqueteDirectoryRoot extends PaqueteDirectory {
         const tracker: IUpdateTracker = {hayConflictos: false, entradas: []};
         await this.checkCambios(this.basedir, this, antiguo, nuevo, false, tracker);
 
-        const paquete = await nuevo.files["package.json"].async("text");
-        await safeWrite(`${this.basedir}/package.json`, paquete, true);
+        const remoto = await nuevo.files["package.json"].async("text");
+        const local = await readFileString(`${this.basedir}/package.json`).catch(() => undefined);
+        await safeWrite(`${this.basedir}/package.json`, packageJsonTrasUpdate(local, remoto), true);
 
         this.autor = nuevo.status.autor;
         this.fecha = nuevo.status.fecha;

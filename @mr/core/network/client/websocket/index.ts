@@ -1,10 +1,10 @@
 /**
- * Editor: Juan C. Martínez
- * Fecha: Thu, 24 Sep 2026 14:39:55 GMT
- * Hash: 7ccaa9d6b60fdea1b45b5a3243fd7ab5
- * Versión: 2026.9.24+1-juancmartinez
- * Anterior: 2026.9.23+1-bixus
- * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
+ * Editor: Bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 4dcbd7594bbe23257401a498218742e1
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.9.24+1-juancmartinez
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {formats} from "dd-trace/ext";
@@ -12,7 +12,7 @@ import tracer from "dd-trace";
 import crypto from "node:crypto";
 
 import {Deferred, PromiseDelayed} from "services-comun/modules/utiles/promise";
-import {error} from "services-comun/modules/utiles/log";
+import {error, warning} from "services-comun/modules/utiles/log";
 
 import type {IMessageClient, IMessageServerOK, IStreamFrame, MessageServer} from "../../metadata/websocket/message";
 import {Result} from "./result";
@@ -57,6 +57,10 @@ const enum EWSRequestType {
  *   lanza un error sin consumir intentos de reconexión.
  * @property heartbeatTimeoutMs - Timeout (ms) sin recibir mensajes (incluyendo pings `Alive`)
  *   antes de considerar la conexión muerta. Si se omite, {@link WSPool.HEARTBEAT_TIMEOUT_MS}.
+ * @property headers - Cabeceras que se envían en el handshake de cada conexión (p. ej. un token de
+ *   autenticación). Solo se pasan al `WebSocket` si hay alguna, porque en navegador el segundo argumento
+ *   del constructor son los `protocols` y no admite cabeceras. **No forman parte de la clave del singleton**:
+ *   si se pide un pool que ya existe con otras cabeceras, se conserva el existente y se avisa una vez.
  */
 interface IWSPoolConfig {
     socket: string;
@@ -64,6 +68,15 @@ interface IWSPoolConfig {
     reconnect?: boolean;
     requestTimeoutMs?: number;
     heartbeatTimeoutMs?: number;
+    headers?: Record<string, string>;
+}
+
+/**
+ * Opciones de {@link WSPool.vaciar}.
+ * @property timeoutMs - Tiempo máximo (ms) de espera. Por defecto 1000.
+ */
+interface IWSPoolVaciarConfig {
+    timeoutMs?: number;
 }
 
 /**
@@ -140,6 +153,9 @@ export class WSPool {
     /** Timeout (ms) sin recibir actividad (mensaje o ping Alive) antes de considerar la conexión muerta. */
     private static readonly HEARTBEAT_TIMEOUT_MS = 45000;
 
+    /** Intervalo (ms) con el que {@link vaciar} comprueba el buffer de salida de las conexiones. */
+    private static readonly VACIAR_INTERVAL_MS = 10;
+
     /**
      * Tiempo base (ms) de espera entre reintentos de reconexión.
      * Se duplica con cada intento consecutivo (backoff exponencial): 100 ms, 200 ms, 400 ms…
@@ -204,7 +220,14 @@ export class WSPool {
     public static get(cfg: IWSPoolConfig): WSPool {
         cfg.socket = WSPool.normalizar(cfg.socket);
 
-        return this.POOLS[`${cfg.socket}${cfg.reconnect !== false ? "-reconnect" : ""}`] ??= new WSPool(cfg);
+        const clave = `${cfg.socket}${cfg.reconnect !== false ? "-reconnect" : ""}`;
+        const existente = this.POOLS[clave];
+        if (existente !== undefined) {
+            existente.comprobarHeaders(cfg.headers);
+            return existente;
+        }
+
+        return this.POOLS[clave] = new WSPool(cfg);
     }
 
     /* INSTANCE */
@@ -228,6 +251,19 @@ export class WSPool {
 
     /** Timeout de heartbeat configurado (ms). */
     private readonly heartbeatTimeoutMs: number;
+
+    /** Cabeceras del handshake (vacío si no hay ninguna). */
+    private readonly headers: Record<string, string>;
+
+    /**
+     * `true` tras {@link destroy}. Sin esto, el cierre de las conexiones al destruir el pool disparaba
+     * {@link deleteConnection}, que reponía conexiones nuevas hasta {@link minConnections}: el pool
+     * «destruido» abría sockets que nadie cerraba (y que mantenían vivo el proceso).
+     */
+    private destroyed: boolean;
+
+    /** `true` una vez avisado de que se pidió este pool con cabeceras distintas, para avisar solo una vez. */
+    private headersAvisadas: boolean;
 
     /** Contador autoincremental utilizado para asignar un `i` único a cada conexión. */
     private i: number;
@@ -261,7 +297,7 @@ export class WSPool {
      * El constructor es privado; usar {@link WSPool.get} para obtener instancias.
      * @param cfg - Configuración del pool.
      */
-    private constructor({socket, minConnections=WSPool.MIN_CONNECTIONS, reconnect=true, requestTimeoutMs=WSPool.REQUEST_TIMEOUT_MS, heartbeatTimeoutMs=WSPool.HEARTBEAT_TIMEOUT_MS}: IWSPoolConfig) {
+    private constructor({socket, minConnections=WSPool.MIN_CONNECTIONS, reconnect=true, requestTimeoutMs=WSPool.REQUEST_TIMEOUT_MS, heartbeatTimeoutMs=WSPool.HEARTBEAT_TIMEOUT_MS, headers={}}: IWSPoolConfig) {
         this.socket = socket;
         // El suelo es 1, no `MIN_CONNECTIONS`. Antes se subía cualquier valor hasta 10, lo que convertía
         // el «por defecto» de la configuración en un mínimo obligatorio y dejaba `minConnections` sin
@@ -273,6 +309,9 @@ export class WSPool {
         this.reconnect = reconnect;
         this.requestTimeoutMs = requestTimeoutMs;
         this.heartbeatTimeoutMs = heartbeatTimeoutMs;
+        this.headers = {...headers};
+        this.headersAvisadas = false;
+        this.destroyed = false;
         this.i = 0;
         this.connections = [];
         this.available = [];
@@ -288,11 +327,58 @@ export class WSPool {
     }
 
     /**
+     * Avisa (una sola vez por pool) si se ha pedido este singleton con cabeceras distintas a las que
+     * tiene. No se sobrescriben ni se silencia: el pool existente sigue usando las suyas. El aviso no
+     * incluye los valores, que pueden ser credenciales.
+     *
+     * @param headers - Cabeceras de la nueva petición del pool.
+     */
+    private comprobarHeaders(headers: Record<string, string>|undefined): void {
+        if (this.headersAvisadas) {
+            return;
+        }
+        const firma = (h: Record<string, string>): string => JSON.stringify(Object.entries(h).map(([k, v]) => [k.toLowerCase(), v]).sort());
+        if (firma(headers ?? {}) === firma(this.headers)) {
+            return;
+        }
+        this.headersAvisadas = true;
+        warning(`WSPool ${this.socket}: ya existe un pool para este endpoint con otras cabeceras; se mantienen las originales`);
+    }
+
+    /**
+     * Espera a que todas las conexiones abiertas tengan vacío el buffer de salida
+     * (`bufferedAmount === 0`), es decir, a que lo enviado con {@link head} haya salido del proceso.
+     * Nunca rechaza: si se agota `timeoutMs` resuelve igualmente.
+     *
+     * @param config - Opciones ({@link IWSPoolVaciarConfig}).
+     */
+    public async vaciar({timeoutMs = 1000}: IWSPoolVaciarConfig = {}): Promise<void> {
+        const pendiente = (): boolean => this.connections.some(c => c.ws.readyState === WebSocket.OPEN && c.ws.bufferedAmount > 0);
+        if (!pendiente()) {
+            return;
+        }
+
+        const deferred = new Deferred<void>();
+        const limite = Date.now() + timeoutMs;
+        const timer = setInterval(() => {
+            if (!pendiente() || Date.now() >= limite) {
+                clearInterval(timer);
+                deferred.resolve();
+            }
+        }, WSPool.VACIAR_INTERVAL_MS);
+
+        return deferred.promise;
+    }
+
+    /**
      * Rellena el pool hasta alcanzar {@link minConnections} conexiones activas.
      * Las nuevas conexiones se añaden directamente a {@link available}.
      * Los errores de conexión se ignoran silenciosamente para no interrumpir el flujo.
      */
     private refillConnections(): void {
+        if (this.destroyed) {
+            return;
+        }
         for (let i=this.connections.length; i<this.minConnections; i++) {
             this.addConnection()
                 .then(connection=>this.available.push(connection))
@@ -313,7 +399,11 @@ export class WSPool {
     private async addConnection(): Promise<ISocketConnection> {
         const i = this.i;
         this.i++;
-        const ws = new WebSocket(this.socket);
+        // El WebSocket global de Node (undici) admite `{headers}` como segundo argumento; en navegador ese
+        // argumento son los `protocols` y lanzaría `SyntaxError`, por eso solo se pasa si hay cabeceras.
+        const ws = Object.keys(this.headers).length > 0
+            ? new (WebSocket as unknown as new (url: string, init: {headers: Record<string, string>}) => WebSocket)(this.socket, {headers: this.headers})
+            : new WebSocket(this.socket);
         ws.binaryType = "arraybuffer";
         const socket = {
             i,
@@ -467,7 +557,7 @@ export class WSPool {
      */
     private deleteConnection(socket: ISocketConnection, status: number): void {
         this.deleteConnectionFinal(socket, status);
-        if (this.connections.length < this.minConnections) {
+        if (!this.destroyed && this.connections.length < this.minConnections) {
             this.addConnection()
                 .then(connection => this.available.push(connection))
                 .catch(()=>undefined);
@@ -970,6 +1060,7 @@ export class WSPool {
      * @param reason - Razón adjunta al cierre (por defecto `"Pool destroyed"`).
      */
     public destroy(code = 1000, reason = "Pool destroyed"): void {
+        this.destroyed = true;
         clearInterval(this.refillTimer);
         if (this.circuitProbeTimer !== undefined) {
             clearTimeout(this.circuitProbeTimer);

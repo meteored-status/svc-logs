@@ -2,6 +2,47 @@
 
 ---
 
+## 2026.11.13 08:48 — [Jose]
+
+### Changed
+
+- **`tsconfig.json` extiende `@tsconfig/node26`** en vez de `@tsconfig/node24` (devDependency igual). El `lib` no cambia porque se fija
+  aquí; el `target` heredado pasa de `es2024` a `es2025`. `strict` deja de venir de la base y lo pone por defecto TypeScript 6. Tests en
+  verde (76). Ojo: este fichero lo extiende el workspace `i18n/` de cada proyecto.
+
+## 2026.11.9 08:44 — [Jose]
+
+### Fixed
+
+- **`value.ts` y `spec/value.spec.ts` con una sola cabecera de autoría y saltos de línea LF.** Llegaron en la
+  2026.11.7+1 con CRLF, y por eso el envío no reconoció la cabecera anterior y puso otra encima; en `value.ts` eso
+  rompía el lint (`mrpack/single-author-header`). El código no cambia. El fallo del envío está corregido en
+  `@mr/cli`.
+
+## 2026.11.7 01:38 — [Jose]
+
+### Fixed
+
+- **Un valor con `$&`, `$1` o `{{otro}}` se pone tal cual.** `Value.applyParams()`
+  (`modules/value/value.ts`) sustituía con `String.replace` y una cadena de reemplazo, que interpreta
+  `$&`, `$1`, `$$` o `` $` ``. Además lo hacía con una expresión por parámetro, una detrás de otra, así que
+  la segunda pasada releía lo que había puesto la primera. Un nombre escrito por la persona, como una libreta
+  llamada «A {{libretas}} $& $1 B», salía «A 1 {{libreta}} $1 B». Ahora hay una sola expresión con todos los
+  parámetros, que sustituye en una pasada con una función de reemplazo. Dos pruebas nuevas en
+  `spec/value.spec.ts`, vistas fallar contra el código anterior.
+
+## 2026.11.6 13:52 — [Jose]
+
+### Fixed
+
+- **Un literal con params cuyo id contiene «key» o «idx» ya no sale roto.** El método de la clase del
+  `index.ts` generado (`generateLangIndex()`, `src/clases-v2/modulo/json.ts`) decidía qué argumento pasar
+  buscando «key», «idx» o «params» con `includes()` en el texto de toda la firma. Con un id como `sankey_aria`
+  la firma es `params: Partial<SankeyAriaParams>`, ganaba «key» y se emitía `sankey_aria(key)`: la pantalla
+  revienta en ejecución con «key is not defined», y `tsc` no lo ve porque el `index.ts` es generado. Ahora se
+  mira el nombre del argumento (lo que va antes de `:`). Prueba nueva en `spec/generate-lang-index.spec.ts`
+  con un id con «key» y otro con «idx», vista fallar antes del arreglo.
+
 ## 2026.9.29 12:59 — [Juan Carlos]
 
 ### Fixed

@@ -40,6 +40,7 @@ import {breakingDominioTiempoRenameRule} from "./rules/breaking-dominio-tiempo-r
 import {breakingDominioTiempoListRenameRule} from "./rules/breaking-dominio-tiempo-list-rename.mjs";
 import {breakingUserTiempoDomainDefaultImportRule} from "./rules/breaking-user-tiempo-domain-default-import.mjs";
 import {deprecatedTraduccionV2ImportRule} from "./rules/deprecated-traduccion-v2-import.mjs";
+import {deprecatedUtilesUnidadesImportRule} from "./rules/deprecated-utiles-unidades-import.mjs";
 import {ensureI18nCoreDevDepRule} from "./rules/ensure-i18n-core-devdep.mjs";
 import {syncMrDevDepsRule} from "./rules/sync-mr-devdeps.mjs";
 
@@ -84,6 +85,7 @@ const RULES = [
     breakingUserTiempoDomainDefaultImportRule,     // R032 (breaking: import Foo from @mr/user-tiempo-domain -> import {Dominio as Foo} from @mr/user-tiempo-domain)
     breakingDominioTiempoListRenameRule,           // R033 (breaking: DominioTiempoList -> DominioList as DominioTiempoList en @mr/user-tiempo-domain/loader)
     deprecatedTraduccionV2ImportRule,              // R035 (services-comun/modules/traduccion/v2/* -> @mr/core-i18n/*)
+    deprecatedUtilesUnidadesImportRule,            // R036 (services-comun/modules/utiles/unidades -> @mr/core-utils/unidades)
 ];
 /**
  * Reglas de nivel workspace. Se ejecutan siempre que haya al menos un patch

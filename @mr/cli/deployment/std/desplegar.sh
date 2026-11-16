@@ -3,7 +3,7 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
-if [[ -f "DESPLEGAR.txt" ]]; then
+if opcion desplegar; then
   BASETOP=$(pwd);
 
   parseWorkspace() {

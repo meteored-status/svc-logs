@@ -7,16 +7,17 @@ set -euo pipefail
 source @mr/cli/deployment/std/aliases.sh
 
 # La organización de GitHub sale de `_K8S_GITHUB` si el trigger la define; si no, de la etiqueta
-# `k8s-github` de `labels.json`, como siempre.
+# `k8s-github` del proyecto. Se lee con `gcloud` (`etiquetaProyecto()` en aliases.sh) y no de
+# `labels.json`, para no esperar a «Labels»: este paso y «Iniciar Kustomize» corren en paralelo con él.
 companies() {
   if [[ -n "${_K8S_GITHUB:-}" ]]; then
     echo "${_K8S_GITHUB}"
   else
-    configl ".labels[\"k8s-github\"]"
+    etiquetaProyecto k8s-github
   fi
 }
 
-if [[ -f "DESPLEGAR.txt" ]]; then
+if opcion desplegar; then
   # Un PAT fine-grained solo vale para una organización de GitHub. Si el kustomize es de otra, su
   # token se lee del secreto `alpred-lectura` del proyecto de GCP de esa organización; la cuenta de
   # Cloud Build necesita ahí `roles/secretmanager.secretAccessor`. Va por trigger (solo la
@@ -52,7 +53,14 @@ if [[ -f "DESPLEGAR.txt" ]]; then
   }
   export -f parseRepository
 
-  companies | xargs -I '{}' -P10 -n1 bash -c "parseRepository {}"
+  # En una asignación para que, si `gcloud` falla, falle el paso (con `set -e`); antes, sin la
+  # etiqueta, se intentaba clonar `null/kustomize`.
+  COMPANIES=$(companies)
+  if [[ -z "${COMPANIES}" ]]; then
+    echo "ERROR: no hay organización de GitHub para el kustomize (ni _K8S_GITHUB ni la etiqueta k8s-github del proyecto)"
+    exit 1
+  fi
+  echo "${COMPANIES}" | xargs -I '{}' -P10 -n1 bash -c "parseRepository {}"
 else
     echo "Omitiendo clonado de kustomizer"
 fi

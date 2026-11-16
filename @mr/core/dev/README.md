@@ -83,7 +83,7 @@ if (DATABASE !== undefined) {
 **Fichero:** `tsconfig/node.json`
 
 Configuración base para todos los servicios Node.js del monorepo. Extiende
-`@tsconfig/node24/tsconfig.json` con las siguientes opciones adicionales:
+`@tsconfig/node26/tsconfig.json` con las siguientes opciones adicionales:
 
 | Opción | Valor | Notas |
 |--------|-------|-------|
@@ -481,7 +481,8 @@ tocó su `CODEMAP.md` — o su `CHANGELOG.md`, si ya existía.
   (junction en Windows, symlink relativo en Unix) — a diferencia de `AGENTS.md`/`CLAUDE.md`,
   que son symlinks de fichero simple. `.claude/settings.local.json` (local) se excluye tanto
   del envío del framework (`.claude/.mr-ignore`) como del `.gitignore` raíz de cada monorepo
-  consumidor (`**/.claude/settings.local.json` en la plantilla `IGNORE` de `@mr/cli`); si ya
+  consumidor (`**/.claude/settings.local.json` en la plantilla `IGNORE` de `@mr/cli`); lo mismo
+  `.claude/scheduled_tasks.lock`, el lock de tareas programadas de Claude Code. Si ya
   existía como fichero real antes de tener este framework, `initClaudeDir()` lo migra primero a
   `@mr/core/dev/.claude/` para no perderlo.
 - `.claude/settings.json` — declara el hook.

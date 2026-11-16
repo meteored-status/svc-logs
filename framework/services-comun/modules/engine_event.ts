@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: b5b00d33aceae63d5d1b5075efefd517
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.6.17+3-josantoniojimnez
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 9bd16a8b2d935058012e45697f28e380
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.9.23+3-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -38,8 +38,7 @@ export abstract class EngineEvent<T extends Configuracion=Configuracion> extends
 
                 if (fileName === "shutdown.lock") {
                     // info("Se ha solicitado el apagado del POD");
-                    this.abort("Se ha solicitado el apagado del POD");
-                    this.shutdown().then(()=>{}).catch(()=>{});
+                    void this.solicitarApagado("Se ha solicitado el apagado del POD");
                 }
             });
         }).catch(() => {
@@ -90,7 +89,7 @@ export abstract class EngineEvent<T extends Configuracion=Configuracion> extends
 
     }
 
-    protected async shutdown(): Promise<void> {
+    protected override async shutdown(): Promise<void> {
 
     }
 }

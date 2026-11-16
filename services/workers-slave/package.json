@@ -15,15 +15,15 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.5.1",
-    "@google-cloud/storage": "^8.4.0",
+    "@google-cloud/storage": "^9.0.0",
     "chokidar": "^6.0.0",
-    "dd-trace": "^6.23.0",
+    "dd-trace": "^6.25.0",
     "formidable": "^3.5.4",
     "mysql2": "^3.24.6",
     "qs": "^6.17.1",
     "source-map-support": "^0.5.21",
     "tslib": "^2.9.1",
-    "ws": "^8.22.1"
+    "ws": "^8.23.0"
   },
   "devDependencies": {
     "@mr/core-dev": "workspace:*",
@@ -37,6 +37,6 @@
   },
   "main": "app.js",
   "optionalDependencies": {
-    "bufferutil": "^4.1.0"
+    "bufferutil": "^4.2.0"
   }
 }

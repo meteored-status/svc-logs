@@ -1,10 +1,10 @@
 /**
- * Editor: Pedro
- * Fecha: Mon, 05 Oct 2026 10:56:47 GMT
- * Hash: 7a15f543086a3c0df980250d6708cb6c
- * Versión: 2026.10.5+1-pedro
- * Anterior: 2026.6.17+1-josantoniojimnez
- * Proyecto: https://github.com/alpred/meteored-svc-panel-usuarios.git
+ * Editor: Bixus
+ * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
+ * Hash: 445a810eae862fed78760390b0366c6f
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.10.5+1-pedro
+ * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import os from "node:os";
@@ -27,6 +27,8 @@ import {readJSON} from "services-comun/modules/utiles/fs";
  * @property servicios - Lista de nombres de servicios del kustomize (mínimo un elemento).
  * @property zona      - Zona de despliegue, leída de la variable de entorno `ZONA`; `"desarrollo"` por defecto.
  * @property cronjob   - `true` si el manifiesto declara que el servicio es un cronjob.
+ * @property tipo      - Tipo de deployment del manifiesto (`deploy.type`): `service`, `cronjob`, `job`, `browser` o `worker`.
+ * @property target    - Destino del deployment del manifiesto (`deploy.target`): `k8s`, `lambda` o `none`.
  * @property sidecar   - `true` si el servicio corre en k8s en producción y necesita el sidecar de Istio.
  * @property replica   - Identificador de réplica del pod (producción) o cadena aleatoria de 5 chars (desarrollo).
  * @property wire      - Número de wire del pod en producción; `0` en desarrollo o cuando no aplica.
@@ -46,6 +48,8 @@ export type IPodInfo = Readonly<{
     servicios: [string, ...string[]];
     zona: string;
     cronjob: boolean;
+    tipo: ManifestDeploymentKind;
+    target: Target;
     sidecar: boolean;
     replica: string;
     wire: number;
@@ -168,6 +172,8 @@ export async function crearPodInfo(): Promise<IPodInfo> {
         servicios: servicios as [string, ...string[]],
         zona: process.env["ZONA"]??"desarrollo",
         cronjob,
+        tipo: manifest.deploy.type,
+        target: manifest.deploy.target,
         sidecar,
         replica,
         wire,

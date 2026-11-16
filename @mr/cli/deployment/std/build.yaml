@@ -1,14 +1,31 @@
 steps:
     #####
+    # ESPERAR A LOS BUILDS ANTERIORES DEL MISMO TRIGGER (ver guarda.sh)
+    #####
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - "@mr/cli/deployment/std/guarda.sh"
+    env:
+      - 'BUILD_ID=$BUILD_ID'
+      - 'LOCATION=$LOCATION'
+      - 'PROJECT_ID=$PROJECT_ID'
+    id: 'Guarda'
+    # Respaldo del tope de espera de guarda.sh (`_GUARDA_ESPERA_MAX`, 900 s por defecto).
+    timeout: '1000s'
+    waitFor:
+      - '-'
+
+    #####
     # DESCARGA DE APLICACIONES NECESARIAS
     #####
-  - name: 'gcr.io/cloud-builders/curl'
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - "@mr/cli/deployment/std/descargas.sh"
     id: 'Descargas'
     waitFor:
-      - '-'
+      - 'Guarda'
 
     #####
     # LABELS
@@ -54,9 +71,11 @@ steps:
     secretEnv:
       - GITTOKEN
     id: 'Clonar Repositorios'
+    # Necesita `jq` (para `opcion`), no `labels.json`: la organización la lee con `gcloud` (ver
+    # `etiquetaProyecto()` en aliases.sh). Así no espera a «Labels» y «Iniciar Kustomize» acaba antes
+    # que la instalación de dependencias.
     waitFor:
       - 'Descargas'
-      - 'Labels'
 
     #####
     # INIT KUSTOMIZE
@@ -77,20 +96,25 @@ steps:
     args:
       - "@mr/cli/deployment/std/cache_get.sh"
     id: 'Descargar Cache Dependencias'
+    # Solo necesita el bucket, que lee con `gcloud` (ver `bucketCache()` en aliases.sh): no espera a
+    # «Descargas» ni a «Labels», y la instalación arranca antes.
     waitFor:
-      - 'Labels'
+      - 'Guarda'
 
     #####
     # INSTALAR LAS DEPENDENCIAS DEL PROYECTO
     #####
-  - name: 'node:lts-alpine'
-    entrypoint: 'sh'
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
     args:
-      - -c
-      - npm install -g corepack && corepack enable && corepack prepare yarn@latest --activate && yarn install --mode=skip-build
+      - "@mr/cli/deployment/std/instalar.sh"
     id: 'Instalar Dependencias'
+    # «Descargas» por el `jq` de `opcion`: sin generar, el paso no instala nada (ver instalar.sh). No
+    # retrasa nada, porque los dos pasos de los que depende acaban a la vez (con 0,1 s de diferencia en
+    # los despliegues del 2026-11-10).
     waitFor:
       - 'Descargar Cache Dependencias'
+      - 'Descargas'
 
     #####
     # GENERAR APP DE PRODUCCIÓN Y CALCULAR CÓDIGO DE VERSIÓN Y HASH
@@ -174,6 +198,12 @@ steps:
     args:
       - "@mr/cli/deployment/std/auto-doc.sh"
     id: 'Generar Documentación'
+    # La documentación es posterior al despliegue: si falla, el build se ve en rojo en los logs
+    # pero no marca como fallido un despliegue que ya ha terminado bien.
+    allowFailure: true
+    # `allowFailure` no cubre el `timeout` global del build (1800 s): sin uno propio, un paso colgado
+    # (proxy, MySQL, docker) agotaría el build entero.
+    timeout: '600s'
     waitFor:
       - 'Desplegar'
 
@@ -211,6 +241,16 @@ substitutions:
   _K8S_CACHE: ''
   _K8S_GITHUB: ''
   _K8S_GITHUB_PROYECTO: ''
+  # Instancia de Cloud SQL (`proyecto:región:instancia`) con la base `doc` donde el paso «Generar Documentación»
+  # guarda la documentación OpenAPI. Es la única forma de activar ese paso: sin `_MYSQL_DOC` no se genera
+  # documentación, aunque el trigger defina `_MYSQL`. Solo cambia el socket: usuario y contraseña siguen siendo los
+  # de `mysql-services-socket-<env>.json`, así que ese usuario tiene que existir en esa instancia y tener permisos
+  # sobre la base `doc`.
+  _MYSQL_DOC: ''
+  # Opcionales: versión de Node distinta de la del `.node-version` del repo (ver `versionNode()` en
+  # aliases.sh) y tope de espera de la guarda en segundos (ver guarda.sh).
+  _NODE_VERSION: ''
+  _GUARDA_ESPERA_MAX: ''
 #  _ENTORNO: 'test'
 options:
   automapSubstitutions: true
@@ -227,8 +267,12 @@ options:
     - '_K8S_GITHUB=${_K8S_GITHUB}'
     - '_K8S_GITHUB_PROYECTO=${_K8S_GITHUB_PROYECTO}'
     - '_MYSQL=${_MYSQL}'
+    - '_MYSQL_DOC=${_MYSQL_DOC}'
+    - '_NODE_VERSION=${_NODE_VERSION}'
+    - '_GUARDA_ESPERA_MAX=${_GUARDA_ESPERA_MAX}'
     - 'COMMIT_SHA=${COMMIT_SHA}'
     - 'PROJECT_ID=${PROJECT_ID}'
+    # Con la sustitución vacía llega solo `https://github.com/`: el autodoc lo trata como ausente.
     - 'REPO_FULL_NAME=https://github.com/${REPO_FULL_NAME}'
     - 'TRIGGER_NAME=${TRIGGER_NAME}'
 #  substitution_option: 'ALLOW_LOOSE'

@@ -1,11 +1,13 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 06:13:12 GMT
- * Hash: f7bbec14e211d27878e3dc0ebfc2cc73
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.4+1-bixus
+ * Fecha: Mon, 16 Nov 2026 08:43:09 GMT
+ * Hash: 6a05e147f306aa138e098b3de34147ed
+ * Versión: 2026.11.16+2-bixus
+ * Anterior: 2026.11.16+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
+
+import type {EPermission} from "../../auth/interface";
 
 /**
  * Los avisos que el panel manda por su cuenta, cada uno con su emisor.
@@ -13,20 +15,23 @@
  * - `monitor`  — un monitor pasa a error o vuelve a OK (`Notification.notify()` del cronjob). Es el único
  *                urgente: algo está roto ahora mismo.
  * - `oncall`   — el aviso de las nueve a quien le toca guardia hoy (`Aviso` del cronjob). Programado.
- * - `anomaly`  — el consumo de Cloudflare que se sale de lo normal (`Anomalias` del cronjob). Informativo.
+ * - `anomaly`  — lo que se sale de lo normal en el consumo de Cloudflare (`Anomalias` del cronjob). Informativo.
+ * - `crawl`    — lo que se sale de lo normal en el rastreo de Googlebot (`rastreo/anomalias.ts` del cronjob). Informativo.
+ *                Nació de partir `anomaly`: los dos llevan a pantallas con permisos distintos, así que cada uno es
+ *                un aviso con sus suscriptores.
  * - `swap`     — alguien te pide un cambio de guardia, o la solicitud que tenías se ha quedado sin efecto
  *                (`data/notification/oncall-swap.ts` de `status-backend`). **El único que no manda el
  *                cronjob**: nace de que otra persona pulsa un botón, no de una pasada periódica.
  *
- * **La lista vive aquí y no en cada emisor** porque la miran cinco sitios: los cuatro emisores para decidir si
- * mandan, y la pantalla de preferencias para pintar las casillas. Con una copia por sitio, el día que entre un
- * aviso nuevo la pantalla no lo ofrecería y nadie se enteraría de que existe.
+ * **La lista vive aquí y no en cada emisor** porque la miran varios sitios: los emisores para decidir si mandan, y la
+ * pantalla de preferencias para pintar las casillas. Con una copia por sitio, el día que entre un aviso nuevo la pantalla
+ * no lo ofrecería y nadie se enteraría de que existe.
  *
- * Añadir uno es esta línea y su defecto de abajo: la pantalla saca la fila sola, el endpoint lo valida solo, y
+ * Añadir uno es esta línea, su defecto y su entrada en `PERMISOS_SUSCRIPCION` de abajo: la pantalla saca la fila sola, el endpoint lo valida solo, y
  * el compilador obliga a darle rótulo —`ROTULO` en `session/user-notifications.tsx` es un `Record<TAviso, …>`,
  * así que no compila hasta que lo tiene—. Lo que no sale solo es el emisor.
  */
-export const AVISOS = ["monitor", "oncall", "anomaly", "swap"] as const;
+export const AVISOS = ["monitor", "oncall", "anomaly", "crawl", "swap"] as const;
 
 /** Uno de los avisos del panel. */
 export type TAviso = typeof AVISOS[number];
@@ -50,9 +55,9 @@ export type TCanal = typeof CANALES[number];
  * solo existe cuando alguien ha elegido, y lo que se aplica mientras no exista se decide aquí. Dos sitios
  * declarando el mismo defecto es un sitio que se queda viejo.
  *
- * Todos nacen con el correo activo porque **es lo que ya pasaba**: los cuatro avisos se mandaban por correo
+ * Todos nacen con el correo activo porque **es lo que ya pasaba**: los avisos se mandaban por correo
  * sin preguntar, y un defecto apagado no sería una preferencia, sería quitarle un aviso a quien no ha pedido
- * nada. El push nace activo en los que valen para eso y apagado en `anomaly`, que es diario e informativo
+ * nada. El push nace activo en los que valen para eso y apagado en `anomaly` y `crawl`, que son diarios e informativos
  * — nada de lo que avisa hay que atenderlo en el minuto, así que no merece vibrar un teléfono.
  *
  * `swap` nace con los dos: va dirigido **a una persona concreta** y espera una respuesta, y es justo el aviso
@@ -66,17 +71,20 @@ export const DEFECTOS: Record<TAviso, Record<TCanal, boolean>> = {
     monitor: {email: true, push: true},
     oncall:  {email: true, push: true},
     anomaly: {email: true, push: false},
+    crawl:   {email: true, push: false},
     swap:    {email: true, push: true},
 };
 
 /**
- * Qué avisos se pueden recibir **aunque no te toquen**.
+ * Qué permisos hacen falta para apuntarse a un aviso, o `null` si el aviso no admite suscripción.
  *
  * Cada aviso tiene un destinatario natural —el de monitores va a la guardia y a los suscriptores del servicio,
- * los de guardia y anomalías solo a la guardia, y el de cambio a quien tiene que responderlo—, y esto dice
- * cuáles admiten además que alguien se apunte.
+ * los de guardia, Cloudflare y rastreo solo a la guardia, y el de cambio a quien tiene que responderlo—, y esto
+ * dice cuáles admiten además que alguien se apunte, y con qué permiso.
  *
- * **Solo las anomalías**, y los otros se quedan fuera por motivos que no son técnicos:
+ * **Solo `anomaly` y `crawl` admiten suscripción**, y cada una exige el permiso de la pantalla a la que lleva su
+ * correo: `status.infra.cloudflare.view` (`/infra/cloudflare`) y `status.seo.crawler.view` (`/seo/googlebot`).
+ * Los otros se quedan fuera por motivos que no son técnicos:
  *
  * - `monitor` ya se puede recibir sin estar de guardia **suscribiéndose a un servicio** desde la portada, que
  *   es más preciso que un «todos los servicios» y ya funciona. Un interruptor global sería un aviso por cada
@@ -86,10 +94,28 @@ export const DEFECTOS: Record<TAviso, Record<TCanal, boolean>> = {
  * - `swap` va dirigido a quien tiene que responder una solicitud concreta. Apuntarse a los cambios de guardia
  *   de los demás sería suscribirse a conversaciones ajenas.
  *
- * La lista vive aquí porque la miran los tres sitios: la pantalla para pintar la casilla, el endpoint para
- * validar lo que llega, y el emisor para saber a quién sumar.
+ * **El permiso se exige a los suscritos, no a la guardia**: quien está de guardia recibe el aviso por serlo, con
+ * o sin permiso. Si debe poder abrir el enlace, el permiso se le asigna aparte.
+ *
+ * Tiene la misma forma que los requisitos de `cumplePermisos()`: un OR de listas, y cada lista es un AND. Es un
+ * `Record` completo a propósito: un aviso nuevo no compila hasta que alguien decide si admite suscripción.
  */
-export const SUSCRIBIBLES: readonly TAviso[] = ["anomaly"];
+export const PERMISOS_SUSCRIPCION: Readonly<Record<TAviso, EPermission[][] | null>> = {
+    monitor: null,
+    oncall:  null,
+    anomaly: [["status.infra.cloudflare.view"]],
+    crawl:   [["status.seo.crawler.view"]],
+    swap:    null,
+};
+
+/**
+ * Qué avisos se pueden recibir **aunque no te toquen**, sin mirar el permiso de nadie: los que tienen
+ * `PERMISOS_SUSCRIPCION`. A qué puede apuntarse una persona concreta es esto filtrado por sus permisos.
+ *
+ * La lista vive aquí porque la miran varios sitios: el endpoint para validar lo que llega, y el emisor para
+ * saber a quién sumar.
+ */
+export const SUSCRIBIBLES: readonly TAviso[] = AVISOS.filter(aviso => PERMISOS_SUSCRIPCION[aviso] !== null);
 
 /** Si un aviso admite que alguien se apunte a recibirlo sin ser destinatario natural. */
 export const suscribible = (aviso: TAviso): boolean => SUSCRIBIBLES.includes(aviso);
@@ -110,23 +136,28 @@ export interface IPreferencia {
 /**
  * Las preferencias de quien lo pide.
  *
- * Viajan **solo las casillas que existen en la tabla**, no las seis: quien no ha guardado nunca recibe una lista
- * vacía, y es la pantalla la que pinta los defectos con `activo()`. Mandar las seis rellenadas obligaría al
+ * Viajan **solo las casillas que existen en la tabla**, no todas: quien no ha guardado nunca recibe una lista
+ * vacía, y es la pantalla la que pinta los defectos con `activo()`. Mandarlas todas rellenadas obligaría al
  * servidor a decidir el defecto y a la pantalla a confiar en que lo ha decidido igual.
  *
  * @property preferences - Las casillas guardadas.
- * @property subscribed  - Los avisos a los que se ha apuntado sin ser destinatario natural. Solo pueden estar
- *                         los de `SUSCRIBIBLES`; el resto se ignora al guardar.
+ * @property subscribed  - Los avisos a los que se ha apuntado sin ser destinatario natural **y a los que puede
+ *                         apuntarse ahora**: una suscripción guardada de quien ya no tiene el permiso sigue en la
+ *                         base de datos, dormida, y no se devuelve.
+ * @property subscribable - A qué avisos puede apuntarse **ahora** quien pregunta, según sus permisos. Lo decide el
+ *                         backend y la pantalla no recalcula nada: los permisos de su sesión pueden ir
+ *                         atrasados respecto a una retirada.
  */
 export interface IPreferenciasOUT {
     preferences: IPreferencia[];
     subscribed: TAviso[];
+    subscribable: TAviso[];
 }
 
 /**
  * Guardado de las preferencias **del propio usuario**.
  *
- * Llegan las seis casillas y se sustituyen todas, no se parchea una: la pantalla enseña la matriz entera, así
+ * Llega la matriz completa y se sustituyen todas, no se parchea una: la pantalla enseña la matriz entera, así
  * que lo que manda al guardar es la matriz entera. El handler valida cada `notice` y cada `channel` contra
  * `AVISOS` y `CANALES` — la tabla admite cualquier cadena, así que sin acotarlo aquí guardaría lo que llegue.
  *
@@ -149,7 +180,7 @@ export const canalValido = (valor: string): valor is TCanal => (CANALES as reado
  * Si a alguien le llega un aviso por un canal, aplicando el defecto cuando no ha elegido.
  *
  * **Es el único sitio donde se resuelve la ausencia de fila**, y de ahí que lo usen tanto la pantalla como los
- * tres emisores: si cada uno interpretara la lista a su manera, la casilla que se ve marcada y el aviso que
+ * emisores: si cada uno interpretara la lista a su manera, la casilla que se ve marcada y el aviso que
  * llega podrían no coincidir, que es la peor forma de fallar de una preferencia — nadie la reporta, porque
  * quien la puso cree que está puesta.
  *

@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:25 GMT
- * Hash: e99c04c8357371e3ab53b1685880fdc7
- * Versión: 2026.9.23+1-bixus
- * Anterior: 2026.9.8+1-bixus
+ * Fecha: Fri, 13 Nov 2026 10:50:41 GMT
+ * Hash: 4e97cba4402266048155925766c01ef7
+ * Versión: 2026.11.13+1-bixus
+ * Anterior: 2026.9.23+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -27,7 +27,7 @@ mapeo.set(EService.logs_slave, {
     slow: 0,
 });
 mapeo.set(EService.status_backend, {
-    endpoint: "switch-svc-status-backend",
+    endpoint: "proxy-svc-status-backend",
     namespace: "services",
     tags: ["status", "status-backend"],
 });

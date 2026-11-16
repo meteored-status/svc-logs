@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 07 Sep 2026 13:12:27 GMT
- * Hash: 4116ac3aa9b474ff09bb91056df2a07e
- * Versión: 2026.9.7+1-bixus
- * Anterior: 2026.9.3+1-bixus
+ * Fecha: Mon, 09 Nov 2026 07:46:18 GMT
+ * Hash: d43d402d8d3592b5c3823de398c9f311
+ * Versión: 2026.11.9+1-bixus
+ * Anterior: 2026.11.7+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -45,6 +45,21 @@ describe("Value · sustitución de parámetros", () => {
 
         assert.equal(valor.value(), "Sin nada que sustituir");
         assert.equal(valor.value({}), "Sin nada que sustituir");
+    });
+
+    it("un valor con `$&`, `$1` o `$$` se pone tal cual", () => {
+        // `String.replace` con una cadena de reemplazo interpreta esos patrones: «A $& B» salía con el
+        // `{{nombre}}` original dentro. El valor puede ser un nombre que haya escrito la persona.
+        const valor = new SingularValue<{nombre: string}>("Copiada a «{{nombre}}»", ["nombre"]);
+
+        assert.equal(valor.value({nombre: "A $& $1 $$ $` B"}), "Copiada a «A $& $1 $$ $` B»");
+    });
+
+    it("un valor que contiene `{{otro}}` no se vuelve a sustituir", () => {
+        // Con una pasada por parámetro, el primer valor se releía en la pasada del segundo.
+        const valor = new SingularValue<{a: string, b: string}>("{{a}} / {{b}}", ["a", "b"]);
+
+        assert.equal(valor.value({a: "x {{b}} y", b: "2"}), "x {{b}} y / 2");
     });
 
     it("no toca las llaves que no son un parámetro declarado", () => {

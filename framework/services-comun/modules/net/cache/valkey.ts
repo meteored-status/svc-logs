@@ -1,8 +1,10 @@
 /**
- * Editor: José Antonio Jiménez
- * Fecha: Wed, 17 Jun 2026 11:12:28 GMT
- * Hash: b0dc8761c83495d005429ef402a8c227
- * Versión: 2026.6.17+3-josantoniojimnez
+ * Editor: Chema
+ * Fecha: Wed, 04 Nov 2026 07:49:02 GMT
+ * Hash: 3e33c97de29d20df847dbe7431bb3085
+ * Versión: 2026.11.4+2-chema
+ * Anterior: 2026.6.17+3-josantoniojimnez
+ * Proyecto: https://github.com/alpred-cms/svc-redaccion.git
  */
 
 import type {Conexion} from "@mr/core-network/server/http/conexion";
@@ -92,7 +94,8 @@ export class NetCacheValKey extends NetCache {
                 "X-Meteored-Cache": "HIT",
             },
         };
-        const ttl = Math.ceil((cache - Date.now()) / 1000);
+        // ValKey.set espera el TTL en milisegundos
+        const ttl = cache - Date.now();
 
         if (ttl <= 0) {
             return;
@@ -159,15 +162,18 @@ export class RequestCacheValkey extends RequestCache {
 
         const cliente = await RequestCacheValkey.valkey(this.pod, this.credenciales, this.options);
 
+        // ValKey.set espera el TTL en milisegundos; metadatos y datos caducan a la vez
+        const ttl = data.expires.getTime() - Date.now();
+
         const metadatakey = `${this.cacheKey(url)}:metadata`;
 
         await cliente.saveJSON(metadatakey, {
             version: 1,
             expires: data.expires,
             headers: data.headers,
-        });
+        }, {ttl});
 
         const datakey = `${this.cacheKey(url)}:data`;
-        await cliente.set(datakey, data.data, {ttl: data.expires.getTime()-Date.now()});
+        await cliente.set(datakey, data.data, {ttl});
     }
 }

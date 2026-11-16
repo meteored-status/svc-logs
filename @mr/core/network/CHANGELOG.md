@@ -2,6 +2,116 @@
 
 ---
 
+## 2026.11.16 11:57 — [Jose]
+
+### Fixed
+
+- **`config/net.ts` arrastraba código de servidor al navegador** y rompía la compilación de los paneles Next con `Module not found:
+  Can't resolve 'fs'`: importaba `warning` de `services-comun/modules/utiles/log` (que trae `dd-trace`, `cluster` y `os`) para avisar
+  del recorte del `shutdownTimeout`, y los paneles cargan `net.ts` a través de `service.ts`. Ahora `net.ts` no importa nada de servidor:
+  `acotarShutdownTimeout()` recorta igual pero sin avisar, `Net.shutdownTimeoutPedido` guarda el valor pedido y `avisoShutdownTimeout(net)`
+  devuelve el texto del aviso (o `null`), que `Server` emite con `warning` una vez al arrancar (`attachSignals`). El valor recortado y
+  las constantes no cambian. `spec/net-shutdown.spec.ts` comprueba el texto en vez de contar avisos, y vigila que `net.ts` no importe
+  de `services-comun`.
+
+## 2026.11.12 17:30 — [Jose]
+
+### Added
+
+- `Server.antesDeCerrar(cb)` (antes de `close()`, con el servidor aún atendiendo; tope 3 s, `PRESUPUESTO_ANTES_DE_CERRAR_MS`) y
+  `Server.duranteCierre(cb)` (en paralelo con `close()`, comparte `shutdownTimeout`), y `Server.gestionaSenales()`. Ganchos genéricos: core-network
+  no conoce el Engine. `@mr/core-workload` los usa para el margen de endpoints y para esperar al `shutdown()` del engine.
+- `acotarShutdownTimeout()` y las constantes `SHUTDOWN_TIMEOUT_PRODUCCION_MS`, `SHUTDOWN_TIMEOUT_DESARROLLO_MS`, `PRESUPUESTO_ANTES_DE_SALIR_MS`
+  y `PRESUPUESTO_ANTES_DE_CERRAR_MS` en `config/net.ts` (`server.ts` las reexporta).
+
+### Changed
+
+- **`isShuttingDown()` es `true` desde el inicio de `cerrarYSalir`** (margen incluido), no solo desde `close()`; `close()` usa un guard propio. Con `/admin/ready/`
+  en 503 durante el margen, el balanceador deja de mandar tráfico mientras el servidor aún atiende.
+- **`cerrarYSalir(config, {salir?, presupuestoAntesDeCerrarMs?})`**: el segundo parámetro pasa a ser un objeto de opciones (antes, la función `salir`).
+  El límite duro se arma **después** del margen de `antesDeCerrar`, así que éste no lo consume.
+- Tras `close()`, las respuestas que salen por keep-alive llevan `Connection: close` (se decide al escribir las cabeceras: Node emite `request`
+  al parsear, también para las encadenadas).
+- **`shutdownTimeout` se acota en `Net`**: en producción, mayor que 18 s o ≤ 0 se recorta a 18 s con `warning` (svc-proxy lo pasaba a 25 s, por encima de
+  la gracia). En desarrollo no se toca.
+- `limiteDuroMs(shutdownTimeout)` en `config/net.ts`, que usa `cerrarYSalir` y los invariantes de presupuesto de `@mr/core-workload`.
+- Pruebas: 17 -> 30.
+
+## 2026.11.12 14:32 — [Jose]
+
+### Changed
+
+- `shutdownTimeout` de producción: 20 s -> **18 s**, y el límite duro de `cerrarYSalir`, de 22 s a 20 s. El preStop del kustomize
+  pasa a esperar 3 s antes de SIGTERM (para que el pod salga de los endpoints antes de cerrar), y ese tiempo cuenta dentro de los
+  25 s de `terminationGracePeriodSeconds`, que es el máximo de Autopilot: 3 + 18 + 1 de `antesDeSalir` + 1 de margen = 23 s.
+
+## 2026.11.12 12:15 — [Jose]
+
+### Fixed
+
+- **`Server.close()` ya no espera al `shutdownTimeout` con un WebSocket abierto.** `http.Server.close()` no resuelve mientras haya una
+  conexión abierta, y `closeAllConnections()` no cierra los sockets upgradeados ni una keep-alive con una petición en vuelo; `close()`
+  solo salía por su timeout y, en producción (25 s de `shutdownTimeout`, 25 s de `terminationGracePeriodSeconds`), el SIGKILL llegaba antes de
+  `antesDeSalir`. Ahora, durante el cierre, se cierra en paralelo el servidor WebSocket del proceso (`Shutdown` a los clientes, que se
+  reconectan a una réplica viva) y se llama a `closeIdleConnections()` cada 150 ms.
+
+### Added
+
+- `servidorWebSocketActual()` (`server/websocket`): el singleton del servidor WebSocket sin crearlo.
+
+### Changed
+
+- `shutdownTimeout` de producción: 25 s -> **20 s**, para dejar margen al presupuesto de 1 s de `antesDeSalir` dentro de los 25 s de gracia.
+- El límite duro de `cerrarYSalir` pasa del doble de `shutdownTimeout` a `shutdownTimeout` + presupuesto de `antesDeSalir` + 1 s (mínimo
+  5 s): en producción, de 40 s a 22 s. Con el doble quedaba por encima de los 25 s de gracia y nunca actuaba antes del SIGKILL.
+
+## 2026.11.12 11:00 — [Jose]
+
+### Added
+
+- **Ruta y autorización por handler WebSocket, comprobadas en el handshake** (`IWSHandler.ruta` y
+  `IWSHandler.autorizar(req)`). Con `ruta` el handler pertenece a ese path (con o sin barra final, sin query):
+  la conexión que hace upgrade a él queda ligada y solo resuelve los métodos de los handlers de esa ruta;
+  las conexiones a cualquier otra ruta solo resuelven handlers sin `ruta`, como hasta ahora. Con `autorizar`
+  (síncrona o `Promise`), si falla, rechaza o lanza, el upgrade termina en `401` y el socket no llega a abrirse;
+  se evalúa una vez por conexión, no por mensaje. Se resuelve con `verifyClient` de `ws`, dentro del propio
+  handshake: sigue habiendo un único listener de `'upgrade'`, sin pelearse con `IUpgradeHandler`. `WSHandler`
+  expone `ruta` y `request` (la petición del upgrade) y su constructor pasa a recibir
+  `{buffer, head, ruta, request}` como objeto de configuración (solo lo instancia el servidor WebSocket).
+  Sin `ruta` nada cambia.
+- **`IWSPoolConfig.headers`**: cabeceras del handshake del cliente (solo Node; en navegador no se pasan). No entran
+  en la clave del singleton: si se pide un pool existente con otras cabeceras, se conserva y se emite un
+  `warning` una vez, sin los valores.
+- **`WSPool.vaciar({timeoutMs})`**: espera a que `bufferedAmount` de las conexiones abiertas llegue a 0 o a que
+  venza el timeout. Nunca rechaza.
+- **`Server.alIniciarCierre(cb)` y `Server.antesDeSalir(cb)`** (`server/http/server.ts`): hooks del cierre por
+  señal. El primero es síncrono y corre antes de `close()`; el segundo, asíncrono, tras `close()` y antes de
+  `process.exit(0)`, con un presupuesto total de 1 s y errores tragados con `warning`. La secuencia vive ahora en
+  `Server.cerrarYSalir(config, salir?)` (salida inyectable para probarla); sin hooks registrados el
+  comportamiento es el de antes y no se registra ningún `process.on` nuevo.
+- Arnés de pruebas del workspace (`yarn workspace @mr/core-network test`, `spec/`, `tsconfig.spec.json`,
+  `typescript` en `devDependencies`) con pruebas de lo anterior.
+
+### Fixed
+
+- `WSPool.destroy()` dejaba sockets abiertos: al cerrar sus conexiones, `deleteConnection()` reponía otras hasta
+  `minConnections`, y esas ya no las cerraba nadie (mantenían vivo el proceso por el timer de heartbeat). Un
+  pool destruido ya no repone.
+
+---
+
+## 2026.11.10 13:17 — [Juan Carlos]
+
+### Added
+
+- **`Contract<T>()` y el campo `contract` de `IRouteGroup` e `IExpresion`** (`server/http/routes/group/contract.ts`):
+  asocian tipos TypeScript (`post`, `response`, `query`, `headers`) y configuración documental (`errors`,
+  `description`, `envelope`) a una ruta para que `mrpack autodoc` genere esquemas OpenAPI. Cero runtime: el helper
+  devuelve una copia de su configuración. El de la expresión sustituye al del bloque. Opcional y compatible con
+  rutas sin contrato.
+
+---
+
 ## 2026.10.22 08:52 — [Jose]
 
 ### Added

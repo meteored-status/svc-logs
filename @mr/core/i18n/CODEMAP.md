@@ -199,12 +199,12 @@ quedo con la version rota cuando esta se arreglo. Es la unica forma de que no vu
 
 - `dependencies`: `chokidar`, `source-map-support`, `tslib` — **las tres son del CLI**, no de los
   idiomas ni del runtime, que no importan nada de fuera de `node:`.
-- `devDependencies`: `@mr/core-cli`, `@tsconfig/node24`, `@types/node`,
+- `devDependencies`: `@mr/core-cli`, `@tsconfig/node26`, `@types/node`,
   `@types/source-map-support`, `esbuild`, `typescript`.
 
 **Sin `@mr/core-dev`.** Lo unico que aportaba era el `tsconfig` base y unos tipos globales del
 bundler (`PRODUCCION`, `ENTORNO`, …) que este paquete no usa —comprobado antes de quitarlos—. El
-`tsconfig.json` extiende ahora **`@tsconfig/node24` directamente**, que es lo que habia al final de
+`tsconfig.json` extiende ahora **`@tsconfig/node26` directamente**, que es lo que habia al final de
 aquella cadena, y solo declara encima lo que el monorepo cambia sobre esa base. La configuracion
 resuelta sale identica, opcion por opcion, a la de antes.
 

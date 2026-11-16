@@ -3,7 +3,7 @@ set -e
 
 source @mr/cli/deployment/std/aliases.sh
 
-if [[ -f "GENERAR.txt" ]]; then
+if opcion generar; then
   parseBucket() {
     RUTA="${1}"
     DIRECTORIO=$(path1 "${RUTA}")

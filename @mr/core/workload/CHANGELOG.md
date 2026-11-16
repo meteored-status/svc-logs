@@ -2,6 +2,137 @@
 
 ---
 
+## 2026.11.13 09:09 — [Jose]
+
+### Fixed
+
+- **Heartbeat en modo simple: ya no se pierde la transición `null → arrancando`.** El emisor manda una foto del estado en cada
+  ciclo, y `arrancando` (`tseq` 0) solo se repetía mientras durase. Un pod que estaba listo antes de su primer envío, o cuyo primer
+  envío se descartaba, mandaba directamente `tseq` 1, y el receptor ya no acepta un `tseq` menor que el que conoce. En status-backend
+  en modo simple el engine está listo en menos de 1 s y salía siempre `arrancando → listo` sin el `null → arrancando`; en modo cluster
+  sí salía, porque el primario se queda 17 s en `arrancando`. Ahora `Heartbeat` (`heartbeat/emisor.ts`), mientras no haya entregado
+  ningún mensaje y durante `PRIMER_ESTADO_MAX_MS` (25 s, por debajo de los 30 s de primera vista del receptor), manda antes de la
+  primera transición la foto de `arrancando` con `tseq` 0 y el `desde` de cuando se creó. Si esa no se entrega, no manda la actual,
+  que sale en el siguiente ciclo. La despedida no espera por esto. Cuatro pruebas nuevas en `spec/emisor.spec.ts`; las que lo
+  cubren, vistas fallar sin el arreglo. Una prueba de la despedida ahora espera `arrancando, listo, parado`. Pruebas: 128 -> 132.
+
+## 2026.11.13 08:59 — [Jose]
+
+### Fixed
+
+- **Heartbeat en modo cluster: el pod ya no vuelve de `no-listo` a `arrancando` al arrancar.** El primario da de alta cada worker
+  como `arrancando`, pero si no informaba en 3 s (`TIMEOUT_WORKER_MS`) lo contaba como `no-listo`, y cuando el worker por fin
+  informaba, el pod volvía a `arrancando`. En status-backend con dos workers se midió `arrancando → no-listo → arrancando → no-listo
+  → listo`: los workers tardaron 17 s en cargar y arrancar el heartbeat. Ahora un worker que todavía no ha informado nunca
+  (`IEstadoWorker.informado: false`, lo pone `RegistroWorkers.alta()`) no caduca y sigue `arrancando`; si no llega a arrancar, lo
+  mata la `startupProbe`. Uno que ya ha informado y se calla sigue contando como `no-listo` a los 3 s. Dos pruebas nuevas en
+  `spec/estado.spec.ts`, vistas fallar sin el arreglo. Pruebas: 126 -> 128.
+
+## 2026.11.12 17:30 — [Jose]
+
+### Fixed
+
+- **El pod ya no sale de los endpoints con el servidor cerrado, ni deja procesos sin apagar, desde que `SIGTERM` llega a Node** (el `run.sh`
+  arranca con `exec node <yarnPath>`). En los proyectos cuyo preStop solo escribe `shutdown.lock` (sin `sleep 3`), el servidor cerraba antes
+  de salir de los endpoints (503), `Engine.shutdown()` no se esperaba, los procesos sin HTTP morían al instante, el primario de un cluster
+  sin heartbeat moría dejando workers y un `shutdownTimeout` de usuario de 25 s superaba la gracia.
+
+### Added
+
+- **Margen de endpoints** (`engine/lock.ts`): `MARGEN_ENDPOINTS_MS` (3 s), `calcularMargenPendiente()` y `margenPendienteMs()`: al recibir
+  `SIGTERM` se espera lo que falte de 3 s desde la fecha de `shutdown.lock` (con `sleep 3` en el preStop, ~0; sin él, ~3 s; sin lock en
+  producción, 3 s; fuera de producción, 0) con el servidor aún atendiendo.
+- `Engine.solicitarApagado(motivo)` (aborta y ejecuta `shutdown()` **una sola vez**, nunca rechaza), `Engine.apagadoPorServidor` y `shutdown()` en
+  la clase base (hook con `override`). El watcher del lock, el cierre del servidor y la señal pasan por él. `ApagadoUnico` (`engine/apagado-unico.ts`).
+- `engine/apagado.ts`: `atenderSenal()` / `instalarApagado()`. `Main` instala un manejador único de `SIGTERM`/`SIGINT` en modo simple y en
+  workers: delega en el servidor HTTP si éste atiende señales; en un proceso sin HTTP pide el apagado con tope 18 s (2 s en desarrollo), se
+  despide (≤ 1 s) y sale con 0; en un cronjob/job con `ejecutar()` en marcha pide el apagado y **no sale** (acaba `ejecutar()`); una segunda
+  señal sale ya con `128 + n`.
+- `despedirAcotado()` en `heartbeat/cierre-primario.ts`.
+- Tras la revisión: **en desarrollo un cronjob/job sale tras la señal** (`shutdown()` con tope de 2 s y `128 + n`; `node --watch` espera sin tope y no
+  se reiniciaba), en producción se mantiene «no sale». **El primario de cluster sale ya con `128 + n` ante una segunda señal.** `ejecucionFinitaPendiente`
+  se pone justo tras el `build` (una señal durante `master()` de un cronjob salía con 0 y el Job constaba como correcto). Sin lock en
+  producción ya no sale el aviso espurio de «antesDeCerrar superaron el presupuesto» (`esperaMargenMs`, `HOLGURA_PRESUPUESTO_MS`). `Main` no
+  repite en el log la señal que ya escribe el servidor. `instalarApagado` e `instalarCierrePrimario` devuelven el desinstalador.
+
+### Changed
+
+- **El primario de un cluster atiende la señal con o sin heartbeat** (`emisor: IEmisorCierre|null`): reenvía la señal, espera
+  `margen + ESPERA_WORKERS_MS` y sale; la despedida y el `drenando` solo con heartbeat. `ESPERA_WORKERS_MS` se deriva de
+  `SHUTDOWN_TIMEOUT_PRODUCCION_MS` y `PRESUPUESTO_ANTES_DE_SALIR_MS` de `@mr/core-network`.
+- `/admin/ready/` responde 503 también si `preStopSolicitado` (ha aparecido `shutdown.lock`), no solo durante el cierre del servidor.
+- El `shutdown()` del Engine HTTP pasa a `protected override`; su contrato: se espera, con presupuesto. **Las subclases directas de `Engine` que
+  sobreescriban `shutdown()` necesitan `override`** (`noImplicitOverride`).
+- Pruebas: 95 -> 126 (`engine-apagado`, `apagado`, `presupuesto`, margen en `lock`, sin emisor y con margen en `cierre-primario`). El arnés mapea
+  `@mr/core-network/server/http/config/net` (solo constantes) al `.js` emitido y añade un stub de `fs`.
+
+## 2026.11.12 14:32 — [Jose]
+
+### Changed
+
+- `ESPERA_WORKERS_MS`: 21 s -> **19 s**, por el `shutdownTimeout` de 18 s de `@mr/core-network` (ver su CHANGELOG): el peor caso del
+  primario de un cluster pasa a 19 + 1 s de despedida + 3 s del preStop = 23 s, dentro de los 25 s de gracia.
+
+## 2026.11.12 12:40 — [Jose]
+
+### Fixed
+
+- **`shutdown.lock` se borra una sola vez por pod, desde `Main`** (modo simple o primario, antes de forkear), no en el `init()` de cada worker. En cluster, un worker que arrancaba tarde se llevaba por delante un lock legítimo de un pod que ya estaba terminando y no drenaba. Elegido frente a «solo si el `mtime` es anterior al arranque del proceso» porque ese criterio no distingue un worker relanzado tras el lock (que borraría el legítimo); con `Main` solo hay un momento posible, anterior a que exista cualquier worker. `chokidar` ve el lock que aparezca después (`ignoreInitial` por defecto), así que no se pierde ninguno.
+- **La despedida del primario tiene tope** (`DESPEDIDA_MAX_MS`, 1 s, `despedidaMs`): `despedir()` espera al contexto y reconecta (hasta unos 5 s), y con los 21 s de espera a los workers pasaba de los 25 s de gracia. Peor caso ahora: 21 s + 1 s.
+- **`POD_REVISION` que el receptor descartaría** (más de 16 caracteres o fuera de `a-z0-9`): el receptor tiraba todos los latidos del pod y el pod no aparecía. `revisionDePod()` manda vacía y avisa (sin el valor) una sola vez por pod (`avisar`, que `construirContexto` y `crear.ts` encadenan).
+
+## 2026.11.12 12:15 — [Jose]
+
+### Added
+
+- **`IHeartbeat.revision`**: el `pod-template-hash` del ReplicaSet (`POD_REVISION`, Downward API desde la etiqueta; si no llega, en
+  producción el penúltimo trozo del hostname cuando tiene la forma `<deployment>-<hash>-<sufijo>`; vacío fuera del clúster). Cambia
+  en cada rollout, también en los que solo cambian el yml y no la imagen. `revisionDePod()` en `heartbeat/payload.ts`.
+- **Modo cluster**: con el heartbeat habilitado, el primario instala un manejador de `SIGTERM`/`SIGINT` (`heartbeat/cierre-primario.ts`)
+  que marca `drenando`, reenvía la señal a los workers, espera a que salgan (hasta 21 s), manda `parado` y sale. Con el heartbeat
+  apagado no cambia nada. `IHeartbeatCreado.emisor` (nuevo).
+- Pruebas: `engine/lock`, metadatos con reintento, formato del token, avisos, `revision`, contexto que falla, cierre del primario,
+  contexto pendiente en el emisor y memoria del drenado.
+
+### Changed
+
+- **Metadatos de GKE (`cluster`, `ubicacion`, `proyectoGcp`) en producción**: se reintentan con backoff (1, 2, 4… hasta 30 s) y **no se
+  emite hasta tenerlos** (forman parte de la clave de la tabla del receptor; con un solo intento, un fallo los dejaba vacíos para
+  siempre). Las `HEARTBEAT_*` siguen mandando y evitan la espera. Un `warning` una sola vez mientras falle y un `info` con los valores y
+  su origen al resolverse. Fuera de producción, como antes. `leerMetadatos` acepta `reintentar`, `esperar`, `primeraEsperaMs` y
+  `maxEsperaMs`. La despedida no espera al contexto.
+- **`HEARTBEAT_TOKEN` en producción** tiene que tener la forma `hb1.<id>.<secreto>` que espera el receptor; si no, no se emite y se avisa
+  (sin el valor).
+- El aviso de `ENTORNO` incoherente solo sale si el heartbeat está habilitado (antes salía también en cronjobs).
+- Si falla la construcción del contexto, un `warning` (antes, silencio) y no se emite.
+- El aviso de heartbeat descartado nombra las dos causas probables (fallo de red o 401): `WSPool` no las distingue.
+- El agregado de un pod en cluster sigue `drenando` si, después de drenar, no quedan workers (antes volvía a `arrancando`).
+
+### Fixed
+
+- `shutdown.lock` sobrevivía a un reinicio del contenedor (`emptyDir` del pod) y el contenedor nuevo se apagaba al arrancar: `init()` del
+  Engine HTTP lo borra antes de vigilar la carpeta.
+- Con `@mr/core-network` 2026.11.12 el cierre ya no espera al `shutdownTimeout` por un WebSocket entrante abierto, así que `antesDeSalir`
+  (el `parado` del heartbeat) llega a ejecutarse antes del SIGKILL.
+
+## 2026.11.12 11:13 — [Jose]
+
+### Added
+
+- **Heartbeat de pods** (`heartbeat/`): cada pod de un servicio (`deploy.type` `service`, `target` `k8s`, con `HEARTBEAT=true`; apagado por
+  defecto) manda un heartbeat por WebSocket a `status-external` cada segundo y sin esperar respuesta (`WSPool.head()`), con estado
+  (`arrancando`, `listo`, `no-listo`, `drenando`, `parado`), transiciones, métricas y los datos del pod (cluster, proyecto de GCP y ubicación
+  salen del servidor de metadatos de GKE). `heartbeat/interface.ts` es la única declaración del mensaje (`IHeartbeat` v1). Un solo envío
+  en vuelo, sin acumular; despedida `parado` en `Server.antesDeSalir`. Detalle y variables de entorno en el README.
+- **Modo cluster**: un heartbeat por pod. Los workers informan a su primario por IPC (`cmd: "heartbeat"`) y el primario emite el agregado con
+  `procesos: {total, listos}`. En cluster no hay `parado` (el primario no recibe señales propias).
+- **Engine HTTP**: `ultimoReady`, `preStopSolicitado` y `registrarReady()`. `GET /admin/ready/` guarda su último resultado para que la sonda no
+  repita `ready()`, que en algunos servicios consulta Elastic.
+- **`IPodInfo.tipo` y `IPodInfo.target`** (del manifest), que solo construye `crearPodInfo()`.
+- **Pruebas** (`spec/`, `node:test`; script `test`) y dependencias `@mr/core-log`, `typescript` (dev) y `tslib`.
+- `HEARTBEAT_TOKEN` y `HEARTBEAT_SOCKET` se recortan: el token llega de un Secret montado desde un fichero, y con un salto de línea final
+  el hash no coincidiría nunca y todos los pods se quedarían fuera con un 401.
+
 ## 2026.10.19 12:40 — [Alex]
 
 ### Added
