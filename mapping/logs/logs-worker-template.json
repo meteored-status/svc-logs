@@ -1,0 +1,37 @@
+{
+  "index_patterns": [
+    "logs-worker-*"
+  ],
+  "priority": 200,
+  "data_stream": {},
+  "composed_of": [
+    "logs@mappings",
+    "logs@settings",
+    "logs@custom",
+    "ecs@mappings"
+  ],
+  "ignore_missing_component_templates": [
+    "logs@custom"
+  ],
+  "template": {
+    "settings": {
+      "index": {
+        "mode": "logsdb"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "event": {
+          "properties": {
+            "scheduledTime": {
+              "type": "date"
+            }
+          }
+        }
+      }
+    }
+  },
+  "_meta": {
+    "description": "logs-worker-*: plantilla logs de x-pack + event.scheduledTime como date (services/workers-slave)"
+  }
+}
