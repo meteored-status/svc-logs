@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 2a527d5f57e3e009d3fae46962286650
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Mon, 16 Nov 2026 12:17:13 GMT
+ * Hash: 985862a251386823546dd1a9d43378b8
+ * Versión: 2026.11.16+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -45,6 +46,7 @@ export interface ILecturaEstado {
  * @property estado - Estado informado.
  * @property causaDrenado - Causa informada, si drenaba.
  * @property ts - Epoch ms en que el primario recibió el informe (o dio de alta el worker, si aún no ha informado).
+ * @property rss - Memoria residente (bytes) que declaró el worker en su último informe; `undefined` si no la mandó (worker de una versión anterior).
  * @property informado - `false` mientras el worker solo está dado de alta y no ha mandado su primer informe. Ese worker no
  *   caduca con `timeoutMs`: hasta que carga el código e inicia el heartbeat no puede informar, y eso puede llevar decenas de
  *   segundos (17 s medidos en status-backend). Si no arranca nunca, lo mata la `startupProbe`. Sin el campo, cuenta como informado.
@@ -53,6 +55,7 @@ export interface IEstadoWorker {
     estado: TEstadoPod;
     causaDrenado: TCausaDrenado|null;
     ts: number;
+    rss?: number;
     informado?: boolean;
 }
 

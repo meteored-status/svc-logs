@@ -2,6 +2,65 @@
 
 ---
 
+## 2026.11.17 09:46 — [Juan C. Martínez]
+
+### Fixed
+- `src/clases/manifest/workspace/deployment/index.ts` — `deploy.enabled: false` no tenía efecto: `check()` solo copiaba el valor si era «verdadero»
+  (`if (deploy.enabled)`), así que un `false` se perdía y ganaba el `true` por defecto. Como el loader guarda el manifest normalizado, `mrpack update`,
+  `mrpack devel` y el `mrpack deploy` del pipeline reescribían el `mrpack.json` a `true` y **desplegaban** el workspace (en test se crearon dos Cloud Run
+  jobs del gazetteer con su programación). Ahora se respeta cualquier booleano; sin `enabled`, sigue siendo `true`. Comprobado con `mrpack devel -c -f
+  --solo=<ws>` sobre dos workspaces con `false`: antes los reescribía, ahora no. Sin spec: el arnés de `@mr/cli` no puede cargar este loader (importa
+  módulos ESM de `@mr/core-dev` desde CommonJS).
+
+## 2026.11.16 13:50 — [Juan Carlos]
+
+### Added
+
+- **`mrpack autodoc` guarda el departamento de cada deployment** en `openapi_service.dpto` (primer paso de BAK-1810, restricción por
+  departamento de lo privado en API Docs; de momento nadie lo lee). Nuevo `clases/auto-doc/departamento.ts`. Con `--env test|produccion`
+  y el clon de kustomize en `kustomizar/`, `leerDepartamento()` resuelve el `dpto` de cada `deploy.kustomize[]` (workspaces `target: k8s`)
+  siguiendo la cadena real de kustomizations: el overlay del entorno, `_all` y los `resources`/`components` que son directorios (el
+  componente del kustomizer, que pone la etiqueta con `deployment.json`, y los componentes base). El kustomizer no determina el departamento
+  (`tiempo-web/widget-legacy` usa el componente de `services`: `backoffice`). Gana el último parche, como en kustomize, así que el servicio
+  sobrescribe al componente. Los parches a recursos sin pods (autoscaler, router) ni se leen. Las rutas se validan como en la topología,
+  para todo el clon (sin enlaces simbólicos, sin `tmp/` ni `credenciales/`, ≤ 64 KiB, profundidad y nodos acotados, sin ciclos) y el
+  contenido de los ficheros nunca se registra.
+- Formato: `^[a-z0-9-]{1,32}$`. **Ante la duda, `null`** con un aviso que no incluye el contenido de los parches: valor inválido,
+  `remove`/`move`/`copy` o `add`/`replace` sobre la etiqueta o sus padres, dos recursos con departamentos distintos, `labels`/`commonLabels`
+  con `dpto`, `patchesStrategicMerge`/`patchesJson6902`/`replacements`/`transformers`, un parche que no es JSON6902 y menciona `dpto`, un
+  `target` con selectores, un fichero que falta o no se lee, o sin overlay del entorno (cronjobs y jobs).
+- Deployments `target: lambda`: `deploy.lambda.labels.dpto` del `mrpack.json` (mismo formato); si falta, `null`.
+- Se escribe en la misma transacción que el documento y la topología, con su propio `UPDATE` y fuera del hash. Ausente (sin `--env` o sin
+  clon de kustomize) no se toca nada; `null` (se intentó y no se sabe) escribe `NULL`, de modo que un servicio que cambia de departamento y
+  cuya kustomization ya no se interpreta no conserva el viejo. Sin la columna o sin el `GRANT` el autodoc sigue igual, sin `dpto` y con un
+  aviso. El log dice cuántos deployments tienen departamento y cuántos se han escrito.
+- No hay relleno de lo ya documentado: cada servicio coge su `dpto` en su próximo despliegue con esta versión de `@mr/cli`.
+- **DDL:** `mapping/alter/ddl-alter-0002.sql` (`dpto VARCHAR(32) NULL`, a aplicar a mano en la base `doc` de test y producción, con
+  `GRANT UPDATE (dpto)` para el autodoc) y `ddl-create.sql` consolidado.
+
+### Changed
+
+- `topologia.ts` exporta `NOMBRE`, `SEGMENTOS_PROHIBIDOS`, `TAMANO_MAX`, `dentro`, `esObjeto`, `parsearYaml` y `textos`, que reutiliza `departamento.ts`.
+
+---
+
+## 2026.11.16 13:45 — [Jose]
+
+### Added
+
+- **`mrpack init` genera `instrumentation.ts` en los workspaces Next.js** (`framework: nextjs`, `runtime: node`): el `register()` que arranca el
+  heartbeat de pods (`@mr/core-workload/heartbeat/next`, `iniciarHeartbeatNext()`), con la guarda `NEXT_RUNTIME === "nodejs"`. Solo lo
+  crea si no hay ningún `instrumentation.*` (en la raíz o en `src/`, cualquier extensión) y **nunca reescribe ni pisa uno existente**: si hay
+  uno que no llama a `iniciarHeartbeatNext()`, avisa en rojo y lo deja. Los workspaces que no son Next no se tocan. Además deja
+  `@mr/core-workload` en las `devDependencies` de esos workspaces (`workspace:*`; `dd-trace` ya lo aseguraba `checkDependencies` para todos).
+  Lógica en `src/clases/init/instrumentation.ts` (pura salvo el acceso a disco, inyectado); `init.ts::checkFiles` la llama y
+  `dependencias.ts::checkDependencies` añade la dependencia. `spec/init/instrumentation.spec.ts` (con un disco real; vistas fallar).
+  Si el monorepo no trae `@mr/core/workload/heartbeat/next/index.ts` (un `@mr/core-workload` anterior) no genera `instrumentation.ts` ni añade la dependencia y avisa de actualizar (`planificarInstrumentation`; la dependencia pasa de `checkDependencies` a `initWorkspace`).
+  Solo en workspaces habilitados. Si el `instrumentation.*` que arranca el heartbeat está únicamente en `src/`, avisa: el `buildId` (`next.config.js` de `services-comun`) solo vigila la raíz.
+  Los Next de otros monorepos recibirán el fichero en el siguiente `update` + `init`, y emitirán en cuanto su kustomize ponga `HEARTBEAT=true`.
+
+---
+
 ## 2026.11.16 11:14 — [Jose]
 
 ### Changed

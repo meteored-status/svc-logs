@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-dev",
-  "version": "2026.11.16+1-bixus",
+  "version": "2026.11.18+1-miguel",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "typings": "./types.d.ts",
@@ -48,8 +48,8 @@
     "tslib": "^2.9.1"
   },
   "devDependencies": {
-    "@rspack/cli": "^2.3.2",
-    "@rspack/core": "^2.3.2",
+    "@rspack/cli": "^2.3.3",
+    "@rspack/core": "^2.3.3",
     "@tsconfig/node26": "^26.0.2",
     "@tsconfig/recommended": "^1.0.14",
     "@types/node": "^26.6.6",

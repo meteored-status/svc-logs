@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 16 Nov 2026 08:43:09 GMT
- * Hash: 6a05e147f306aa138e098b3de34147ed
- * Versión: 2026.11.16+2-bixus
- * Anterior: 2026.11.16+1-bixus
+ * Fecha: Mon, 16 Nov 2026 13:26:05 GMT
+ * Hash: bd807f9e4b2547751063efcf5af3bbfc
+ * Versión: 2026.11.16+3-bixus
+ * Anterior: 2026.11.16+2-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -12,16 +12,20 @@ import type {EPermission} from "../../auth/interface";
 /**
  * Los avisos que el panel manda por su cuenta, cada uno con su emisor.
  *
- * - `monitor`  — un monitor pasa a error o vuelve a OK (`Notification.notify()` del cronjob). Es el único
- *                urgente: algo está roto ahora mismo.
+ * - `monitor`  — un monitor pasa a error o vuelve a OK (`Notification.notify()` del cronjob). Urgente: algo
+ *                está roto ahora mismo.
  * - `oncall`   — el aviso de las nueve a quien le toca guardia hoy (`Aviso` del cronjob). Programado.
  * - `anomaly`  — lo que se sale de lo normal en el consumo de Cloudflare (`Anomalias` del cronjob). Informativo.
  * - `crawl`    — lo que se sale de lo normal en el rastreo de Googlebot (`rastreo/anomalias.ts` del cronjob). Informativo.
  *                Nació de partir `anomaly`: los dos llevan a pantallas con permisos distintos, así que cada uno es
  *                un aviso con sus suscriptores.
  * - `swap`     — alguien te pide un cambio de guardia, o la solicitud que tenías se ha quedado sin efecto
- *                (`data/notification/oncall-swap.ts` de `status-backend`). **El único que no manda el
- *                cronjob**: nace de que otra persona pulsa un botón, no de una pasada periódica.
+ *                (`data/notification/oncall-swap.ts` de `status-backend`). Nace de que otra persona pulsa un botón, no
+ *                de una pasada periódica.
+ * - `pods`     — un servicio se queda sin pods listos o con pods caídos en su revisión actual, o se recupera (`VigilantePods`
+ *                de `status-backend`, `data/pods/alertas/`). Urgente como `monitor`. Los dos que no manda el cronjob son este
+ *                y `swap`; el perro guardián de `pods` sí corre en el cronjob, porque tiene que avisar justo cuando el
+ *                vigilante no está.
  *
  * **La lista vive aquí y no en cada emisor** porque la miran varios sitios: los emisores para decidir si mandan, y la
  * pantalla de preferencias para pintar las casillas. Con una copia por sitio, el día que entre un aviso nuevo la pantalla
@@ -31,7 +35,7 @@ import type {EPermission} from "../../auth/interface";
  * el compilador obliga a darle rótulo —`ROTULO` en `session/user-notifications.tsx` es un `Record<TAviso, …>`,
  * así que no compila hasta que lo tiene—. Lo que no sale solo es el emisor.
  */
-export const AVISOS = ["monitor", "oncall", "anomaly", "crawl", "swap"] as const;
+export const AVISOS = ["monitor", "oncall", "anomaly", "crawl", "swap", "pods"] as const;
 
 /** Uno de los avisos del panel. */
 export type TAviso = typeof AVISOS[number];
@@ -58,7 +62,8 @@ export type TCanal = typeof CANALES[number];
  * Todos nacen con el correo activo porque **es lo que ya pasaba**: los avisos se mandaban por correo
  * sin preguntar, y un defecto apagado no sería una preferencia, sería quitarle un aviso a quien no ha pedido
  * nada. El push nace activo en los que valen para eso y apagado en `anomaly` y `crawl`, que son diarios e informativos
- * — nada de lo que avisa hay que atenderlo en el minuto, así que no merece vibrar un teléfono.
+ * — nada de lo que avisa hay que atenderlo en el minuto, así que no merece vibrar un teléfono. `pods` es el otro urgente
+ * junto a `monitor`: un servicio sin pods listos hay que atenderlo ya.
  *
  * `swap` nace con los dos: va dirigido **a una persona concreta** y espera una respuesta, y es justo el aviso
  * que se quedaba una semana sin contestar por no haberse visto.
@@ -73,18 +78,22 @@ export const DEFECTOS: Record<TAviso, Record<TCanal, boolean>> = {
     anomaly: {email: true, push: false},
     crawl:   {email: true, push: false},
     swap:    {email: true, push: true},
+    pods:    {email: true, push: true},
 };
 
 /**
  * Qué permisos hacen falta para apuntarse a un aviso, o `null` si el aviso no admite suscripción.
  *
  * Cada aviso tiene un destinatario natural —el de monitores va a la guardia y a los suscriptores del servicio,
- * los de guardia, Cloudflare y rastreo solo a la guardia, y el de cambio a quien tiene que responderlo—, y esto
+ * los de guardia, Cloudflare y rastreo solo a la guardia, el de cambio a quien tiene que responderlo y el de pods
+ * a la guardia y a quien se apunte—, y esto
  * dice cuáles admiten además que alguien se apunte, y con qué permiso.
  *
- * **Solo `anomaly` y `crawl` admiten suscripción**, y cada una exige el permiso de la pantalla a la que lleva su
- * correo: `status.infra.cloudflare.view` (`/infra/cloudflare`) y `status.seo.crawler.view` (`/seo/googlebot`).
- * Los otros se quedan fuera por motivos que no son técnicos:
+ * **Solo `anomaly`, `crawl` y `pods` admiten suscripción**, y cada una exige el permiso de la pantalla a la que lleva su
+ * correo: `status.infra.cloudflare.view` (`/infra/cloudflare`), `status.seo.crawler.view` (`/seo/googlebot`) y
+ * `status.infra.view` (`/infra/pods`). La de `pods` es **global**, no por servicio: los servicios de pods no tienen fila
+ * en la tabla `service` (su clave es compuesta y aparecen y desaparecen con los despliegues), y un filtro por proyecto,
+ * si llega a hacer falta, es otra tabla. Los otros se quedan fuera por motivos que no son técnicos:
  *
  * - `monitor` ya se puede recibir sin estar de guardia **suscribiéndose a un servicio** desde la portada, que
  *   es más preciso que un «todos los servicios» y ya funciona. Un interruptor global sería un aviso por cada
@@ -106,6 +115,7 @@ export const PERMISOS_SUSCRIPCION: Readonly<Record<TAviso, EPermission[][] | nul
     anomaly: [["status.infra.cloudflare.view"]],
     crawl:   [["status.seo.crawler.view"]],
     swap:    null,
+    pods:    [["status.infra.view"]],
 };
 
 /**

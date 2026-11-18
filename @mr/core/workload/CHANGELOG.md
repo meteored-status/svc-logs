@@ -2,6 +2,54 @@
 
 ---
 
+## 2026.11.16 17:35 — [Jose]
+
+### Changed
+
+- **El autosondeo de `/admin/ready` de los servicios Next se hace cada 5 s y `no-listo` se mide en tiempo.** Medido en local con `next start` (3 min por variante), atender el sondeo cada segundo era más de la mitad de la CPU de reposo del heartbeat. `AdaptadorNext.ready()` consulta de verdad cada `INTERVALO_AUTOSONDEO_MS` (5000, inyectable con `intervaloSondeoMs`) y entre sondeos devuelve el último resultado (las llamadas simultáneas comparten el sondeo en vuelo). Sustituye a `FALLOS_SEGUIDOS_NO_LISTO`/`fallosSeguidosNoListo`: ahora rechaza cuando lleva `PLAZO_NO_LISTO_MS` (10 000, inyectable con `plazoNoListoMs`) sin un sondeo bueno, el equivalente de `failureThreshold: 10` × `periodSeconds: 1` del kubelet. Reloj inyectable (`ahora`). `started()` no cambia (la `Sonda` deja de llamarlo tras el primer éxito), ni `drenando`, ni los plazos de cada consulta ni el margen frente a la `Sonda`. Pruebas en `spec/sonda-next.spec.ts` (193 en total). README (sección «Servicios Next») y CODEMAP actualizados.
+
+## 2026.11.16 16:19 — [Jose]
+
+### Fixed
+
+- **El autosondeo de los servicios Next tolera fallos como el kubelet.** En producción `service-status-frontend` pasó a `no-listo` y volvió a `listo` con un solo autosondeo fallido (15:01:57 y 15:11:58), cuando el kubelet no lo habría sacado de los endpoints (`failureThreshold: 10`). `AdaptadorNext.ready()` solo rechaza tras `FALLOS_SEGUIDOS_NO_LISTO` (10, inyectable con `fallosSeguidosNoListo`) fallos seguidos; un éxito reinicia la cuenta. `drenando` y el paso de `arrancando` a `listo` no cambian. La consulta de `ready()` vence `MARGEN_SONDA_MS` (50 ms) antes que el `PromiseTimeout` de la `Sonda`, que no tiene histéresis propia. El autosondeo pide `/admin/ready` y `/admin/started` **sin barra final**: con `trailingSlash: false` la barra daba un `308` por sondeo y duplicaba las peticiones por segundo (la CPU en reposo de status-frontend pasó de ~0,02 a 0,04–0,06 núcleos); con `trailingSlash: true` se sigue el `308`. Cadencia, umbral y plazos no cambian. Pruebas en `spec/sonda-next.spec.ts`. README (sección «Servicios Next») actualizado.
+
+## 2026.11.16 13:35 — [Jose]
+
+### Added
+
+- **Heartbeat de pods en los servicios Next.js** (`heartbeat/next/`, importable como `@mr/core-workload/heartbeat/next`). Un servicio Next no
+  arranca con `Main` ni tiene `Engine`, así que no emitía. `iniciarHeartbeatNext()` se llama desde el `register()` de `instrumentation.ts`
+  (una vez por proceso, en `next start` y en standalone, Next 15.5 y 16) y reutiliza el emisor tal cual (`iniciarHeartbeat` en modo
+  `simple`, `Sonda`, `Heartbeat`, `MedidorMetricas`, `despedirAcotado`, `borrarLockApagado`); sin `HEARTBEAT=true` no instala nada.
+  - `AdaptadorNext` (`sonda-next.ts`) hace de `Engine` para la `Sonda`: `started()` y `ready()` son un autosondeo de `/admin/started/` y
+    `/admin/ready/` en `127.0.0.1:$PORT` (200–399 es bueno, como el kubelet; timeout de 900 ms; sin agente y `Connection: close`), y `vigilarLock()` borra un `shutdown.lock` anterior y hace un `stat` cada 500 ms (con `unref`) para `drenando(prestop)`.
+  - `ServidorCierreNext` (`cierre-next.ts`, un `IServidorCierre`) atiende `SIGTERM`/`SIGINT` tras el manejador de Next (`drenando(senal)`),
+    envuelve `process.exit` tras la señal y, en la primera llamada, hace la despedida (`parado`, tope de 1 s) y después el `exit` real con el
+    mismo código (143 en Next 16, 0 en la 15.5); un temporizador con referencia evita que, con el bucle vacío, Node salga solo con 0. Si nadie más
+    atiende la señal (`NEXT_MANUAL_SIG_HANDLE`), sale él con `128 + n`.
+  - `iniciar-next.ts`: guarda en `globalThis[Symbol.for("@mr/core-workload/heartbeat-next")]`, trabajo en segundo plano sin bloquear el
+    primer request y todo error convertido en `warning`.
+  - Pruebas: `spec/cierre-next.spec.ts` (con un proceso falso y con un proceso hijo real que recibe `SIGTERM`), `spec/sonda-next.spec.ts` (con un
+    servidor HTTP de verdad y la `Sonda` real) y `spec/iniciar-next.spec.ts`, todas vistas fallar rompiendo el código. Pruebas: 141 -> 182.
+  - El autosondeo sigue las redirecciones como el kubelet (el `308` de `trailingSlash`): mismo host y puerto, hasta 10 saltos, 900 ms en total; otro host cuenta como `listo`.
+  - Revisión: sin `HEARTBEAT=true` no se lee el pod (antes un workspace sin `mrpack.json` daba un `warning` en cada arranque), y fuera de producción el autosondeo tiene 5 s de plazo (`next dev` daba `no-listo` mientras compilaba; `IConfigIniciarHeartbeat.timeoutSondaMs`, opcional).
+  - Solo de servidor: no importarlo desde código compartido con el navegador. README (sección «Servicios Next») y CODEMAP actualizados.
+
+## 2026.11.16 13:16 — [Jose]
+
+### Changed
+
+- **Heartbeat en modo cluster: `metricas.rss` es la del primario más la de los workers vivos.** Antes era solo la del primario, así que
+  la columna Memoria de `/infra/pods` quedaba muy por debajo de lo que consume el pod. El informe IPC que cada worker ya mandaba al
+  primario (cada segundo y en cada cambio) lleva ahora `rss` (`process.memoryUsage.rss()`, opcional en `IMensajeHeartbeatWorker`):
+  ni mensaje ni temporizador nuevos, solo un número más en un mensaje que ya existía (unos 1 por segundo y worker). `RegistroWorkers.rss()`
+  suma los workers vivos que han informado hace no más de 3 s (el mismo criterio de caducidad que el estado agregado) y mandaron `rss`;
+  un worker muerto, parado, caducado, recién dado de alta o de una versión anterior (sin `rss`) no suma, y un `rss` inválido (NaN,
+  negativo) se ignora. `metricasConWorkers()` lo aplica en `crear.ts`; el pod simple no cambia. El contrato (`metricas.rss` en bytes)
+  y el receptor no cambian; solo el JSDoc de `IHeartbeatMetricas.rss`. Pruebas nuevas en `spec/rss-workers.spec.ts` y una en
+  `spec/sonda.spec.ts`, todas vistas fallar rompiendo el código. Pruebas: 132 -> 141.
+
 ## 2026.11.13 09:09 — [Jose]
 
 ### Fixed

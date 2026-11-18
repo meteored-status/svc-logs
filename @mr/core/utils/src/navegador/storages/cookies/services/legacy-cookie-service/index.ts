@@ -1,12 +1,14 @@
 /**
  * Editor: miguel
- * Fecha: Thu, 12 Nov 2026 11:34:11 GMT
- * Hash: 166ed1663a807a420ad6cd56f31b441a
- * Versión: 2026.11.12+1-miguel
+ * Fecha: Wed, 18 Nov 2026 11:11:39 GMT
+ * Hash: 622b07fa32395972d3fc6b5e9e558676
+ * Versión: 2026.11.18+1-miguel
+ * Anterior: 2026.11.16+1-miguel
  * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import type {IServiceCookie} from "./base.ts";
+import {leerCookie} from "./acciones";
+import type {IServiceCookie} from "../base";
 
 /**
  * Servicio de cookies sobre `document.cookie`.
@@ -34,16 +36,10 @@ class LegacyCookieService implements IServiceCookie {
     }
 
     /**
-     * Valor de la cookie, o `undefined` si no existe. Puede lanzar si el valor está mal codificado.
+     * Valor de la cookie, o `undefined` si no existe. Ver {@link leerCookie}.
      */
     public get(key: string): string | undefined {
-        for (const cookie of document.cookie.split(";")) {
-            const [nombre, valor] = cookie.trim().split("=");
-            if (nombre === key) {
-                return decodeURIComponent(valor ?? "");
-            }
-        }
-        return undefined;
+        return leerCookie(document.cookie, key);
     }
 
     /**

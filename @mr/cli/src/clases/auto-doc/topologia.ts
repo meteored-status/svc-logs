@@ -1,8 +1,9 @@
 /**
  * Editor: Juan C. Martínez
- * Fecha: Thu, 12 Nov 2026 13:17:55 GMT
- * Hash: dfc33b0ef9c76e840b7144bc93e7024c
- * Versión: 2026.11.12+2-juancmartinez
+ * Fecha: Mon, 16 Nov 2026 13:01:58 GMT
+ * Hash: e1fc0261f6d2f025bddd6debe553a2f1
+ * Versión: 2026.11.16+6-juancmartinez
+ * Anterior: 2026.11.12+2-juancmartinez
  * Proyecto: git@github.com:alpred/meteored-svc-panel-intranet.git
  */
 
@@ -101,7 +102,7 @@ export interface IConfigLeerTopologia {
 const ENTORNOS: readonly string[] = ["test", "produccion"];
 
 /** Nombre de un deployment o de un directorio del repo kustomize. */
-const NOMBRE = /^[a-z0-9-]+$/;
+export const NOMBRE = /^[a-z0-9-]+$/;
 
 /** Etiqueta DNS (namespace, zona). */
 const ETIQUETA = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
@@ -119,10 +120,10 @@ const ETIQUETA_HEXADECIMAL = /^0x/i;
 const SUFIJOS_INTERNOS: readonly string[] = [".svc", ".cluster.local", ".internal", ".local", ".localhost"];
 
 /** Segmentos que nunca se aceptan como `dir` ni `name`: contienen secretos o basura de trabajo. */
-const SEGMENTOS_PROHIBIDOS: readonly string[] = ["tmp", "credenciales"];
+export const SEGMENTOS_PROHIBIDOS: readonly string[] = ["tmp", "credenciales"];
 
 /** Tamaño máximo de cada fichero leído (64 KiB). */
-const TAMANO_MAX = 64 * 1024;
+export const TAMANO_MAX = 64 * 1024;
 
 /** Tope de hosts por deployment. */
 const HOSTS_MAX = 50;
@@ -418,11 +419,11 @@ async function leerFichero(base: string, relativa: string): Promise<{texto?: str
     }
 }
 
-function dentro(raiz: string, ruta: string): boolean {
+export function dentro(raiz: string, ruta: string): boolean {
     return ruta === raiz || ruta.startsWith(raiz.endsWith(path.sep) ? raiz : `${raiz}${path.sep}`);
 }
 
-function parsearYaml(texto: string): Record<string, unknown> | undefined {
+export function parsearYaml(texto: string): Record<string, unknown> | undefined {
     try {
         const valor = yamlLoad(texto, {schema: JSON_SCHEMA}) as unknown;
 
@@ -432,10 +433,10 @@ function parsearYaml(texto: string): Record<string, unknown> | undefined {
     }
 }
 
-function textos(valor: unknown): string[] {
+export function textos(valor: unknown): string[] {
     return Array.isArray(valor) ? (valor as unknown[]).filter((v): v is string => typeof v === "string") : [];
 }
 
-function esObjeto(valor: unknown): valor is Record<string, unknown> {
+export function esObjeto(valor: unknown): valor is Record<string, unknown> {
     return typeof valor === "object" && valor !== null && !Array.isArray(valor);
 }

@@ -1,9 +1,9 @@
 /**
  * Editor: Juan C. Martínez
- * Fecha: Thu, 12 Nov 2026 13:17:55 GMT
- * Hash: b7354bc5e7e1b79d97f83a06a93cd63b
- * Versión: 2026.11.12+2-juancmartinez
- * Anterior: 2026.11.11+2-juancmartinez
+ * Fecha: Mon, 16 Nov 2026 13:01:58 GMT
+ * Hash: b35ac2b520e1076c4c1e2bf68300c427
+ * Versión: 2026.11.16+6-juancmartinez
+ * Anterior: 2026.11.12+2-juancmartinez
  * Proyecto: git@github.com:alpred/meteored-svc-panel-intranet.git
  */
 
@@ -15,6 +15,7 @@ import type {IOpenAPI} from "services-comun/modules/openapi/interface";
 
 import {type IAviso, formatearAviso} from "./avisos";
 import {type IDocumentoServicio, guardarDocumentos} from "./almacen";
+import {departamentoDeLambda, leerDepartamento} from "./departamento";
 import {Log} from "../log";
 import {ManifestWorkspaceLoader} from "../manifest/workspace";
 import {construirOpenAPI} from "./openapi";
@@ -79,7 +80,7 @@ export async function run(basedir: string, {env, out, dryRun = false, servicio, 
             const {vigentes, completo} = await listarDeployments(basedir);
             const resultado = await guardarDocumentos({basedir, env, documentos: docs, vigentes, completo, filtrado: servicio !== undefined});
             sinGuardar.push(...resultado.fallidos);
-            Log.info(LOG, `${resultado.versionesCreadas.length} versiones nuevas, ${resultado.sinCambios.length} sin cambios, ${resultado.bajas.length} bajas, ${resultado.fallidos.length} sin guardar, ${resultado.topologias.length} topologías escritas`);
+            Log.info(LOG, `${resultado.versionesCreadas.length} versiones nuevas, ${resultado.sinCambios.length} sin cambios, ${resultado.bajas.length} bajas, ${resultado.fallidos.length} sin guardar, ${resultado.topologias.length} topologías escritas, ${resultado.dptos.length} departamentos escritos (${resultado.dptosNulos.length} a NULL)`);
             if (resultado.aviso !== undefined) {
                 Log.error(LOG, `AVISO: ${resultado.aviso}`);
             }
@@ -88,6 +89,10 @@ export async function run(basedir: string, {env, out, dryRun = false, servicio, 
     if (topologia !== undefined) {
         const con = docs.filter(d => d.topologia !== undefined && d.topologia !== null).length;
         Log.info(LOG, `${con} de ${docs.length} deployments con topología (entorno ${topologia.entorno})`);
+    }
+    const intentados = docs.filter(d => d.dpto !== undefined);
+    if (intentados.length > 0) {
+        Log.info(LOG, `${intentados.filter(d => d.dpto !== null).length} de ${intentados.length} deployments con departamento`);
     }
     Log.info(LOG, `${docs.length} documentos generados${dryRun ? " (dry-run: no se ha escrito nada)" : ""}`);
 
@@ -273,7 +278,27 @@ async function docService(basedir: string, service: string, {strict, topologia}:
         }
     }
 
-    return docs.map(doc => ({workspace: `services/${service}`, doc, topologia: topologias.get(doc.info.title) ?? null}));
+    // `dpto`: ausente si no se ha podido intentar (k8s sin clon de kustomize); `null` si se ha intentado y no se sabe.
+    const dptos = new Map<string, string | null>();
+    if (manifest.deploy.target === "lambda") {
+        for (const name of nombres) {
+            const {dpto, avisos} = departamentoDeLambda(name, manifest.deploy.lambda?.labels?.dpto);
+            for (const aviso of avisos) {
+                Log.error(LOG, `${service}: AVISO: dpto: ${aviso}`);
+            }
+            dptos.set(name, dpto);
+        }
+    } else if (topologia !== undefined && manifest.deploy.target === "k8s") {
+        for (const {name, dir = "services"} of manifest.deploy.kustomize ?? []) {
+            const {dpto, avisos} = await leerDepartamento({raiz: topologia.raiz, dir, name, entorno: topologia.entorno});
+            for (const aviso of avisos) {
+                Log.error(LOG, `${service}: AVISO: dpto: ${aviso}`);
+            }
+            dptos.set(name, dpto);
+        }
+    }
+
+    return docs.map(doc => ({workspace: `services/${service}`, doc, topologia: topologias.get(doc.info.title) ?? null, dpto: dptos.get(doc.info.title)}));
 }
 
 async function escribirFicheros(docs: IOpenAPI[], out: string): Promise<void> {

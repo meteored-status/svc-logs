@@ -2,6 +2,12 @@
 
 ---
 
+## 2026.11.16 12:00 — [Miguel]
+
+### Added
+
+- `server/http/utiles/headers.ts`: `parserHeaders(headers)` (`{headers, cookies}` con `exists` y `get`), `IParserHeaders` e `IConsulta`. Las cookies se leen con `leerCookie` de `@mr/core-utils`.
+
 ## 2026.11.16 11:57 — [Jose]
 
 ### Fixed

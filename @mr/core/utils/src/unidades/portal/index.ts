@@ -1,9 +1,10 @@
 /**
  * Editor: miguel
- * Fecha: Tue, 03 Nov 2026 07:22:11 GMT
- * Hash: 2adf8dbfaa0a9c7701648eb3a0921568
- * Versión: 2026.11.3+1-miguel
- * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
+ * Fecha: Mon, 16 Nov 2026 15:13:05 GMT
+ * Hash: 5237204908bd3cfb0cad06e729c1ebaf
+ * Versión: 2026.11.16+1-miguel
+ * Anterior: 2026.11.3+1-miguel
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 import {TDistancia} from "../magnitudes/distancia";
@@ -45,7 +46,7 @@ export const unidadesDefecto: IUnidadesPortal = {
  *
  * @template TId - Tipo del identificador del portal.
  */
-export class UnidadesPortal<TId extends string = string> implements IUnidadesPortal {
+export class UnidadesPortal<TId extends string> implements IUnidadesPortal {
     /* INSTANCE */
 
     public readonly id: TId;

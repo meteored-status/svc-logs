@@ -11,7 +11,8 @@
   "homepage": "https://github.com/meteored-status/svc-logs#readme",
   "scripts": {
     "packd": "yarn g:esbuild",
-    "devel": "yarn g:devel"
+    "devel": "yarn g:devel",
+    "test": "yarn tsc -p tsconfig.spec.json && yarn node --test \"tmp/spec/**/*.spec.js\""
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.5.1",
@@ -33,6 +34,7 @@
     "@types/node": "^26.6.6",
     "services-comun": "workspace:*",
     "services-comun-status": "workspace:*",
+    "typescript": "^6.0.3",
     "zod": "^4.6.7"
   },
   "main": "app.js",

@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 8495771b4a4d6ff4a9c43a36372e2353
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Mon, 16 Nov 2026 12:17:13 GMT
+ * Hash: 134dc3ba8d816a396a6ecd4b67c46722
+ * Versión: 2026.11.16+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -18,11 +19,13 @@ import {UnSoloVuelo} from "./vuelo";
  * @property enviar - Manda el mensaje al primario (`process.send`).
  * @property intervaloMs - Periodo del temporizador. Por defecto 1000: el primario cuenta como no listo a un
  *   worker que lleva más de 3 s sin informar.
+ * @property rss - Lee la RSS (bytes) de este proceso para mandarla en cada informe. Por defecto `process.memoryUsage.rss()`.
  */
 export interface IConfigInformante {
     sonda: Sonda;
     enviar: (mensaje: IMensajeHeartbeatWorker) => void;
     intervaloMs?: number;
+    rss?: () => number;
 }
 
 /**
@@ -34,13 +37,15 @@ export class InformanteWorker implements IInstanciaHeartbeat {
     private readonly sonda: Sonda;
     private readonly enviar: (mensaje: IMensajeHeartbeatWorker) => void;
     private readonly intervaloMs: number;
+    private readonly rss: () => number;
     private readonly vuelo: UnSoloVuelo;
     private timer: NodeJS.Timeout|null;
 
-    public constructor({sonda, enviar, intervaloMs = 1000}: IConfigInformante) {
+    public constructor({sonda, enviar, intervaloMs = 1000, rss = () => process.memoryUsage.rss()}: IConfigInformante) {
         this.sonda = sonda;
         this.enviar = enviar;
         this.intervaloMs = intervaloMs;
+        this.rss = rss;
         this.vuelo = new UnSoloVuelo(() => this.ciclo());
         this.timer = null;
     }
@@ -83,6 +88,6 @@ export class InformanteWorker implements IInstanciaHeartbeat {
 
     private async ciclo(): Promise<void> {
         const {estado, causaDrenado} = await this.sonda.evaluar();
-        this.enviar({cmd: "heartbeat", estado, causaDrenado});
+        this.enviar({cmd: "heartbeat", estado, causaDrenado, rss: this.rss()});
     }
 }

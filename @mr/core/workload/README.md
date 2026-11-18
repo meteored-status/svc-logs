@@ -20,6 +20,7 @@ junto con los handlers predefinidos (`admin`, `error`, `favicon`) que dependen d
 | [Engine base](#engine-base) | `@mr/core-workload/engine` | Clase base del engine: `build`, ciclo de vida, abort, métricas |
 | [Engine HTTP](#engine-http) | `@mr/core-workload/engine/server` | Engine HTTP/HTTPS abstracto con watcher de shutdown |
 | [Heartbeat de pods](#heartbeat) | `@mr/core-workload/heartbeat/interface` | Cada pod de un servicio manda su estado a `status-external` cada segundo; contrato del mensaje y emisor |
+| [Heartbeat en servicios Next](#servicios-next) | `@mr/core-workload/heartbeat/next` | `iniciarHeartbeatNext()`: el mismo heartbeat en un servicio Next.js, desde `instrumentation.ts`, sin `Main` ni `Engine` |
 | [Handler admin](#handler-admin) | `@mr/core-workload/handlers/admin` | Rutas de administración interna (`/admin/*`) |
 | [Handler error](#handler-error) | `@mr/core-workload/handlers/error` | Handler de error por defecto (404 / JSON) |
 | [Handler favicon](#handler-favicon) | `@mr/core-workload/handlers/favicon` | Sirve `/favicon.ico` |
@@ -395,6 +396,64 @@ el upgrade; si ya trae una ruta distinta de `/`, se respeta tal cual.
   23 s en el peor caso, dentro de los 25 s de gracia. **Sin heartbeat** hace lo mismo salvo `drenando` y `parado` (antes el primario moría
   por la acción por defecto de Node y dejaba workers huérfanos). Una **segunda señal** en el primario sale ya con `128 + n`. Ningún servicio con este `Main` usa hoy el modo cluster.
 
+### Servicios Next
+
+Un servicio Next.js (`framework: nextjs`) no arranca con `Main` ni tiene `Engine`: lo lanza `next start`. El heartbeat se arranca desde
+`instrumentation.ts` y reutiliza todo el emisor: `Sonda` y `Heartbeat` no cambian; solo se les da un adaptador y un cierre propios.
+
+**Entrada:** `@mr/core-workload/heartbeat/next` → `iniciarHeartbeatNext()`. En cada workspace Next, en la raíz:
+
+```ts
+// instrumentation.ts
+export async function register(): Promise<void> {
+    if (process.env["NEXT_RUNTIME"] === "nodejs") {
+        (await import("@mr/core-workload/heartbeat/next")).iniciarHeartbeatNext();
+    }
+}
+```
+
+`mrpack init` lo genera y deja `@mr/core-workload` en `devDependencies` (se empaqueta, como `@mr/core-network`). Las variables de
+entorno y las condiciones para emitir (`HEARTBEAT=true`, service de k8s…) son las de arriba.
+
+**Por qué `instrumentation.ts`.** Next llama a `register()` **una vez por proceso, antes de servir el primer request** (en `next start`
+y en `standalone`), así que es el único sitio que llega igual a las dos formas de arrancar y a Next 15.5 y 16. **Solo está probado con `next start`**: en `standalone` el `server.js` escucha en `HOSTNAME` (el nombre del pod) y no en `127.0.0.1`, así que el autosondeo fallaría y el pod saldría `no-listo`; ningún proyecto lo usa hoy (las imágenes son `next start`). La guarda
+`NEXT_RUNTIME === "nodejs"` hace que el compilador del runtime edge elimine el `import()`. No toca `run.sh`, `Dockerfile-next` ni el
+kustomize.
+
+**Es síncrono y no puede fallar.** `register()` bloquea el primer request, así que `iniciarHeartbeatNext()` no espera nada (ni
+`crearPodInfo` ni los metadatos de GKE): lo primero que hace es mirar `HEARTBEAT=true` (sin ella no lee ni el pod, así que un workspace sin `mrpack.json` no da avisos); el trabajo va en segundo plano y cualquier error acaba en un `warning`. Una guarda en
+`globalThis[Symbol.for("@mr/core-workload/heartbeat-next")]` impide un segundo emisor en el mismo proceso (en `next dev`,
+`register()` puede ejecutarse más de una vez y la guarda sobrevive a la reevaluación de módulos). **Si no está habilitado** (sin
+`HEARTBEAT=true`, en desarrollo sin `HEARTBEAT_SOCKET`…) **no se instala nada**: ni manejador de señal, ni envoltorio de
+`process.exit`, ni sondeo, ni borrado del lock. Siempre es modo `simple` (un solo proceso por pod).
+
+**Estados sin `Engine`** (`heartbeat/next/sonda-next.ts`, `AdaptadorNext`, que la `Sonda` usa por duck typing):
+
+| Estado | Cuándo |
+|--------|--------|
+| `arrancando` | Desde `register()` hasta el primer `GET http://127.0.0.1:$PORT/admin/started` bueno. |
+| `listo` / `no-listo` | Cada segundo la `Sonda` llama a `ready()`, pero el `GET /admin/ready` se hace de verdad **cada 5 s** (`INTERVALO_AUTOSONDEO_MS`; atender el sondeo era más de la mitad de la CPU de reposo del heartbeat en Next, medido con `next start`) y entre sondeos se devuelve el último resultado (un éxito viejo puede tapar un fallo hasta 5 s; las llamadas simultáneas comparten el sondeo). Es **sin barra final** en la propia máquina (con `trailingSlash: false` una barra costaría un `308` más: el doble de peticiones por el enrutado y `proxy.ts` cada segundo, que subió la CPU en reposo del pod; el kubelet sigue con `/admin/ready/` y su `308`, y con `trailingSlash: true` el nuestro lo recibe y lo sigue, así que se mide lo mismo): 200–399 es `listo`, igual que el kubelet; cualquier otra cosa, un timeout de 900 ms o un `ECONNREFUSED`, es **un fallo**, y solo **10 s seguidos sin un sondeo bueno** (`PLAZO_NO_LISTO_MS`, el equivalente de `failureThreshold: 10` × `periodSeconds: 1` de la `readinessProbe` del kustomize: con sondeo cada 5 s, 2 fallos seguidos; un éxito reinicia la cuenta) dan `no-listo`: el kubelet no saca el pod de los endpoints por un fallo suelto y `/infra/pods` tampoco debe avisar. La consulta de `ready()` vence `MARGEN_SONDA_MS` (50 ms) antes que el plazo de la `Sonda`, para que un sondeo colgado pase por la cuenta y no lo declare fallido la `Sonda` por su cuenta (que no aplica histéresis propia). `started()` se pide cada segundo solo hasta el primer éxito (la `Sonda` no vuelve a llamarlo), así que `arrancando` → `listo` no espera 5 s, y no cuenta;  `drenando` (lock o señal) sigue siendo inmediato. Así `/infra/pods` dice lo mismo que los endpoints de k8s, y un Next que ya no contesta sale `no-listo` (o en silencio, si el event loop está atascado). La petición **sigue las redirecciones como el kubelet** (Next contesta `308` hacia la otra forma de la ruta según `trailingSlash`): una `Location` relativa, o absoluta `http` con el mismo host y puerto, hasta 10 saltos (más, rechaza), cada uno con su conexión y con los 900 ms como tope **total**; una redirección a otro host, puerto o protocolo no se sigue y el 3xx cuenta como `listo`, que es lo que hace el kubelet (la da por buena y solo avisa con un evento). El plazo es de 900 ms en producción y de **5 s fuera de ella** (`next dev`: mientras Next compila una página tarda más en contestar y saldría un `no-listo` falso; el plazo llega a `iniciarHeartbeat` por `timeoutSondaMs`). No deja conexiones vivas (sin agente y con `Connection: close`: una keep-alive haría esperar al `server.close()` de Next). |
+| `drenando` (`prestop`) | Aparece `files/tmp/admin/shutdown.lock` (el preStop del kustomize). Next no tiene el watcher del Engine HTTP: un `stat` cada 500 ms (con `unref`). Antes de vigilar se borra un lock anterior (reinicio del contenedor por la liveness). |
+| `drenando` (`senal`) | `ServidorCierreNext` (`cierre-next.ts`, un `IServidorCierre`) registra `SIGTERM`/`SIGINT`. Su manejador queda **después** del de Next, que ya ha hecho `server.close()` en el mismo tick. |
+| `parado` | Next no da ningún gancho de salida, así que, al recibir la primera señal, se **envuelve `process.exit`**: la primera llamada (la de Next, con 143, o con 0 en la 15.5) ejecuta la despedida con un tope de 1 s (`DESPEDIDA_MAX_MS`) y después hace el `exit` real **con el mismo código**; las llamadas posteriores mientras está pendiente se ignoran. El tope lo mantiene un temporizador **con referencia**: sin él, con el bucle de eventos vacío, Node saldría solo con 0 en vez de con el código de Next. Si Next no termina dentro de la gracia llega `SIGKILL` y queda un «silencio esperado» tras drenar, que `status-external` ya acepta. |
+
+`ServidorCierreNext` solo envuelve `process.exit` **tras la señal** y solo con el heartbeat activo. Si nadie más atiende la señal (p. ej.
+con `NEXT_MANUAL_SIG_HANDLE`), su manejador anularía la acción por defecto de Node, así que sale él, tras la despedida, con `128 + n`.
+
+**Lo que hay que saber**
+
+- **Solo de servidor.** `heartbeat/next` importa `node:http`, `node:fs` y el cliente WebSocket (`WSPool`, que usa el `WebSocket` global de Node): no importarlo desde código
+  compartido con el navegador (rompería el build con `Can't resolve 'fs'`). Tras el build, `x-mr-heartbeat` no debe aparecer en `.next/static`.
+- **Dependencias del workspace Next:** `dd-trace` en `dependencies` (es externo en el servidor de Next; sin inicializar no hace nada. Si
+  algún proyecto lo inicializara, el autosondeo crearía un span por segundo) y `@mr/core-workload` en `devDependencies`.
+- **`buildDirs`.** El `next.config.js` base de `services-comun` añade `./instrumentation.ts` y el emisor al hash del `buildId` **si ese
+  fichero existe**; sin eso, un cambio en el emisor no generaría imagen nueva.
+- **Sin margen de endpoints.** Next no espera antes del `close()`, así que depende del `sleep 3` del preStop del kustomize para salir
+  de los endpoints sin 5xx. `drenando(prestop)` precede unos 3 s a `drenando(senal)` sin transición nueva (la causa no cuenta para `tseq`).
+- **Supuesto sin medir:** que Next termina llamando a `process.exit` (medido leyendo 15.5.4 y 16.4.6). Si algún día dejara que el
+  bucle se vaciase solo, el socket del `WSPool` podría mantener vivo el proceso hasta `SIGKILL`: se vigila midiendo la duración de salida en cada rollout.
+- **Versiones:** Next 15.5 o superior.
+
 ### En local
 
 Con `HEARTBEAT=true` y `HEARTBEAT_SOCKET` apuntando al receptor local emite igual (token opcional). Sin
@@ -406,7 +465,8 @@ Con `HEARTBEAT=true` y `HEARTBEAT_SOCKET` apuntando al receptor local emite igua
 `yarn workspace @mr/core-workload test` (`node:test`, `spec/`): estado y agregado de cluster (con la memoria del drenado), decisión de
 habilitar (formato del token, avisos), URL, metadatos con reintento, payload y `revision`, contexto que falla, la sonda, el emisor con
 un pool falso (también con el contexto pendiente), el cierre del primario (con y sin heartbeat, con margen), el margen de endpoints y el borrado de `shutdown.lock`, el apagado una sola vez
-(`ApagadoUnico`), `atenderSenal` (señal repetida, servidor, cronjob, proceso sin HTTP) y los invariantes del presupuesto de 25 s.
+(`ApagadoUnico`), `atenderSenal` (señal repetida, servidor, cronjob, proceso sin HTTP), los invariantes del presupuesto de 25 s y, para los servicios Next,
+el adaptador (autosondeo y vigilante del lock, con un servidor HTTP de verdad), el cierre (con un proceso falso y con un proceso hijo real) y el arranque.
 
 ---
 

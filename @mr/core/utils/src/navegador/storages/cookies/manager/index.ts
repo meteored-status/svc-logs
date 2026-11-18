@@ -1,9 +1,10 @@
 /**
  * Editor: miguel
- * Fecha: Thu, 12 Nov 2026 11:34:11 GMT
- * Hash: 9ceb79630001536e251fa962e42d9637
- * Versión: 2026.11.12+1-miguel
- * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
+ * Fecha: Mon, 16 Nov 2026 15:13:05 GMT
+ * Hash: c6d9441d5871e35e027b7df647328b46
+ * Versión: 2026.11.16+1-miguel
+ * Anterior: 2026.11.12+1-miguel
+ * Proyecto: https://github.com/alpred/meteored-web-www.git
  */
 
 import type {IServiceCookie} from "../services/base";
@@ -121,6 +122,22 @@ export class CookieManager<E extends Record<PropertyKey, ICookieConfig>> {
                 this.servicio.remove(nombre, this.dominio);
             }
             this.valores[id] = raw;
+        } catch {
+            // Ver JSDoc de este método.
+        }
+    }
+
+    /**
+     * Elimina la cookie de `clave`, sea cual sea su valor: no depende de que coincida con el valor por defecto. Después, `get`
+     * devuelve el valor por defecto.
+     *
+     * Un fallo al borrar se silencia a propósito, como en {@link set}.
+     */
+    public remove<K extends keyof E>(clave: K): void {
+        const id = String(clave);
+        try {
+            this.servicio.remove(this.config(id).nombre, this.dominio);
+            this.valores[id] = undefined;
         } catch {
             // Ver JSDoc de este método.
         }

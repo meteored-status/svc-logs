@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-utils",
-  "version": "2026.11.13+1-miguel",
+  "version": "2026.11.18+1-miguel",
   "description": "Utilidades varias de MR{FW}",
   "author": "José Antonio Jiménez",
   "config": {
@@ -15,12 +15,14 @@
     "./navegador/communication/navegador/transporte": "./src/navegador/communication/navegador/transporte.ts",
     "./navegador/communication/navegador/transportes/evento-dom": "./src/navegador/communication/navegador/transportes/evento-dom.ts",
     "./navegador/communication/navegador/transportes/broadcast-channel": "./src/navegador/communication/navegador/transportes/broadcast-channel.ts",
-    "./navegador/communication/utils/interfaz-publica": "./src/navegador/communication/utils/interfaz-publica.ts",
+    "./navegador/objects/interceptar": "./src/navegador/objects/interceptar.ts",
     "./apis/geolocation": "./src/navegador/apis/geolocation.ts",
     "./navegador/storages/cookies": "./src/navegador/storages/cookies/index.ts",
     "./navegador/storages/cookies/manager": "./src/navegador/storages/cookies/manager/index.ts",
     "./navegador/storages/cookies/manager/*": "./src/navegador/storages/cookies/manager/*.ts",
     "./navegador/storages/cookies/manager/tipos": "./src/navegador/storages/cookies/manager/tipos/index.ts",
+    "./navegador/storages/cookies/services/legacy-cookie-service": "./src/navegador/storages/cookies/services/legacy-cookie-service/index.ts",
+    "./navegador/storages/cookies/services/legacy-cookie-service/acciones": "./src/navegador/storages/cookies/services/legacy-cookie-service/acciones/index.ts",
     "./navegador/storages/cookies/services/*": "./src/navegador/storages/cookies/services/*.ts",
     "./unidades": "./src/unidades/magnitudes/index.ts",
     "./unidades/portal": "./src/unidades/portal/index.ts",
