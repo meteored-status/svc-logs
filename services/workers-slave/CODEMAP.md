@@ -37,17 +37,21 @@ services/workers-slave/
 │  └─ data/
 │     ├─ bucket.ts                      — Bucket: relación bucket↔cliente en MySQL, cola procesando/repesca, descarga de GCS y flujo de un evento
 │     └─ source/
-│        └─ cloudflare.ts               — Cloudflare: esquema Zod del NDJSON de tail events + indexado en Elasticsearch
+│        ├─ cloudflare.ts               — Cloudflare: lectura del NDJSON, indexado en Elasticsearch y resumen de descartes
+│        └─ cloudflare-schema.ts        — parsearLinea(): esquema Zod de Workers Trace Events (solo depende de zod)
 ├─ assets/
 │  └─ favicon.ico                       — favicon servido por el handler estándar de @mr/core-workload
 ├─ files/                                — no explorado en detalle (credenciales/config de despliegue); ver mrpack.json
 ├─ output/                               — código compilado (esbuild); generado, sin valor documental
+├─ spec/
+│  └─ cloudflare-schema.spec.ts         — pruebas node:test de parsearLinea() con eventos reales
 ├─ main.ts                               — Main.ejecutar(Engine, Configuracion)
 ├─ app.js                                — bootstrap runtime (source-map-support, Datadog, require("./output/app"))
 ├─ devel.js                              — bootstrap de desarrollo (TZ=UTC, require("./app"))
 ├─ mrpack.json                           — despliegue k8s ("service", target "k8s", `alone: true`), multi-arch (amd64+arm64)
 ├─ package.json
 ├─ tsconfig.json                         — extiende services-comun-status/tsconfig.json
+├─ tsconfig.spec.json                    — compila spec/ a tmp/spec para `yarn run workers-slave test`
 └─ tsconfig.tsbuildinfo                  — caché incremental de TypeScript; no leer/documentar
 ```
 
@@ -146,10 +150,31 @@ un fallo real.
 
 | Símbolo | Tipo | Descripción |
 |---------|------|-------------|
-| `SourceCloudflare` | `interface` | Forma del documento que se indexa: `{"@timestamp", entrypoint?, status: "ok"\|"canceled"\|"exception", script, event: {rayID, request: {url, method}, response: {status}, type: "fetch"\|"tail"}, exceptions?, logs?, tags?, version: {id, message?, tag?}, namespace?, source}`. `source` no viene del log de Cloudflare: lo añade `parse()` con `Bucket.buildSource(notify)`. |
-| `Cloudflare` | `class` | Parseo (Zod) e indexado de líneas NDJSON de [Workers Trace Events](https://developers.cloudflare.com/workers/observability/logs/tail-workers/). Todo estático. |
-| `Cloudflare.ingest(cliente, notify, storage, signal, repesca)` | `static async` | Lee el fichero línea a línea (`readline`, `crlfDelay: Infinity`), descarta vacías, parsea cada una y encola su indexado sin esperarla individualmente — solo al final, `Promise.all`. Si `signal` se aborta a mitad, corta la lectura y rechaza con `Error("Abortado")`. Con `repesca: true`, antes de leer nada borra del índice los documentos con el mismo `source` (`limpiarDuplicados`). Devuelve el nº de líneas válidas. |
-| `Cloudflare.parse(json, source)` | `private static` | `JSON.parse` + `SCHEMA.parse` (Zod `.strict()`: rechaza campos no declarados); en error registra con `error()` y devuelve `null` — una línea corrupta se descarta y sigue con las demás. |
+| `SourceCloudflare` | `interface` | El documento que se indexa: `IRegistroCloudflare` + `source` (`gs://...`, lo añade `ingest()` con `Bucket.buildSource(notify)`). |
+| `Cloudflare` | `class` | Lectura e indexado de líneas NDJSON de [Workers Trace Events](https://developers.cloudflare.com/logs/logpush/logpush-job/datasets/account/workers_trace_events/). Todo estático. |
+| `Cloudflare.ingest(cliente, notify, storage, signal, repesca)` | `static async` | Lee el fichero línea a línea (`readline`, `crlfDelay: Infinity`), descarta vacías, parsea cada una con `parsearLinea()` y encola su indexado sin esperarla individualmente — solo al final, `Promise.all`. Si `signal` se aborta a mitad, corta la lectura y rechaza con `Error("Abortado")`. Con `repesca: true`, antes de leer nada borra del índice los documentos con el mismo `source` (`limpiarDuplicados`). Devuelve el nº de líneas válidas. |
+| `Cloudflare.informarDescartes(source, descartes)` | `private static` | Al acabar el fichero, si alguna línea no se pudo parsear, escribe **un solo** `error()` con las líneas agrupadas por motivo (`{motivo: {lineas, ejemplo}}`, ejemplo recortado a 2.000 caracteres). Sustituye al antiguo `error()` por línea con el evento entero, que llegó a pasar de 5.000 al día con las alarmas. |
+
+### `modules/data/source/cloudflare-schema.ts` — esquema de Workers Trace Events
+
+Solo importa `zod`, para poder probarlo sin Elasticsearch, GCS ni MySQL (`spec/cloudflare-schema.spec.ts`).
+
+| Símbolo | Tipo | Descripción |
+|---------|------|-------------|
+| `EVENT_TYPES` | `const` | `fetch`, `alarm`, `scheduled`, `queue`, `email`, `worker_rpc`, `hibernatable_web_socket` (los documentados por Cloudflare) y `tail` (no documentado; ya se aceptaba). |
+| `OUTCOMES` | `const` | `ok`, `canceled`, `exception`, `unknown` (Logpush) + `exceededCpu`, `exceededMemory`, `scriptNotFound`, `responseStreamDisconnected` (Tail API). |
+| `IRegistroCloudflare` | `interface` | `{"@timestamp", entrypoint?, status, script, event, exceptions?, logs?, tags?, version: {id, message?, tag?}, namespace?}`. |
+| `IEvent` | `interface` | `{type, rayID?, request?, response?, scheduledTime?, detail?}`: ver la tabla de abajo. |
+| `TParseo` | `type` | `{ok: true, registro}` o `{ok: false, motivo}`. |
+| `parsearLinea(linea)` | `function` | `JSON.parse` + `safeParse`. **No lanza nunca.** Si falla, devuelve un motivo corto y estable, sin el evento: `JSON inválido`, `EventType="x"`, `Outcome="x"`, `Event: claves no reconocidas X`, `Event.RayID: invalid_type`… Si hay varios problemas, van ordenados y separados por `; `. |
+
+El esquema es una unión discriminada por `EventType`. Todas las variantes son `.strict()` en la raíz, así que un campo nuevo de Cloudflare (p. ej. `CPUTimeMs` si se activa en el job de Logpush) se descarta y aparece en el resumen; no se indexa a ciegas.
+
+| `EventType` | `Event` aceptado | `event` indexado |
+|-------------|------------------|------------------|
+| `fetch` | `{RayID, Request: {URL, Method}, Response: {Status}}`, estricto | `rayID`, `request: {url, method}`, `response: {status}` |
+| `alarm` | `{ScheduledTimeMs}`, estricto (comprobado con eventos de producción) | `scheduledTime` (Date) |
+| resto | cualquier objeto, `{}` o `null` | `detail`: el `Event` original en JSON, o nada si está vacío. Va como texto porque Cloudflare no documenta su forma y así no se abren campos nuevos en el mapping dinámico de `logs-worker-*`. Cuando se vea uno real, conviene darle esquema propio, como a `alarm`. |
 
 `guardar()` reintenta hasta 10 veces (con backoff, ×10 si el error es de conexión) solo ante
 *timeout* o error de conexión; cualquier otro error de indexado va directo a `Bucket.addRepesca()`

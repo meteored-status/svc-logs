@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: c92f9f84f8d0916117460f2459df3003
- * Versión: 2026.11.13+1-bixus
- * Anterior: 2026.11.10+2-bixus
+ * Fecha: Mon, 16 Nov 2026 14:36:40 GMT
+ * Hash: 42d02df1fddb18fc6d7fbb7c68b5e9eb
+ * Versión: 2026.11.16+8-bixus
+ * Anterior: 2026.11.16+7-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -34,6 +34,7 @@ import {initYarnRC} from "./init/yarnrc";
 import {initConfig, type IWorkspaces} from "./init/config-workspaces";
 import {initRun} from "./init/run";
 import {checkLint} from "./init/lint";
+import {type IPlanInstrumentation, RUTA_EMISOR_INSTRUMENTATION, comprobarInstrumentation, dependenciasInstrumentation, planificarInstrumentation} from "./init/instrumentation";
 import {checkWorkspaceDeps} from "./init/workspace-deps";
 import {parchearArranque, parchearCorepack} from "./init/dockerfile";
 import {NODE_VERSION} from "./init/node";
@@ -98,12 +99,36 @@ export async function init(basedir: string): Promise<boolean> {
     return false;
 }
 
-async function checkFiles(config: Manifest, basedir: string): Promise<void> {
+/**
+ * Crea el `instrumentation.ts` de un workspace Next.js (el arranque del heartbeat de pods) si no tiene ninguno. Si ya hay un
+ * `instrumentation.*` que no lo arranca, no se pisa: se avisa.
+ */
+async function checkInstrumentation(basedir: string): Promise<void> {
+    const {avisos} = await comprobarInstrumentation({
+        leer: async (ruta) => await isFile(`${basedir}/${ruta}`) ? readFileString(`${basedir}/${ruta}`) : null,
+        escribir: async (ruta, contenido) => {
+            Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgYellow], `Creando ${basedir}/${ruta}`));
+            await safeWrite(`${basedir}/${ruta}`, contenido, false);
+        },
+    });
+    for (const aviso of avisos) {
+        Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgRed], `${basedir}/${aviso}`));
+    }
+}
+
+async function checkFiles(config: Manifest, basedir: string, plan: IPlanInstrumentation): Promise<void> {
     if (config.deploy.runtime===Runtime.node && config.build.framework!==BuildFW.nextjs) {
         await Promise.all([
             safeWrite(`${basedir}/app.js`, APP({type: config.deploy.type}), true),
             safeWrite(`${basedir}/devel.js`, DEVEL, true),
         ]);
+    }
+
+    if (plan.aviso !== null) {
+        Log.info({type: Log.label_base, label: "init"}, Colors.colorize([Colors.FgRed], `${basedir}: ${plan.aviso}`));
+    }
+    if (plan.aplicar) {
+        await checkInstrumentation(basedir);
     }
 
     if (await isFile(`${basedir}/init.js`)) {
@@ -479,6 +504,13 @@ async function initWorkspace(basedir: string, monorepoRoot: string, dependencies
 
     const {paquete, config} = await loadConfig(basedir);
     const hash = md5(JSON.stringify(paquete));
+    // `instrumentation.ts` y su dependencia solo si este monorepo ya trae el emisor (`@mr/core-workload` actualizado); si no, se avisa.
+    const plan = planificarInstrumentation({
+        framework: config.build.framework,
+        runtime: config.deploy.runtime,
+        enabled: config.enabled,
+        emisorDisponible: await isFile(`${monorepoRoot}/${RUTA_EMISOR_INSTRUMENTATION}`),
+    });
     if (config.enabled) {
         paquete.version = "0000.00.00-000";
         checkScripts(config, paquete.scripts ??= {}, paquete.dependencies);
@@ -486,6 +518,9 @@ async function initWorkspace(basedir: string, monorepoRoot: string, dependencies
         if (config.deploy.runtime==Runtime.node) {
             checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, paquete.optionalDependencies??={}, dependenciesDefecto);
             // salida.openTelemetry = this.checkDependencies(config, paquete.dependencies??={}, paquete.devDependencies??={}, dependenciesDefecto);
+            if (plan.aplicar) {
+                dependenciasInstrumentation(paquete.devDependencies);
+            }
 
             const devDeps = paquete.devDependencies ?? {};
 
@@ -520,7 +555,7 @@ async function initWorkspace(basedir: string, monorepoRoot: string, dependencies
         await safeWrite(`${basedir}/package.json`, `${JSON.stringify(paquete, null, 2)}\n`, true);
     }
 
-    await checkFiles(config, `${basedir}`);
+    await checkFiles(config, `${basedir}`, plan);
 
     salida.cambio = hash!==md5(JSON.stringify(paquete));
 

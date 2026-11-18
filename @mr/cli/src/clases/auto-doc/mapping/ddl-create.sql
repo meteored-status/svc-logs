@@ -7,6 +7,8 @@
 -- openapi_service: un registro por deployment (`info.title` del documento) con su versión vigente.
 --                  `topology`/`topology_at` (alter 0001): topología extraída del repo kustomize, fuera del documento
 --                  versionado y de su hash.
+--                  `dpto` (alter 0002): departamento del deployment (etiqueta `dpto` de kustomize o de `deploy.lambda.labels`);
+--                  NULL = no se conoce con certeza.
 -- openapi_version: contratos distintos de cada servicio; solo se inserta una fila nueva si el hash del
 --                  documento canónico cambia (un contrato normalmente no cambia entre despliegues).
 -- La tabla `openapi` anterior deja de escribirse.
@@ -23,6 +25,7 @@ CREATE TABLE openapi_service (
   removed_at      DATETIME NULL,
   topology        JSON NULL,
   topology_at     DATETIME NULL,
+  dpto            VARCHAR(32) NULL,
   UNIQUE KEY uk_deployment (deployment),
   KEY ix_repository (repository)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

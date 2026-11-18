@@ -1,6 +1,6 @@
 {
   "name": "@mr/core-lint",
-  "version": "2026.11.16+1-bixus",
+  "version": "2026.11.18+1-miguel",
   "description": "Linter de las convenciones de MR{FW}",
   "author": "José Antonio Jiménez",
   "type": "module",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.2"
+    "typescript-eslint": "^8.73.0"
   },
   "peerDependencies": {
     "eslint": ">=10"

@@ -20,7 +20,7 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 ├─ heartbeat/
 │  ├─ interface.ts   — contrato único del mensaje (`IHeartbeat`, `TEstadoPod`, `TCausaDrenado`, ruta/método/cabecera); solo tipos y constantes, sin Node
 │  ├─ estado.ts      — `calcularEstado`, `agregarEstados` (cluster); puras
-│  ├─ workers.ts     — `RegistroWorkers` (primario) + mensaje IPC `IMensajeHeartbeatWorker`
+│  ├─ workers.ts     — `RegistroWorkers` (primario; `rss()` suma la de los workers vivos) + mensaje IPC `IMensajeHeartbeatWorker` (con `rss`) + `metricasConWorkers`
 │  ├─ config.ts      — `decidirHeartbeat` (cuándo emite y con qué), `construirUrl`, `tokenConFormato`
 │  ├─ metadatos.ts   — cluster/proyecto/ubicación del servidor de metadatos de GKE (+ `HEARTBEAT_*`); reintento con backoff en producción
 │  ├─ contexto.ts    — `resolverContexto`: `info` al resolver, `warning` y sin emitir si falla
@@ -29,10 +29,15 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 │  ├─ sonda.ts       — `Sonda`: estado de este proceso (started/ready/señal/preStop)
 │  ├─ vuelo.ts       — `UnSoloVuelo`: un envío en vuelo, gana la última petición
 │  ├─ emisor.ts      — `Heartbeat`: emisor por WebSocket (pod simple / primario de cluster) + despedida
-│  ├─ informante.ts  — `InformanteWorker`: informe por IPC de un worker al primario
+│  ├─ informante.ts  — `InformanteWorker`: informe por IPC de un worker al primario (estado y RSS)
 │  ├─ registro.ts    — `heartbeatActual()` / `registrarHeartbeat()`, `IInstanciaHeartbeat`, `IServidorCierre`
 │  ├─ cierre-primario.ts — `cerrarPrimario`, `instalarCierrePrimario`: SIGTERM/SIGINT del primario de un cluster (con o sin heartbeat), `despedirAcotado`
-│  └─ crear.ts       — `iniciarHeartbeat()`: lo que llama `Main` tras el sidecar
+│  ├─ crear.ts       — `iniciarHeartbeat()`: lo que llama `Main` tras el sidecar
+│  └─ next/          — el heartbeat de un servicio Next.js (sin `Main` ni `Engine`), desde `instrumentation.ts`
+│     ├─ index.ts        — `iniciarHeartbeatNext()` (`@mr/core-workload/heartbeat/next`): síncrono, nunca lanza, con las dependencias reales
+│     ├─ iniciar-next.ts — `iniciarHeartbeatNextCon()` / `montarHeartbeatNext()`: guarda en `globalThis`, enlaza adaptador y cierre al emisor; deshabilitado no instala nada
+│     ├─ sonda-next.ts   — `AdaptadorNext` (autosondeo de `/admin/started` y `/admin/ready` sin barra final, vigilante de `shutdown.lock`), `consultarHttp`, `respuestaBuena`
+│     └─ cierre-next.ts  — `ServidorCierreNext`: SIGTERM/SIGINT y envoltorio de `process.exit` (despedida ≤ 1 s y mismo código)
 ├─ spec/             — pruebas `node:test` (`yarn workspace @mr/core-workload test`) + `stubs/`
 ├─ handlers/
 │  ├─ admin.ts       — rutas /admin/* (healthchecks, doc, metrics Prometheus, pubsub)
@@ -302,4 +307,5 @@ Ver el apartado «Heartbeat» del `README.md`. API pública:
 - `cierre-primario.ts`: `cerrarPrimario({senal, workers, emisor|null, salir?, esperaMs?, despedidaMs?, margen?})` (espera `margen + esperaMs`), `despedirAcotado(emisor|null, ms?)`, `instalarCierrePrimario({workers, emisor|null, salir?})` (devuelve el desinstalador; segunda señal → `128+n`), `ESPERA_WORKERS_MS` (19 s, derivado de las constantes de core-network), `DESPEDIDA_MAX_MS` (1 s).
 - `emisor.ts`: `class Heartbeat` (`iniciar`, `setEngine`, `marcarEjecutado`, `disparar`, `enlazarServidor`, `alIniciarCierre`, `despedir`). Entrega el primer estado (`arrancando`, `tseq` 0) antes que cualquier transición durante `PRIMER_ESTADO_MAX_MS` (25 s): si no se entrega, la foto actual espera al siguiente ciclo.
 - `crear.ts`: `iniciarHeartbeat({pod, unix, modo})` → `{instancia, workers, emisor}` o `null` (`emisor` es `null` en un worker).
+- `next/index.ts` (importable como `@mr/core-workload/heartbeat/next`): `iniciarHeartbeatNext()`, sin parámetros, síncrono; ver «Servicios Next» del `README.md`. `next/iniciar-next.ts`: `iniciarHeartbeatNextCon(deps)` y `montarHeartbeatNext(deps)` (dependencias inyectables: `crearPod`, `iniciar`, `adaptador`, `proceso`, `almacen`, `unix`), `CLAVE_HEARTBEAT_NEXT`. `next/sonda-next.ts`: `class AdaptadorNext` (`started`, `ready` —sondea cada `INTERVALO_AUTOSONDEO_MS` (5 s), devuelve el último resultado entre sondeos y rechaza tras `PLAZO_NO_LISTO_MS` (10 s) sin éxito—, `preStopSolicitado`, `vigilarLock(disparar)`, `detener`), `consultarHttp(url, ms)`, `respuestaBuena(codigo)`. `next/cierre-next.ts`: `class ServidorCierreNext implements IServidorCierre` (`instalar`, `desinstalar`), `IProcesoCierre`. **Solo de servidor.**
 - `registro.ts`: `heartbeatActual()`; `IInstanciaHeartbeat`, `IServidorCierre`.

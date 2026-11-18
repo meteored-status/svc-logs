@@ -1,10 +1,10 @@
 /**
  * Editor: Juan C. Martínez
- * Fecha: Tue, 20 Oct 2026 10:27:34 GMT
- * Hash: ec6f193523708f25a821762ba4f39c1e
- * Versión: 2026.10.20+3-juancmartinez
- * Anterior: 2026.9.23+3-bixus
- * Proyecto: git@github.com:alpred/meteored-web-widget.git
+ * Fecha: Tue, 17 Nov 2026 09:24:35 GMT
+ * Hash: 501a79c73330d6da6439bb35f80355fa
+ * Versión: 2026.11.17+1-juancmartinez
+ * Anterior: 2026.10.20+3-juancmartinez
+ * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
  */
 
 import type {ClientOptions} from "@elastic/elasticsearch/client";
@@ -166,10 +166,19 @@ export interface IMetadata {
  * Si el fichero no existe, Elasticsearch queda deshabilitado y todas las operaciones rechazan.
  * @property ca - Ruta al certificado CA por defecto, usada cuando el fichero de credenciales no
  * especifica uno propio.
+ * @property requestTimeout - Milisegundos que espera el cliente la respuesta de cada petición antes de
+ * abandonarla (`TimeoutError`). Por defecto 60000. Un servicio con un plazo propio mucho menor lo baja
+ * para que una petición ya abandonada no siga ocupando el socket del cliente hasta los 60 s.
+ * @property maxRetries - Reintentos del cliente por petición. Si no se indica, el del cliente oficial
+ * (3, ante 502/503/504 y errores de conexión; un timeout no se reintenta por defecto). `0` desactiva los
+ * reintentos: un servicio con plazo propio los quiere desactivados, o un clúster que contesta 503 recibe
+ * hasta cuatro veces cada petición mucho después de que el servicio la haya abandonado.
  */
 export interface IESConfig {
     credenciales: string;
     ca?: string;
+    requestTimeout?: number;
+    maxRetries?: number;
 }
 
 /**
@@ -543,7 +552,8 @@ export class Elasticsearch {
             nodes: config.hosts,
             compression: true,//!config.hosts.map(actual=>actual.startsWith("https://")).reduce((actual, acumulado)=>actual||acumulado),
             tls,
-            requestTimeout: 60000,
+            requestTimeout: this.config.requestTimeout ?? 60000,
+            ...this.config.maxRetries === undefined ? {} : {maxRetries: this.config.maxRetries},
         };
     }
 

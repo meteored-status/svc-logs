@@ -1,9 +1,9 @@
 /**
  * Editor: Juan C. Martínez
- * Fecha: Thu, 12 Nov 2026 13:17:55 GMT
- * Hash: 585c0ca63993b36cf37ad5437c6016b2
- * Versión: 2026.11.12+2-juancmartinez
- * Anterior: 2026.11.11+2-juancmartinez
+ * Fecha: Mon, 16 Nov 2026 13:01:58 GMT
+ * Hash: b06e2a766d6557ccafbfc10b19e258a4
+ * Versión: 2026.11.16+6-juancmartinez
+ * Anterior: 2026.11.12+2-juancmartinez
  * Proyecto: git@github.com:alpred/meteored-svc-panel-intranet.git
  */
 
@@ -19,6 +19,7 @@ import type {IOpenAPI} from "services-comun/modules/openapi/interface";
 
 import {Log} from "../log";
 import {aplicarSocket, calcularBajas, esReintentable, hashDocumento, necesitaVersion, normalizarRepositorio} from "./canonico";
+import {escribirDepartamento} from "./departamento";
 import {type ITopologia, esTopologiaNoSoportada} from "./topologia";
 
 const execFileAsync = promisify(execFile);
@@ -35,11 +36,16 @@ const VERSION_MAX = 50;
  * @property doc       - Documento OpenAPI; su `info.title` es el deployment.
  * @property topologia - Topología del deployment (`openapi_service.topology`), fuera del documento versionado y de su
  *                       hash. `null` o ausente: no se escribe y se conserva la anterior.
+ * @property dpto      - Departamento del deployment (`openapi_service.dpto`). Ausente: no se ha intentado resolverlo (sin
+ *                       clon de kustomize, por ejemplo) y no se toca lo guardado. `null`: se ha intentado y no se ha podido
+ *                       saber con certeza, y se escribe `NULL` (así un servicio que cambia de departamento con una
+ *                       kustomization que ya no se interpreta no conserva el departamento viejo).
  */
 export interface IDocumentoServicio {
     workspace: string;
     doc: IOpenAPI;
     topologia?: ITopologia | null;
+    dpto?: string | null;
 }
 
 /**
@@ -69,6 +75,8 @@ export interface IConfigGuardar {
  * @property bajas            - Deployments marcados como retirados.
  * @property fallidos          - Deployments que no se han podido guardar (el resto sí se guardó).
  * @property topologias       - Deployments cuya topología se ha escrito.
+ * @property dptos            - Deployments a los que se ha escrito un departamento.
+ * @property dptosNulos       - Deployments a los que se ha escrito `NULL` como departamento.
  * @property aviso            - Por qué no se han calculado las bajas, si es el caso.
  */
 export interface IResultadoGuardar {
@@ -77,6 +85,8 @@ export interface IResultadoGuardar {
     bajas: string[];
     fallidos: string[];
     topologias: string[];
+    dptos: string[];
+    dptosNulos: string[];
     aviso?: string;
 }
 
@@ -155,19 +165,27 @@ export async function guardarDocumentos({basedir, env, documentos, vigentes, com
     const credenciales = `${basedir}/kustomizar/tmp/credenciales/mysql-services-socket-${env}.json`;
     const temporal = await credencialesConSocket(credenciales, process.env["MYSQL_SOCKET"]);
     const db = MySQL.build({credenciales: temporal?.fichero ?? credenciales, database: "doc"});
-    const resultado: IResultadoGuardar = {versionesCreadas: [], sinCambios: [], bajas: [], fallidos: [], topologias: []};
+    const resultado: IResultadoGuardar = {versionesCreadas: [], sinCambios: [], bajas: [], fallidos: [], topologias: [], dptos: [], dptosNulos: []};
     let topologiaSinSoporte = false;
+    let dptoSinSoporte = false;
 
     try {
-        for (const {workspace, doc, topologia} of documentos) {
+        for (const {workspace, doc, topologia, dpto} of documentos) {
             // Un fallo en un deployment no corta el resto: se registra y se sigue. Las bajas salen de los manifests,
             // no de lo guardado, así que se calculan igualmente.
             try {
                 const version = await leerVersion(basedir, workspace);
-                const {creada, topologiaGuardada, topologiaSinSoporte: sinSoporte} = await guardarConReintento(db, {repositorio, workspace, doc, version, commitSha, topologia: topologia ?? null});
+                const {creada, topologiaGuardada, topologiaSinSoporte: sinSoporte, dptoGuardado, dptoSinSoporte: dptoSinSoporteDoc} = await guardarConReintento(db, {repositorio, workspace, doc, version, commitSha, topologia: topologia ?? null, dpto});
                 (creada ? resultado.versionesCreadas : resultado.sinCambios).push(doc.info.title);
                 if (topologiaGuardada) {
                     resultado.topologias.push(doc.info.title);
+                }
+                if (dptoGuardado) {
+                    (dpto === null ? resultado.dptosNulos : resultado.dptos).push(doc.info.title);
+                }
+                if (dptoSinSoporteDoc && !dptoSinSoporte) {
+                    dptoSinSoporte = true;
+                    Log.error(LOG, "AVISO: la base `doc` no admite el departamento (falta la columna dpto o el GRANT de escritura): se documenta sin dpto");
                 }
                 if (sinSoporte && !topologiaSinSoporte) {
                     topologiaSinSoporte = true;
@@ -203,12 +221,15 @@ interface IConfigDocumento {
     version: string | null;
     commitSha: string | null;
     topologia: ITopologia | null;
+    dpto?: string | null;
 }
 
 interface IResultadoDocumento {
     creada: boolean;
     topologiaGuardada: boolean;
     topologiaSinSoporte: boolean;
+    dptoGuardado: boolean;
+    dptoSinSoporte: boolean;
 }
 
 /**
@@ -231,11 +252,11 @@ async function guardarConReintento(db: MySQL, config: IConfigDocumento): Promise
 /**
  * Guarda un documento en una transacción. `creada` es `true` si ha creado una versión nueva.
  *
- * La topología se escribe en la misma transacción pero fuera del documento versionado (no entra en el hash). Si la base
- * no la admite (columna inexistente o sin permiso), el documento se guarda igualmente: un `UPDATE` fallido no aborta la
- * transacción en MySQL.
+ * La topología y el departamento se escriben en la misma transacción pero fuera del documento versionado (no entran en el
+ * hash), cada uno con su `UPDATE`. Si la base no los admite (columna inexistente o sin permiso), el documento se guarda
+ * igualmente: un `UPDATE` fallido no aborta la transacción en MySQL. Un `dpto` `null` escribe `NULL`; uno ausente no toca nada.
  */
-async function guardarDocumento(db: MySQL, {repositorio, workspace, doc, version, commitSha, topologia}: IConfigDocumento): Promise<IResultadoDocumento> {
+async function guardarDocumento(db: MySQL, {repositorio, workspace, doc, version, commitSha, topologia, dpto}: IConfigDocumento): Promise<IResultadoDocumento> {
     const deployment = doc.info.title;
     const hash = hashDocumento(doc);
     const transaccion = await db.transaction();
@@ -279,9 +300,10 @@ async function guardarDocumento(db: MySQL, {repositorio, workspace, doc, version
                 topologiaSinSoporte = true;
             }
         }
+        const {guardado: dptoGuardado, sinSoporte: dptoSinSoporte} = await escribirDepartamento(transaccion, servicioId, dpto);
         await transaccion.commit();
 
-        return {creada: crear, topologiaGuardada, topologiaSinSoporte};
+        return {creada: crear, topologiaGuardada, topologiaSinSoporte, dptoGuardado, dptoSinSoporte};
     } catch (err) {
         await transaccion.rollback().catch((errRollback: unknown) => {
             Log.error(LOG, `${deployment}: el rollback ha fallado: ${errRollback instanceof Error ? errRollback.message : String(errRollback)}`);

@@ -318,6 +318,7 @@ No contiene ficheros `.ts` propios; agrupa los dos sub-bloques siguientes.
 | `server/http/schema/spec-to-type/` | conversión spec → tipo TS |
 | `server/http/schema/validation/backend/` | validación de cuerpo con el esquema |
 | `server/http/utiles/path.ts` | utilidades de normalización de paths |
+| `server/http/utiles/headers.ts` | `parserHeaders`: consulta cabeceras y cookies de la petición (`{headers, cookies}` con `exists` y `get`) |
 
 > **Migración:** los handlers predefinidos (`admin`, `error`, `favicon`) se han trasladado
 > a [`@mr/core-workload/handlers/`](../../workload/CODEMAP.md).
