@@ -1,135 +1,33 @@
-import {z} from "zod";
 import readline from "node:readline/promises";
 
-import {Storage} from "services-comun/modules/fs/storage";
+import type {Storage} from "services-comun/modules/fs/storage";
 import {PromiseDelayed} from "services-comun/modules/utiles/promise";
 import {error, info} from "services-comun/modules/utiles/log";
 import bulk from "services-comun/modules/utiles/elastic/bulk";
 import elasticsearch from "services-comun/modules/utiles/elastic";
 
 import {Bucket, type ICliente, type INotify} from "../bucket";
+import {type IRegistroCloudflare, parsearLinea} from "./cloudflare-schema";
 
-export interface SourceCloudflare {
-    "@timestamp": Date;
-    entrypoint?:  string;
-    status:       "ok" | "canceled" | "exception";
-    script:       string;
-    event:        Event;
-    exceptions?:  Exception[];
-    logs?:        string[];
-    tags?:        string[];
-    version:      ScriptVersion;
-    namespace?:   string;
-    source:       string;
+export interface SourceCloudflare extends IRegistroCloudflare {
+    source: string;
 }
 
-interface Event {
-    rayID:    string;
-    request:  Request;
-    response: Response;
-    type:     "fetch" | "tail";
-}
-
-interface Request {
-    url:    string;
-    method: string;
-}
-
-interface Response {
-    status: number;
-}
-
-interface Exception {
-    name: string;
-    message: string;
-    timestamp: Date;
-}
-
-interface ScriptVersion {
-    id:       string;
-    message?: string;
-    tag?:     string;
-}
-
-function  hacerUndefinedLength<T extends {length:number}>(v: T): T|undefined {
-    return v.length>0?v:undefined;
+/**
+ * Líneas descartadas de un fichero con el mismo motivo.
+ *
+ * @property lineas  - Cuántas.
+ * @property ejemplo - La primera, recortada, para poder ver un caso real sin volcarlas todas.
+ */
+interface IDescarte {
+    lineas:  number;
+    ejemplo: string;
 }
 
 export class Cloudflare {
     /* STATIC */
-    private static readonly SCHEMA_EVENT_REQUEST = z.object({
-        URL:    z.string(),
-        Method: z.string(),
-    }).strict().transform(o=>({
-        url: o.URL,
-        method: o.Method,
-    }));
 
-    private static readonly SCHEMA_EVENT_RESPONSE = z.object({
-        Status: z.number(),
-    }).strict().transform(o=>({
-        status: o.Status,
-    }));
-
-    private static readonly SCHEMA_EVENT = z.object({
-        RayID:    z.string(),
-        Request:  this.SCHEMA_EVENT_REQUEST,
-        Response: this.SCHEMA_EVENT_RESPONSE,
-    }).strict().transform(o=>({
-        rayID: o.RayID,
-        request: o.Request,
-        response: o.Response,
-    }));
-
-    private static readonly SCHEMA_EXCEPTIONS = z.object({
-        Name:        z.string(),
-        Message:     z.string(),
-        TimestampMs: z.coerce.date(),
-    }).strict().transform(o=>({
-        name: o.Name,
-        message: o.Message,
-        timestamp: o.TimestampMs,
-    })).array().transform(hacerUndefinedLength).optional();
-
-    private static readonly SCHEMA_VERSION = z.object({
-        ID:      z.string(),
-        Message: z.string().transform(hacerUndefinedLength).optional(),
-        Tag:     z.string().transform(hacerUndefinedLength).optional(),
-    }).strict().transform(o=>({
-        id: o.ID,
-        message: o.Message,
-        tag: o.Tag,
-    }));
-
-    private static readonly SCHEMA = z.object({
-        Entrypoint:        z.string()        .transform(hacerUndefinedLength).optional(),
-        Event:             this.SCHEMA_EVENT,
-        EventTimestampMs:  z.coerce.date(),
-        EventType:         z.enum(["fetch", "tail"]),
-        Exceptions:        this.SCHEMA_EXCEPTIONS,
-        Logs:              z.any().array().transform(lineas=>lineas.map(linea=>JSON.stringify(linea))).transform(hacerUndefinedLength).optional(),
-        Outcome:           z.enum(["ok", "canceled", "exception"]),
-        ScriptName:        z.string(),
-        ScriptTags:        z.string().array().transform(hacerUndefinedLength).optional(),
-        ScriptVersion:     this.SCHEMA_VERSION,
-        DispatchNamespace: z.string()        .transform(hacerUndefinedLength).optional(),
-    }).strict().transform(o=>({
-        "@timestamp": o.EventTimestampMs,
-        entrypoint: o.Entrypoint,
-        status: o.Outcome,
-        script: o.ScriptName,
-        event: {
-            rayID: o.Event.rayID,
-            request: o.Event.request,
-            response: o.Event.response,
-            type: o.EventType,
-        },
-        exceptions: o.Exceptions,
-        logs: o.Logs,
-        tags: o.ScriptTags,
-        version: o.ScriptVersion,
-        namespace: o.DispatchNamespace,
-    }));
+    private static readonly EJEMPLO_MAX = 2000;
 
     public static async ingest(cliente: ICliente, notify: INotify, storage: Storage, signal: AbortSignal, repesca: boolean): Promise<number> {
         let ok = true;
@@ -149,6 +47,7 @@ export class Cloudflare {
         }
 
         const promesas: Promise<void>[] = [];
+        const descartes = new Map<string, IDescarte>();
         let lineas = 0;
         const lector = readline.createInterface({
             input: storage.stream,
@@ -165,15 +64,26 @@ export class Cloudflare {
                 continue;
             }
 
-            const registro = this.parse(linea.trim(), source);
-            if (registro==null) {
+            const texto = linea.trim();
+            const parseo = parsearLinea(texto);
+            if (!parseo.ok) {
+                const descarte = descartes.get(parseo.motivo);
+                if (descarte!==undefined) {
+                    descarte.lineas++;
+                } else {
+                    descartes.set(parseo.motivo, {lineas: 1, ejemplo: texto.slice(0, this.EJEMPLO_MAX)});
+                }
                 continue;
             }
 
-            promesas.push(this.guardar(cliente, registro, notify, repesca));
+            promesas.push(this.guardar(cliente, {...parseo.registro, source}, notify, repesca));
             lineas++;
         }
         await Promise.all(promesas);
+
+        if (descartes.size>0) {
+            this.informarDescartes(source, descartes);
+        }
 
         return lineas;
     }
@@ -237,15 +147,21 @@ export class Cloudflare {
 
     }
 
-    private static parse(json: string, source: string): SourceCloudflare|null {
-        try {
-            return {
-                ...Cloudflare.SCHEMA.parse(JSON.parse(json)),
-                source,
-            };
-        } catch (e) {
-            error("Cloudflare.parse", json, JSON.stringify(e));
-            return null;
+    /**
+     * Un único `error()` por fichero con las líneas que no se han podido parsear, agrupadas por
+     * motivo y con un ejemplo de cada uno. Así un tipo de evento nuevo de Cloudflare se ve, pero no
+     * escribe una línea de log por evento.
+     *
+     * @param source - Fichero de origen (`gs://...`).
+     * @param descartes - Descartes agrupados por motivo.
+     */
+    private static informarDescartes(source: string, descartes: Map<string, IDescarte>): void {
+        let total = 0;
+        const motivos: Record<string, IDescarte> = {};
+        for (const [motivo, descarte] of descartes) {
+            total += descarte.lineas;
+            motivos[motivo] = descarte;
         }
+        error(`Cloudflare.parse: ${total} líneas descartadas en ${source}`, JSON.stringify(motivos));
     }
 }

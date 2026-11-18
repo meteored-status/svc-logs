@@ -7009,6 +7009,7 @@ __metadata:
     services-comun-status: "workspace:*"
     source-map-support: "npm:^0.5.21"
     tslib: "npm:^2.9.1"
+    typescript: "npm:^6.0.3"
     ws: "npm:^8.23.0"
     zod: "npm:^4.6.7"
   dependenciesMeta:
