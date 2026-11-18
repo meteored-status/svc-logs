@@ -16,7 +16,7 @@ Elasticsearch, paginación simple y transacciones "fake"/sobre Google Cloud Stor
 |--------|---------|-------------|
 | [Transacciones (contrato común)](./CODEMAP.md#transacciones-contrato-común-transaction) | `services-comun/modules/database/transaction` | `Transaction`/`TransactionManager` (abstractas) + decorador `@transactional` |
 | [MySQL](./CODEMAP.md#mysql-mysql) | `services-comun/modules/database/mysql` | `MySQL implements Disposable`, `MySQLTransactionManager`, caché de consultas (`Cache`/`CacheBuilder`, memoria/disco/mock) |
-| [PostgreSQL](./CODEMAP.md#postgresql-postgresql) | `services-comun/modules/database/postgresql` | `PostgreSQL implements AsyncDisposable`, `PostgreSQLTransactionManager`, `Notify` (LISTEN/NOTIFY), `Lock` |
+| [PostgreSQL](./CODEMAP.md#postgresql-postgresql) | `services-comun/modules/database/postgresql` | `PostgreSQL implements AsyncDisposable`, `PostgreSQLTransactionManager`, `Notify` (LISTEN/NOTIFY), `Lock`, `tryLock()` (bloqueo de sesión no bloqueante en conexión directa) |
 | [AlloyDB](./CODEMAP.md#alloydb-alloydb) | `services-comun/modules/database/alloydb` | `AlloyDB extends PostgreSQL` — mismo driver sobre credenciales/endpoint de AlloyDB |
 | [Redis](./CODEMAP.md#redis-redis) | `services-comun/modules/database/redis` | `Redis implements AsyncDisposable` — cliente con namespace por servicio, locks distribuidos, contadores en un solo nodo (`bulkHIncrBy`/`bulkHGetAll`), reconexión persistente y fallo rápido sin conexión (con Redis conectado pero mudo, los métodos existentes no tienen límite de tiempo: ver el CODEMAP) |
 | [ValKey](./CODEMAP.md#valkey-valkey) | `services-comun/modules/database/valkey` | `ValKey` — equivalente a `Redis` sobre el protocolo/cliente ValKey (`@valkey/valkey-glide`) |

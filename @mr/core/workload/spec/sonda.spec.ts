@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 5ef89ed44aaf3fd6512a5be398f3c551
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Mon, 16 Nov 2026 12:17:13 GMT
+ * Hash: b74a29581ded8702875883cc39232c72
+ * Versión: 2026.11.16+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -104,9 +105,21 @@ describe("InformanteWorker", () => {
         assert.ok(mensajes.every((m) => m.cmd === "heartbeat"));
     });
 
+    it("cada informe lleva la RSS del worker, sin otro mensaje ni temporizador", async () => {
+        const mensajes: IMensajeHeartbeatWorker[] = [];
+        let rss = 10;
+        const informante = new InformanteWorker({sonda: new Sonda(), enviar: (m) => { mensajes.push(m); }, intervaloMs: 1_000_000, rss: () => rss});
+        informante.setEngine({});
+        await turno();
+        rss = 20;
+        informante.marcarEjecutado();
+        await turno();
+        assert.deepEqual(mensajes.map((m) => m.rss), [10, 20]);
+    });
+
     it("con el servidor cerrando por señal informa drenando de inmediato", async () => {
         const mensajes: IMensajeHeartbeatWorker[] = [];
-        const informante = new InformanteWorker({sonda: new Sonda(), enviar: (m) => { mensajes.push(m); }, intervaloMs: 1_000_000});
+        const informante = new InformanteWorker({sonda: new Sonda(), enviar: (m) => { mensajes.push(m); }, intervaloMs: 1_000_000, rss: () => 123});
         let inicio: () => void = () => undefined;
         let salida: () => Promise<void> = async () => undefined;
         const servidor: IServidorCierre = {isShuttingDown: () => false, alIniciarCierre: (cb) => { inicio = cb; }, antesDeSalir: (cb) => { salida = cb; }};
@@ -117,7 +130,7 @@ describe("InformanteWorker", () => {
 
         inicio();
         await turno();
-        assert.deepEqual(mensajes.at(-1), {cmd: "heartbeat", estado: "drenando", causaDrenado: "senal"});
+        assert.deepEqual(mensajes.at(-1), {cmd: "heartbeat", estado: "drenando", causaDrenado: "senal", rss: 123});
         await salida();
     });
 });

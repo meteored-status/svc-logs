@@ -1,14 +1,14 @@
 /**
  * Editor: miguel
- * Fecha: Fri, 13 Nov 2026 07:54:06 GMT
- * Hash: 5ac07e835e7c329934121a07bd28e28c
- * Versión: 2026.11.13+1-miguel
- * Anterior: 2026.11.12+1-miguel
+ * Fecha: Wed, 18 Nov 2026 11:11:39 GMT
+ * Hash: ce3be91d4c0e3b4fc40be01d06b937ad
+ * Versión: 2026.11.18+1-miguel
+ * Anterior: 2026.11.13+1-miguel
  * Proyecto: https://github.com/alpred/tiempo-web-javascript.git
  */
 
-import {claveEmision, type IMessage, type TWhen} from "./eventos";
-import {emitirInterfazPublica, type InterfazPublica} from "./utils/interfaz-publica";
+import {claveEmision, esPeticion, type IMessage, type TWhen} from "./eventos";
+import {interceptarMiembros} from "../objects/interceptar";
 
 /**
  * Lo que envía un componente: el origen lo pone `Comunicacion`.
@@ -33,11 +33,15 @@ export interface IEstrategia {
 
 /**
  * Un evento que escucha un componente: el `metodo` (o atributo) del componente que lo recibe y `escuchar`, que conecta lo que hace al recibirlo. Solo llegan los
- * mensajes de otros componentes: cada estrategia descarta los del propio componente (el `origin`), para evitar bucles.
+ * mensajes de otros componentes: cada estrategia descarta los del propio componente (el `origin`), para evitar bucles. Si el evento es una petición (`esPeticion`), la estrategia llama al `callback` sin argumentos: el receptor responde con su getter y
+ * la estrategia devuelve lo que responde a quien pidió.
+ *
+ * @property respuesta - Es la escucha de quien pidió: `metodo` es su petición (`get_x`) y el `callback` recibe lo que responden, que es lo que devuelve esa llamada.
  */
 export interface IEscucha {
     metodo: string;
-    escuchar(callback: (value: unknown) => void, signal?: AbortSignal): void;
+    respuesta?: boolean;
+    escuchar(callback: (...args: unknown[]) => unknown, signal?: AbortSignal): void;
 }
 
 /**
@@ -56,10 +60,16 @@ export class Comunicacion {
     /* INSTANCE */
     private readonly emisiones: Map<string, IEstrategia[]>;
     private readonly oyentes: Map<string, IEstrategia[]>;
+    private readonly estrategias: IEstrategia[];
+    private readonly respuestas: Map<string, unknown>;
+    private readonly conectados: WeakSet<object>;
 
     public constructor(...estrategias: IEstrategia[]) {
+        this.estrategias = estrategias;
         this.emisiones = new Map();
         this.oyentes = new Map();
+        this.respuestas = new Map();
+        this.conectados = new WeakSet();
         for (const estrategia of estrategias) {
             for (const clave of estrategia.emisiones) {
                 this.emisiones.set(clave, [...this.emisiones.get(clave) ?? [], estrategia]);
@@ -68,6 +78,13 @@ export class Comunicacion {
                 this.oyentes.set(componente, [...this.oyentes.get(componente) ?? [], estrategia]);
             }
         }
+    }
+
+    /**
+     * Una `Comunicacion` nueva con las estrategias de esta más `estrategias`. Los componentes registrados en una no lo están en la otra.
+     */
+    public extender(...estrategias: IEstrategia[]): Comunicacion {
+        return new Comunicacion(...this.estrategias, ...estrategias);
     }
 
     /**
@@ -80,22 +97,55 @@ export class Comunicacion {
     }
 
     /**
-     * Registra un componente con su interfaz pública (`crearInterfazPublica`: lo que se puede llamar o asignar desde fuera). La envuelve para que cada llamada emita `before` y
-     * `after` (`emitirInterfazPublica`), la conecta a los eventos que escucha, en todas las estrategias (al llegar uno, llama a la entrada que dice el evento con su `value`) y la
-     * devuelve: el componente debe llamarse a sí mismo por ella para que emita. Falla si un evento apunta a algo que la interfaz no tiene. `Comunicacion` nunca conoce la instancia.
+     * Hace una petición de lectura (`get_x`, ver `esPeticion`) en nombre de `componente` y devuelve lo que responden, o `undefined` si nadie lo hace. Con el transporte `app`
+     * (síncrono) la respuesta llega antes de que vuelva la llamada; con uno asíncrono no llega a tiempo y da `undefined`.
      */
-    public add<T>(nombre: string, interfaz: InterfazPublica<T>, signal?: AbortSignal): InterfazPublica<T> {
-        const envuelta = emitirInterfazPublica(interfaz, nombre, (componente, metodo, when, message) => { this.emit(componente, metodo, when, message); });
-        const receptores = envuelta as Record<string, TReceptor | undefined>;
-        for (const {metodo, escuchar} of this.escuchas(nombre)) {
-            const receptor = receptores[metodo];
-            if (typeof receptor !== "function") {
-                throw new Error(`${nombre}: el evento apunta a "${metodo}", que no está en su interfaz`);
-            }
-            escuchar(receptor, signal);
-        }
+    public pedir(componente: string, metodo: string): unknown {
+        const clave = `${componente}:${metodo}`;
+        this.respuestas.delete(clave);
+        this.emit(componente, metodo, "after", {value: undefined});
+        const respuesta = this.respuestas.get(clave);
+        this.respuestas.delete(clave);
 
-        return envuelta;
+        return respuesta;
+    }
+
+    /**
+     * Conecta un objeto ya construido directamente: sus métodos y setters pasan a emitir `before` y `after` (`interceptarMiembros`) y cada evento que escucha
+     * llama a su miembro del mismo nombre: un método se ejecuta, un accesor o un atributo se lee (sin argumentos) o se asigna (con uno). Solo los métodos y setters emiten; escribir
+     * un atributo normal desde dentro no. Las peticiones de lectura (`get_x`) no emiten por su cuenta: las hace el objeto con `pedir`. Falla si un evento apunta a un miembro que no existe.
+     */
+    public conectar(nombre: string, instancia: object, signal?: AbortSignal): void {
+        if (this.conectados.has(instancia)) {
+            return;
+        }
+        this.conectados.add(instancia);
+        interceptarMiembros(instancia, {
+            antes: (miembro, args) => { this.emit(nombre, miembro, "before", {value: args}); },
+            despues: (miembro, valor) => { this.emit(nombre, miembro, "after", {value: valor}); },
+            omitir: (miembro) => esPeticion(`${nombre}:${miembro}`),
+        });
+        const objeto = instancia as Record<string, unknown>;
+        for (const {metodo, respuesta, escuchar} of this.escuchas(nombre)) {
+            if (respuesta) {
+                escuchar((valor) => { this.respuestas.set(`${nombre}:${metodo}`, valor); }, signal);
+                continue;
+            }
+            if (!(metodo in objeto)) {
+                throw new Error(`${nombre}: el evento apunta a "${metodo}", que no está en el objeto`);
+            }
+            escuchar((...args) => {
+                const miembro = objeto[metodo];
+                if (typeof miembro === "function") {
+                    return (miembro as (...a: unknown[]) => unknown).apply(instancia, args);
+                }
+                if (args.length > 0) {
+                    objeto[metodo] = args[0];
+                }
+
+                return objeto[metodo];
+            }, signal);
+        }
     }
 
     private escuchas(nombre: string): IEscucha[] {

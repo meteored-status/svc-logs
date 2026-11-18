@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: d6b5471aa389157bf85574da6b53c060
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Mon, 16 Nov 2026 14:36:40 GMT
+ * Hash: 29708faf582151d2b5f4610ad84b4a3c
+ * Versión: 2026.11.16+3-bixus
+ * Anterior: 2026.11.16+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -18,7 +19,7 @@ import {CABECERA_HEARTBEAT} from "./interface";
 import {Heartbeat} from "./emisor";
 import {InformanteWorker} from "./informante";
 import {MedidorMetricas} from "./metricas";
-import {RegistroWorkers} from "./workers";
+import {RegistroWorkers, metricasConWorkers} from "./workers";
 import {Sonda} from "./sonda";
 import {construirContexto} from "./payload";
 import {decidirHeartbeat} from "./config";
@@ -41,11 +42,13 @@ export type TModoHeartbeat = "simple"|"primario"|"worker";
  * @property pod - Metadatos del pod.
  * @property unix - Epoch ms del arranque del proceso (el `unix` de `Main`).
  * @property modo - Cómo corre el proceso.
+ * @property timeoutSondaMs - Tiempo máximo de cada sondeo de `started()`/`ready()` (por defecto el de {@link Sonda}, 900 ms).
  */
 export interface IConfigIniciarHeartbeat {
     pod: IPodInfo;
     unix: number;
     modo: TModoHeartbeat;
+    timeoutSondaMs?: number;
 }
 
 /**
@@ -68,7 +71,7 @@ export interface IHeartbeatCreado {
  * @returns Lo montado, o `null` si no aplica (no es un servicio de k8s, `HEARTBEAT` no es `true`, falta
  *   configuración…). Los avisos de configuración los da solo el proceso que no es worker.
  */
-export function iniciarHeartbeat({pod, unix, modo}: IConfigIniciarHeartbeat): IHeartbeatCreado|null {
+export function iniciarHeartbeat({pod, unix, modo, timeoutSondaMs}: IConfigIniciarHeartbeat): IHeartbeatCreado|null {
     const entorno = entornoActual();
     const decision = decidirHeartbeat({env: process.env, entorno, tipo: pod.tipo, target: pod.target});
     if (modo !== "worker") {
@@ -83,7 +86,7 @@ export function iniciarHeartbeat({pod, unix, modo}: IConfigIniciarHeartbeat): IH
         return null;
     }
 
-    const sonda = new Sonda();
+    const sonda = new Sonda({timeoutMs: timeoutSondaMs});
     if (modo === "worker") {
         const informante = new InformanteWorker({
             sonda,
@@ -119,7 +122,7 @@ export function iniciarHeartbeat({pod, unix, modo}: IConfigIniciarHeartbeat): IH
         pool: WSPool.get({socket, headers: {[CABECERA_HEARTBEAT]: token}, minConnections: 1, heartbeatTimeoutMs: 25000}),
         sonda,
         fuente: workers !== null ? () => workers.agregar(Date.now()) : undefined,
-        metricas: () => medidor.leer(),
+        metricas: () => metricasConWorkers(medidor.leer(), workers, Date.now()),
     });
     info(`Heartbeat activado hacia ${socket}${modo === "primario" ? " (primario de un cluster)" : ""}`);
     emisor.iniciar();

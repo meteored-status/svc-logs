@@ -93,8 +93,9 @@ mrpack/
 │   │   ├── index.ts                 E/S: lista servicios, aislamiento por servicio, --out/--dry-run/--strict, MySQL
 │   │   ├── almacen.ts               guardarDocumentos(): MySQL `doc` (openapi_service/openapi_version), versiones por hash, bajas
 │   │   ├── topologia.ts             leerTopologia()/calcularTopologia(): hosts públicos, Service interno y alone de cada deployment, del clon de kustomize
+│   │   ├── departamento.ts          leerDepartamento()/calcularDepartamento()/departamentoDeLambda()/escribirDepartamento(): `dpto` de cada deployment (kustomize o `deploy.lambda.labels`) → openapi_service.dpto
 │   │   ├── canonico.ts              forma canónica + hash, necesitaVersion(), calcularBajas(), normalizarRepositorio(), aplicarSocket()
-│   │   ├── mapping/                 ddl-create.sql (+ alter/ddl-alter-NNNN.sql, 0001: topology/topology_at): tablas de la base `doc`
+│   │   ├── mapping/                 ddl-create.sql (+ alter/ddl-alter-NNNN.sql, 0001: topology/topology_at, 0002: dpto): tablas de la base `doc`
 │   │   ├── programa.ts              crearPrograma(): programa TS con el tsconfig del servicio (falla con extends roto o sin RouteGroup)
 │   │   ├── literal.ts               tsToJSON()/tsToString(): evalúa literales y constantes del AST
 │   │   ├── rutas.ts                 extraerRutas(): RouteGroup → grupos/operaciones (+ avisos); separarQuery() (query string del resumen)
@@ -147,6 +148,9 @@ mrpack/
 │   │   │                            Dockerfile propios, como en deployment/std (pruebas en spec/init/)
 │   │   │                            parchearArranque() / lineaArranque() — run.sh con `exec node <yarnPath>`,
 │   │   │                            para que SIGTERM llegue a Node
+│   │   ├── instrumentation.ts       comprobarInstrumentation() — `instrumentation.ts` de los workspaces Next.js (arranque del
+│   │   │                            heartbeat de pods); decidirInstrumentation() (pura), dependenciasInstrumentation()
+│   │   │                            (`@mr/core-workload` en devDependencies), aplicaInstrumentation(); pruebas en spec/init/
 │   │   ├── editorconfig.ts          EDITORCONFIG — .editorconfig
 │   │   ├── ignore.ts                IGNORE — .gitignore
 │   │   ├── node.ts                  NODE_VERSION — versión mayor de Node que escribe en .node-version
@@ -646,6 +650,20 @@ repo que nunca tuvo no recibe ninguno. `.run.xml` ajenos no se tocan.
 (`framework/cliente.ts → add()`), así que `@mr/core-lint` llega a cualquier monorepo con el primer
 `init`.
 
+### `clases/init/instrumentation.ts`
+```ts
+export async function comprobarInstrumentation(disco: IDiscoInstrumentation): Promise<IDecisionInstrumentation>
+export function decidirInstrumentation(existentes: IInstrumentationExistente[]): IDecisionInstrumentation
+export function aplicaInstrumentation(config: {framework: string; runtime: string}): boolean
+export function dependenciasInstrumentation(devDependencies: Record<string, string>): void
+// `checkFiles()` (init.ts) llama a comprobarInstrumentation() en los workspaces node + nextjs; `checkDependencies()` a dependenciasInstrumentation().
+```
+
+Genera `instrumentation.ts` (`CONTENIDO_INSTRUMENTATION`: el `register()` que llama a `iniciarHeartbeatNext()` de
+`@mr/core-workload/heartbeat/next`, solo con `NEXT_RUNTIME === "nodejs"`) si no existe **ningún** `instrumentation.*` (raíz o `src/`,
+cualquier extensión). Nunca reescribe ni pisa uno existente: si hay uno que no contiene `iniciarHeartbeatNext`, solo avisa. El
+acceso a disco va inyectado (`IDiscoInstrumentation`) para poder probarlo con un disco real sin cargar `@mr/core-cli`.
+
 ### `clases/init/workspace-deps.ts`
 ```ts
 export async function checkWorkspaceDeps(basedir: string): Promise<boolean>
@@ -796,6 +814,24 @@ export async function run(basedir:string, config:IConfigEjecucion): Promise<void
 //   almacen.ts la escribe en la misma transacción que el documento, fuera del hash. Sin columnas/GRANT (esTopologiaNoSoportada)
 //   o sin clon: aviso y sin topología, sin romper la documentación. `run()` registra «N de M deployments con topología».
 //   soloZona sale de entornos.json[0].resourceLabels.zona (<basedir>/entornos.json o /root/entornos.json).
+// Departamento (departamento.ts, BAK-1810, restricción por departamento de lo privado en API Docs): openapi_service.dpto
+//   (VARCHAR(32) NULL, alter 0002). Con --env test|produccion y el clon de kustomize, por cada deploy.kustomize[] {name, dir} de un
+//   workspace target k8s, leerDepartamento() sigue la cadena REAL de kustomizations: <dir>/<name>/<env> → `resources` (`../_all`) →
+//   los `resources`/`components` que sean directorios (el componente del kustomizer `<kustomizer>/_componentes/deployment`, que
+//   aplica deployment.json con un add de labels/dpto, y los componentes base). El kustomizer NO determina el dpto: `tiempo-web/widget-legacy`
+//   usa `services/_componentes/deployment` → backoffice. Orden de kustomize: primero los resources, luego los patches propios, gana el
+//   último (el servicio sobrescribe en `_all/deployment.json` con un replace). Un parche con `target.kind` sin pods (HPA, VirtualService) ni se lee.
+//   Ruta validada igual que la topología pero para todo el clon (sin enlaces simbólicos en ningún tramo, sin tmp/ ni credenciales/, ≤64 KiB,
+//   ≤5 niveles, ≤40 nodos, sin ciclos); el contenido de los ficheros (hay parches con secretos) nunca se registra.
+//   Valor válido: ^[a-z0-9-]{1,32}$ (sin `_`, sin mayúsculas; el mismo formato que tendrán DPTO_REGEX de services-comun-meteored y el CHECK de department.id con BAK-1810, duplicado aquí porque @mr/cli no depende del framework). Ante CUALQUIER duda → dpto null con aviso: valor inválido, remove/move/copy o add/replace sobre la
+//   etiqueta o sus padres, dos recursos con valores distintos, labels/commonLabels con dpto, patchesStrategicMerge/patchesJson6902/
+//   replacements/transformers, parche no JSON6902 que mencione dpto, target con selectores, recurso o parche ilegible, falta el overlay del
+//   entorno (los cronjobs/jobs no lo tienen: salen null). calcularDepartamento() es pura (recibe INodoKustomize ya leído).
+//   Lambdas (target lambda): departamentoDeLambda() con `deploy.lambda.labels.dpto` del mrpack.json; falta o inválido → null.
+//   Semántica de escritura (escribirDepartamento(), misma transacción que el documento y la topología, UPDATE aparte): dpto ausente =
+//   no se intentó (sin --env o sin clon k8s) → no se toca; null = se intentó y no se sabe → se escribe NULL (cierra el acceso, no
+//   conserva el departamento viejo); valor → se escribe. Sin columna/GRANT (esDepartamentoNoSoportado): aviso y sigue sin dpto.
+//   No hay relleno de servicios ya documentados: cada uno coge su dpto en su próximo despliegue.
 // programa.ts: crearPrograma() falla si parseado.errors trae algo (extends roto) o si el programa no incluye el fichero de RouteGroup.
 // esquema.ts: la pila de recursión sin nombre se aparta al entrar en un componente con nombre (IMenu[] → IMenu → IMenu[] termina en $ref).
 // Nombres y alcance `public` (BAK-1814): lo que se reparte por orden de llegada (nombre limpio de un esquema frente a sus

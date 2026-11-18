@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Thu, 01 Oct 2026 06:34:06 GMT
- * Hash: 43fa6aaf6af19045610102ede4aaa1cc
- * Versión: 2026.10.1+2-bixus
- * Anterior: 2026.9.23+2-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 17 Nov 2026 09:24:35 GMT
+ * Hash: ecb01243abcca92272221c4d7e3529d2
+ * Versión: 2026.11.17+1-juancmartinez
+ * Anterior: 2026.10.1+2-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
  */
 
 import {type IManifestDeployment, ManifestDeploymentKind, Runtime, Target} from "@mr/core-dev/manifest/deployment";
@@ -59,7 +59,9 @@ class ManifestWorkspaceDeploymentLoader {
      */
     public check(deploy: Partial<IManifestDeployment|IManifestDeploymentUpdate1|IManifestDeploymentUpdate2|IManifestDeploymentLegacy> = {}, names: string[]): IManifestDeployment {
         const data = this.default;
-        if (deploy.enabled) {
+        // `false` también cuenta: con `if (deploy.enabled)` un `"enabled": false` se perdía, ganaba el `true` por defecto y, como el loader
+        // guarda el manifest normalizado, el `mrpack.json` se reescribía con `true` (y el workspace se desplegaba).
+        if (typeof deploy.enabled === "boolean") {
             data.enabled = deploy.enabled;
         }
         if (deploy.type) {

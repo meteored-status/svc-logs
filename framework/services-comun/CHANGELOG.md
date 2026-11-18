@@ -2,6 +2,33 @@
 
 ---
 
+## 2026.11.18 08:30 — [Juan Carlos]
+
+### Fixed
+
+- `modules/fs/storage.ts`: `Storage.get()` fallaba siempre con `@google-cloud/storage` 9
+  (`TypeError: Cannot read properties of undefined (reading 'contentType')`). En la 9, `file.get()` resuelve a `[File]`;
+  en la 8 resolvía a `[File, metadata]`. Los metadatos se leen ahora de `file.metadata`, que las dos versiones rellenan al
+  hacer el `get()`. Medido contra un GCS falso local (`STORAGE_EMULATOR_HOST`): falla antes del cambio, funciona después.
+  `getOne`, `getAll`, `list` y `download` no cambian. Lo usan, entre otros, los handlers de vídeos de `videos-estaticos`.
+
+## 2026.11.16 13:30 — [Jose]
+
+### Added
+
+- `next.config.js`: si el proyecto tiene `./instrumentation.*` en la raíz (cualquier extensión que acepta Next; el mismo criterio que `mrpack init`, que
+  además avisa si está en `src/`), el `generateBuildId` base añade a `buildDirs` ese fichero y **el cierre de imports del emisor del heartbeat
+  de pods** (`@mr/core-workload/heartbeat/next`): `../../@mr/core/workload/{heartbeat,config,engine}`, `../../@mr/core/network`,
+  `../../@mr/core/dev/manifest`, `../../@mr/core/log/modules` y `../../framework/services-comun/modules/utiles`, salvo lo que el proyecto ya
+  cubra. Solo eso, no el workspace entero del emisor (README, CHANGELOG, `spec`, `tmp`). Sin esto, un cambio en el emisor no movía el `buildId`,
+  `mrpack` daba el workspace por «Sin cambios» y no había imagen nueva. **Con la condición, el `buildId` de los proyectos sin `instrumentation.*`
+  no cambia**; en los que la tengan cambia una sola vez, al aparecer. Las rutas son relativas al directorio de trabajo, como las demás, y se
+  resuelven al calcular el `buildId`. `dirsDeBuild()` queda exportada (`module.exports.dirsDeBuild`). `spec/next-config.spec.ts` (9 pruebas),
+  con una que **calcula el cierre de imports real del emisor** (`ts.preProcessFile`, resolviendo los imports por nombre de paquete) y
+  comprueba que cada fichero cae dentro de esos directorios: si el emisor importa algo de otro sitio, falla; vista fallar quitando cada
+  directorio. `dirsDeBuild` se exporta **no enumerable** (un `{...base, ...custom}` la colaba en la configuración de Next y salía «Unrecognized key(s)» en cada
+  arranque) y de `@mr/core/network` solo entran `index.ts`, `client/websocket`, `metadata/websocket` y `server/http/config`. Se envía junto con `@mr/core-workload` (`heartbeat/next/`) y `@mr/cli` (`mrpack init`).
+
 ## 2026.11.16 11:14 — [Jose]
 
 ### Changed
@@ -10,8 +37,6 @@
   `modules/fs/storage.ts` no usa nada de lo que cambia: `getMetadata`, `download`, `createReadStream` y `createWriteStream`
   devuelven lo mismo (comprobado contra el bucket). `firebase-admin` 14.5.1 sigue pidiendo `^8.1.0`, así que conviven la 8.4.0
   (suya) y la 9.0.0 hasta que suba.
-
----
 
 ## 2026.11.12 17:30 — [Jose]
 
@@ -28,8 +53,6 @@
 - `openapi/interface.ts`: `IComponents.securitySchemes` (`ISecuritySchemes`, `ISecurityScheme`) y `IHTTPMethod.security`,
   para documentar `Authorization` como esquema de seguridad; `ISchema.examples` pasa de `any[]` a `unknown[]`.
 
----
-
 ## 2026.11.10 13:18 — [Juan Carlos]
 
 ### Changed
@@ -40,7 +63,26 @@
   `allOf`, `items`, `prefixItems`, `additionalProperties`, `pattern`, `format`, `description`, `deprecated`, `$ref`);
   `IProperty` e `IItems` pasan a ser alias de `ISchema`; `IResponses` se indexa por `string` (admite `"default"`).
 
----
+## 2026.11.5 12:25 — [Juan C. Martínez]
+
+### Added
+- `modules/elasticsearch/index.ts` — `IESConfig` admite dos opciones OPCIONALES, `requestTimeout` (ms; 60000 si no se indica) y `maxRetries` (los del cliente oficial, que por defecto reintenta 3 veces ante
+  502/503/504 y errores de conexión, si no se indica). Quien no las pase no cambia de comportamiento. Las necesita un servicio con plazo propio mucho menor que 60 s (el servicio público del gazetteer
+  abandona la búsqueda a los 3 s): con el cliente por defecto, un clúster degradado seguía recibiendo cada petición hasta cuatro veces y el socket seguía ocupado hasta los 60 s, mucho después de que el
+  servicio la hubiera abandonado. Con `maxRetries: 0` y `requestTimeout` ≈ plazo, la petición abandonada acaba a la vez. Medido: un timeout NO se reintenta por defecto (el cliente solo reintenta
+  502/503/504 y errores de conexión).
+- `spec/elasticsearch/cliente-opciones.spec.ts` — contra un servidor local que cuenta peticiones: sin opciones reintenta (no cambia); `maxRetries: 0` llega una sola vez; `requestTimeout` abandona un
+  Elasticsearch que no contesta a tiempo y sin reintentos.
+
+## 2026.11.5 10:39 — [Juan C. Martínez]
+
+### Fixed
+- `modules/database/postgresql/index.ts` — los pools `primary`, `read` y `notify` de `PostgreSQLCluster` no escuchaban el evento `error` de `pg`. Ese evento llega cuando
+  el servidor cierra una conexion INACTIVA del pool (reinicio, failover o mantenimiento de la base, o un intermediario que corta las inactivas), y sin escuchador Node lo
+  trata como no capturado y TUMBA EL PROCESO: reproducido parando el AlloyDB local con un servicio arrancado («terminating connection due to administrator command»).
+  Ahora `watchPool()` lo escucha y registra como mucho un `warning` por rol y tipo de error cada minuto (`LogThrottle`); `pg` descarta la conexion muerta y abre otra
+  cuando haga falta. El pool de bloqueos (`lockPool`) ya lo hacia.
+- `spec/database/postgresql/pool-errors.spec.ts` — emitir `error` en los pools `primary` y `read` no lanza.
 
 ## 2026.11.5 10:30 — [JuanCarlos]
 
@@ -67,6 +109,28 @@
 ### Removed
 - `modules/utiles/unidades.ts` — movido a `@mr/core-utils/unidades` (separado por magnitud). Los imports se migran con el patch
   **R036** (`yarn run patch:apply`).
+
+## 2026.10.30 12:56 — [Juan C. Martínez]
+
+### Added
+- `modules/database/postgresql/index.ts` — `PostgreSQL.tryLock(key)`: bloqueo consultivo de SESIÓN no bloqueante
+  (`pg_try_advisory_lock(hashtext(key))`) por una conexión DIRECTA (entrada `notify` de las credenciales; en el formato plano, la propia
+  instancia) en un pool aparte (`PostgreSQLCluster.lockPool()`, con `keepAlive` y escuchador de `error`). Devuelve el `Lock` o `null` si lo
+  tiene otra sesión. Con credenciales de cluster sin `notify` rechaza con un mensaje claro: la primaria va por un PgBouncer en modo
+  transacción, donde un bloqueo de sesión no vale. El pool se cierra con el cluster, sin esperar a las conexiones prestadas.
+- `modules/database/postgresql/lock/lock.ts` — `Lock.tryAcquire(name, pool)`: toma el bloqueo en una conexión propia del pool, que se queda
+  reservada; `release()` lo suelta en ESA conexión (una sola vez) y la devuelve; si el `unlock` falla, la destruye (el servidor libera el
+  bloqueo al cerrarse). `Lock.acquire` y `getLock` no cambian.
+- `modules/database/postgresql/index.ts` — opción `applicationName` en `IPostgreSQLConnectionOptions` (`application_name` de cada conexión,
+  visible en `pg_stat_activity`).
+- `modules/database/transaction/isolation.ts` — `IsolationLevel.REPEATABLE_READ` (= 2), y `modules/database/postgresql/transaction.ts`: `begin()`
+  lo traduce a `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ` (MySQL no lo mapea: sigue ignorando lo que no es `SERIALIZABLE`).
+- `spec/database/postgresql/lock.spec.ts` — `Lock.tryAcquire` y `tryLock` con un pool falso, y `Transaction.begin` con cada nivel.
+
+### Known issues
+- `getLock`/`Lock.acquire` (los de `listen()`) toman el bloqueo con `pg_advisory_lock` (bloqueante) por `pool.query` y lo sueltan con otro
+  `pool.query`, que puede caer en OTRA conexión del pool: el `unlock` no lo encuentra y el bloqueo queda pegado a la conexión que lo tomó.
+  Sin tocar en este cambio.
 
 ## 2026.10.30 08:58 — [Juan Carlos]
 

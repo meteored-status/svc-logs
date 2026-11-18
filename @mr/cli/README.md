@@ -764,6 +764,13 @@ Entre otras acciones:
   `exec node <yarnPath> workspace ${WS} …` (o `exec yarn …` sin `yarnPath`). Por qué, en el párrafo del entrypoint
   de [`deployment/README.md`](deployment/README.md). Si la etapa final arranca con Yarn de otra forma, no se
   toca y sale un aviso en rojo.
+- En los workspaces `framework: nextjs` con `deploy.runtime = "node"`, genera `instrumentation.ts` (`init/instrumentation.ts →
+  comprobarInstrumentation()`): el `register()` que arranca el heartbeat de pods de `@mr/core-workload/heartbeat/next`
+  (ver «Servicios Next» en el README de `@mr/core-workload`), y deja `@mr/core-workload` en sus `devDependencies`
+  (`workspace:*`, se empaqueta como `@mr/core-network`; `dd-trace` ya lo asegura para todos). **Solo lo crea si no existe ningún
+  `instrumentation.*` (raíz o `src/`, cualquier extensión) y nunca reescribe uno existente**: es idempotente. Si hay uno que no llama a
+  `iniciarHeartbeatNext()`, no lo pisa y sale un aviso en rojo (ese servicio no emitirá heartbeat hasta que se añada la llamada a mano).
+  Solo en workspaces habilitados (`enabled`) y solo si el monorepo trae `@mr/core/workload/heartbeat/next/index.ts`; si no, avisa de actualizar el framework. El `next.config.js` de `services-comun` mete el emisor en el `buildId` cuando existe `instrumentation.*` **en la raíz** (misma lista de extensiones); si el válido está solo en `src/`, `init` avisa.
 - Normaliza `build.bundler` en `mrpack.json` según runtime/framework:
   `browser -> rspack`, `php/cfworker -> none`, `node+nextjs -> none`, `node+componentes -> rspack`,
   `node+bundle.web -> rspack`. La condición de `componentes` mira tanto el bundle principal

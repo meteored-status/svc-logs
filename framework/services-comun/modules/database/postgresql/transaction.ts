@@ -1,9 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: a74ac4d9fcabaac373e5f285d30ae8ca
- * Versión: 2026.9.23+3-bixus
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Tue, 17 Nov 2026 09:24:35 GMT
+ * Hash: 3644125d04c436f65e94bcc4f7369418
+ * Versión: 2026.11.17+1-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-localizacion.git
  */
 
 import type {Pool, PoolClient, QueryResult} from "pg";
@@ -44,6 +45,9 @@ export class Transaction extends TransactionBase {
         if (isolationLevel) {
             let level: TIsolationLevel|undefined = undefined;
             switch (isolationLevel) {
+                case IsolationLevel.REPEATABLE_READ:
+                    level = TIsolationLevel.REPEATABLE_READ;
+                    break;
                 case IsolationLevel.SERIALIZABLE:
                     level = TIsolationLevel.SERIALIZABLE;
                     break;

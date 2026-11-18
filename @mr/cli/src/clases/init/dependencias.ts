@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 117f76afe05ff05e77af6ae7554c0570
- * Versión: 2026.9.23+2-bixus
- * Anterior: 2026.9.7+1-bixus
+ * Fecha: Mon, 16 Nov 2026 14:36:40 GMT
+ * Hash: 88273361e60b13086a7fa72df096153e
+ * Versión: 2026.11.16+8-bixus
+ * Anterior: 2026.11.16+7-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -51,7 +51,7 @@ export function checkDependencies(config: Manifest, dependencies: Record<string,
         delete dependencies["@mr/core-network"];
     }
 
-    if (config.build.framework!=BuildFW.nextjs) {
+    if (config.build.framework!==BuildFW.nextjs) {
         dependencies["source-map-support"] ??= defecto["source-map-support"]??"*";
 
         for (const [lib, version] of Object.entries(defecto)) {

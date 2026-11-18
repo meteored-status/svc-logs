@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: aeaa9b918c1e572c3a6bad27bfd658cd
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Mon, 16 Nov 2026 12:17:13 GMT
+ * Hash: 1b152c90839bae9427d7f8aee930bdcf
+ * Versión: 2026.11.16+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -58,7 +59,8 @@ export interface IHeartbeatProcesos {
 /**
  * Medidas del proceso en el momento del envío.
  *
- * @property rss - Memoria residente (bytes).
+ * @property rss - Memoria residente (bytes). En un pod simple es la del proceso; en el primario de un cluster, la suma de la del
+ *   primario y la de los workers vivos que han informado hace menos de 3 s.
  * @property loopP99 - Percentil 99 del retraso del event loop (ms) desde el envío anterior.
  * @property loopMax - Máximo del retraso del event loop (ms) desde el envío anterior.
  * @property uptime - Segundos desde el arranque del proceso.

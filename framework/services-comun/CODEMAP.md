@@ -78,7 +78,7 @@ como entry point real — la trazabilidad activa del monorepo es Datadog (`dd-tr
 
 | Fichero | Rol |
 |---------|-----|
-| `next.config.js` | Factory `(buildDirs?) => NextConfig` — config base compartida: `distDir: "output"`, `poweredByHeader: false`, `reactStrictMode: true`, rewrite `/admin/:path*` → `/api/admin/:path*`, inyecta constantes globales (`DESARROLLO`, `TEST`, `PRODUCCION`, `ENTORNO`, `NEXTJS`) vía `webpack.DefinePlugin` y sustituye imports `node:*` por su forma sin prefijo. Si se le pasan `buildDirs`, calcula `generateBuildId` con un hash MD5 recursivo del contenido de esos directorios. |
+| `next.config.js` | Factory `(buildDirs?) => NextConfig` — config base compartida: `distDir: "output"`, `poweredByHeader: false`, `reactStrictMode: true`, rewrite `/admin/:path*` → `/api/admin/:path*`, inyecta constantes globales (`DESARROLLO`, `TEST`, `PRODUCCION`, `ENTORNO`, `NEXTJS`) vía `webpack.DefinePlugin` y sustituye imports `node:*` por su forma sin prefijo. Si se le pasan `buildDirs`, calcula `generateBuildId` con un hash MD5 recursivo del contenido de esos directorios. **Si el proyecto tiene `./instrumentation.*` en la raíz** (el arranque del heartbeat de pods de `@mr/core-workload/heartbeat/next`), el hash incluye también ese fichero y el cierre de imports del emisor (`../../@mr/core/workload/{heartbeat,config,engine}`, `../../@mr/core/network/{index.ts,client/websocket,metadata/websocket,server/http/config}`, `../../@mr/core/dev/manifest`, `../../@mr/core/log/modules`, `../../framework/services-comun/modules/utiles`; los que el proyecto no tenga ya; `dirsDeBuild()`, exportada para las pruebas), para que un cambio en el emisor mueva el `buildId` y haya imagen nueva; sin ese fichero el `buildId` no cambia. |
 | `next.config.deps.js` | Wrapper: `require("./next.config.base")` + spread de `custom`. **Nota:** `./next.config.base` no existe actualmente en este workspace — el fichero no tiene consumidores activos localizados (no se detectó ningún `require`/`import` de `services-comun/next.config.deps.js` desde dentro del propio workspace ni desde `services/panel-frontend`); parece código huérfano o pendiente de completar. No confundir con el patrón real: los servicios Next.js consumidores (p. ej. `services/panel-frontend/next.config.deps.js`) hacen `require('services-comun/next.config.js')` directamente, **no** `next.config.deps.js`. |
 
 Ambos ficheros también se usan como **inputs de fingerprint** de versión de despliegue: `@mr/cli`
@@ -286,6 +286,10 @@ cliente oficial `@elastic/elasticsearch`. Expone métodos 1:1 con la API de Elas
 habilitado (`"Elastic not enabled"`). Todas las operaciones, `bulk` incluida, comparten un único cliente
 cacheado por instancia, y con él su pool de conexiones: no se crea ni se cierra un cliente por llamada.
 
+`IESConfig` admite, además de `credenciales` y `ca`, `requestTimeout` (ms; 60000 por defecto) y `maxRetries` (el del cliente oficial, 3 ante
+502/503/504 y errores de conexión, si no se indica; `0` los desactiva). Son opcionales y aditivas: quien no las pasa no cambia. Las usa un servicio con
+plazo propio mucho menor que 60 s (`services/localizacion-gazetteer`) para que una petición abandonada no siga viva en el clúster.
+
 #### Familias `Bulk*`
 
 Tres generaciones convivientes (`bulk/`, `bulk-old/`, `bloque/`) de *bulk writer* — acumulan operaciones
@@ -444,11 +448,13 @@ yarn run services-comun test
 
 | Fichero | Qué fija |
 |---------|----------|
+| `spec/next-config.spec.ts` | `next.config.js`: `dirsDeBuild` (solo con `instrumentation.*`, sin repetir lo que el proyecto ya cubre), que el `buildId` no cambie sin él y cambie con él, y que el cierre de imports real del emisor quede dentro de los directorios hasheados |
 | `spec/utiles/array.spec.ts` | `arrayChop`, `unique` y `arrayEquals` |
 | `spec/utiles/promise.spec.ts` | `Semaforo` (límite, FIFO, carril libre si falla, `RangeError`) y `PromiseTimeout` (error con los ms, y que no deja timers vivos ni rechazos sin atender) |
 | `spec/utiles/cache-ttl.spec.ts` | `CacheTtl`: caducidad, *single-flight*, fallos sin cachear, barrido, `delete` y `clear` (también con cargas en curso) |
 | `spec/database/mysql/cache.spec.ts` | `Cache.get()` de `database/mysql/cache`: que una consulta fallida no deje la clave rota, y que las peticiones simultáneas compartan consulta |
 | `spec/net/cache/disk.spec.ts` | `RequestCacheDisk` de `net/cache/disk`: que `check()` caduque lo cacheado con `expires` numérico o en string ISO (ficheros legacy), rechace uno ilegible, y que `save()` escriba `expires` como número |
+| `spec/elasticsearch/cliente-opciones.spec.ts` | `IESConfig.maxRetries` y `requestTimeout` contra un servidor local que cuenta peticiones: sin opciones reintenta (no cambia), `maxRetries: 0` llega una vez, `requestTimeout` abandona un Elasticsearch que no contesta |
 | `spec/estructura.spec.ts` | que no haya ningún `.spec.ts` dentro de `modules/` |
 
 ### Por qué el arnés es así

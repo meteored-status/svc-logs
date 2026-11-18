@@ -1,10 +1,10 @@
 /**
- * Editor: Bixus
- * Fecha: Wed, 23 Sep 2026 08:46:26 GMT
- * Hash: 4c6a481ab985c9c89b0749a636e3416d
- * Versión: 2026.9.23+3-bixus
- * Anterior: 2026.7.16+1-juancmartinez
- * Proyecto: https://github.com/meteored-status/svc-status.git
+ * Editor: Juan C. Martínez
+ * Fecha: Wed, 18 Nov 2026 07:44:17 GMT
+ * Hash: d75c7de0b9b70c05300c8cce0fb49ad4
+ * Versión: 2026.11.18+1-juancmartinez
+ * Anterior: 2026.9.23+3-bixus
+ * Proyecto: git@github.com:alpred/meteored-svc-data-video.git
  */
 
 import type {Readable} from "node:stream";
@@ -90,7 +90,8 @@ export class Storage implements IDocumento {
         let i = 0;
         for (const actual of await Promise.all(buckets.map((actual)=>storage.bucket(actual).file(file).get().catch(async ()=>null)))) {
             if (actual!=null) {
-                return new this(buckets[i], actual[0], actual[1]);
+                // Desde @google-cloud/storage 9, file.get() solo devuelve [File]; los metadatos quedan en file.metadata
+                return new this(buckets[i], actual[0], actual[0].metadata);
             }
             i++;
         }

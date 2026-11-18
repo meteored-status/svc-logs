@@ -79,25 +79,42 @@ implementaciones intercambiables: `MemoryCache` (proceso), `DiskCache` (fichero)
 
 | Fichero | Símbolos exportados |
 |---------|---------------------|
-| `postgresql/index.ts` | `PostgreSQL implements AsyncDisposable`, `IPostgreSQL`, `IPostgreSQLConnectionOptions`, `IPostgreSQLBuild`, `TipoRegistro`, `IInsert`, `TListener` |
+| `postgresql/index.ts` | `PostgreSQL implements AsyncDisposable` (con `tryLock(key)`), `IPostgreSQL`, `IPostgreSQLConnectionOptions` (`applicationName`, `settings`...), `IPostgreSQLBuild`, `TipoRegistro`, `IInsert`, `TListener` |
 | `postgresql/startup-options.ts` | `startupOptions` (los `settings` de la conexion como opcion de arranque `-c nombre=valor` de libpq) |
-| `postgresql/transaction.ts` | `Transaction extends TransactionBase`, `TIsolationLevel` |
+| `postgresql/transaction.ts` | `Transaction extends TransactionBase`, `TIsolationLevel` (`begin()` admite `IsolationLevel.SERIALIZABLE` y `REPEATABLE_READ`) |
 | `postgresql/postgre-s-q-l-transaction-manager.ts` | `PostgreSQLTransactionManager extends TransactionManager` |
 | `postgresql/notify/notify.ts` | `Notify`, `NotifyCallback` |
-| `postgresql/lock/lock.ts` | `Lock` |
+| `postgresql/lock/lock.ts` | `Lock` (`acquire`: bloqueante, el de `listen()`; `tryAcquire`: no bloqueante, en conexión propia, el de `PostgreSQL.tryLock`) |
 
 ### Símbolos
 
 `PostgreSQL` envuelve el driver `pg`; soporta conexión por host o por socket Unix
 (`IPostgreSQLHost`/`IPostgreSQLSocket`), es `AsyncDisposable` (`using`/`await using`). `Notify` implementa
 el patrón `LISTEN`/`NOTIFY` de PostgreSQL con callback tipado (`TListener`); `Lock` implementa locks
-consultivos (`pg_advisory_lock` o equivalente) sobre la misma conexión.
+consultivos con `hashtext(nombre)` en dos modos que no son intercambiables (ver «Bloqueos consultivos»).
 
 `IPostgreSQLConnectionOptions.settings` fija parámetros de sesión (`work_mem`, `statement_timeout`,
 `pg_trgm.similarity_threshold`...) en CADA conexión de los pools de esa instancia, como opciones de arranque: valen
 fuera de una transacción —a diferencia de `SET LOCAL`— y no se quedan pegados en una conexión que use otro. Para
 consultas con ajustes distintos se construye otro `PostgreSQL`/`AlloyDB` con los suyos (cada uno tiene sus pools).
 Prueba en `spec/database/postgresql/startup-options.spec.ts`.
+`IPostgreSQLConnectionOptions.applicationName` fija el `application_name` de cada conexión (visible en `pg_stat_activity`; es un parámetro de
+arranque normal, no un `-c` de `settings`).
+
+#### Bloqueos consultivos
+
+- **`PostgreSQL.tryLock(key): Promise<Lock|null>`** — `pg_try_advisory_lock(hashtext(key))`, SIN esperar; `null` si lo tiene otra sesión.
+  Va por una **conexión directa**: la entrada `notify` de las credenciales (en el formato plano, la propia instancia), en un pool aparte
+  (`PostgreSQLCluster.lockPool()`, con `keepAlive`). **Con credenciales de cluster sin `notify` rechaza** en vez de caer a `primary`: la
+  primaria va por un PgBouncer en modo transacción, donde un bloqueo de sesión «funciona» y no protege. La conexión queda reservada
+  hasta `release()`, que suelta el bloqueo **en esa misma conexión** y la devuelve al pool (si el `unlock` falla, la destruye: al cerrarse,
+  el servidor lo libera). Si la conexión se cae mientras se tiene el bloqueo, el servidor lo libera y solo se avisa en el log. Hay que
+  llamar siempre a `release()` (`try`/`finally`).
+- **`getLock`/`Lock.acquire`** (los de `listen()`) NO se han tocado y **tienen un defecto**: toman el bloqueo con `pg_advisory_lock`
+  (bloqueante) por `pool.query`, y lo sueltan con otro `pool.query`; en un pool, cada `query` puede caer en una conexión distinta, así que el
+  `unlock` puede no encontrarlo y el bloqueo de sesión queda pegado a la conexión que lo tomó. No usarlos para nada nuevo.
+
+Pruebas en `spec/database/postgresql/lock.spec.ts` (con un `Pool` y un cliente falsos: sin base).
 
 **Reutilizado por:** `AlloyDB` (hereda `PostgreSQL` íntegro) y `AlloyDBTransactionManager` (hereda
 `PostgreSQLTransactionManager`).
