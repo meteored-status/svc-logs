@@ -2,6 +2,16 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entradas nuevas arriba.
 
+## 2026.11.18 13:58 — [Jose]
+
+### Added
+- Plantilla de índice `logs-worker` en el Elastic de producción, guardada en
+  `mapping/logs/logs-worker-template.json`. Hasta ahora `logs-worker-*` usaba la plantilla genérica
+  `logs` de x-pack, que mapeaba `event.scheduledTime` como `keyword`. La nueva reutiliza sus mismos
+  componentes y fija ese campo como `date`. Aplicada con un rollover a
+  `.ds-logs-worker-meteored-2026.11.18-000005`. En `.ds-...-000004` quedan como `keyword` las alarmas
+  de los minutos posteriores al despliegue.
+
 ## 2026.11.18 13:28 — [Jose]
 
 ### Fixed
