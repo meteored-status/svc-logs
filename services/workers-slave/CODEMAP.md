@@ -168,6 +168,14 @@ Solo importa `zod`, para poder probarlo sin Elasticsearch, GCS ni MySQL (`spec/c
 | `TParseo` | `type` | `{ok: true, registro}` o `{ok: false, motivo}`. |
 | `parsearLinea(linea)` | `function` | `JSON.parse` + `safeParse`. **No lanza nunca.** Si falla, devuelve un motivo corto y estable, sin el evento: `JSON inválido`, `EventType="x"`, `Outcome="x"`, `Event: claves no reconocidas X`, `Event.RayID: invalid_type`… Si hay varios problemas, van ordenados y separados por `; `. |
 
+**Mapping del índice.** `logs-worker-<cliente>` es un data stream del Elastic Cloud (serverless) de
+`meteored-status`, con la plantilla propia `logs-worker` (`mapping/logs/logs-worker-template.json`,
+prioridad 200). Esa plantilla reutiliza los componentes de la plantilla `logs` de x-pack (`logsdb`,
+ECS, mapping dinámico con textos como `keyword`, sin detección de fechas) y solo fija
+`event.scheduledTime` como `date`. Si se añade otro campo de fecha al documento, hay que declararlo
+en esa plantilla, porque si no entrará como `keyword`. El cambio se aplica a partir del siguiente
+rollover: `PUT _index_template/logs-worker` + `POST logs-worker-meteored/_rollover`.
+
 El esquema es una unión discriminada por `EventType`. Todas las variantes son `.strict()` en la raíz, así que un campo nuevo de Cloudflare (p. ej. `CPUTimeMs` si se activa en el job de Logpush) se descarta y aparece en el resumen; no se indexa a ciegas.
 
 | `EventType` | `Event` aceptado | `event` indexado |
