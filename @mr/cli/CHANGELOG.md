@@ -2,6 +2,14 @@
 
 ---
 
+## 2026.11.19 12:57 — [Jose]
+
+### Fixed
+- `deployment/std/kustomizar.sh` — con dos clusters con la misma label `zona` (misma región), los recursos de cada workspace se generaban dos veces
+  en `despliegue_<ws>_<zona>.yaml` y `gke-deploy` avisaba de duplicados. El manifiesto es por zona y `desplegar.sh` ya lo aplica a cada cluster de
+  esa zona, pero el kustomizado recorría las zonas una vez por cluster. Ahora se recorren las zonas sin repetir y, en los proyectos con clientes,
+  los pares zona/cliente sin repetir.
+
 ## 2026.11.17 09:46 — [Juan C. Martínez]
 
 ### Fixed
