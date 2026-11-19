@@ -417,7 +417,10 @@ if opcion desplegar; then
         fi
         NUM_CLIENTES=$(configc "length")
         if [[ "$NUM_CLIENTES" -eq 0 ]]; then
-          ZONAS=$(confige '.[] | .resourceLabels.zona')
+          # Una vez por zona, no por cluster: el manifiesto es `despliegue_<ws>_<zona>.yaml` y
+          # `desplegar.sh` lo aplica a todos los clusters de esa zona. Con dos clusters en la misma zona
+          # se generaba dos veces en el mismo fichero y `gke-deploy` avisaba de recursos duplicados.
+          ZONAS=$(confige '[.[] | .resourceLabels.zona] | unique | .[]')
           for ZONA in ${ZONAS}; do
             parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}"
             STATUS=$?
@@ -427,20 +430,28 @@ if opcion desplegar; then
             fi
           done
         else
+          # Pares zona/cliente sin repetir, por lo mismo que en la rama sin clientes: dos clusters de la
+          # misma zona con el mismo cliente generaban sus recursos dos veces en el mismo fichero.
           CLUSTERES=$(configc '.[] | .name')
-          for CLUSTER in ${CLUSTERES}; do
+          PARES=$(for CLUSTER in ${CLUSTERES}; do
             ZONA=$(jq -r ".resourceLabels.zona" "${CLUSTER}.json")
             CLIENTES=$(jq -r ".resourceLabels.\"client-ids\"" "${CLUSTER}.json")
             IFS='_' read -r -a CLIENTES_ARRAY <<< "${CLIENTES}"
             for CLIENTE in "${CLIENTES_ARRAY[@]}"; do
-              parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}" "${CLIENTE}"
-              STATUS=$?
-              if [[ $STATUS -ne 0 ]]; then
-                echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA} [${CLIENTE}]"
-                exit 1
-              fi
+              printf '%s\t%s\n' "${ZONA}" "${CLIENTE}"
             done
-          done
+          done | sort -u)
+          while IFS=$'\t' read -r ZONA CLIENTE <&3; do
+            if [[ -z "${ZONA}" ]]; then
+              continue
+            fi
+            parseWorkspaceCluster "${DIRECTORIO}" "${WORKSPACE}" "${SERVICIO}" "${VERSION}" "${KUSTOMIZER}" "${ZONA}" "${CLIENTE}"
+            STATUS=$?
+            if [[ $STATUS -ne 0 ]]; then
+              echo "Error ejecutando kustomize para ${WORKSPACE} (${SERVICIO}) en ${ZONA} [${CLIENTE}]"
+              exit 1
+            fi
+          done 3<<< "${PARES}"
         fi
 
       elif [[ "$(configw "${RUTA}" '.deploy.target')" == "lambda" ]]; then
