@@ -14,25 +14,30 @@ Mapa tecnico del workspace `@mr/core/workload/`.
 ├─ engine/
 │  ├─ index.ts       — Engine base (build, ciclo de vida, abort, métricas)
 │  ├─ server.ts      — Engine HTTP (initWebServer/S, shutdown watcher, prebuild)
+│  ├─ sidecar.ts     — `pararSidecar({puerto?, maxMs?})`: `POST /quitquitquit` al agente de Istio con tope de `PARADA_SIDECAR_MAX_MS` (2 s); nunca rechaza
 │  ├─ lock.ts        — `borrarLockApagado()` (lo llama `Main` una vez por pod, antes de forkear) y el margen de endpoints: `MARGEN_ENDPOINTS_MS`, `calcularMargenPendiente()` (pura), `margenPendienteMs()` (mira el mtime del lock), `esperaMargenMs()` (lo que espera de verdad `antesDeCerrar`: descuenta el stat y deja `HOLGURA_PRESUPUESTO_MS` bajo el presupuesto)
 │  ├─ apagado.ts     — `atenderSenal()` / `instalarApagado()` (devuelve el desinstalador): SIGTERM/SIGINT de un proceso que no es el primario de un cluster (señal repetida → `128+n`; servidor HTTP; cronjob: en producción no sale, en desarrollo sí; sin HTTP)
 │  └─ apagado-unico.ts — `ApagadoUnico`: ejecuta el `shutdown()` del engine una sola vez; nunca rechaza
 ├─ heartbeat/
-│  ├─ interface.ts   — contrato único del mensaje (`IHeartbeat`, `TEstadoPod`, `TCausaDrenado`, ruta/método/cabecera); solo tipos y constantes, sin Node
+│  ├─ interface.ts   — contrato único del mensaje (`IHeartbeat`, `IHeartbeatEjecucion`, `TCargaPod`, `TEstadoPod`, `TCausaDrenado`, ruta/método/cabecera); solo tipos y constantes, sin Node
 │  ├─ estado.ts      — `calcularEstado`, `agregarEstados` (cluster); puras
 │  ├─ workers.ts     — `RegistroWorkers` (primario; `rss()` suma la de los workers vivos) + mensaje IPC `IMensajeHeartbeatWorker` (con `rss`) + `metricasConWorkers`
-│  ├─ config.ts      — `decidirHeartbeat` (cuándo emite y con qué), `construirUrl`, `tokenConFormato`
+│  ├─ config.ts      — `decidirHeartbeat` (cuándo emite y con qué: servicios, cronjobs y jobs de k8s; las cargas finitas solo en modo simple), `construirUrl`, `tokenConFormato`
+│  ├─ carga.ts       — cargas finitas (cronjob/job): `cargaDePod`, `esCargaFinita`, `leerEntornoCron` (`CRON_*`, `POD_JOB*`), `horaProgramadaDeJob`, `construirEjecucion`; puras
+│  ├─ finita.ts      — `terminarEjecucionFinita` (despedida → sidecar → salir con 0), `resultadoDeError` (solo `err.name`)
 │  ├─ metadatos.ts   — cluster/proyecto/ubicación del servidor de metadatos de GKE (+ `HEARTBEAT_*`); reintento con backoff en producción
 │  ├─ contexto.ts    — `resolverContexto`: `info` al resolver, `warning` y sin emitir si falla
 │  ├─ metricas.ts    — `MedidorMetricas` (RSS, retraso del event loop, uptime)
 │  ├─ payload.ts     — `construirContexto`, `construirHeartbeat`, `revisionDePod`; puras
-│  ├─ sonda.ts       — `Sonda`: estado de este proceso (started/ready/señal/preStop)
+│  ├─ sonda.ts       — `Sonda`: estado de este proceso (started/ready/señal/preStop); en modo `finita`, `listo` en cuanto hay engine
 │  ├─ vuelo.ts       — `UnSoloVuelo`: un envío en vuelo, gana la última petición
-│  ├─ emisor.ts      — `Heartbeat`: emisor por WebSocket (pod simple / primario de cluster) + despedida
+│  ├─ emisor.ts      — `Heartbeat`: emisor por WebSocket (pod simple / primario de cluster) + despedida (espera acotada al vuelo, `parado` construido una vez)
+│  ├─ despedida.ts   — `despedirConfirmado()`: la despedida con acuse y un reintento por un pool nuevo; pura (pools, reloj y fábrica inyectados), `IPoolHeartbeat`
+│  ├─ pool.ts        — `adaptarPool(WSPool)`: lo que el emisor usa de `WSPool`; `get()` distingue `ok:false` de los fallos
 │  ├─ informante.ts  — `InformanteWorker`: informe por IPC de un worker al primario (estado y RSS)
 │  ├─ registro.ts    — `heartbeatActual()` / `registrarHeartbeat()`, `IInstanciaHeartbeat`, `IServidorCierre`
 │  ├─ cierre-primario.ts — `cerrarPrimario`, `instalarCierrePrimario`: SIGTERM/SIGINT del primario de un cluster (con o sin heartbeat), `despedirAcotado`
-│  ├─ crear.ts       — `iniciarHeartbeat()`: lo que llama `Main` tras el sidecar
+│  ├─ crear.ts       — `iniciarHeartbeat()`: lo que llama `Main` al empezar `start()`, tras `crearPodInfo()` y antes de cargar la configuración y del sidecar
 │  └─ next/          — el heartbeat de un servicio Next.js (sin `Main` ni `Engine`), desde `instrumentation.ts`
 │     ├─ index.ts        — `iniciarHeartbeatNext()` (`@mr/core-workload/heartbeat/next`): síncrono, nunca lanza, con las dependencias reales
 │     ├─ iniciar-next.ts — `iniciarHeartbeatNextCon()` / `montarHeartbeatNext()`: guarda en `globalThis`, enlaza adaptador y cierre al emisor; deshabilitado no instala nada
@@ -70,7 +75,8 @@ Mapa tecnico del workspace `@mr/core/workload/`.
   - Metodos de ciclo de vida:
     - `checkSidecar()` — sondeo a `GET /healthz/ready`
     - `startSidecar(pod)` — reintentos progresivos hasta 10 × `intento×100ms`
-    - `stopSidecar({pod?})` — `POST /quitquitquit`; errores de red silenciados
+    - `stopSidecar({pod?})` — `pararSidecar()` (`engine/sidecar.ts`): `POST /quitquitquit`, como mucho 2 s, errores de red silenciados
+    - `pararSidecarSiFinita()` — en el `catch` de `ejecutar`, antes del `exit(1)`: para el sidecar si el manifiesto es de un cronjob/job que falló antes de declararse (solo el proceso del pod)
     - `addSlave()` — levanta un worker en modo cluster
     - `startMaster(configuracion, hilos)` — proceso primario en cluster
     - `startSlave(configuracion)` — proceso worker en cluster
@@ -78,7 +84,7 @@ Mapa tecnico del workspace `@mr/core/workload/`.
     - `workersParaCierre()` *(privado)* — los workers como los necesita `cierre-primario.ts`; `start()` instala ahí el manejador de señales del primario, con o sin heartbeat
     - `start()` instala `instalarApagado` (modo simple y workers) al inicio y guarda `engineActual` / `ejecucionFinitaPendiente` (cronjob/job con `master()`/`ejecutar()` en marcha, desde justo tras el `build`: en producción la señal no hace salir el proceso)
     - `addSlave()` además da de alta el worker en el `RegistroWorkers`, atiende `cmd: "heartbeat"` y lo da de baja al `exit`
-    - `start()` — tras el sidecar llama a `iniciarHeartbeat()` y, después de construir el engine, le pasa la instancia (`setEngine`) y marca `marcarEjecutado()` al resolver `ejecutar()`. Ciclo completo: guarda de Pub/Sub → load → sidecar → cluster/simple → cronjob cleanup. La guarda (`comprobarEmuladorPubSub`) aborta el arranque si un bundle de test/producción tiene `PUBSUB_EMULATOR_HOST`; si el proceso corre contra el emulador, `info("Pub/Sub: emulador <host> (<proyecto>)")` (solo el primario en cluster)
+    - `start()` — lee `crearPodInfo()` y llama a `iniciarHeartbeat()` **antes** de `configLoader.load()` y del sidecar (un proceso que muere ahí deja su `arrancando`) y, después de construir el engine, le pasa la instancia (`setEngine`) y marca `marcarEjecutado()` al resolver `ejecutar()`. Ciclo completo: guarda de Pub/Sub → heartbeat (`arrancando`) → load → sidecar → cluster/simple → cronjob cleanup. La guarda (`comprobarEmuladorPubSub`) aborta el arranque si un bundle de test/producción tiene `PUBSUB_EMULATOR_HOST`; si el proceso corre contra el emulador, `info("Pub/Sub: emulador <host> (<proyecto>)")` (solo el primario en cluster)
 
 ### `engine/index.ts`
 
@@ -252,6 +258,7 @@ Main.ejecutar(...)
   -> instancia Main(engine, configLoader, cfg)
   -> start()
      -> comprobarEmuladorPubSub(...) (lanza → catch de ejecutar: error + exit(1)); info si hay emulador
+     -> crearPodInfo() + iniciarHeartbeat(...) (si HEARTBEAT: `arrancando` ya sale; sin él no hace nada)
      -> this.configLoader.load() (single-shot)
      -> startSidecar(...)
       -> si minimo_hilos !== 1:
@@ -298,14 +305,17 @@ engine.initWebServer(handlers, net, config?)
 
 Ver el apartado «Heartbeat» del `README.md`. API pública:
 
-- `interface.ts` (importable como `@mr/core-workload/heartbeat/interface`): `IHeartbeat` (v1, con `revision`), `IHeartbeatProcesos`, `IHeartbeatMetricas`, `TEstadoPod`, `TCausaDrenado`, `RUTA_HEARTBEAT`, `METODO_HEARTBEAT`, `CABECERA_HEARTBEAT`.
+- `interface.ts` (importable como `@mr/core-workload/heartbeat/interface`): `IHeartbeat` (v1, con `revision`, `carga?` y `ejecucion?` para las cargas finitas: `TCargaPod`, `IHeartbeatEjecucion` —con `indice?` de un Job Indexed—, `TResultadoEjecucion`, `TConcurrenciaCron`), `IHeartbeatProcesos`, `IHeartbeatMetricas`, `TEstadoPod`, `TCausaDrenado`, `RUTA_HEARTBEAT`, `METODO_HEARTBEAT` (sin respuesta), `METODO_HEARTBEAT_CONFIRMADO` y `IConfirmacionHeartbeat` (la despedida, con respuesta), `CABECERA_HEARTBEAT`.
 - `estado.ts`: `calcularEstado(entrada)`, `agregarEstados(workers, ahora, {timeoutMs?, drenadoAntes?})` (sin workers y con `drenadoAntes` sigue `drenando`; un worker con `informado: false`, solo dado de alta, no caduca con el timeout y sigue `arrancando`), `causaMasFuerte`, `TIMEOUT_WORKER_MS`.
-- `config.ts`: `decidirHeartbeat({env, entorno, tipo, target})` → `TDecision` (en producción exige un token `hb1.<id>.<secreto>`; los `avisos` solo salen si está habilitado); `tokenConFormato(token)`; `construirUrl(base)`; `SOCKET_POR_DEFECTO`.
+- `config.ts`: `decidirHeartbeat({env, entorno, tipo, target, modo?})` → `TDecision` (emiten `service`, `cronjob` y `job` de k8s; las cargas finitas solo con `modo` `simple`; en producción exige un token `hb1.<id>.<secreto>`; los `avisos` solo salen si está habilitado); `tokenConFormato(token)`; `construirUrl(base)`; `SOCKET_POR_DEFECTO`.
 - `metadatos.ts`: `leerMetadatos({env, leer?, consultar?, reintentar?, esperar?, primeraEsperaMs?, maxEsperaMs?})` (con `reintentar` no resuelve hasta tener los tres), `interpretarRespuesta`, `resolverMetadatos`.
 - `contexto.ts`: `resolverContexto(metadatos, construir)`.
-- `payload.ts`: `construirContexto(...)`, `construirHeartbeat(contexto, foto)`, `revisionDePod({env, hostname, produccion, avisar?})` (manda vacía una `POD_REVISION` que no encaje con `^[a-z0-9]{1,16}$`).
+- `carga.ts`: `cargaDePod(tipo)`, `esCargaFinita(carga)`, `leerEntornoCron(env, {hostname})` → `IEntornoCron` (todo puede faltar; recorta a los máximos del contrato; `indice` sale de `JOB_COMPLETION_INDEX`, entero 0–65535 o `null`; con `indice` y sin `POD_JOB`, un hostname `<job>-<índice>` da el Job sin ese sufijo: `jobDeHostname()`), `horaProgramadaDeJob({job, cronjob, inicio, plazoInicioS, plazoEjecucionS})` (hora del nombre `<cronjob>-<minutos>` si es coherente con el arranque, o `null`), `construirEjecucion({env, hostname, carga, inicio})` → `IHeartbeatEjecucion` (en un `job`, `programada` siempre `null`; lleva `indice`).
+- `finita.ts`: `esperarPrimerEnvio(emisor|null, maxMs)` (antes del `exit(1)` de un arranque fallido: deja salir el primer latido, nunca rechaza; `Main.esperarPrimerEnvio` le pasa `PRIMER_ENVIO_ESPERA_MAX_MS`, 1 s, de `emisor.ts`; `Heartbeat.esperarPrimerEnvio(maxMs)` resuelve al terminar el primer envío —entregado o descartado— **y vaciar el buffer de salida del pool** (`pool.vaciar()`, el frame ya ha salido del proceso), o al agotarse el tope), `terminarEjecucionFinita({emisor|null, ejecucion, stopSidecar, salir})` (despedida, sidecar y `salir(0)`, en ese orden; `Main` lo usa por el camino normal y por el de un fallo), `resultadoDeError(err)` (`{resultado: "error", error: err.name}`, nunca el mensaje).
+- `payload.ts`: `construirContexto({…, carga?})` (en una carga finita: `revision` vacía y `carga` + `ejecucion` en el contexto; un servicio sale como siempre), `construirHeartbeat(contexto, foto)`, `revisionDePod({env, hostname, produccion, avisar?})` (manda vacía una `POD_REVISION` que no encaje con `^[a-z0-9]{1,16}$`).
 - `cierre-primario.ts`: `cerrarPrimario({senal, workers, emisor|null, salir?, esperaMs?, despedidaMs?, margen?})` (espera `margen + esperaMs`), `despedirAcotado(emisor|null, ms?)`, `instalarCierrePrimario({workers, emisor|null, salir?})` (devuelve el desinstalador; segunda señal → `128+n`), `ESPERA_WORKERS_MS` (19 s, derivado de las constantes de core-network), `DESPEDIDA_MAX_MS` (1 s).
-- `emisor.ts`: `class Heartbeat` (`iniciar`, `setEngine`, `marcarEjecutado`, `disparar`, `enlazarServidor`, `alIniciarCierre`, `despedir`). Entrega el primer estado (`arrancando`, `tseq` 0) antes que cualquier transición durante `PRIMER_ESTADO_MAX_MS` (25 s): si no se entrega, la foto actual espera al siguiente ciclo.
+- `emisor.ts`: `class Heartbeat` (`iniciar`, `setEngine`, `marcarEjecutado`, `disparar`, `enlazarServidor`, `alIniciarCierre`, `despedir(ejecucion?)`; con `finita` la despedida fuera de una señal espera al contexto hasta `PRESUPUESTO_DESPEDIDA_FINITA_MS`, 3 s; si hubo señal durante la ejecución el `parado` va con `resultado` `null` y causa `senal`: el receptor lo guarda como `cortada`) e `IResultadoDespedida`. Entrega el primer estado (`arrancando`, `tseq` 0) antes que cualquier transición durante `PRIMER_ESTADO_MAX_MS` (25 s): si no se entrega, la foto actual espera al siguiente ciclo.
+- `despedida.ts`: `despedirConfirmado({pool, abrirNuevo, mensaje, reloj, presupuestoMs?, intentoMs?, vaciarMs?})` → `{resultado: "confirmado"|"reserva"|"sin-confirmar", intentos, ms, motivo?}`, nunca rechaza; `motivo` es `intento 1: …; intento 2: …` y los timeouts dicen si había conexión (`IPoolHeartbeat.get(…, {alConectar})`, `IConfigGetPool`) o no llegó a haberla; `PRESUPUESTO_DESPEDIDA_MS` (900), `INTENTO_DESPEDIDA_MS` (300, solo el intento 1, por el pool del emisor, que tras un `Shutdown` suele ser ya una conexión nueva; la avalancha de reconexiones que lo atascaba la ataca el servidor WebSocket de core-network con su `Shutdown` escalonado, sin cambios aquí y sin usar `refillJitterMs`; el reintento usa el resto menos `MARGEN_RESERVA_MS` = 100); tipos `IPoolHeartbeat` (con `get`), `TRespuestaPool`, `IRelojDespedida`. `emisor.ts` añade `ESPERA_VUELO_MAX_MS` (100) y reexporta `IPoolHeartbeat`; `IConfigEmisor` gana `abrirNuevo` (obligatoria), `presupuestoDespedidaMs`, `esperaVueloMs`, `reloj`. `pool.ts`: `adaptarPool(pool)`.
 - `crear.ts`: `iniciarHeartbeat({pod, unix, modo})` → `{instancia, workers, emisor}` o `null` (`emisor` es `null` en un worker).
 - `next/index.ts` (importable como `@mr/core-workload/heartbeat/next`): `iniciarHeartbeatNext()`, sin parámetros, síncrono; ver «Servicios Next» del `README.md`. `next/iniciar-next.ts`: `iniciarHeartbeatNextCon(deps)` y `montarHeartbeatNext(deps)` (dependencias inyectables: `crearPod`, `iniciar`, `adaptador`, `proceso`, `almacen`, `unix`), `CLAVE_HEARTBEAT_NEXT`. `next/sonda-next.ts`: `class AdaptadorNext` (`started`, `ready` —sondea cada `INTERVALO_AUTOSONDEO_MS` (5 s), devuelve el último resultado entre sondeos y rechaza tras `PLAZO_NO_LISTO_MS` (10 s) sin éxito—, `preStopSolicitado`, `vigilarLock(disparar)`, `detener`), `consultarHttp(url, ms)`, `respuestaBuena(codigo)`. `next/cierre-next.ts`: `class ServidorCierreNext implements IServidorCierre` (`instalar`, `desinstalar`), `IProcesoCierre`. **Solo de servidor.**
 - `registro.ts`: `heartbeatActual()`; `IInstanciaHeartbeat`, `IServidorCierre`.

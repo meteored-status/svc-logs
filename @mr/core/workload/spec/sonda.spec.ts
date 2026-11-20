@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Mon, 16 Nov 2026 12:17:13 GMT
- * Hash: b74a29581ded8702875883cc39232c72
- * Versión: 2026.11.16+1-bixus
- * Anterior: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: bd535f9608b67c3905b813ecd66d889f
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.16+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -84,6 +84,30 @@ describe("Sonda", () => {
         const otra = new Sonda();
         otra.setConsultaCierre(() => true);
         assert.deepEqual(await otra.evaluar(), {estado: "drenando", causaDrenado: "senal"});
+    });
+});
+
+describe("Sonda de una carga finita", () => {
+    it("sin engine es arrancando; con engine está listo (en curso) sin esperar a ejecutar() ni llamar a started()/ready()", async () => {
+        let llamadas = 0;
+        const sonda = new Sonda({finita: true});
+        assert.equal((await sonda.evaluar()).estado, "arrancando");
+        sonda.setEngine({started: async () => { llamadas++; throw new Error("no"); }, ready: async () => { llamadas++; throw new Error("no"); }});
+        assert.deepEqual(await sonda.evaluar(), {estado: "listo", causaDrenado: null});
+        assert.equal(llamadas, 0);
+    });
+
+    it("la señal sigue dando drenando", async () => {
+        const sonda = new Sonda({finita: true});
+        sonda.setEngine({});
+        sonda.marcarSenal();
+        assert.deepEqual(await sonda.evaluar(), {estado: "drenando", causaDrenado: "senal"});
+    });
+
+    it("un servicio no cambia: con engine pero sin ejecutar sigue arrancando", async () => {
+        const sonda = new Sonda();
+        sonda.setEngine({});
+        assert.equal((await sonda.evaluar()).estado, "arrancando");
     });
 });
 

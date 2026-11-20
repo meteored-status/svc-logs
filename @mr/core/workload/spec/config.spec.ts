@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 5328aeb707cc58589b0e34bbd64eb98c
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: 5d375732e42233e2db6adecc393a76cc
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -39,14 +40,50 @@ describe("decidirHeartbeat", () => {
         assert.equal(d.config.token, TOKEN);
     });
 
-    it("cronjob, job, worker o lambda no emiten, y sin avisar (es lo normal)", () => {
-        for (const tipo of ["cronjob", "job", "worker", "browser"]) {
+    it("worker, browser o lambda no emiten, y sin avisar (es lo normal)", () => {
+        for (const tipo of ["worker", "browser"]) {
             const d = decidirHeartbeat(entrada({HEARTBEAT: "true", HEARTBEAT_TOKEN: TOKEN}, {tipo}));
             assert.equal(d.habilitado, false);
             assert.equal(!d.habilitado && d.avisar, false);
         }
         const lambda = decidirHeartbeat(entrada({HEARTBEAT: "true", HEARTBEAT_TOKEN: TOKEN}, {target: "lambda"}));
         assert.equal(lambda.habilitado, false);
+        for (const tipo of ["cronjob", "job"]) {
+            const d = decidirHeartbeat(entrada({HEARTBEAT: "true", HEARTBEAT_TOKEN: TOKEN}, {tipo, target: "lambda"}));
+            assert.equal(d.habilitado, false, `${tipo} en lambda no emite`);
+        }
+    });
+
+    it("un cronjob y un job de k8s emiten con HEARTBEAT=true y token, con la misma configuración que un servicio", () => {
+        const servicio = decidirHeartbeat(entrada({HEARTBEAT: "true", HEARTBEAT_TOKEN: TOKEN}));
+        for (const tipo of ["cronjob", "job"]) {
+            const d = decidirHeartbeat(entrada({HEARTBEAT: "true", HEARTBEAT_TOKEN: TOKEN}, {tipo}));
+            assert.ok(d.habilitado, tipo);
+            assert.deepEqual(d, servicio, tipo);
+        }
+    });
+
+    it("un cronjob o un job sin HEARTBEAT=true no emiten, y sin avisar", () => {
+        for (const tipo of ["cronjob", "job"]) {
+            const d = decidirHeartbeat(entrada({HEARTBEAT_TOKEN: TOKEN}, {tipo}));
+            assert.equal(d.habilitado, false, tipo);
+            assert.equal(!d.habilitado && d.avisar, false, tipo);
+        }
+    });
+
+    it("las cargas finitas solo emiten en modo simple; un servicio emite también en primario y en worker", () => {
+        const env = {HEARTBEAT: "true", HEARTBEAT_TOKEN: TOKEN};
+        for (const tipo of ["cronjob", "job"]) {
+            assert.ok(decidirHeartbeat({...entrada(env, {tipo}), modo: "simple"}).habilitado, tipo);
+            for (const modo of ["primario", "worker"] as const) {
+                const d = decidirHeartbeat({...entrada(env, {tipo}), modo});
+                assert.equal(d.habilitado, false, `${tipo} ${modo}`);
+                assert.equal(!d.habilitado && d.avisar, false, `${tipo} ${modo}`);
+            }
+        }
+        for (const modo of ["simple", "primario", "worker"] as const) {
+            assert.ok(decidirHeartbeat({...entrada(env), modo}).habilitado, modo);
+        }
     });
 
     it("sin HEARTBEAT=true no emite, y sin avisar", () => {
@@ -119,9 +156,9 @@ describe("decidirHeartbeat", () => {
 });
 
 describe("ENTORNO incoherente solo avisa si el heartbeat está habilitado", () => {
-    it("un cronjob o un servicio sin HEARTBEAT=true no da el aviso", () => {
+    it("un worker, un lambda o un servicio sin HEARTBEAT=true no dan el aviso", () => {
         const incoherente = {HEARTBEAT: "true", HEARTBEAT_TOKEN: TOKEN, ENTORNO: "desarrollo"};
-        assert.equal(decidirHeartbeat(entrada(incoherente, {tipo: "cronjob"})).avisos.length, 0);
+        assert.equal(decidirHeartbeat(entrada(incoherente, {tipo: "worker"})).avisos.length, 0);
         assert.equal(decidirHeartbeat(entrada(incoherente, {target: "lambda"})).avisos.length, 0);
         assert.equal(decidirHeartbeat(entrada({...incoherente, HEARTBEAT: "false"})).avisos.length, 0);
         assert.equal(decidirHeartbeat(entrada(incoherente)).avisos.length, 1);

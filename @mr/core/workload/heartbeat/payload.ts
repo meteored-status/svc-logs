@@ -1,14 +1,16 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 80a310bceb639635209731818ab8fb4a
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: 88eeb9961dc3947bccc036c34a0a9dab
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import type {EEntorno} from "@mr/core-log/interface";
 
-import type {IHeartbeat, IHeartbeatMetricas, IHeartbeatProcesos, TCausaDrenado, TEstadoPod} from "./interface";
+import {construirEjecucion, esCargaFinita} from "./carga";
+import type {IHeartbeat, IHeartbeatMetricas, IHeartbeatProcesos, TCargaPod, TCausaDrenado, TEstadoPod} from "./interface";
 import type {IMetadatosPod} from "./metadatos";
 
 /**
@@ -64,6 +66,8 @@ export interface IPodContexto {
  * @property hostname - `os.hostname()`.
  * @property metadatos - Cluster, proyecto y ubicación.
  * @property inicio - Epoch ms del arranque del proceso.
+ * @property carga - Carga del pod (`cargaDePod(pod.tipo)`). Ausente es `service`: el contexto sale como siempre. En una carga finita la
+ *   `revision` es `''` (el nombre del Job lleva la hora programada, no un hash de revisión) y el contexto lleva `carga` y `ejecucion`.
  * @property avisar - Cómo dejar un aviso (se llama como mucho una vez por contexto, que se construye una sola vez por pod).
  */
 export interface IConfigContexto {
@@ -75,6 +79,7 @@ export interface IConfigContexto {
     metadatos: IMetadatosPod;
     inicio: number;
     produccion: boolean;
+    carga?: TCargaPod;
     avisar?: (mensaje: string) => void;
 }
 
@@ -144,7 +149,9 @@ export function revisionDePod({env, hostname, produccion, avisar}: IConfigRevisi
  * `<hostname>/<servicio>` fuera, porque fuera `pod.host` vale el nombre del servicio y varios servicios de
  * la misma máquina darían el mismo.
  */
-export function construirContexto({pod, entorno, env, servicio, hostname, metadatos, inicio, produccion, avisar}: IConfigContexto): IContextoHeartbeat {
+export function construirContexto({pod, entorno, env, servicio, hostname, metadatos, inicio, produccion, carga = "service", avisar}: IConfigContexto): IContextoHeartbeat {
+    const finita = esCargaFinita(carga);
+
     return {
         entorno,
         proyectoGcp: metadatos.proyecto.valor,
@@ -157,8 +164,9 @@ export function construirContexto({pod, entorno, env, servicio, hostname, metada
         producto: env["POD_PRODUCTO"] ?? "",
         departamento: env["POD_DPTO"] ?? "",
         version: pod.version,
-        revision: revisionDePod({env, hostname, produccion, avisar}),
+        revision: finita ? "" : revisionDePod({env, hostname, produccion, avisar}),
         inicio,
+        ...(finita ? {carga, ejecucion: construirEjecucion({env, hostname, carga, inicio})} : {}),
     };
 }
 

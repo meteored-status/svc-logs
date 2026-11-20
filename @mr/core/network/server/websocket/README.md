@@ -28,6 +28,7 @@ Para la documentación del cliente (`WSPool`, `Result`, circuit breaker, reconex
 
 ```
 server/websocket/
+├── escalonado.ts   # Funciones puras: ventana y retrasos del Shutdown del apagado, vida con jitter
 ├── handler.ts      # Interfaz IWSHandler y clase auxiliar WSHandler
 └── index.ts        # Servidor WebSocket (singleton) + EWSControlMessage
 
@@ -148,7 +149,28 @@ process.on("SIGTERM", async () => {
 await ws.shutdown(10_000); // máximo 10 s antes de forzar cierre
 ```
 
-El método: (1) deja de aceptar nuevas conexiones; (2) envía `"Shutdown"` a todos los clientes activos; (3) espera a que cierren limpiamente; (4) fuerza el cierre de los que no respondan; (5) elimina el singleton.
+El método: (1) deja de aceptar nuevas conexiones; (2) envía `"Shutdown"` a los clientes activos (**repartido en el tiempo si son 50 o más**, ver más abajo); (3) espera a que cierren limpiamente; (4) fuerza el cierre de los que no respondan; (5) elimina el singleton.
+
+#### Shutdown escalonado
+
+Un cliente reconecta en cuanto recibe `"Shutdown"`. Si una réplica con cientos de clientes los avisa a todos a la vez, todos
+llegan a la vez a las réplicas que quedan: medido en producción (status-external, 2026-11-18), 160–284 upgrades por segundo
+contra un superviviente que se ha visto aguantar unos 50/s y atascarse 3–4 s con 160–284/s. Los clientes de otros monorepos no se pueden
+tocar, así que el servidor reparte lo único que controla: cuándo les dice que se vayan.
+
+- **Menos de 50 clientes abiertos:** todos a la vez, como siempre (servidores pequeños, pruebas, paneles del navegador).
+- **En Cloud Run (`K_SERVICE` definida):** nunca se escalona, todos a la vez como hoy. Su gracia es de 10 s, no cabe una ventana de hasta 10 s y no se sabe cuántos servidores WS hay en lambdas.
+- **50 o más:** los clientes se barajan y se avisan **equiespaciados** en una ventana de `clientes / 40` segundos (≈ 40 clientes por
+  segundo), con tope de 10 s y nunca más de `timeoutMs − 5 s − 1 s` (así el último, que tiene 5 s para cerrar, acaba antes de
+  que el apagado fuerce el cierre). Con el `shutdownTimeout` de producción (18 s) manda el tope de 10 s; con el de desarrollo
+  (2 s) o el de las pruebas la ventana es 0.
+- Una línea `info` al empezar (`Servidor WebSocket: Shutdown escalonado a N clientes en W ms`); con menos de 50 no hay línea.
+- **Efecto:** el apagado de un servidor con 50 clientes o más **tarda hasta 10 s más** (siempre dentro de `shutdownTimeout`). Mientras
+  dura la ventana el servidor sigue atendiendo a los clientes que aún no han recibido el aviso.
+- **`Alive` hasta el final:** cada cliente sigue recibiendo sus `"Alive"` hasta justo antes de su `"Shutdown"` (el intervalo de
+  liveness se borra por cliente, no al empezar el apagado), así que la ventana no afecta al `heartbeatTimeoutMs` de ningún cliente.
+- El `info` de inicio incluye el ritmo efectivo (clientes/s): con más de 400 clientes la ventana topa en 10 s y deja de ser 40/s.
+- Las funciones (`ventanaApagadoMs`, `retrasosApagado`, `vidaConexionMs` y sus constantes) son puras y están en `escalonado.ts`.
 
 `Server.close()` del servidor HTTP lo llama por su cuenta (`servidorWebSocketActual()`, que devuelve el singleton sin crearlo) al cerrar por señal, en paralelo al cierre del servidor HTTP: no hace falta llamarlo desde el servicio.
 
@@ -294,8 +316,13 @@ El servidor envía automáticamente mensajes de control sin `id` (definidos en e
 | Valor del enum             | Valor en JSON  | Cuándo se envía |
 |----------------------------|----------------|-----------------|
 | `EWSControlMessage.Ready`    | `"Ready"`    | Al establecer la conexión. |
-| `EWSControlMessage.Alive`    | `"Alive"`    | Cada 10 s mientras la conexión lleve menos de 9 min activa. |
-| `EWSControlMessage.Shutdown` | `"Shutdown"` | Cuando la conexión supera los 9 min; da 5 s al cliente para cerrar limpiamente. |
+| `EWSControlMessage.Alive`    | `"Alive"`    | Cada 10 s mientras la conexión no haya superado su vida. |
+| `EWSControlMessage.Shutdown` | `"Shutdown"` | Cuando la conexión supera su vida, o en el apagado del servidor (ver «Shutdown escalonado»); da 5 s al cliente para cerrar limpiamente. |
+
+**La vida de una conexión es de 7 a 9 min**: 540 s menos un jitter aleatorio de hasta 120 s, fijado al conectar. Como la edad solo
+se mira en el intervalo de `"Alive"` (10 s), la vida real se redondea hacia arriba a múltiplos de 10 s: 12 escalones, de 430 a 540 s. Antes eran 540 s
+exactos para todas, así que una cohorte de conexiones abiertas en la misma ráfaga (tras una reconexión masiva) se reciclaba
+entera a la vez, y esa avalancha se repetía cada 9 min. El jitter va solo hacia abajo: no se supera nunca los 540 s.
 
 El cliente puede importar el enum para comparar mensajes de control recibidos:
 

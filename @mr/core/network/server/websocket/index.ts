@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 8e883108189f7fd523eb1aab098d2c7b
- * Versión: 2026.11.13+1-bixus
- * Anterior: 2026.9.23+1-bixus
+ * Fecha: Wed, 18 Nov 2026 15:20:23 GMT
+ * Hash: a11e2d1f4d1608a718cdd45297d9a640
+ * Versión: 2026.11.18+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -12,10 +12,11 @@ import {formats} from "dd-trace/ext";
 import type {IncomingMessage, Server} from "node:http";
 import {type RawData, WebSocketServer, type WebSocket as WS} from "ws";
 
-import {warning} from "services-comun/modules/utiles/log";
+import {info, warning} from "services-comun/modules/utiles/log";
 import {Deferred, PromiseTimeout, PromiseTimeoutError} from "services-comun/modules/utiles/promise";
 
 import type {IMessageClient, IMessageServerKO, IMessageServerOK} from "../../metadata/websocket/message";
+import {ESPERA_CIERRE_MS, retrasosApagado, ventanaApagadoMs, vidaConexionMs} from "./escalonado";
 import {type IWSHandler, normalizarRuta, WSHandler} from "./handler";
 
 /**
@@ -33,7 +34,11 @@ export const enum EWSControlMessage {
 
 /**
  * Representa el estado interno de un cliente WebSocket conectado.
- * @property timestamp - Marca de tiempo (ms desde epoch) del último mensaje recibido del cliente.
+ * @property timestamp - Marca de tiempo (ms desde epoch) en la que se estableció la conexión (no la del último
+ *   mensaje recibido): de ella cuenta la vida de la conexión.
+ * @property vidaMs - Vida (ms) de esta conexión antes de reciclarla con `Shutdown`: `MAX_LIVENESS_MS` (`escalonado.ts`) menos un
+ *   jitter de hasta `LIVENESS_JITTER_MS`, fijado al conectar para que las conexiones abiertas en la misma
+ *   ráfaga no se reciclen todas a la vez.
  * @property timer - Referencia al intervalo/timeout de liveness activo para este cliente.
  * @property client - Socket WebSocket asociado al cliente.
  * @property pendingBuffer - Promesa diferida que se resuelve cuando llega el fragmento binario
@@ -50,6 +55,7 @@ export const enum EWSControlMessage {
  */
 interface IClientMap {
     timestamp: number;
+    vidaMs: number;
     timer?: NodeJS.Timeout;
     client: WS;
     pendingBuffer?: Deferred<ArrayBuffer|undefined>;
@@ -67,7 +73,8 @@ interface IClientMap {
  * ### Ciclo de vida de una conexión
  * 1. Al conectar, el servidor envía un mensaje `"Ready"`.
  * 2. Cada {@link INTERVAL_ALIVE_MS} ms se envía un ping `"Alive"` mientras la
- *    conexión no supere {@link MAX_LIVENESS_MS}.
+ *    conexión no supere su vida (`MAX_LIVENESS_MS` (`escalonado.ts`) menos un jitter por conexión de hasta
+ *    `LIVENESS_JITTER_MS`: entre 420 y 540 s).
  * 3. Cuando se alcanza el límite de tiempo, se notifica al cliente con `"Shutdown"`
  *    y se cierra limpiamente tras {@link MAX_SHUTDOWN_MS}.
  *
@@ -82,11 +89,8 @@ class WebSocket {
     /** Intervalo entre envíos de ping de liveness (ms). */
     private static readonly INTERVAL_ALIVE_MS = 10000;
 
-    /** Tiempo máximo de vida de una conexión antes de iniciar el shutdown (ms). */
-    private static readonly MAX_LIVENESS_MS = 540000;
-
     /** Tiempo de espera para que el cliente cierre limpiamente tras recibir el shutdown (ms). */
-    private static readonly MAX_SHUTDOWN_MS = 5000;
+    private static readonly MAX_SHUTDOWN_MS = ESPERA_CIERRE_MS;
 
     /**
      * Número máximo de handlers simultáneos permitidos por conexión.
@@ -191,12 +195,13 @@ class WebSocket {
 
             const cliente = {
                 timestamp: Date.now(),
+                vidaMs: vidaConexionMs(Math.random),
                 traceContext: tracer.scope().active(),
                 ruta: this.rutaReservada(req),
                 request: req,
                 activeRequests: 0,
                 timer: setInterval(()=>{
-                    if ((Date.now()-cliente.timestamp)<WebSocket.MAX_LIVENESS_MS) {
+                    if ((Date.now()-cliente.timestamp)<cliente.vidaMs) {
                         cliente.client.send(WebSocket.MESSAGE_LIVENESS);
                     } else {
                         cliente.client.send(WebSocket.MESSAGE_SHUTDOWN);
@@ -462,10 +467,15 @@ class WebSocket {
      * Inicia el apagado graceful del servidor WebSocket.
      *
      * 1. Deja de aceptar nuevas conexiones.
-     * 2. Envía `"Shutdown"` a todos los clientes activos y les da {@link MAX_SHUTDOWN_MS}
-     *    para cerrar limpiamente.
+     * 2. Envía `"Shutdown"` a los clientes activos y les da {@link MAX_SHUTDOWN_MS}
+     *    para cerrar limpiamente. **Con 50 clientes o más el envío se reparte** en una ventana de hasta
+     *    10 s (ver {@link ventanaApagadoMs}): los clientes reconectan en cuanto lo reciben, y todos a la vez
+     *    saturan a las réplicas que quedan. Con menos de 50, en Cloud Run (`K_SERVICE` definida) o con un
+     *    `timeoutMs` que no deja sitio, se envía a todos a la vez. Cada cliente sigue recibiendo sus `Alive`
+     *    hasta el momento de su `Shutdown`.
      * 3. Espera hasta `timeoutMs` ms a que todos los clientes se desconecten.
-     *    Si el tiempo se agota, fuerza el cierre con `terminate()`.
+     *    Si el tiempo se agota, fuerza el cierre con `terminate()`. La ventana siempre deja sitio al cierre del
+     *    último cliente: nunca pasa de `timeoutMs` - 5 s - 1 s.
      * 4. Elimina la instancia singleton para que una llamada posterior a `createWSServer()`
      *    pueda arrancar un servidor nuevo.
      *
@@ -478,13 +488,25 @@ class WebSocket {
         // Dejar de aceptar nuevas conexiones HTTP upgrade
         this.server.close();
 
-        // Notificar a todos los clientes y programar cierre forzado si no responden
-        for (const [ws, cliente] of this.clientes) {
-            if (cliente.timer) {
-                clearInterval(cliente.timer);
-                delete cliente.timer;
-            }
-            if (ws.readyState === ws.OPEN) {
+        // Notificar a los clientes abiertos (repartido si son muchos) y programar el cierre forzoso si no responden
+        const abiertos = [...this.clientes.keys()].filter(ws => ws.readyState === ws.OPEN);
+        const ventanaMs = ventanaApagadoMs({clientes: abiertos.length, timeoutMs, cloudRun: process.env["K_SERVICE"] !== undefined});
+        if (ventanaMs > 0) {
+            const ritmo = Math.round(abiertos.length / (ventanaMs / 1000));
+            info(`Servidor WebSocket: Shutdown escalonado a ${abiertos.length} clientes en ${ventanaMs} ms (${ritmo} clientes/s)`);
+        }
+        const retrasos = retrasosApagado({clientes: abiertos.length, ventanaMs, aleatorio: Math.random});
+        abiertos.forEach((ws, i) => {
+            const despedir = (): void => {
+                // Su liveness se detiene justo antes de su Shutdown, no al empezar el apagado: hasta entonces sigue recibiendo `Alive`
+                const cliente = this.clientes.get(ws);
+                if (cliente?.timer) {
+                    clearInterval(cliente.timer);
+                    delete cliente.timer;
+                }
+                if (ws.readyState !== ws.OPEN) {
+                    return;
+                }
                 try {
                     ws.send(WebSocket.MESSAGE_SHUTDOWN);
                 } catch {
@@ -495,8 +517,13 @@ class WebSocket {
                         ws.close(1001, "Server shutdown");
                     }
                 }, WebSocket.MAX_SHUTDOWN_MS).unref();
+            };
+            if (retrasos[i] > 0) {
+                setTimeout(despedir, retrasos[i]).unref();
+            } else {
+                despedir();
             }
-        }
+        });
 
         // Sin clientes activos: limpiar y resolver
         if (this.clientes.size === 0) {

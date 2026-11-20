@@ -71,7 +71,28 @@ solo reintenta cada 60 s.
 | `pool.head(method, params?)` | `Promise<void>` | Fire-and-forget: envía sin esperar respuesta. |
 | `pool.getCircuitState()` | `CircuitState` | Estado actual del circuit breaker (`"closed"`, `"open"`, `"half-open"`). |
 | `pool.vaciar({timeoutMs?})` | `Promise<void>` | Espera a que todas las conexiones abiertas tengan `bufferedAmount === 0` (lo enviado con `head()` ya salió del proceso) o a que venza `timeoutMs` (1000 por defecto). **Nunca rechaza.** Pensado para una despedida justo antes de salir. |
-| `pool.destroy(code?, reason?)` | `void` | Cierra todas las conexiones y elimina el singleton. Tras `destroy()` el pool no repone conexiones (antes, el cierre de las suyas disparaba la reposición y quedaban sockets abiertos que mantenían vivo el proceso). |
+| `pool.destroy(code?, reason?)` | `void` | Cierra todas las conexiones y elimina el singleton. **No deja sockets abiertos**: cancela la reposición programada, un handshake que termine después se cierra al abrirse, el pool no abre más conexiones (ni bajo demanda: `get()`/`head()` rechazan) y el bucle de reconexión de un `get()` en curso lanza en vez de reintentar. |
+
+### Reposición tras perder una conexión
+
+Cuando se pierde una conexión (`Shutdown` del servidor, cierre, error o timeout de heartbeat) el pool la repone **en segundo plano
+con un retraso aleatorio de 0 a `refillJitterMs`** (3000 ms por defecto; con 0 se repone en el acto, como antes). Es para
+repartir las reconexiones cuando un servidor se apaga y todos sus clientes pierden la conexión a la vez.
+
+```ts
+const pool = WSPool.get({socket: "ws://servicio:8080", refillJitterMs: 5000});
+```
+
+- **Ninguna petición espera al jitter.** Si hace falta una conexión y no hay ninguna libre, `getConnection()` la abre al momento.
+  Por eso un emisor que escribe a menudo (el heartbeat de pods, uno por segundo) apenas se reparte: reabre bajo demanda en su
+  siguiente envío. El jitter reparte a los pools que están en reposo.
+- **Un solo temporizador a la vez**, y al vencer se recalcula lo que falta: una conexión abierta bajo demanda entretanto cuenta, y
+  no se abre otra. Las conexiones **con el handshake en vuelo también cuentan** (`pendingConnections`); antes, dos reposiciones
+  seguidas o una reposición y una apertura bajo demanda abrían cada una la suya y el pool acababa con sockets de más.
+- No afecta al llenado inicial del constructor, que sigue siendo inmediato, ni al relleno periódico de 60 s.
+- No cambia el circuit breaker (las reposiciones en segundo plano no lo alimentan, ni antes ni ahora), el backoff de `stream()` ni
+  el tratamiento de los streams en curso.
+- No forma parte de la clave del singleton (como `headers`): se aplica la del primer `get()` de ese endpoint.
 
 ### Cuántas conexiones abre
 
