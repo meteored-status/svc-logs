@@ -207,7 +207,7 @@ Parsers disponibles: `respuesta` (IRespuesta), `json`, `text`, `buffer`, `arrayB
 
 | Fichero | Símbolos exportados |
 |---------|---------------------|
-| `client/websocket/index.ts` | `WSPool` |
+| `client/websocket/index.ts` | `WSPool`, `retardoReposicionMs()` |
 | `client/websocket/result.ts` | `Result`, `WSConnectionError` |
 | `client/websocket/error.ts` | (re-exportado desde `result.ts`) |
 
@@ -225,8 +225,16 @@ WSPool                                    (singleton por socket+reconnect)
   get(method, params?, buffer?)     → Promise<Result>      — streaming con respuesta
   getCircuitState()                 → CircuitState
   vaciar({timeoutMs?})              → Promise<void>        — espera bufferedAmount===0 o timeout; nunca rechaza
-  destroy(code?, reason?)           → void                 — sin reposición posterior
+  destroy(code?, reason?)           → void                 — sin sockets posteriores: cancela la reposición, cierra los handshakes en vuelo, no abre más
+retardoReposicionMs(jitterMs, aleatorio) → number          — pura: retraso aleatorio en [0, jitterMs)
 ```
+
+**Reposición:** al perder una conexión, `deleteConnection()` llama a `programarReposicion()`: un único temporizador (`unref`) con
+retraso aleatorio de hasta `refillJitterMs` (3000 por defecto; 0 = en el acto). Al vencer, `refillConnections()` abre solo el
+`deficit()` = `minConnections − (connections + pendingConnections)`. `pendingConnections` cuenta los handshakes en vuelo
+(`addConnection()` los suma y los resta una sola vez al abrir, fallar o vencer). La apertura bajo demanda no espera nunca.
+`addConnection()` rechaza con el pool destruido; un handshake que abre después de `destroy()` o del timeout se cierra.
+`stream()` lanza `WSConnectionError` si el pool se destruye durante la reconexión.
 
 **Conexiones:** `minConnections` es cuántas se mantienen calientes, **no un tope**. `getConnection()` es
 `available.pop() ?? addConnection()`, así que el número real lo marca la concurrencia de peticiones en
@@ -253,6 +261,7 @@ IWSPoolConfig
   reconnect?: boolean            — true por defecto
   requestTimeoutMs?: number      — 30 000 ms por defecto
   heartbeatTimeoutMs?: number    — 45 000 ms por defecto
+  refillJitterMs?: number        — 3 000 ms por defecto; retraso máximo de la reposición en segundo plano (0 = inmediata)
   headers?: Record<string,string> — cabeceras del handshake (solo Node); no entran en la clave del singleton;
                                     si se pide un pool existente con otras, `warning` una vez
 ```
@@ -470,6 +479,7 @@ type TDevice = "pc" | "mv"
 | Fichero | Símbolos exportados |
 |---------|---------------------|
 | `server/websocket/index.ts` | `WebSocket` (clase, default export singleton), `EWSControlMessage` |
+| `server/websocket/escalonado.ts` | `ventanaApagadoMs()`, `retrasosApagado()`, `vidaConexionMs()` y sus constantes (módulo puro, sin imports) |
 | `server/websocket/handler.ts` | `WSHandler`, `IWSHandler`, `IWSHandlerConfig`, `normalizarRuta()` |
 
 ### Símbolos
@@ -481,17 +491,24 @@ Gestiona el ciclo de vida de todas las conexiones WebSocket sobre el servidor HT
 WebSocket
   constructor(http: Server, handlers: IWSHandler[])
   addHandlers(handlers: IWSHandler[])    — registra handlers adicionales en caliente
-  shutdown(timeoutMs)   → Promise<void>  — drena conexiones activas, rechaza nuevas
+  shutdown(timeoutMs)   → Promise<void>  — drena conexiones activas, rechaza nuevas; con ≥50 clientes reparte el Shutdown (hasta 10 s)
 
 servidorWebSocketActual() → WebSocket|undefined  — el singleton, sin crearlo (lo usa Server.close())
 ```
 
 **Constantes de ciclo de vida:**
 - `INTERVAL_ALIVE_MS = 10 000` — ping periódico (`"Alive"`)
-- `MAX_LIVENESS_MS = 540 000` — vida máxima de una conexión antes de `"Shutdown"`
-- `MAX_SHUTDOWN_MS = 5 000` — espera al cierre limpio del cliente
+- `MAX_LIVENESS_MS = 540 000` — vida máxima de una conexión antes de `"Shutdown"`; cada conexión recibe al conectar `vidaMs` = 540 000 − aleatorio·`LIVENESS_JITTER_MS` (120 000): de 420 a 540 s, solo hacia abajo (la vida real va en escalones de 10 s, de 430 a 540, porque la edad se mira en el intervalo de `Alive`)
+- `MAX_SHUTDOWN_MS = 5 000` — espera al cierre limpio del cliente (`ESPERA_CIERRE_MS` en `escalonado.ts`)
 - `MAX_CONCURRENT_REQUESTS = 10` — límite de handlers en vuelo por conexión
 - `HANDLER_TIMEOUT_MS = 30 000` — timeout por handler
+
+**Shutdown escalonado (`escalonado.ts`):** `shutdown(timeoutMs)` baraja los clientes abiertos y manda el `Shutdown` equiespaciado en
+`ventanaApagadoMs({clientes, timeoutMs, cloudRun?})` = 0 si `cloudRun` (`shutdown()` pasa `process.env["K_SERVICE"] !== undefined`: en Cloud Run no se escalona) o `clientes < 50` (`UMBRAL_ESCALONADO`); si no,
+`min(10 000 (VENTANA_MAX_MS), clientes / 40 (RITMO_APAGADO_POR_S) · 1000, timeoutMs − 5000 − 1000 (MARGEN_APAGADO_MS))`, nunca negativa.
+`retrasosApagado({clientes, ventanaMs, aleatorio})` da el retraso de cada cliente (equiespaciado y barajado). Cada cliente se
+cierra con 1001 a `retraso + 5 s`. Un `info` con nº de clientes, ventana y ritmo efectivo (clientes/s) si la ventana > 0. El
+liveness (`Alive`) de cada cliente se borra justo antes de su `Shutdown`, no al empezar el apagado.
 
 **Mensajes de control** (`EWSControlMessage`): `Ready` | `Alive` | `Shutdown`.
 
@@ -627,8 +644,11 @@ El protocolo (`metadata/websocket`) es el único punto de acoplamiento entre amb
 | Fichero | Qué cubre |
 |---------|-----------|
 | `spec/websocket-ruta.spec.ts` | `IWSHandler.ruta`/`autorizar`: 401 en el handshake, aislamiento entre rutas, normalización, circuit breaker ante un 401, `destroy()` |
+| `spec/websocket-reposicion.spec.ts` | `WSPool`: `retardoReposicionMs`, reposición inmediata con jitter 0, con jitter largo solo bajo demanda y sin duplicar, handshakes en vuelo contados, `destroy()` (reposición programada, handshake en vuelo, `get()` en reconexión) |
 | `spec/websocket-cliente.spec.ts` | `WSPool.vaciar()` y el aviso por cabeceras distintas sobre un singleton existente |
 | `spec/servidor-cierre.spec.ts` | `Server.alIniciarCierre`/`antesDeCerrar`/`duranteCierre`/`antesDeSalir`/`cerrarYSalir`: orden, `isShuttingDown()` desde el inicio, topes y plazo |
 | `spec/net-shutdown.spec.ts` | `shutdownTimeout` acotado a 18 s en producción (25 000 → 18 000, 0 → 18 000, 10 000 se respeta; desarrollo no se toca), el texto de `avisoShutdownTimeout()` y que `config/net.ts` no importa nada de `services-comun` |
 | `spec/servidor-cierre-conexiones.spec.ts` | `Server.close()` con un WebSocket abierto, una keep-alive ociosa y otra con petición en vuelo: resuelve mucho antes del timeout y `antesDeSalir` se ejecuta |
+| `spec/websocket-escalonado.spec.ts` | Puras del servidor: `ventanaApagadoMs` (umbral, ritmo, tope, cota por `timeoutMs`), `retrasosApagado`, `vidaConexionMs` |
+| `spec/websocket-apagado-escalonado.spec.ts` | `shutdown()` con un servidor real: con 60 clientes el `Shutdown` llega repartido y acaba antes de `timeoutMs`; con 10, a la vez |
 | `spec/helpers.ts`, `spec/stubs/*` | servidor local en el puerto 0; réplicas de `services-comun` (`instalar.ts` redirige los especificadores) |

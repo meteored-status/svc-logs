@@ -1,13 +1,15 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 44961d47fca39fa5411bdd0ae2143e2b
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: 84d8c1fd0b5ce067b44175da87633a03
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
 import {EEntorno} from "@mr/core-log/interface";
 
+import {cargaDePod, esCargaFinita} from "./carga";
 import {RUTA_HEARTBEAT} from "./interface";
 
 /** Receptor por defecto, solo en producción y test: la dirección pública de status. */
@@ -29,12 +31,15 @@ const TOKEN_DESARROLLO = "desarrollo";
  * @property entorno - Entorno del bundle (`entornoActual()`).
  * @property tipo - Tipo de despliegue del manifest (`pod.tipo`).
  * @property target - Destino del despliegue (`pod.target`).
+ * @property modo - Cómo corre el proceso (`simple`, `primario` o `worker`). Ausente es `simple`. Las cargas finitas (cronjob y job)
+ *   solo emiten en modo simple.
  */
 export interface IEntradaDecision {
     env: Record<string, string|undefined>;
     entorno: EEntorno;
     tipo: string;
     target: string;
+    modo?: "simple"|"primario"|"worker";
 }
 
 /**
@@ -118,15 +123,18 @@ export function construirUrl(base: string): string {
 /**
  * Decide si el proceso emite heartbeat, y con qué.
  *
- * Solo se emite en un servicio (`tipo` `service`) desplegado en Kubernetes (`target` `k8s`) con
- * `HEARTBEAT=true`. **Producción** aquí es todo lo que no es desarrollo (test también lo es, como en
+ * Solo se emite en un servicio, un cronjob o un job (`tipo` `service`, `cronjob` o `job`) desplegado en Kubernetes (`target` `k8s`)
+ * con `HEARTBEAT=true`; las cargas finitas (cronjob y job) solo en modo simple. **Producción** aquí es todo lo que no es desarrollo (test también lo es, como en
  * `crearPodInfo`). Fuera de producción no hay receptor por defecto —para no mandar nunca heartbeats locales
  * a producción— y el token es opcional; en producción el token es obligatorio y tiene que tener la forma `hb1.<id>.<secreto>`.
  * Los `avisos` (p. ej. `ENTORNO` incoherente) solo se dan si el heartbeat queda habilitado o falla por configuración.
  */
-export function decidirHeartbeat({env, entorno, tipo, target}: IEntradaDecision): TDecision {
-    if (tipo !== "service" || target !== "k8s") {
-        return {habilitado: false, motivo: `solo emiten los servicios de k8s (tipo ${tipo}, target ${target})`, avisar: false, avisos: []};
+export function decidirHeartbeat({env, entorno, tipo, target, modo = "simple"}: IEntradaDecision): TDecision {
+    if (!["service", "cronjob", "job"].includes(tipo) || target !== "k8s") {
+        return {habilitado: false, motivo: `solo emiten los servicios, cronjobs y jobs de k8s (tipo ${tipo}, target ${target})`, avisar: false, avisos: []};
+    }
+    if (esCargaFinita(cargaDePod(tipo)) && modo !== "simple") {
+        return {habilitado: false, motivo: `una carga finita solo emite en modo simple (modo ${modo})`, avisar: false, avisos: []};
     }
     if (env["HEARTBEAT"] !== "true") {
         return {habilitado: false, motivo: "HEARTBEAT no es true", avisar: false, avisos: []};

@@ -2,6 +2,56 @@
 
 ---
 
+## 2026.11.18 13:51 — [Jose]
+
+### Added
+
+- **`WSPool`: opción `refillJitterMs`** (3000 ms por defecto; 0 = comportamiento anterior). Al perder una conexión (`Shutdown`, cierre,
+  error o timeout de heartbeat), la reposición en segundo plano espera un tiempo aleatorio de 0 a ese valor, con **un único
+  temporizador**, para repartir las reconexiones cuando un servidor se apaga. No retrasa ninguna petición: la apertura bajo demanda
+  (`getConnection()` sin conexión libre) sigue siendo inmediata, y la reposición, al vencer, solo abre lo que siga faltando. El
+  llenado inicial del constructor y el relleno de 60 s no cambian. `retardoReposicionMs(jitterMs, aleatorio)` exportada. Pruebas en
+  `spec/websocket-reposicion.spec.ts`.
+
+### Fixed
+
+- **`WSPool` contaba mal lo que faltaba para llegar a `minConnections`:** no tenía en cuenta los handshakes en vuelo, así que dos
+  reposiciones seguidas, o una reposición y una apertura bajo demanda, abrían cada una su socket y el pool acababa con alguno de
+  más. Ahora `pendingConnections` cuenta lo que está en vuelo (se resta una sola vez al abrir, fallar o vencer).
+- **`WSPool.destroy()` ya no deja sockets abiertos:** cancela la reposición programada; `addConnection()` rechaza con el pool destruido
+  (también `get()`/`head()`); un handshake que termina después de `destroy()` (o después de vencer su timeout) se cierra al abrirse en
+  vez de entrar en `connections`; la sonda del circuit breaker no se reprograma; y el bucle de reconexión de `stream()` lanza
+  `WSConnectionError` si el pool está destruido, en vez de reintentar hasta agotar `requestTimeoutMs`. **Cambio de comportamiento:** un
+  pool destruido que alguien conserva ya no sirve peticiones (antes abría un socket nuevo que nadie cerraba).
+
+## 2026.11.18 13:50 — [Jose]
+
+### Changed
+
+- **Servidor WebSocket — apagado escalonado.** `shutdown(timeoutMs)` ya no manda el `Shutdown` a todos los clientes a la vez: con 50
+  clientes abiertos o más los baraja y los avisa equiespaciados a ~40 por segundo, en una ventana de hasta 10 s y nunca más de
+  `timeoutMs − 5 s − 1 s` (con el `shutdownTimeout` de producción, 18 s, manda el tope de 10 s; con el de desarrollo, 2 s, o el de las
+  pruebas, no hay ventana). Con menos de 50 clientes todo igual que antes. Motivo, medido en producción (status-external,
+  2026-11-18): cuando una réplica con cientos de clientes se apagaba, todos reconectaban a la vez contra las que quedaban (160–284
+  upgrades por segundo contra un mismo superviviente, que se ha visto aguantar unos 50/s y atascarse 3–4 s con 160–284/s). Los clientes de otros
+  monorepos no se pueden tocar, así que se reparte lo único que controla el servidor. Un `info` con el nº de clientes y la ventana.
+  **Atención: los servidores WebSocket con 50 clientes o más tardan hasta 10 s más en apagarse** (siempre dentro de su
+  `shutdownTimeout`); durante la ventana siguen atendiendo a quien aún no ha recibido el aviso. **En Cloud Run (`K_SERVICE` definida) no se escalona
+  nunca:** `ventanaApagadoMs` recibe `cloudRun` y devuelve 0, así que el `Shutdown` va a todos a la vez como hoy (su gracia es de
+  10 s y no se sabe cuántos servidores WS hay en lambdas).
+- **Servidor WebSocket — la vida de cada conexión lleva jitter.** Antes todas se reciclaban a los 540 s exactos, así que una cohorte
+  abierta en la misma ráfaga (tras una reconexión masiva) se reciclaba entera a la vez y la avalancha se repetía cada 9 min. Ahora
+  cada conexión fija al conectar su `vidaMs` entre 420 y 540 s (solo hacia abajo: nunca se supera los 540 s). La vida real va
+  en escalones de 10 s (de 430 a 540), porque la edad se mira en el intervalo de `Alive`.
+- El `info` del apagado escalonado incluye el ritmo efectivo (clientes/s); cada cliente sigue recibiendo sus `Alive` hasta justo
+  antes de su `Shutdown`.
+- Corregido el JSDoc de `IClientMap.timestamp`: es la hora de conexión, no la del último mensaje recibido.
+
+### Added
+
+- `server/websocket/escalonado.ts`: `ventanaApagadoMs()`, `retrasosApagado()`, `vidaConexionMs()` y sus constantes (módulo puro, sin
+  imports). Pruebas en `spec/websocket-escalonado.spec.ts` y `spec/websocket-apagado-escalonado.spec.ts`.
+
 ## 2026.11.16 12:00 — [Miguel]
 
 ### Added

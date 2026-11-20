@@ -61,7 +61,22 @@ if opcion desplegar; then
     CLUSTER="${6}"
 
     updateImagen "${KUSTOMIZER}" "${DIR}" "${WORKSPACE}" "${VERSION}"
-    kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${ZONA}/${CLUSTER}/g" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
+    # Las variables `CRON_*` del heartbeat las rellena el `scripts/cron-env.yq` del repo de kustomize a partir del CronJob ya
+    # construido, como hace su `build.sh` con `_all`: sin esto, un CronJob construido por `entornos/` sale con la programación
+    # vacía. Solo si el repo lo trae y la salida tiene algún CronJob; si no, la salida es la de siempre, sin pasar por yq.
+    CRON_ENV="kustomizar/scripts/cron-env.yq"
+    if [[ -f "${CRON_ENV}" ]]; then
+      GENERADO_CRON="generado_cron_${WORKSPACE}_${CLUSTER}.yaml"
+      kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${ZONA}/${CLUSTER}/g" > "${GENERADO_CRON}" || exit 1
+      if grep -q '^kind: CronJob$' "${GENERADO_CRON}"; then
+        yq --from-file "${CRON_ENV}" "${GENERADO_CRON}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
+      else
+        cat "${GENERADO_CRON}" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
+      fi
+      rm "${GENERADO_CRON}"
+    else
+      kustomize build "${DIR}" | sed "s/\${PROJECT_ID}/${PROJECT_ID}/g" | sed "s/\${ZONA}/${CLUSTER}/g" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml" || exit 1
+    fi
     echo "---" >> "despliegue_${WORKSPACE}_${CLUSTER}.yaml"
   }
   export -f parseWorkspaceEjecutar

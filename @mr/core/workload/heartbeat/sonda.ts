@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 59b1c4c8b495a69053dc03fe11bb284e
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: a0b621128197e6c8b9d692b99e91ba6e
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -33,11 +34,14 @@ export interface IEngineSonda {
  * @property timeoutMs - Tiempo máximo de una llamada a `started()`/`ready()`. Por defecto 900.
  * @property frescoMs - Antigüedad máxima del último resultado de `/admin/ready/` para reutilizarlo en vez
  *   de llamar a `ready()`. Por defecto 2000.
+ * @property finita - Carga finita (cronjob o job): está `listo` («en curso») en cuanto tiene engine, sin esperar a `ejecutar()` ni
+ *   llamar a `started()`/`ready()`, que un cronjob no tiene por qué atender. Por defecto `false`.
  */
 export interface IConfigSonda {
     ahora?: () => number;
     timeoutMs?: number;
     frescoMs?: number;
+    finita?: boolean;
 }
 
 /**
@@ -52,16 +56,18 @@ export class Sonda {
     private readonly ahora: () => number;
     private readonly timeoutMs: number;
     private readonly frescoMs: number;
+    private readonly finita: boolean;
     private engine: IEngineSonda|null;
     private ejecutado: boolean;
     private startedOk: boolean;
     private senalRecibida: boolean;
     private consultaCierre: () => boolean;
 
-    public constructor({ahora = Date.now, timeoutMs = 900, frescoMs = 2000}: IConfigSonda = {}) {
+    public constructor({ahora = Date.now, timeoutMs = 900, frescoMs = 2000, finita = false}: IConfigSonda = {}) {
         this.ahora = ahora;
         this.timeoutMs = timeoutMs;
         this.frescoMs = frescoMs;
+        this.finita = finita;
         this.engine = null;
         this.ejecutado = false;
         this.startedOk = false;
@@ -119,6 +125,9 @@ export class Sonda {
 
     private async comprobarArrancado(): Promise<boolean> {
         const engine = this.engine;
+        if (this.finita) {
+            return engine !== null;
+        }
         if (engine === null || !this.ejecutado) {
             return false;
         }
@@ -137,7 +146,7 @@ export class Sonda {
 
     private async comprobarListo(): Promise<boolean> {
         const engine = this.engine;
-        if (engine === null || typeof engine.ready !== "function") {
+        if (this.finita || engine === null || typeof engine.ready !== "function") {
             return true;
         }
         const ultimo = engine.ultimoReady;

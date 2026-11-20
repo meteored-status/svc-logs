@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: cb075da14a7085341e4e1d4c74454fa6
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: 1acbc538eec9b09dd25329701e1baa69
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -56,7 +57,9 @@ export const esperaApagadoMs = (): number => global.PRODUCCION ? SHUTDOWN_TIMEOU
  *
  * - **Señal repetida**, o llegada antes de que exista el engine: sale ya con `128 + n` (143 con `SIGTERM`, 130 con `SIGINT`).
  * - **El servidor HTTP la atiende** (`apagadoPorServidor`): no hace nada, el servidor cierra y sale.
- * - **Ejecución finita en marcha** (cronjob/job): pide el apagado (aborta y `shutdown()`). En **producción no sale**: el
+ * - **Ejecución finita en marcha** (cronjob/job): avisa al heartbeat (`drenando`, causa `senal`) y pide el apagado (aborta y
+ *   `shutdown()`). Esa ejecución se despedirá como cortada (`parado` sin resultado y con causa `senal`, ver `Heartbeat.despedir`) aunque
+ *   `ejecutar()` resuelva con normalidad. En **producción no sale**: el
  *   proceso termina cuando acaba `ejecutar()`, por el camino normal de {@link Main}, o por `SIGKILL`. **Fuera de
  *   producción** sale tras el `shutdown()` con tope `esperaMs` (2 s) y código `128 + n`: `node --watch` (`g:devel`) manda
  *   `SIGTERM` al guardar y espera sin tope, y un cronjob que no mira `abortSignal` no se reiniciaría nunca.
@@ -78,6 +81,12 @@ export async function atenderSenal({senal, repetida, engine, ejecucionPendiente,
         return;
     }
     if (ejecucionPendiente && produccion) {
+        // El pod pasa a `drenando/senal`: si Kubernetes lo mata después (`activeDeadlineSeconds`), el receptor sabe que fue cortado.
+        try {
+            emisor?.alIniciarCierre();
+        } catch (err) {
+            warning("Error marcando el cierre del heartbeat", err);
+        }
         await engine.solicitarApagado(`Recibida señal ${senal}`);
 
         return;

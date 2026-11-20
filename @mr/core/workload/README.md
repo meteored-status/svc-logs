@@ -294,17 +294,107 @@ sonda del heartbeat no repita una consulta que, en algunos servicios, va a Elast
 `IHeartbeat` es **la única declaración del mensaje**: `status-external` la importa de aquí, no al revés.
 
 Cada pod de un servicio manda un heartbeat por WebSocket a `status-external`, **cada segundo y sin esperar
-respuesta** (`WSPool.head()`), para saber en tiempo real el estado de todos los pods de todos los monorepos.
+respuesta** (`WSPool.head()`; solo la despedida espera un acuse, ver `parado`), para saber en tiempo real el estado de todos los pods de todos los monorepos.
 El receptor guarda el último de cada pod y da por muerto al que lleva unos 5 s callado. `Main` lo arranca
-tras el sidecar y no hay nada que llamar desde el servicio.
+al empezar el arranque (antes de cargar la configuración y del sidecar) y no hay nada que llamar desde el servicio.
 
 ### Cuándo emite
 
 Solo si se cumplen **las tres**, y apagado por defecto:
 
-1. `manifest.deploy.type` es `service` (no cronjob, job ni worker), y
+1. `manifest.deploy.type` es `service`, `cronjob` o `job` (no worker ni browser), y
 2. `manifest.deploy.target` es `k8s` (`IPodInfo.tipo` y `IPodInfo.target`), y
 3. `HEARTBEAT=true`.
+
+Un **cronjob** o un **job** (carga finita) solo emite en modo simple, y su latido lleva `carga` (`cronjob` o `job`) y `ejecucion`
+(`IHeartbeatEjecucion`); un servicio no manda ninguno de los dos y su latido es el de siempre. En una carga finita:
+
+- `listo` significa «en curso» y es el estado desde que el pod tiene engine (`Main` llama a `setEngine` antes de `master()`); no se llama a
+  `started()`/`ready()`. La ejecución acaba en `parado`.
+- La `revision` va vacía (el hostname del pod de un Job lleva la hora programada, que parecería un `pod-template-hash`).
+- La ejecución sale del entorno que inyecta el kustomize —`CRON_NOMBRE`, `CRON_SCHEDULE`, `CRON_TIMEZONE`, `CRON_CONCURRENCIA`,
+  `CRON_PLAZO_INICIO_S`, `CRON_PLAZO_EJECUCION_S`, y por Downward API `POD_JOB` y `POD_JOB_UID`—; todas pueden faltar (`carga.ts`). La hora
+  programada se toma del nombre del Job (`<cronjob>-<minutos desde epoch>`) solo si es coherente con el arranque del pod; un `job`
+  nunca la tiene.
+  En un Job `Indexed`, Kubernetes inyecta `JOB_COMPLETION_INDEX` y el latido lo lleva en `ejecucion.indice`: solo vale un entero decimal
+  de 0 a 65535 (sin signo ni decimales); vacío, `abc`, `-1`, `3.5` o `70000` dan `null`. El campo es opcional en el contrato (un emisor
+  anterior no lo manda; el receptor lo toma por `null`). Cómo se identifica el Job: `POD_JOB`, o el hostname sin su último trozo
+  `-xxxxx`; en un Indexed, el hostname es `<job>-<índice>` (documentación de Kubernetes, no medido aquí), que no casa con eso, así que **con
+  `indice` y sin `POD_JOB`**, si el hostname termina en `-<índice>`, el Job es el hostname sin ese sufijo (y el CronJob, deducido sin
+  `CRON_NOMBRE`, sale de ese Job). Sin `indice` todo sigue igual. Aun así, lo robusto es que el kustomize de un Job paralelo inyecte `POD_JOB`.
+- **Despedida** (`Main`, `terminarEjecucionFinita`): al acabar `ejecutar()` manda `parado` con `resultado` `ok` o `error` (en `error`,
+  solo `err.name`, nunca el mensaje; también cuenta un fallo de `master()`, aunque `ejecutar()` se haga igualmente), **después** para el
+  sidecar de Istio y sale con 0 (el código de salida no refleja el fallo: lo cuenta el heartbeat). La despedida espera al contexto (los
+  metadatos de GKE) dentro de un presupuesto total de 3 s (`PRESUPUESTO_DESPEDIDA_FINITA_MS`), porque una ejecución corta puede acabar antes
+  de tenerlo. Tras una señal (`SIGTERM` en producción, p. ej. `activeDeadlineSeconds`) el pod pasa a `drenando/senal` y el proceso sigue
+  hasta que acaba `ejecutar()` o lo mata Kubernetes.
+- **Ejecución cortada por la señal**: si hubo señal durante la ejecución, el `parado` **no declara resultado**: `ejecucion.resultado` `null`,
+  `ejecucion.error` `null` y `causaDrenado` `senal` (se fuerza, porque el ciclo que la evaluaría puede no haber corrido), tanto si `ejecutar()`
+  resolvió al atender el aviso como si falló después (decisión: `cortada` gana a `error`, porque Kubernetes ya la dio por fallida y lo útil para quien
+  mira el panel es que la cortaron; el nombre del error solo queda en el log del pod). El receptor lo traduce a `cron_run.result` `cortada` y a
+  `resultado: cortada` en el evento de Elastic. Contrato `IHeartbeat` v1 sin cambios: `resultado: null` ya era válido (un receptor anterior acepta el
+  latido y, si ya sabe leer la causa, lo marca `cortada`; si no, lo deja como un `parado` sin resultado), así que no obliga a ordenar el despliegue.
+
+### Arranque temprano y arranques fallidos
+
+`Main.start()` lee `crearPodInfo()` y arranca el heartbeat (`arrancando`) **antes** de `configLoader.load()` y de esperar al sidecar, en servicios y
+en cargas finitas. Así un proceso que muere cargando la configuración o esperando al sidecar ya ha mandado su latido, y el receptor cuenta el
+reinicio (mismo pod, `boot` mayor) en vez de no ver nada. El sidecar ya está listo cuando arranca la app (`holdApplicationUntilProxyStarts`).
+Solo usa el entorno, `package.json` y `mrpack.json`; no depende de la configuración del servicio. `crearPodInfo()` se llama otra vez al cargar la
+configuración: en producción da lo mismo (sale del hostname), en desarrollo `replica` y `deploy` son aleatorios y difieren entre las dos lecturas.
+Sin `HEARTBEAT=true` no se hace nada nuevo.
+
+Si `start()` rechaza en un servicio, `Main.ejecutar` espera **como mucho 1 s** (`PRIMER_ENVIO_ESPERA_MAX_MS`, handshake incluido) a que el primer envío
+**haya salido del proceso** antes de `process.exit(1)`: `Heartbeat.esperarPrimerEnvio` espera al `head()` y después a `pool.vaciar()`
+(`bufferedAmount === 0`), porque `head()` resuelve en cuanto `ws.send()` encola el frame y un `exit` en ese mismo encadenado lo perdía (medido: 0 frames
+de 27 arranques fallidos con fallo de `load()` a 0–5 ms y handshake de 0, 150 y 400 ms; 27 de 27 con el arreglo). El código de salida no cambia y no se manda `parado` (sería una despedida limpia). Una carga finita que falla antes de saber que
+lo es (falla cargando la configuración o esperando al sidecar) sigue ese mismo camino, con `exit(1)` para que el Job reintente según su
+`backoffLimit`, pero **antes para el sidecar** (`Main.pararSidecarSiFinita`, solo el proceso del pod, nunca un worker): sin sidecar nativo,
+`istio-proxy` no termina con la aplicación y el pod se quedaría en `Running` con el Job colgado (con `Forbid`, saltándose las siguientes
+ejecuciones) hasta `activeDeadlineSeconds`. Que es finita lo dice ya el manifiesto que lee `crearPodInfo()`. Una que ya está en marcha se despide
+con `error` y sale con 0, como siempre.
+
+La parada del sidecar (`engine/sidecar.ts`, `pararSidecar`) espera la respuesta de `POST /quitquitquit` **como mucho 2 s**
+(`PARADA_SIDECAR_MAX_MS`): contesta al momento, pero un proxy que acepta la conexión y no responde dejaría el proceso sin llegar a salir.
+
+### Despedida confirmada
+
+Medido en producción el 2026-11-18: un pod de status-backend se quedó en `drenando` sin llegar a `parado`. Lo medido: los callbacks de `antesDeSalir`
+superaron el presupuesto de 1 s en el backend y en el receptor que se apagaba a la vez, y el `parado` no llegó. Lo más probable, **no observado**: la despedida
+esperaba, sin tope, a un ciclo cuyo `head()` estaba atascado en una reconexión (hasta 5 s); que no apareciera «Heartbeat descartado» no lo descarta, porque
+`avisarDescarte` limita a un aviso por minuto. Además, el
+receptor que recibía los latidos se apagaba a la vez. El `parado` es el único latido que no se cura solo con el siguiente, así que es el único con acuse.
+
+- **Contrato** (`interface.ts`): `METODO_HEARTBEAT_CONFIRMADO` (`"heartbeat-confirmado"`), en la misma ruta y con la misma autorización, con el mismo
+  `IHeartbeat` (sin cambios). **Contesta** una `IConfirmacionHeartbeat {v: 1, resultado: "confirmado"|"reintentar"}`, o un error si el latido no es
+  válido. `METODO_HEARTBEAT` no cambia y **sigue sin contestar nunca**. El acuse es en memoria: «lo tengo», no «ya está en MySQL».
+- **Emisor** (`despedida.ts` puro, con pools, reloj y fábrica de pool nuevo inyectados; `emisor.ts` lo usa):
+  1. Espera a un envío en vuelo **como mucho `ESPERA_VUELO_MAX_MS` (100 ms)**: un ciclo atascado ya no le quita el presupuesto. Los ciclos no mandan nada
+     una vez empezada la despedida (su `seq` sería mayor que el del `parado`).
+  2. Sin contexto resuelto no se manda nada (como antes). Si no, construye el `parado` **una sola vez** (mismo `seq` en todos los intentos: repetirlo es inocuo).
+  3. **Intento 1** por el pool del emisor (`get`, hasta 300 ms). Ojo, no es «la conexión caliente»: si el receptor se apagó antes, su `Shutdown` ya sacó la conexión del pool y
+     este intento paga un handshake nuevo (medido: en 5 de 6 despedidas fallidas el intento 1 fue ya una conexión nueva). Solo es una conexión ya abierta si nada la ha cerrado. `confirmado`: fin. `ok:false` (un receptor anterior, que contesta al momento «No handler for
+     method»): `head(METODO_HEARTBEAT)` de reserva más `vaciar` y fin, **sin reintento**.
+  4. Sin respuesta, caída, circuito abierto o `reintentar`: **un único reintento** (intento 2) por un **pool nuevo** de un solo uso (`WSPool.get` con `reconnect: false`, otra clave del
+     singleton y por tanto otra conexión **por el mismo Service**, que cae en otra réplica solo si hay otra viva que acepte (si solo queda una, es la misma); `adaptarPool` en `pool.ts`, fábrica `abrirNuevo` en `crear.ts`), destruido tras el intento. Su tope es **todo lo que queda del presupuesto menos `MARGEN_RESERVA_MS` (100 ms, para el `head` de reserva si contesta `ok:false`)**, no 300 ms: una conexión nueva paga DNS + TCP + TLS + upgrade (~300-600 ms tras Cloudflare) y varios intentos cortos abandonarían el handshake a medias cada vez.
+  5. Presupuesto total de **900 ms desde `despedir()`**, por debajo del 1 s de `antesDeSalir`, `despedirAcotado` y Next. `destroy()` siempre. Nunca rechaza.
+  6. Logs: nada si se confirma al primer intento; `info` si se confirma (o sale por reserva) en el intento ≥ 2, con intentos y ms; `warning` si no se confirma, con el motivo de **cada** intento,
+     p. ej. `intento 1: sin respuesta en 300 ms (no llegó a haber conexión); intento 2: sin respuesta en 395 ms (había conexión desde los 120 ms)`. «Había conexión» es que `WSPool.get()` resolvió
+     (hay un socket por el que enviar: puede ser uno ya abierto que en realidad está muerto), no que el receptor haya contestado nada; «no llegó a haber conexión» es que el handshake no se completó
+     a tiempo. Se distinguen con `IPoolHeartbeat.get(..., {alConectar})`, que `adaptarPool` llama entre `pool.get()` y la lectura de la respuesta.
+  7. **`sin-confirmar` no es «perdido»**: el intento abandonado puede llegar igualmente si su handshake abre antes del `exit`, y el receptor lo aplica. Es «no sé si llegó».
+- **Lo que no arregla por sí misma** (medido el 2026-11-18): cuando moría un `status-external` con carga mandaba `Shutdown` a todos sus clientes y estos reconectaban a la vez contra los que quedan (340–575 conexiones en 2–3 s);
+  el superviviente se atascaba 3–4 s. Todas las despedidas fallidas (7 ese día) fueron por eso: ni el intento 1 ni el 2 obtuvieron respuesta, y el 2 no ha funcionado ni una vez en producción
+  (solo quedaba una réplica, la atascada). Es saturación del receptor por la avalancha de reconexiones, y ninguna variante de la despedida dentro de 1 s lo arregla.
+  **Lo ataca el servidor WebSocket de `@mr/core-network`**, no este emisor: desde su entrada del 2026-11-18, `shutdown()` reparte el `Shutdown` entre sus clientes (~40/s, hasta 10 s, con 50 o más)
+  y da jitter a la vida de cada conexión, de modo que el que muere ya no devuelve a todos a la vez contra el que queda y el intento 1 (o el reintento) encuentra un superviviente tranquilo: si al morir
+  el receptor aún no ha mandado el `Shutdown` a la conexión de este emisor, contesta `reintentar` y el reintento abre una conexión nueva hacia otra réplica; si ya lo mandó, el pool reabre bajo demanda contra un superviviente.
+  Este paquete **no cambia de comportamiento** por ello y **no usa `refillJitterMs`** del pool (opción nueva de core-network), a propósito: así no depende de la versión nueva y versiones mezcladas compilan.
+- **Compatibilidad**: emisor viejo + receptor nuevo = `head` como siempre; emisor nuevo + receptor viejo = `ok:false` al momento y `head` de reserva (un viaje de ida y vuelta más);
+  si el receptor viejo se apaga y calla, 300 ms y una conexión nueva hacia uno vivo con el resto (hasta 500 ms), dentro del tope de 900 ms.
+- **Sin medir** (ver `README` de `status-external`): que el sidecar de Istio deje abrir conexiones salientes nuevas mientras drena, y el coste de una conexión nueva por Cloudflare.
+  Si la medida falla, la contingencia es abrir el pool de reserva al pasar a `drenando`.
+- `requestTimeoutMs` de los pools del heartbeat es 1000 (solo la despedida usa `get()`): los temporizadores de `WSPool` no llevan `unref`.
 
 ### Variables de entorno (lo que tiene que poner cada proyecto en su yml)
 
@@ -340,8 +430,8 @@ el upgrade; si ya trae una ruta distinta de `/`, se respeta tal cual.
     `files/tmp/admin/shutdown.lock`; el watcher del Engine HTTP lo marca (`preStopSolicitado`).
   - Si se dan las dos, manda `senal`. Es la que dirá, con el primer despliegue, si el `SIGTERM` llega de verdad
     a Node (el proceso 1 del contenedor es `node <yarnPath>`, que sí lo reenvía; ver «Apagado por señal»).
-- `parado`: la despedida. `Server.antesDeSalir` manda `parado`, hace `pool.vaciar({timeoutMs: 500})` y
-  `pool.destroy()`, dentro del presupuesto de 1 s de `antesDeSalir`. En un pod simple no hay `process.on("SIGTERM")` propio
+- `parado`: la despedida, **con acuse** (ver «Despedida confirmada» más abajo). `Server.antesDeSalir` construye el `parado` una vez, lo manda con
+  `get(METODO_HEARTBEAT_CONFIRMADO)` y destruye los pools, dentro del presupuesto de 1 s de `antesDeSalir`. En un pod simple no hay `process.on("SIGTERM")` propio
   (el del servidor HTTP); el del primario de un cluster está más abajo. Para que se llegue a `antesDeSalir`,
   `Server.close()` cierra en paralelo el servidor WebSocket (sus clientes reciben `Shutdown` y se reconectan a otra
   réplica) y cierra las keep-alive ociosas (ver el README de `server/http`); `shutdownTimeout` es de 18 s en producción,
@@ -464,7 +554,7 @@ Con `HEARTBEAT=true` y `HEARTBEAT_SOCKET` apuntando al receptor local emite igua
 
 `yarn workspace @mr/core-workload test` (`node:test`, `spec/`): estado y agregado de cluster (con la memoria del drenado), decisión de
 habilitar (formato del token, avisos), URL, metadatos con reintento, payload y `revision`, contexto que falla, la sonda, el emisor con
-un pool falso (también con el contexto pendiente), el cierre del primario (con y sin heartbeat, con margen), el margen de endpoints y el borrado de `shutdown.lock`, el apagado una sola vez
+un pool falso (también con el contexto pendiente y con un ciclo atascado en `head()`: el `parado` sale en < 150 ms), la despedida confirmada (`despedida.spec.ts`, con pools y reloj falsos; `despedida-ws.spec.ts`, con un servidor WebSocket escrito a mano y el `WSPool` real: receptor nuevo, receptor anterior y segundo intento por otro socket), el cierre del primario (con y sin heartbeat, con margen), el margen de endpoints y el borrado de `shutdown.lock`, el apagado una sola vez
 (`ApagadoUnico`), `atenderSenal` (señal repetida, servidor, cronjob, proceso sin HTTP), los invariantes del presupuesto de 25 s y, para los servicios Next,
 el adaptador (autosondeo y vigilante del lock, con un servidor HTTP de verdad), el cierre (con un proceso falso y con un proceso hijo real) y el arranque.
 
