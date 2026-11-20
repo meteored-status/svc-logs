@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 4dcbd7594bbe23257401a498218742e1
- * Versión: 2026.11.13+1-bixus
- * Anterior: 2026.9.24+1-juancmartinez
+ * Fecha: Wed, 18 Nov 2026 15:20:23 GMT
+ * Hash: 28083870e2614b95704c6d3aec755ddb
+ * Versión: 2026.11.18+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -61,6 +61,12 @@ const enum EWSRequestType {
  *   autenticación). Solo se pasan al `WebSocket` si hay alguna, porque en navegador el segundo argumento
  *   del constructor son los `protocols` y no admite cabeceras. **No forman parte de la clave del singleton**:
  *   si se pide un pool que ya existe con otras cabeceras, se conserva el existente y se avisa una vez.
+ * @property refillJitterMs - Retraso máximo (ms) con el que se repone en segundo plano una conexión perdida
+ *   (`Shutdown` del servidor, cierre, error o timeout de heartbeat): cada reposición espera un tiempo aleatorio entre
+ *   0 y este valor. Reparte las reconexiones de los clientes cuando un servidor se apaga y todos pierden la
+ *   conexión a la vez. **No retrasa ninguna petición**: si hace falta una conexión y no hay ninguna libre, se abre
+ *   al momento, y la reposición, al vencer, solo abre las que sigan faltando. No afecta al llenado inicial.
+ *   Por defecto {@link WSPool.REFILL_JITTER_MS}; con 0 se repone en el acto.
  */
 interface IWSPoolConfig {
     socket: string;
@@ -69,6 +75,23 @@ interface IWSPoolConfig {
     requestTimeoutMs?: number;
     heartbeatTimeoutMs?: number;
     headers?: Record<string, string>;
+    refillJitterMs?: number;
+}
+
+/**
+ * Retraso (ms) con el que se repone en segundo plano una conexión perdida: un valor aleatorio entre 0 y `jitterMs`.
+ * Pura y exportada para poder probarla; el azar entra por parámetro.
+ *
+ * @param jitterMs - Retraso máximo (ms). Un valor menor o igual que 0 da 0.
+ * @param aleatorio - Fuente de azar en [0, 1): `Math.random` en producción.
+ * @returns El retraso en ms, entero y en [0, jitterMs).
+ */
+export function retardoReposicionMs(jitterMs: number, aleatorio: () => number): number {
+    if (jitterMs <= 0) {
+        return 0;
+    }
+
+    return Math.floor(aleatorio() * jitterMs);
 }
 
 /**
@@ -135,6 +158,13 @@ export class WSPool {
 
     /** Intervalo (ms) con el que se comprueba y rellena el pool hasta el mínimo de conexiones. */
     private static readonly REFILL_INTERVAL_MS = 60000;
+
+    /**
+     * Retraso máximo (ms) **por defecto** de la reposición en segundo plano de una conexión perdida. Los
+     * servidores que se apagan avisan a todos sus clientes casi a la vez; sin esto, todos reconectan en el mismo
+     * instante contra las réplicas que quedan. Ver {@link IWSPoolConfig.refillJitterMs}.
+     */
+    private static readonly REFILL_JITTER_MS = 3000;
 
     /** Registro global de pools indexado por URL del socket. Garantiza una única instancia por endpoint. */
     private static readonly POOLS: Record<string, WSPool> = {};
@@ -274,6 +304,19 @@ export class WSPool {
     /** Subconjunto de {@link connections} que están libres y listas para procesar peticiones. */
     private readonly available: ISocketConnection[];
 
+    /** Retraso máximo (ms) de la reposición en segundo plano tras perder una conexión. */
+    private readonly refillJitterMs: number;
+
+    /**
+     * Conexiones con el handshake en vuelo (ya pedidas, aún sin abrir). Se cuentan al calcular cuántas faltan para
+     * llegar a {@link minConnections}: sin ellas, dos reposiciones seguidas (o una reposición y una apertura bajo
+     * demanda) abrían cada una la suya y el pool acababa con sockets de más.
+     */
+    private pendingConnections: number;
+
+    /** Temporizador de la reposición retrasada por jitter. `undefined` si no hay ninguna programada (solo hay una a la vez). */
+    private refillJitterTimer: NodeJS.Timeout | undefined;
+
     /** Timer del intervalo periódico de reposición del pool. Se almacena para cancelarlo en {@link destroy}. */
     private readonly refillTimer: NodeJS.Timeout;
 
@@ -297,7 +340,7 @@ export class WSPool {
      * El constructor es privado; usar {@link WSPool.get} para obtener instancias.
      * @param cfg - Configuración del pool.
      */
-    private constructor({socket, minConnections=WSPool.MIN_CONNECTIONS, reconnect=true, requestTimeoutMs=WSPool.REQUEST_TIMEOUT_MS, heartbeatTimeoutMs=WSPool.HEARTBEAT_TIMEOUT_MS, headers={}}: IWSPoolConfig) {
+    private constructor({socket, minConnections=WSPool.MIN_CONNECTIONS, reconnect=true, requestTimeoutMs=WSPool.REQUEST_TIMEOUT_MS, heartbeatTimeoutMs=WSPool.HEARTBEAT_TIMEOUT_MS, headers={}, refillJitterMs=WSPool.REFILL_JITTER_MS}: IWSPoolConfig) {
         this.socket = socket;
         // El suelo es 1, no `MIN_CONNECTIONS`. Antes se subía cualquier valor hasta 10, lo que convertía
         // el «por defecto» de la configuración en un mínimo obligatorio y dejaba `minConnections` sin
@@ -310,6 +353,9 @@ export class WSPool {
         this.requestTimeoutMs = requestTimeoutMs;
         this.heartbeatTimeoutMs = heartbeatTimeoutMs;
         this.headers = {...headers};
+        this.refillJitterMs = refillJitterMs;
+        this.pendingConnections = 0;
+        this.refillJitterTimer = undefined;
         this.headersAvisadas = false;
         this.destroyed = false;
         this.i = 0;
@@ -371,7 +417,16 @@ export class WSPool {
     }
 
     /**
-     * Rellena el pool hasta alcanzar {@link minConnections} conexiones activas.
+     * Cuántas conexiones faltan para llegar a {@link minConnections}, contando las que están abiertas y las que
+     * tienen el handshake en vuelo. Negativo o cero si no falta ninguna.
+     */
+    private deficit(): number {
+        return this.minConnections - (this.connections.length + this.pendingConnections);
+    }
+
+    /**
+     * Rellena el pool hasta alcanzar {@link minConnections} conexiones, abriendo solo el déficit
+     * ({@link deficit}): lo que ya está abierto o en vuelo cuenta.
      * Las nuevas conexiones se añaden directamente a {@link available}.
      * Los errores de conexión se ignoran silenciosamente para no interrumpir el flujo.
      */
@@ -379,11 +434,33 @@ export class WSPool {
         if (this.destroyed) {
             return;
         }
-        for (let i=this.connections.length; i<this.minConnections; i++) {
+        for (let i=this.deficit(); i>0; i--) {
             this.addConnection()
                 .then(connection=>this.available.push(connection))
                 .catch(()=>undefined);
         }
+    }
+
+    /**
+     * Programa la reposición en segundo plano tras perder una conexión: **un único** temporizador, con un retraso
+     * aleatorio de hasta {@link refillJitterMs} (ver {@link retardoReposicionMs}). Al vencer, {@link refillConnections}
+     * recalcula el déficit, de modo que si mientras tanto una petición abrió una conexión bajo demanda, no se abre
+     * otra. Con retraso 0 repone en el acto, como antes.
+     */
+    private programarReposicion(): void {
+        if (this.destroyed || this.refillJitterTimer !== undefined || this.deficit() <= 0) {
+            return;
+        }
+
+        const retardo = retardoReposicionMs(this.refillJitterMs, Math.random);
+        if (retardo <= 0) {
+            this.refillConnections();
+            return;
+        }
+        this.refillJitterTimer = setTimeout(() => {
+            this.refillJitterTimer = undefined;
+            this.refillConnections();
+        }, retardo).unref();
     }
 
     /**
@@ -393,10 +470,17 @@ export class WSPool {
      * completa en ese tiempo, el socket se cierra y la promesa se rechaza.
      * Una vez abierta, inicializa los listeners de control mediante {@link initConnection}.
      *
+     * Mientras el handshake está en vuelo cuenta en {@link pendingConnections}. Un pool destruido no abre
+     * conexiones, y si {@link destroy} se llama con un handshake en vuelo, el socket se cierra al abrirse y no
+     * entra en {@link connections}.
+     *
      * @returns Promesa que se resuelve con la nueva {@link ISocketConnection}.
-     * @throws {Error} Si la conexión tarda demasiado o produce un error.
+     * @throws {Error} Si el pool está destruido, o si la conexión tarda demasiado o produce un error.
      */
     private async addConnection(): Promise<ISocketConnection> {
+        if (this.destroyed) {
+            throw new Error(`WSPool ${this.socket}: pool destruido`);
+        }
         const i = this.i;
         this.i++;
         // El WebSocket global de Node (undici) admite `{headers}` como segundo argumento; en navegador ese
@@ -404,6 +488,8 @@ export class WSPool {
         const ws = Object.keys(this.headers).length > 0
             ? new (WebSocket as unknown as new (url: string, init: {headers: Record<string, string>}) => WebSocket)(this.socket, {headers: this.headers})
             : new WebSocket(this.socket);
+        // Después de crear el socket: si el constructor lanza (p. ej. una cabecera ilegal), no queda nada en vuelo que contar
+        this.pendingConnections++;
         ws.binaryType = "arraybuffer";
         const socket = {
             i,
@@ -415,24 +501,51 @@ export class WSPool {
 
         const promesa = new Deferred<ISocketConnection>();
 
+        // El handshake termina una sola vez (abre, falla o vence), y solo entonces deja de contar como en vuelo.
+        // Tras un timeout los listeners siguen puestos: si el socket llegara a abrirse igualmente, openHandler lo cierra.
+        let terminada = false;
+        const terminar = (): boolean => {
+            if (terminada) {
+                return false;
+            }
+            terminada = true;
+            this.pendingConnections--;
+            clearTimeout(timeout);
+            return true;
+        };
+
         const timeout = setTimeout(() => {
+            if (!terminar()) {
+                return;
+            }
             socket.ws.close();
             promesa.reject(new Error(`WebSocket connection timeout (${WSPool.CONNECTION_TIMEOUT_MS}ms)`));
         }, WSPool.CONNECTION_TIMEOUT_MS);
 
         const openHandler = () => {
-            clearTimeout(timeout);
             socket.ws.removeEventListener("open", openHandler);
             socket.ws.removeEventListener("error", errorHandler);
+            if (!terminar()) {
+                // Abrió después de vencer el timeout: la promesa ya está rechazada, nadie lo gestionaría
+                socket.ws.close();
+                return;
+            }
+            if (this.destroyed) {
+                socket.ws.close(1000, "Pool destroyed");
+                promesa.reject(new Error(`WSPool ${this.socket}: pool destruido`));
+                return;
+            }
             this.connections.push(socket);
             promesa.resolve(socket);
             this.initConnection(socket);
         };
 
         const errorHandler = () => {
-            clearTimeout(timeout);
             socket.ws.removeEventListener("open", openHandler);
             socket.ws.removeEventListener("error", errorHandler);
+            if (!terminar()) {
+                return;
+            }
             promesa.reject(new Error(`WebSocket connection error connecting to ${this.socket}`));
         };
 
@@ -545,7 +658,9 @@ export class WSPool {
     }
 
     /**
-     * Elimina una conexión del pool y lanza una reposición si el pool está por debajo del mínimo.
+     * Elimina una conexión del pool y programa una reposición si el pool está por debajo del mínimo
+     * ({@link programarReposicion}: con un retraso aleatorio de hasta {@link refillJitterMs}, y contando las
+     * conexiones en vuelo).
      *
      * La eliminación es **inmediata**: la conexión sale del pool antes de intentar crear
      * una nueva. Esto evita conexiones zombie cuando `addConnection()` falla (el orden
@@ -557,11 +672,7 @@ export class WSPool {
      */
     private deleteConnection(socket: ISocketConnection, status: number): void {
         this.deleteConnectionFinal(socket, status);
-        if (!this.destroyed && this.connections.length < this.minConnections) {
-            this.addConnection()
-                .then(connection => this.available.push(connection))
-                .catch(()=>undefined);
-        }
+        this.programarReposicion();
     }
 
     /**
@@ -754,8 +865,8 @@ export class WSPool {
      * @param attempt - Número de intento actual (controla el backoff).
      */
     private startCircuitProbe(attempt = 0): void {
-        if (this.circuitProbeTimer !== undefined) {
-            return; // ya hay una sonda en curso
+        if (this.destroyed || this.circuitProbeTimer !== undefined) {
+            return; // pool destruido, o ya hay una sonda en curso
         }
         const delay = Math.min(
             WSPool.RECONNECT_BASE_MS * (2 ** attempt),
@@ -1015,6 +1126,10 @@ export class WSPool {
                 {
                     let reconnected = false;
                     while (!reconnected) {
+                        // Un pool destruido no reconecta: sin esto, el bucle reintentaría (y abriría sockets) hasta agotar el timeout
+                        if (this.destroyed) {
+                            throw new WSConnectionError(`WebSocket: pool destruido (method: ${method})`);
+                        }
                         const baseDelay = Math.min(
                             WSPool.RECONNECT_BASE_MS * (2 ** (reconnectAttempts - 1)),
                             WSPool.RECONNECT_MAX_MS,
@@ -1027,6 +1142,9 @@ export class WSPool {
                             ]);
                         } catch {
                             throw new Error(`WebSocket request timeout (${this.requestTimeoutMs}ms) for method ${method}`);
+                        }
+                        if (this.destroyed) {
+                            throw new WSConnectionError(`WebSocket: pool destruido (method: ${method})`);
                         }
                         try {
                             conexion = await this.getConnection();
@@ -1053,6 +1171,10 @@ export class WSPool {
      * del proceso. Las peticiones en curso recibirán un error de cierre cuando sus
      * conexiones se cierren.
      *
+     * **No deja sockets abiertos**: cancela la reposición programada, un handshake que termine después se cierra
+     * al abrirse, el pool no abre más conexiones (ni siquiera bajo demanda: `get()`/`head()` rechazan) y el
+     * bucle de reconexión de {@link stream} lanza en vez de reintentar.
+     *
      * Tras llamar a `destroy()`, cualquier llamada posterior a {@link WSPool.get}
      * con la misma configuración creará un pool nuevo desde cero.
      *
@@ -1062,6 +1184,10 @@ export class WSPool {
     public destroy(code = 1000, reason = "Pool destroyed"): void {
         this.destroyed = true;
         clearInterval(this.refillTimer);
+        if (this.refillJitterTimer !== undefined) {
+            clearTimeout(this.refillJitterTimer);
+            this.refillJitterTimer = undefined;
+        }
         if (this.circuitProbeTimer !== undefined) {
             clearTimeout(this.circuitProbeTimer);
             this.circuitProbeTimer = undefined;

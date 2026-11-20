@@ -1,9 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 16895d2283eaffdf6ebeb00adbf8ed8a
- * Versión: 2026.11.13+1-bixus
- * Anterior: 2026.10.20+1-alexcg
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: e355eac222a6dd9c53434ba582f11792
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -19,12 +19,15 @@ import {error, info, warning} from "services-comun/modules/utiles/log";
 import {comprobarEmuladorPubSub, modoPubSub} from "./config/pubsub";
 import type {Configuracion} from "./config";
 import type {Engine} from "./engine";
-import type {IPodInfo} from "./config/pod";
+import {type IPodInfo, crearPodInfo} from "./config/pod";
 import {type IHeartbeatCreado, type TModoHeartbeat, iniciarHeartbeat} from "./heartbeat/crear";
 import {type IWorkerCierre, instalarCierrePrimario} from "./heartbeat/cierre-primario";
+import {type IResultadoDespedida, PRIMER_ENVIO_ESPERA_MAX_MS} from "./heartbeat/emisor";
+import {esperarPrimerEnvio, resultadoDeError, terminarEjecucionFinita} from "./heartbeat/finita";
 import {esMensajeHeartbeatWorker} from "./heartbeat/workers";
 import {borrarLockApagado} from "./engine/lock";
 import {instalarApagado} from "./engine/apagado";
+import {pararSidecar} from "./engine/sidecar";
 
 emitter.setMaxListeners(256);
 
@@ -129,8 +132,12 @@ export class Main {
      * de arranque de forma asíncrona.
      *
      * En caso de error durante el arranque:
-     * - Si es un **cronjob**, intenta detener el sidecar antes de salir con código `0`.
-     * - En cualquier otro caso, finaliza el proceso con código `1`.
+     * - Si es un **cronjob**, despide el heartbeat (resultado `error` con `err.name`, si lo hay) y detiene el sidecar antes de salir
+     *   con código `0` ({@link Main.terminarEjecucionFinita}).
+     * - En cualquier otro caso, finaliza el proceso con código `1`. Antes espera como mucho 1 s a que salga el primer latido del
+     *   heartbeat (`arrancando`), para que el receptor vea el arranque fallido y cuente el reinicio; no cambia el código de salida.
+     *   Si el manifiesto es de un cronjob o job que aún no se había declarado como tal, para además el sidecar
+     *   ({@link Main.pararSidecarSiFinita}).
      *
      * @param engine       - Clase del engine del servicio; debe satisfacer {@link IEngine}.
      * @param configLoader - Clase o objeto con el método estático/de instancia `load()`.
@@ -141,13 +148,11 @@ export class Main {
         void main.start().catch(async (err)=>{
             error("Error iniciando el Engine", err);
             if (main.cronjob) {
-                try {
-                    // todo tener en cuenta el lambda
-                    await main.stopSidecar();
-                } finally {
-                    process.exit(0);
-                }
+                // todo tener en cuenta el lambda
+                await main.terminarEjecucionFinita(resultadoDeError(err));
             } else {
+                await main.esperarPrimerEnvio();
+                await main.pararSidecarSiFinita();
                 process.exit(1);
             }
         });
@@ -159,9 +164,11 @@ export class Main {
     protected readonly unix: number;
     private readonly minimoHilos: number;
     private readonly slaves: Map<Worker, ClusterStatus>;
+    private pod: IPodInfo|null;
     private heartbeat: IHeartbeatCreado|null;
     private engineActual: Engine|null;
     private ejecucionFinitaPendiente: boolean;
+    private finitaPorManifest: boolean;
     protected cronjob: boolean;
 
     /**
@@ -181,9 +188,11 @@ export class Main {
         this.unix = Date.now();
         this.minimoHilos = minimoHilos;
         this.slaves = new Map<Worker, ClusterStatus>();
+        this.pod = null;
         this.heartbeat = null;
         this.engineActual = null;
         this.ejecucionFinitaPendiente = false;
+        this.finitaPorManifest = false;
         this.cronjob = false;
     }
 
@@ -219,8 +228,8 @@ export class Main {
     }
 
     /**
-     * Solicita al sidecar de Istio su parada graceful mediante `POST /quitquitquit`.
-     * Los errores de red se ignoran porque el proceso puede estar ya en fase de cierre.
+     * Solicita al sidecar de Istio su parada graceful mediante `POST /quitquitquit` ({@link pararSidecar}): como mucho
+     * `PARADA_SIDECAR_MAX_MS` (2 s) de espera, y los errores de red se ignoran porque el proceso puede estar ya en fase de cierre.
      * Si `pod.sidecar` es `false`, retorna inmediatamente sin hacer ninguna petición.
      *
      * @param options     - Opciones del método.
@@ -231,32 +240,46 @@ export class Main {
             return;
         }
 
-        const deferred = new Deferred<void>();
-        let resuelto = false;
-        const conexion = http.request({
-            protocol: "http:",
-            method: "POST",
-            hostname: "localhost",
-            port: 15020,
-            path: "/quitquitquit",
-        }, (message)=>{
-            message.on("error", ()=>undefined);
-            message.on("end", ()=>undefined);
-            if (!resuelto) {
-                resuelto = true;
-                deferred.resolve();
-            }
-        });
+        await pararSidecar();
+    }
 
-        conexion.on("error", ()=>{
-            if (!resuelto) {
-                resuelto = true;
-                deferred.resolve();
-            }
+    /**
+     * Final de una carga finita (cronjob o job): despide el heartbeat con el resultado de la ejecución (si el pod emite), detiene el
+     * sidecar de Istio y sale con código 0, en ese orden (ver {@link terminarEjecucionFinita}).
+     *
+     * @param ejecucion - Cómo acabó la ejecución.
+     */
+    protected async terminarEjecucionFinita(ejecucion: IResultadoDespedida): Promise<void> {
+        await terminarEjecucionFinita({
+            emisor: this.heartbeat?.emisor ?? null,
+            ejecucion,
+            stopSidecar: async ()=>this.stopSidecar({pod: this.pod ?? undefined}),
+            salir: (codigo)=>{
+                info("Proceso terminado");
+                process.exit(codigo);
+            },
         });
+    }
 
-        conexion.end();
-        await deferred.promise;
+    /**
+     * Deja salir el primer latido antes de que un arranque fallido termine el proceso (como mucho {@link PRIMER_ENVIO_ESPERA_MAX_MS}).
+     * Sin heartbeat no hace nada. Nunca rechaza.
+     */
+    protected async esperarPrimerEnvio(): Promise<void> {
+        await esperarPrimerEnvio(this.heartbeat?.emisor ?? null, PRIMER_ENVIO_ESPERA_MAX_MS);
+    }
+
+    /**
+     * Un cronjob o job que falla antes de declararse como tal (cargando la configuración o esperando al sidecar) sale por el camino de
+     * servicio, con código `1`; sin parar el sidecar, `istio-proxy` seguiría vivo y el pod se quedaría en `Running` con el Job colgado
+     * (con `Forbid`, saltándose las siguientes ejecuciones) hasta `activeDeadlineSeconds`. Solo el proceso del pod (simple o primario),
+     * nunca un worker. Nunca rechaza.
+     */
+    protected async pararSidecarSiFinita(): Promise<void> {
+        if (!this.finitaPorManifest || (this.isClusterMode && !cluster.isPrimary)) {
+            return;
+        }
+        await this.stopSidecar({pod: this.pod ?? undefined});
     }
 
     /**
@@ -376,10 +399,13 @@ export class Main {
      * Ejecuta el ciclo completo de arranque:
      * 1. Comprueba que `PUBSUB_EMULATOR_HOST` no esté definida en un bundle de test o producción (`comprobarEmuladorPubSub`):
      *    si lo está, el arranque aborta. Si el proceso corre contra el emulador, lo deja en el log (solo el primario).
-     * 2. Carga la configuración (single-shot).
-     * 3. Espera al sidecar.
-     * 4. En modo cluster: primario → `startMaster`; worker → `startSlave`.
-     * 5. En modo simple: `build → master → ejecutar`. Si es cronjob, detiene el sidecar y termina.
+     * 2. Lee los metadatos del pod (`crearPodInfo`) y arranca el heartbeat si el servicio lo tiene activado, en `arrancando`: así un
+     *    proceso que muere cargando la configuración o esperando al sidecar ya deja su latido (ver {@link Main.ejecutar}).
+     * 3. Carga la configuración (single-shot).
+     * 4. Espera al sidecar.
+     * 5. En modo cluster: primario → `startMaster`; worker → `startSlave`.
+     * 6. En modo simple: `build → master → ejecutar`. Si es cronjob, despide el heartbeat con el resultado (`ok`, o `error` si falló
+     *    `master()`; si `ejecutar()` rechaza, lo hace `Main.ejecutar`), detiene el sidecar y termina.
      */
     protected async start(): Promise<void> {
         comprobarEmuladorPubSub({produccion: PRODUCCION, env: process.env});
@@ -393,9 +419,18 @@ export class Main {
             info(`Pub/Sub: emulador ${emulador} (${proyecto})`);
         }
 
+        // El heartbeat arranca antes de cargar la configuración y de esperar al sidecar: un proceso que muere ahí también deja su `arrancando`
+        // (el sidecar ya está listo cuando arranca la app, `holdApplicationUntilProxyStarts`). Solo usa el entorno, `package.json` y `mrpack.json`.
+        const podInicial = await crearPodInfo();
+        // Se sabe ya si es una carga finita: si el arranque falla antes de declararla, el sidecar también hay que pararlo.
+        this.pod = podInicial;
+        this.finitaPorManifest = podInicial.cronjob;
+        this.heartbeat = iniciarHeartbeat({pod: podInicial, unix: this.unix, modo: this.modoHeartbeat});
+
         const configuracion = await this.configLoader.load();
         this.configLoader.load = () => { throw new Error("Solo se puede cargar la configuración una vez"); };
 
+        this.pod = configuracion.pod;
         await this.startSidecar(configuracion.pod);
 
         // Un `shutdown.lock` que sobreviva a un reinicio del contenedor (el `emptyDir` es del pod) apagaría el nuevo al arrancar. Se borra
@@ -405,7 +440,6 @@ export class Main {
             await borrarLockApagado();
         }
 
-        this.heartbeat = iniciarHeartbeat({pod: configuracion.pod, unix: this.unix, modo: this.modoHeartbeat});
         const emisor = this.heartbeat?.emisor ?? null;
         if (this.isClusterMode && cluster.isPrimary) {
             // Con o sin heartbeat: el primario reenvía la señal a los workers y espera a que salgan; con él, además despide el pod.
@@ -431,23 +465,31 @@ export class Main {
         this.engineActual = engineInstance;
         // Cronjob o job: `master()` + `ejecutar()` son el trabajo entero y el proceso acaba cuando terminan, no por la señal
         // (una señal durante `master()` saldría con 0 y el Job constaría como correcto).
-        this.ejecucionFinitaPendiente = configuracion.pod.cronjob || configuracion.pod.tipo === ManifestDeploymentKind.JOB;
+        const finita = configuracion.pod.cronjob || configuracion.pod.tipo === ManifestDeploymentKind.JOB;
+        this.ejecucionFinitaPendiente = finita;
+        let ejecucion: IResultadoDespedida = {resultado: "ok", error: null};
+        if (finita) {
+            // En una carga finita el pod está en curso desde que tiene engine, no desde que `ejecutar()` resuelve (que es el final).
+            this.heartbeat?.instancia.setEngine(engineInstance);
+        }
         try {
             try {
                 await engineInstance.master();
             } catch (err) {
                 error("Error iniciando el Master Engine", err);
+                // Se sigue ejecutando como siempre, pero la ejecución consta como fallida.
+                ejecucion = resultadoDeError(err);
             }
-            this.heartbeat?.instancia.setEngine(engineInstance);
+            if (!finita) {
+                this.heartbeat?.instancia.setEngine(engineInstance);
+            }
             await engineInstance.ejecutar();
         } finally {
             this.ejecucionFinitaPendiente = false;
         }
         this.heartbeat?.instancia.marcarEjecutado();
         if (configuracion.pod.cronjob) {
-            await this.stopSidecar({pod: configuracion.pod});
-            info("Proceso terminado");
-            process.exit();
+            await this.terminarEjecucionFinita(ejecucion);
         } else {
             this.setupWarningHandler();
         }

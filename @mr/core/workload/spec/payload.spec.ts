@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: 0a2874bfc59b92bfa8697438566bdc42
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: 9324d5c815d3cc3d1b5bd03104478912
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -62,6 +63,55 @@ describe("construirContexto", () => {
         const vacio: IMetadatosPod = {cluster: {valor: "", origen: "vacío"}, proyecto: {valor: "", origen: "vacío"}, ubicacion: {valor: "", origen: "vacío"}};
         const c = construirContexto({pod, entorno: EEntorno.DESARROLLO, env: {}, servicio: "x", hostname: "h", metadatos: vacio, inicio: 1, produccion: false});
         assert.deepEqual([c.cluster, c.proyectoGcp, c.ubicacion, c.namespace, c.producto, c.departamento], ["", "", "", "", "", ""]);
+    });
+});
+
+describe("construirContexto en cargas finitas", () => {
+    const hostCron = "cronjob-status-control-29918140-8mcpp";
+    const envCron = {...env, CRON_NOMBRE: "cronjob-status-control", POD_JOB: "cronjob-status-control-29918140", POD_JOB_UID: "uid-1"};
+    const podCron = {servicio: "cronjob-status-control", zona: "madrid", version: "2026.11.12-001"};
+    const inicio = 29918140 * 60_000 + 1000;
+    const cron = (carga: "cronjob"|"job", e: Record<string, string> = envCron) => construirContexto({pod: podCron, entorno: EEntorno.PRODUCCION, env: e, servicio: "mr-status/cronjob-status-control", hostname: hostCron, metadatos, inicio, produccion: true, carga});
+
+    it("la revisión va vacía: el hostname del pod de un Job lleva la hora programada, que parece un pod-template-hash", () => {
+        assert.equal(revisionDePod({env: {}, hostname: hostCron, produccion: true}), "29918140", "lo que se tomaría por revisión sin esta regla");
+        assert.equal(cron("cronjob").revision, "");
+        assert.equal(cron("job").revision, "");
+        assert.equal(cron("cronjob", {...envCron, POD_REVISION: "7c9d5f8b4"}).revision, "", "ni siquiera con POD_REVISION");
+    });
+
+    it("el contexto lleva la carga y la ejecución, con resultado y error a null hasta la despedida", () => {
+        const c = cron("cronjob");
+        assert.equal(c.carga, "cronjob");
+        assert.deepEqual(c.ejecucion, {
+            job: "cronjob-status-control-29918140", jobUid: "uid-1", cronjob: "cronjob-status-control", programada: 29918140 * 60_000, programacion: null, zonaHoraria: null,
+            concurrencia: null, plazoInicioS: null, plazoEjecucionS: null, resultado: null, error: null, indice: null,
+        });
+        assert.equal(cron("job").carga, "job");
+        assert.equal(cron("job").ejecucion?.programada, null);
+        assert.equal(construirHeartbeat(c, foto).carga, "cronjob");
+    });
+
+    it("el índice de un Job Indexed (JOB_COMPLETION_INDEX) viaja en la ejecución del contexto y del heartbeat; inválido o ausente, null", () => {
+        const indexado = cron("cronjob", {...envCron, JOB_COMPLETION_INDEX: "3"});
+        assert.equal(indexado.ejecucion?.indice, 3);
+        assert.equal(construirHeartbeat(indexado, foto).ejecucion?.indice, 3);
+        assert.equal(cron("job", {...envCron, JOB_COMPLETION_INDEX: "3"}).ejecucion?.indice, 3);
+        assert.equal(cron("cronjob", {...envCron, JOB_COMPLETION_INDEX: "-1"}).ejecucion?.indice, null);
+        assert.equal(cron("cronjob").ejecucion?.indice, null);
+    });
+
+    it("un servicio sale idéntico a siempre: sin carga ni ejecucion, y con su revisión del hostname", () => {
+        const real = "status-backend-5d8c7b9f6b-x7k2p";
+        const c = construirContexto({pod, entorno: EEntorno.PRODUCCION, env, servicio: "mr-status/status-backend", hostname: real, metadatos, inicio: 500, produccion: true});
+        assert.deepEqual(c, {
+            entorno: EEntorno.PRODUCCION, proyectoGcp: "meteored-status", cluster: "status-madrid-2", ubicacion: "europe-southwest1", zona: "madrid", namespace: "meteored-status",
+            pod: real, servicio: "mr-status/status-backend", producto: "status", departamento: "sistemas", version: "2026.11.12-001", revision: "5d8c7b9f6b", inicio: 500,
+        });
+        assert.equal("carga" in c, false);
+        assert.equal("ejecucion" in c, false);
+        const explicito = construirContexto({pod, entorno: EEntorno.PRODUCCION, env, servicio: "mr-status/status-backend", hostname: real, metadatos, inicio: 500, produccion: true, carga: "service"});
+        assert.deepEqual(explicito, c);
     });
 });
 

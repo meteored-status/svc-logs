@@ -1,8 +1,9 @@
 /**
  * Editor: Bixus
- * Fecha: Fri, 13 Nov 2026 08:17:27 GMT
- * Hash: ff83b8c2f2f7d7e376016e279ea3199d
- * Versión: 2026.11.13+1-bixus
+ * Fecha: Fri, 20 Nov 2026 08:56:10 GMT
+ * Hash: 994584e3cdeb9c61856d9d96cc2e5350
+ * Versión: 2026.11.20+1-bixus
+ * Anterior: 2026.11.13+1-bixus
  * Proyecto: https://github.com/meteored-status/svc-status.git
  */
 
@@ -75,6 +76,22 @@ describe("atenderSenal", () => {
         const orden: string[] = [];
         await atenderSenal(base(orden, montar(orden), {ejecucionPendiente: true}));
         assert.deepEqual(orden, ["apagado:Recibida señal SIGTERM", "apagado:fin"]);
+    });
+
+    it("en producción, la señal con la ejecución de un cronjob en marcha marca el cierre en el heartbeat (drenando/senal) antes de pedir el apagado, sin despedirse ni salir", async () => {
+        const orden: string[] = [];
+        const emisor = {alIniciarCierre: () => { orden.push("drenando"); }, despedir: async () => { orden.push("despedir"); }};
+        await atenderSenal(base(orden, montar(orden), {ejecucionPendiente: true, emisor}));
+        assert.deepEqual(orden, ["drenando", "apagado:Recibida señal SIGTERM", "apagado:fin"]);
+    });
+
+    it("si alIniciarCierre falla, el apagado del cronjob sigue adelante", async () => {
+        limpiarAvisos();
+        const orden: string[] = [];
+        const emisor = {alIniciarCierre: () => { throw new Error("boom"); }, despedir: async () => { orden.push("despedir"); }};
+        await atenderSenal(base(orden, montar(orden), {ejecucionPendiente: true, emisor}));
+        assert.deepEqual(orden, ["apagado:Recibida señal SIGTERM", "apagado:fin"]);
+        assert.equal(avisos.length, 1);
     });
 
     it("en desarrollo, un cronjob en marcha pide el apagado y sale con 128 + n (node --watch no espera a que acabe)", async () => {

@@ -687,6 +687,16 @@ los mismos valores por defecto (`europe-west1-docker.pkg.dev`, `services` y el n
 workspace). Con el overlay `_all/`, la imagen la monta `kustomizar/build.sh`, que vive en
 el repo de kustomize.
 
+## Programación del heartbeat de los CronJobs
+
+Las variables `CRON_*` del heartbeat (nombre, `schedule`, `timeZone`, `concurrencyPolicy`, `startingDeadlineSeconds` y
+`activeDeadlineSeconds`) se declaran vacías en `_componentes/{cronjob,job}` del repo de kustomize y las rellena su
+`scripts/cron-env.yq` a partir del CronJob ya construido. Con el overlay `_all/` lo hace `kustomizar/build.sh`
+(`add_cron_env`); con `entornos/` y `clientes/`, `parseWorkspaceEjecutar()` de `kustomizar.sh`, **solo si el repo trae
+`scripts/cron-env.yq` y la salida tiene algún `kind: CronJob`**. Si no, la salida es la de siempre y no pasa por yq (que
+reformatea la indentación de todo el documento). Sin este paso, un CronJob construido por `entornos/` sale con la programación
+vacía: sigue informando del resultado de cada ejecución, pero no se detectan las saltadas.
+
 ## Plantillas Cloud Run
 
 Usadas por `kustomizar.sh` cuando el workspace tiene `deploy.target = "lambda"`:

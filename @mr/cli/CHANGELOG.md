@@ -2,6 +2,11 @@
 
 ---
 
+## 2026.11.20 10:06 — [Jose]
+
+### Fixed
+- `deployment/std/kustomizar.sh` — `parseWorkspaceEjecutar()` (overlays `entornos/` y `clientes/`) rellena ahora las variables `CRON_*` del heartbeat con el `scripts/cron-env.yq` del repo de kustomize, como ya hacía su `build.sh` con `_all/`. Sin esto, los CronJobs construidos por `entornos/` (18 en mr, 21 en ed) salían con la programación vacía y no se podían detectar sus ejecuciones saltadas. Solo actúa si el repo trae `scripts/cron-env.yq` **y** la salida tiene algún `kind: CronJob`; en cualquier otro caso la salida es byte a byte la de antes (no pasa por yq, que reformatea). Comprobado sobre una copia del kustomize de mr: `meteo-videos-radar` (CronJob por `entornos/belgica`) sale con `CRON_NOMBRE`, schedule, concurrencia y plazos, y `meteo-json-cams` (Deployment) sale idéntico. Documentado en `deployment/README.md` («Programación del heartbeat de los CronJobs»).
+
 ## 2026.11.19 12:57 — [Jose]
 
 ### Fixed
